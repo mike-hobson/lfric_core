@@ -150,7 +150,7 @@ contains
   !>
   subroutine print_field( self, title )
 
-    use log_mod, only : log_event, log_scratch_space, LOG_LEVEL_DEBUG
+    use log_mod, only : log_event, log_scratch_space, LOG_LEVEL_INFO
 
     implicit none
 
@@ -163,7 +163,7 @@ contains
     integer                   :: df
     integer,          pointer :: map( : )
 
-    call log_event( title, LOG_LEVEL_DEBUG )
+    call log_event( title, LOG_LEVEL_INFO )
 
     do cell=1,self%ncell
      map => self%vspace%get_cell_dofmap( cell )
@@ -171,7 +171,7 @@ contains
         do layer=0,self%nlayers-1
           write( log_scratch_space, '( I4, I4, I4, F8.2 )' ) &
               cell, df, layer+1, self%data( map( df ) + layer )
-          call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
+          call log_event( log_scratch_space, LOG_LEVEL_INFO )
         end do
       end do
     end do

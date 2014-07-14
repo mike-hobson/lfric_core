@@ -37,6 +37,45 @@ contains
     real(kind=dp) :: epsilon
     real(kind=dp), pointer, dimension(:,:) :: test_nodes
 
+    integer :: test_v0_dofmap_result_1,&
+               test_v0_dofmap_result_2
+
+    real(kind=dp) :: test_v0_basis_result, &
+                     test_v0_diff_basis_result
+
+    real(kind=dp) :: test_v0_nodal_coords_1, &
+                     test_v0_nodal_coords_2, &
+                     test_v0_nodal_coords_3
+
+    integer :: test_v1_dofmap_result_1,&
+               test_v1_dofmap_result_2
+
+    real(kind=dp) :: test_v1_basis_result, &
+                     test_v1_diff_basis_result
+
+    real(kind=dp) :: test_v1_nodal_coords_1, &
+                     test_v1_nodal_coords_2, &
+                     test_v1_nodal_coords_3
+
+    integer :: test_v2_dofmap_result_1,&
+               test_v2_dofmap_result_2
+
+    real(kind=dp) :: test_v2_basis_result, &
+                     test_v2_diff_basis_result
+
+    real(kind=dp) :: test_v2_nodal_coords_1, &
+                     test_v2_nodal_coords_2, &
+                     test_v2_nodal_coords_3
+
+    integer :: test_v3_dofmap_result_1,&
+               test_v3_dofmap_result_2
+
+    real(kind=dp) :: test_v3_basis_result, &
+                     test_v3_diff_basis_result
+
+    real(kind=dp) :: test_v3_nodal_coords_1, &
+                     test_v3_nodal_coords_2, &
+                     test_v3_nodal_coords_3
     
     ! set some sizes ...
     num_cells = 35
@@ -89,6 +128,48 @@ contains
        v3_dofmap(i,:) = i+64
     end do
 
+! Grab some of the contents of the module data for later testing
+! before it is moved into the function space 
+    test_v0_dofmap_result_1=v0_dofmap(0,1)
+    test_v0_dofmap_result_2=v0_dofmap(num_cells-2,1)
+
+    test_v0_basis_result=v0_basis(1,1,1,1)
+    test_v0_diff_basis_result=v0_diff_basis(1,1,1,1)
+
+    test_v0_nodal_coords_1=v0_nodal_coords(1,1)
+    test_v0_nodal_coords_2=v0_nodal_coords(2,1)
+    test_v0_nodal_coords_3=v0_nodal_coords(3,1)
+
+    test_v1_dofmap_result_1=v1_dofmap(0,1)
+    test_v1_dofmap_result_2=v1_dofmap(num_cells-2,1)
+
+    test_v1_basis_result=v1_basis(1,1,1,1)
+    test_v1_diff_basis_result=v1_diff_basis(1,1,1,1)
+
+    test_v1_nodal_coords_1=v1_nodal_coords(1,1)
+    test_v1_nodal_coords_2=v1_nodal_coords(2,1)
+    test_v1_nodal_coords_3=v1_nodal_coords(3,1)
+
+    test_v2_dofmap_result_1=v2_dofmap(0,1)
+    test_v2_dofmap_result_2=v2_dofmap(num_cells-2,1)
+
+    test_v2_basis_result=v2_basis(1,1,1,1)
+    test_v2_diff_basis_result=v2_diff_basis(1,1,1,1)
+
+    test_v2_nodal_coords_1=v2_nodal_coords(1,1)
+    test_v2_nodal_coords_2=v2_nodal_coords(2,1)
+    test_v2_nodal_coords_3=v2_nodal_coords(3,1)
+
+    test_v3_dofmap_result_1=v3_dofmap(0,1)
+    test_v3_dofmap_result_2=v3_dofmap(num_cells-2,1)
+
+    test_v3_basis_result=v3_basis(1,1,1,1)
+    test_v3_diff_basis_result=v3_diff_basis(1,1,1,1)
+
+    test_v3_nodal_coords_1=v3_nodal_coords(1,1)
+    test_v3_nodal_coords_2=v3_nodal_coords(2,1)
+    test_v3_nodal_coords_3=v3_nodal_coords(3,1)
+
 !v0
     v0_func_space = v0_func_space%get_instance(V0)
 
@@ -100,23 +181,23 @@ contains
     @assertEqual( num_unique_dofs, testundf )
 
     testmap => v0_func_space%get_cell_dofmap(0)
-    @assertEqual( v0_dofmap(0,1), testmap(1) )
+    @assertEqual( test_v0_dofmap_result_1, testmap(1) )
 
     testmap => v0_func_space%get_cell_dofmap(num_cells-2)    
-    @assertEqual( v0_dofmap(num_cells-2,1), testmap(1) )
+    @assertEqual( test_v0_dofmap_result_2, testmap(1) )
 
     epsilon = 1.0e-14
 
     test_basis => v0_func_space%get_basis( )
-    @assertEqual( v0_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+    @assertEqual( test_v0_basis_result , test_basis(1,1,1,1), epsilon )
 
     test_basis => v0_func_space%get_diff_basis()
-    @assertEqual( v0_diff_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+    @assertEqual( test_v0_diff_basis_result, test_basis(1,1,1,1), epsilon )
 
     test_nodes => v0_func_space%get_nodes( )
-    @assertEqual( v0_nodal_coords(1,1), test_nodes(1,1), epsilon )
-    @assertEqual( v0_nodal_coords(2,1), test_nodes(2,1), epsilon )
-    @assertEqual( v0_nodal_coords(3,1), test_nodes(3,1), epsilon )
+    @assertEqual( test_v0_nodal_coords_1, test_nodes(1,1), epsilon )
+    @assertEqual( test_v0_nodal_coords_2, test_nodes(2,1), epsilon )
+    @assertEqual( test_v0_nodal_coords_3, test_nodes(3,1), epsilon )
 
 !v1
     v1_func_space = v1_func_space%get_instance(V1)
@@ -128,24 +209,24 @@ contains
     testundf = v1_func_space%get_undf()
     @assertEqual( num_unique_dofs, testundf )
 
-    testmap => v1_func_space%get_cell_dofmap(1)
-    @assertEqual( v1_dofmap(1,1), testmap(1) )
+    testmap => v1_func_space%get_cell_dofmap(0)
+    @assertEqual( test_v1_dofmap_result_1, testmap(1) )
 
     testmap => v1_func_space%get_cell_dofmap(num_cells-2)    
-    @assertEqual( v1_dofmap(num_cells-2,1), testmap(1) )
+    @assertEqual( test_v1_dofmap_result_2, testmap(1) )
 
     epsilon = 1.0e-14
 
     test_basis => v1_func_space%get_basis( )
-    @assertEqual( v1_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+    @assertEqual( test_v1_basis_result, test_basis(1,1,1,1), epsilon )
 
     test_basis => v1_func_space%get_diff_basis()
-    @assertEqual( v1_diff_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+    @assertEqual( test_v1_diff_basis_result, test_basis(1,1,1,1), epsilon )
 
     test_nodes => v1_func_space%get_nodes( )
-    @assertEqual( v1_nodal_coords(1,1), test_nodes(1,1), epsilon )
-    @assertEqual( v1_nodal_coords(2,1), test_nodes(2,1), epsilon )
-    @assertEqual( v1_nodal_coords(3,1), test_nodes(3,1), epsilon )
+    @assertEqual( test_v1_nodal_coords_1, test_nodes(1,1), epsilon )
+    @assertEqual( test_v1_nodal_coords_2, test_nodes(2,1), epsilon )
+    @assertEqual( test_v1_nodal_coords_3, test_nodes(3,1), epsilon )
 
 !v2
     v2_func_space = v2_func_space%get_instance(V2)
@@ -157,24 +238,24 @@ contains
     testundf = v2_func_space%get_undf()
     @assertEqual( num_unique_dofs, testundf )
 
-    testmap => v2_func_space%get_cell_dofmap(1)
-    @assertEqual( v2_dofmap(1,1), testmap(1) )
+    testmap => v2_func_space%get_cell_dofmap(0)
+    @assertEqual( test_v2_dofmap_result_1, testmap(1) )
 
     testmap => v2_func_space%get_cell_dofmap(num_cells-2)    
-    @assertEqual( v2_dofmap(num_cells-2,1), testmap(1) )
+    @assertEqual( test_v2_dofmap_result_2, testmap(1) )
 
     epsilon = 1.0e-14
 
     test_basis => v2_func_space%get_basis( )
-    @assertEqual( v2_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+    @assertEqual( test_v2_basis_result, test_basis(1,1,1,1), epsilon )
 
     test_basis => v2_func_space%get_diff_basis()
-    @assertEqual( v2_diff_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+    @assertEqual( test_v2_diff_basis_result, test_basis(1,1,1,1), epsilon )
 
     test_nodes => v2_func_space%get_nodes( )
-    @assertEqual( v2_nodal_coords(1,1), test_nodes(1,1), epsilon )
-    @assertEqual( v2_nodal_coords(2,1), test_nodes(2,1), epsilon )
-    @assertEqual( v2_nodal_coords(3,1), test_nodes(3,1), epsilon )
+    @assertEqual( test_v2_nodal_coords_1, test_nodes(1,1), epsilon )
+    @assertEqual( test_v2_nodal_coords_2, test_nodes(2,1), epsilon )
+    @assertEqual( test_v2_nodal_coords_3, test_nodes(3,1), epsilon )
 
 !v3
     v3_func_space = v3_func_space%get_instance(V3)
@@ -186,41 +267,24 @@ contains
     testundf = v3_func_space%get_undf()
     @assertEqual( num_unique_dofs, testundf )
 
-    testmap => v3_func_space%get_cell_dofmap(1)
-    @assertEqual( v3_dofmap(1,1), testmap(1) )
+    testmap => v3_func_space%get_cell_dofmap(0)
+    @assertEqual( test_v3_dofmap_result_1, testmap(1) )
 
     testmap => v3_func_space%get_cell_dofmap(num_cells-2)    
-    @assertEqual( v3_dofmap(num_cells-2,1), testmap(1) )
+    @assertEqual( test_v3_dofmap_result_2, testmap(1) )
 
     epsilon = 1.0e-14
 
     test_basis => v3_func_space%get_basis( )
-    @assertEqual( v3_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+    @assertEqual( test_v3_basis_result, test_basis(1,1,1,1), epsilon )
 
     test_basis => v3_func_space%get_diff_basis()
-    @assertEqual( v3_diff_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+    @assertEqual( test_v3_diff_basis_result, test_basis(1,1,1,1), epsilon )
 
     test_nodes => v3_func_space%get_nodes( )
-    @assertEqual( v3_nodal_coords(1,1), test_nodes(1,1), epsilon )
-    @assertEqual( v3_nodal_coords(2,1), test_nodes(2,1), epsilon )
-    @assertEqual( v3_nodal_coords(3,1), test_nodes(3,1), epsilon )    
-
-    deallocate(v0_basis)
-    deallocate(v1_basis)
-    deallocate(v2_basis)
-    deallocate(v3_basis)
-    deallocate(v0_diff_basis)
-    deallocate(v1_diff_basis)
-    deallocate(v2_diff_basis)
-    deallocate(v3_diff_basis)
-    deallocate(v0_nodal_coords)
-    deallocate(v1_nodal_coords)
-    deallocate(v2_nodal_coords)
-    deallocate(v3_nodal_coords)
-    deallocate(v0_dofmap)
-    deallocate(v1_dofmap)
-    deallocate(v2_dofmap)
-    deallocate(v3_dofmap)
+    @assertEqual( test_v3_nodal_coords_1, test_nodes(1,1), epsilon )
+    @assertEqual( test_v3_nodal_coords_2, test_nodes(2,1), epsilon )
+    @assertEqual( test_v3_nodal_coords_3, test_nodes(3,1), epsilon )
 
   end subroutine test_func_space
 

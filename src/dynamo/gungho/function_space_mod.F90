@@ -32,16 +32,16 @@ type, public :: function_space_type
   integer              :: dim_space, dim_space_diff
   !> A two dimensional, allocatable array which holds the indirection map 
   !! or dofmap for the whole function space over the bottom level of the domain.
-  integer, pointer :: dofmap(:,:)
+  integer, allocatable :: dofmap(:,:)
   !> 4-dim allocatable array of reals which hold the values of the basis function
-  real(kind=dp), pointer :: basis(:,:,:,:)
+  real(kind=dp), allocatable :: basis(:,:,:,:)
   !> 4-dim allocatable array of reals which hold the values of the basis function
   !! for the differential  functions space
-  real(kind=dp), pointer :: diff_basis(:,:,:,:)
+  real(kind=dp), allocatable :: diff_basis(:,:,:,:)
 
   !> A two dimensional, allocatable array of reals which holds the coordinates
   !! of the function_space degrees of freedom
-  real(kind=dp), pointer :: nodal_coords(:,:)
+  real(kind=dp), allocatable :: nodal_coords(:,:)
 
 contains
   !final :: destructor
@@ -112,12 +112,12 @@ public get_ncell, get_cell_dofmap
 contains
 
 function get_instance(function_space) result(instance)
-  use basis_function_mod,         only : get_basis, &
+  use basis_function_mod,         only : &
               v0_basis, v1_basis, v2_basis, v3_basis, &
               v0_diff_basis, v1_diff_basis, v2_diff_basis, v3_diff_basis, &
               v0_nodal_coords, v1_nodal_coords, v2_nodal_coords, v3_nodal_coords
 
-  use dofmap_mod,                 only : get_dofmap, &
+  use dofmap_mod,                 only : &
               v0_dofmap, v1_dofmap, v2_dofmap, v3_dofmap
   use gaussian_quadrature_mod,    only : ngp_h, ngp_v
   use mesh_mod, only : num_cells, v_unique_dofs
@@ -211,9 +211,12 @@ subroutine init_function_space(self, &
   integer, intent(in) :: num_cells, num_dofs, num_unique_dofs
   integer, intent(in) :: dim_space, dim_space_diff
   integer, intent(in) :: ngp_h,ngp_v
-  integer, intent(in), target :: dofmap(0:,:)
-  real(kind=dp), intent(in), target :: basis(:,:,:,:), diff_basis(:,:,:,:)
-  real(kind=dp), intent(in), target :: nodal_coords(:,:)
+! The following four arrays have intent inout because the move_allocs in the
+! code need access to the arrays to free them in their original locations
+  integer, intent(inout), allocatable  :: dofmap(:,:)
+  real(kind=dp), intent(inout), allocatable  :: basis(:,:,:,:)
+  real(kind=dp), intent(inout), allocatable  :: diff_basis(:,:,:,:)
+  real(kind=dp), intent(inout), allocatable  :: nodal_coords(:,:)
 
   self%ncell           =  num_cells
   self%ndf             =  num_dofs
@@ -222,11 +225,10 @@ subroutine init_function_space(self, &
   self%dim_space_diff  =  dim_space_diff
   self%ngp_h           =  ngp_h
   self%ngp_v           =  ngp_v  
-  self%dofmap          => dofmap
-  self%basis           => basis
-  self%diff_basis      => diff_basis
-  self%nodal_coords    => nodal_coords
-  
+  call move_alloc(dofmap, self%dofmap)
+  call move_alloc(basis , self%basis)
+  call move_alloc(diff_basis , self%diff_basis)
+  call move_alloc(nodal_coords , self%nodal_coords) 
   return
 end subroutine init_function_space
 

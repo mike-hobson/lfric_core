@@ -22,12 +22,17 @@ module solver_mod
   use function_space_mod,      only : function_space_type
   use gaussian_quadrature_mod, only : gaussian_quadrature_type, GQ3
 
-  use psy,             only : invoke_inner_prod,                               &
-                              invoke_axpy, invoke_minus_field_data,            &
-                              invoke_copy_field_data, invoke_set_field_scalar, &
-                              invoke_w3_solver_kernel,                         &
-                              invoke_divide_field,                             &
-                              invoke_copy_scaled_field_data
+  use psy,             only : invoke_inner_prod,              &
+                              invoke_axpy,                    &
+                              invoke_minus_field_data,        &
+                              invoke_copy_field_data,         &
+                              invoke_set_field_scalar,        &
+                              invoke_w3_solver_kernel,        &
+                              invoke_divide_field,            &
+                              invoke_copy_scaled_field_data,  &
+                              invoke_matrix_vector_kernel_w0, &
+                              invoke_matrix_vector_kernel_w1, &
+                              invoke_matrix_vector_kernel_w2
   use argument_mod,    only : w0, w1, w2, w3
 
   implicit none
@@ -724,11 +729,11 @@ end subroutine gcr_solver_algorithm
 
     select case ( space )
       case ( w0 )
-        call invoke_matrix_vector_w0( Ax, x )
+        call invoke_matrix_vector_kernel_w0( Ax, x )
       case ( w1 )       
-        call invoke_matrix_vector_w1( Ax, x )
+        call invoke_matrix_vector_kernel_w1( Ax, x )
       case ( w2 )
-        call invoke_matrix_vector_w2( Ax, x )
+        call invoke_matrix_vector_kernel_w2( Ax, x )
     end select
 
     return

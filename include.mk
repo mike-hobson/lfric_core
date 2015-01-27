@@ -31,10 +31,6 @@ ifdef PE_ENV
     endif
 endif
 
-ifndef CPP
-	CPP = cpp
-endif
-
 ifndef FC
   $(info No compiler specified in $$FC)
   OS = $(shell uname -s)
@@ -59,9 +55,9 @@ EMPTY :=
 SPACE := $(EMPTY) # Comment to highlight space character.
 
 ifdef VERBOSE
-	Q :=
+    Q :=
 else
-	Q = @
+    Q = @
 endif
 
 -include $(ESMFMKFILE)
@@ -75,7 +71,7 @@ ifeq '$(COMPILER_NAME)' 'ifort'
   FFLAGS_COMPILER       = -xhost $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS)
   FFLAGS_OPTIMISATION   = -O0
   FFLAGS_DEBUG          = -g -traceback
-  FFLAGS_WARNINGS       = -warn all  -warn errors
+  FFLAGS_WARNINGS       = -warn all -warn errors
   FFLAGS_INIT           = -ftrapuv
   FFLAGS_RUNTIME        = -check all -fpe0
   FFLAGS_TESTS          = -assume realloc_lhs
@@ -104,7 +100,7 @@ else ifeq '$(COMPILER_NAME)' 'gfortran'
   FFLAGS_COMPILER       = $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS)
   FFLAGS_OPTIMISATION   = -O0 
   FFLAGS_DEBUG          = -g
-  FFLAGS_WARNINGS       = -Wall  -Werror
+  FFLAGS_WARNINGS       = -Wall -Werror
   FFLAGS_INIT           = -finit-integer=31173 -finit-real=snan \
                           -finit-logical=true -finit-character=85
   FFLAGS_RUNTIME        = -fcheck=all -ffpe-trap=invalid,zero,overflow,underflow
@@ -158,3 +154,5 @@ endif
 
 FFLAGS += $(FFLAGS_COMPILER) $(FFLAGS_OPTIMISATION) $(FFLAGS_DEBUG) \
           $(FFLAGS_WARNINGS) $(FFLAGS_INIT) $(FFLAGS_RUNTIME)
+
+export BUILD_DIR TOOL_DIR Q FCOM F_MOD_DESTINATION_ARG FFLAGS FFLAGS_TEST FC

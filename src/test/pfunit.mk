@@ -7,8 +7,8 @@
 
 CMAKE ?= cmake
 
-PFUNIT_SOURCE = $(abspath ../pfunit)
-PFUNIT_BUILD = $(BUILD_DIR)/pfunit
+PFUNIT_SOURCE_DIR = $(abspath ../pfunit)
+PFUNIT_BUILD_DIR = $(BUILD_DIR)/pfunit
 
 include $(ROOT)/include.mk
 
@@ -36,29 +36,26 @@ else
   $(error Unrecognised compiler "$(FC)")
 endif
 
-.PHONY: pfunit
-pfunit: $(PFUNIT_BUILD)/Makefile
-	@echo Building pFUnit
-	$(Q)$(MAKE) -C $(PFUNIT_BUILD)
-	$(Q)$(MAKE) -C $(PFUNIT_BUILD) tests install
-
-$(PFUNIT_BUILD)/Makefile: | $(PFUNIT_BUILD)
-	@echo Configuring pFUnit
-	$(Q)cd $(PFUNIT_BUILD); $(CMAKE) -DINSTALL_PATH=$(PFUNIT_INSTALL) \
-	                                 $(PFUNIT_SOURCE)
-
-$(PFUNIT_BUILD) $(dir $(DRIVER_OBJ) ):
-	@echo Creating $@
-	$(Q)mkdir $@
-
-$(PFUNIT_INSTALL)/include/driver.F90: pfunit
-
 DRIVER_DIR = $(dir $(DRIVER_OBJ))
 
-$(DRIVER_OBJ): $(PFUNIT_INSTALL)/include/driver.F90 $(DRIVER_DIR)testSuites.inc
+$(DRIVER_OBJ): $(PFUNIT_INSTALL_DIR)/include/driver.F90 $(DRIVER_DIR)testSuites.inc | $(DRIVER_DIR)
 	@echo Compiling $@
-	$(Q)$(FC) $(FFLAGS) -c -I$(PFUNIT_INSTALL)/mod -I$(DRIVER_DIR) \
+	$(Q)$(FC) $(FFLAGS) -c -I$(PFUNIT_INSTALL_DIR)/mod -I$(DRIVER_DIR) \
 	          -DBUILD_ROBUST -o $@ $<
+
+$(PFUNIT_INSTALL_DIR)/include/driver.F90: $(PFUNIT_BUILD_DIR)/Makefile
+	@echo Building pFUnit
+	$(Q)$(MAKE) -C $(PFUNIT_BUILD_DIR)
+	$(Q)$(MAKE) -C $(PFUNIT_BUILD_DIR) tests install
+
+$(PFUNIT_BUILD_DIR)/Makefile: | $(PFUNIT_BUILD_DIR)
+	@echo Configuring pFUnit
+	$(Q)cd $(PFUNIT_BUILD_DIR); $(CMAKE) -DINSTALL_PATH=$(PFUNIT_INSTALL_DIR) \
+	                                     $(PFUNIT_SOURCE_DIR)
+
+$(PFUNIT_BUILD_DIR) $(dir $(DRIVER_OBJ)):
+	@echo Creating $@
+	$(Q)mkdir $@
 
 ALL_TESTS = $(shell find . -name "*.pf")
 
@@ -79,5 +76,5 @@ ALWAYS:
 
 .PHONY: clean
 clean:
-	-rm -rf $(PFUNIT_BUILD)
-	-rm -rf $(PFUNIT_INSTALL)
+	-rm -rf $(PFUNIT_BUILD_DIR)
+	-rm -rf $(PFUNIT_INSTALL_DIR)

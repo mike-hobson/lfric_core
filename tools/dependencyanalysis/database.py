@@ -30,21 +30,23 @@ class Dependencies():
     #   filename - The filename of the database.
     #
     def __init__( self, filename ):
-        self._database = sqlite3.connect( filename )
+        self._database = sqlite3.connect( filename, timeout=5.0 )
 
-        self._database.isolation_level = None
+        self._database.isolation_level = 'EXCLUSIVE'
         self._database.row_factory     = sqlite3.Row
 
-        # No need to make these changes a transaction. It doesn't matter if
-        # another request occurs in their midst.
-        cursor = self._database.cursor()
-        cursor.execute( 'CREATE TABLE IF NOT EXISTS provides' \
-                        + ' (file TEXT NOT NULL, program_unit TEXT NOT NULL)' )
-        cursor.execute( 'CREATE TABLE IF NOT EXISTS dependencies' \
-                        + '(dependor TEXT NOT NULL, dependee TEXT NOT NULL)' )
-        cursor.execute( 'CREATE TABLE IF NOT EXISTS programs' \
-                        + '(name TEXT PRIMARY KEY)' )
+        with self._database:
+            self._database.executescript( '''
+CREATE TABLE IF NOT EXISTS provides (file TEXT NOT NULL, program_unit TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS dependencies (dependor TEXT NOT NULL, dependee TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS programs (name TEXT PRIMARY KEY);
+                                          ''' )
 
+    ###########################################################################
+    # Destructor.
+    #
+    def __del__( self ):
+        self._database.close()
 
     ###########################################################################
     # Remove a source file from the database.
@@ -55,17 +57,12 @@ class Dependencies():
     def removeSourceFile( self, filename ):
         # These changes are made a transaction so that the file is removed, or
         # it isn't. No other query can find the database inconsistent.
-        cursor = self._database.cursor()
-        cursor.execute( 'BEGIN TRANSACTION' )
-        cursor.execute( 'DELETE FROM dependencies WHERE ' \
-                        + '(SELECT  program_unit AS dependor FROM provides WHERE file = ?) ', \
-                        [filename] )
-        cursor.execute( 'DELETE FROM programs WHERE ' \
-                        + '(SELECT program_unit AS dependor FROM provides WHERE file = ?)', \
-                        [filename] )
-        cursor.execute( 'DELETE FROM provides WHERE file = ?', \
-                        [filename] )
-        cursor.execute( 'COMMIT TRANSACTION' )
+        with self._database:
+            self._database.executescript( '''
+DELETE FROM dependencies WHERE (SELECT  program_unit AS dependor FROM provides WHERE file = "{filename}");
+DELETE FROM programs WHERE (SELECT program_unit AS dependor FROM provides WHERE file = "{filename}");
+DELETE FROM provides WHERE file = "{filename}";
+                                          '''.format( filename=filename ) )
 
     ###########################################################################
     # Add a program to the database.
@@ -77,13 +74,12 @@ class Dependencies():
     def addProgram( self, name, filename ):
         # Changes are transacted to ensure other processes can't find the
         # database with half a program.
-        cursor = self._database.cursor()
-        cursor.execute( 'BEGIN TRANSACTION' )
-        cursor.execute( 'INSERT INTO provides VALUES ( ?, ? )', \
-                        [filename, name] )
-        cursor.execute( 'INSERT OR REPLACE INTO programs VALUES ( ? )', \
-                        [name] )
-        cursor.execute( 'COMMIT TRANSACTION' )
+        with self._database:
+            self._database.executescript( '''
+INSERT INTO provides VALUES ( "{filename}", "{name}" );
+INSERT OR REPLACE INTO programs VALUES ( "{name}" );
+                                          '''.format( filename=filename, \
+                                                      name=name ) )
 
     ###########################################################################
     # Add a module to the database.
@@ -93,9 +89,9 @@ class Dependencies():
     #   filename - The source file in which the modules was found.
     #
     def addModule( self, name, filename ):
-        cursor = self._database.cursor()
-        cursor.execute( 'INSERT INTO provides VALUES ( ?, ? )', \
-                        [filename, name] )
+        with self._database:
+            self._database.execute( 'INSERT INTO provides VALUES ( ?, ? )', \
+                                    [filename, name] )
 
     ###########################################################################
     # Add a dependency to the database.
@@ -105,9 +101,9 @@ class Dependencies():
     #   dependee - The module depended on by a module.
     #
     def addDependency( self, dependor, dependee ):
-        cursor = self._database.cursor()
-        cursor.execute( 'INSERT INTO dependencies VALUES ( ?, ? )', \
-                        [dependor, dependee] )
+        with self._database:
+            self._database.execute( 'INSERT INTO dependencies VALUES ( ?, ? )', \
+                                    [dependor, dependee] )
 
     ###########################################################################
     # Get a list of dependencies for a source file.
@@ -119,9 +115,9 @@ class Dependencies():
     #
     def getDependencySources( self, filename ):
         cursor = self._database.cursor()
-        cursor.execute( 'SELECT DISTINCT p.file AS dependent_file, dp.file AS dependee_file, d.dependee AS dependee FROM dependencies AS d, provides AS p, provides as dp' \
-                        + ' WHERE p.file = ? AND d.dependor = p.program_unit AND dp.program_unit = d.dependee ORDER BY d.dependee', \
-                        [filename] )
+        self._database.execute( 'SELECT DISTINCT p.file AS dependent_file, dp.file AS dependee_file, d.dependee AS dependee FROM dependencies AS d, provides AS p, provides as dp' \
+                                + ' WHERE p.file = ? AND d.dependor = p.program_unit AND dp.program_unit = d.dependee ORDER BY d.dependee', \
+                                    [filename] )
 
         for row in cursor.fetchall():
             yield row

@@ -9,14 +9,17 @@ IGNORE_DEPENDENCIES = netcdf
 EXTERNAL_LIBRARIES = netcdff
 
 export ROOT = ../..
+
 include $(ROOT)/include.mk
-export PFUNIT_INSTALL = $(BUILD_DIR)/pfunit-install
+
+PFUNIT_INSTALL_DIR = $(BUILD_DIR)/pfunit-install
 
 SPECIAL_FFLAGS := $(filter-out -Werror,$(FFLAGS)) # pFUnit isn't that well put together
 
 OBJ_DIR = $(BUILD_DIR)/tests
 OBJ_SUBDIRS = $(patsubst %,$(OBJ_DIR)/%,$(shell find * -type d))
-export DRIVER_OBJ=$(OBJ_DIR)/driver.o
+
+DRIVER_OBJ=$(OBJ_DIR)/driver.o
 
 TEST_SOURCES = $(shell find -name "*.pf")
 TEST_OBJECTS = $(patsubst %.pf,$(OBJ_DIR)/%.o,$(TEST_SOURCES))
@@ -29,19 +32,19 @@ SUBJECT_SUBDIRS = $(shell find $(SUBJECT_DIR) -type d)
 SUBJECT_MODINC  = $(patsubst %,-I %,$(SUBJECT_SUBDIRS))
 
 .PHONY: test
-test: $(OBJ_DIR)/test | pfunit
+test: $(OBJ_DIR)/test
 	$(Q)$(OBJ_DIR)/test -robust
 
 .PRECIOUS: $(OBJ_DIR)/%.F90
-$(OBJ_DIR)/%.F90: %.pf | $(OBJ_DIR) $(OBJ_SUBDIRS)
+$(OBJ_DIR)/%.F90: %.pf | $(OBJ_DIR) $(OBJ_SUBDIRS) $(DRIVER_OBJ)
 	@echo Generating $@
-	$(Q)$(PFUNIT_INSTALL)/bin/pFUnitParser.py $< $@
+	$(Q)$(PFUNIT_INSTALL_DIR)/bin/pFUnitParser.py $< $@
 
 $(OBJ_DIR)/%.o: $(OBJ_DIR)/%.F90
 	@echo Compiling $<
 	$(Q)$(FC) $(FPPFLAGS) $(SPECIAL_FFLAGS) $(FFLAGS_TESTS) \
 	          $(F_MOD_DESTINATION_ARG)$(OBJ_DIR)/$(dir $@) \
-	          $(SUBJECT_MODINC) -I$(PFUNIT_INSTALL)/mod \
+	          $(SUBJECT_MODINC) -I$(PFUNIT_INSTALL_DIR)/mod \
 	          -c -o $@ $<
 
 $(OBJ_DIR)/test: $(DRIVER_OBJ) $(SUPPORT_OBJECTS) $(TEST_OBJECTS)
@@ -49,7 +52,7 @@ $(OBJ_DIR)/test: $(DRIVER_OBJ) $(SUPPORT_OBJECTS) $(TEST_OBJECTS)
 	$(Q)$(FLINK) $(FLDFLAGS) -o $@ \
 	             $^ \
 	             $(SUBJECT_DIR)/modules.a \
-	             $(PFUNIT_INSTALL)/lib/libpfunit.a \
+	             $(PFUNIT_INSTALL_DIR)/lib/libpfunit.a \
 	             $(patsubst %,-l%,$(EXTERNAL_LIBRARIES))
 
 # Replace OBJ_SUBDIR with mangling of % ?
@@ -61,16 +64,16 @@ $(OBJ_DIR)/%.o: %.f90 | $(OBJ_SUBDIRS)
 	$(FC) $(FPPFLAGS) $(F_MOD_DESTINATION_ARG)$(OBJ_DIR)/$(dir $@) \
 	      $(SUBJECT_MODINC) -c -o $@ $<
 
-$(DRIVER_OBJ):
-	$(MAKE) -f pfunit.mk $(DRIVER_OBJ)
+$(DRIVER_OBJ): | $(dir $(DRIVER_OBJ))
+	$(MAKE) -f pfunit.mk PFUNIT_INSTALL_DIR=$(PFUNIT_INSTALL_DIR) \
+	                     DRIVER_OBJ=$@
 
 $(OBJ_DIR) $(OBJ_SUBDIRS):
 	@echo "Creating $@"
 	$(Q)mkdir -p $@
 
-.PHONY: pfunit
-pfunit:
-	$(MAKE) -f pfunit.mk pfunit
+.PHONY: ALWAYS
+ALWAYS:
 
 .PHONY: clean
 clean:

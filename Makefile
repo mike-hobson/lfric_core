@@ -6,16 +6,12 @@
 ##############################################################################
 
 .PHONY: test
-test: all
+test: build
 	$(MAKE) -C src/test
 
-.PHONY: all
-all:
+.PHONY: build
+build:
 	$(MAKE) -C src/dynamo
-
-.PHONY: run
-run: test
-	$(MAKE) -C run
 
 .PHONY: doc docs
 doc docs:

@@ -104,11 +104,11 @@
 
     [[compile_with_{{name}}]]
         inherit = None, REMOTE, {{compiler}}
-        command scripting = "make -C $SOURCE_DIRECTORY all"
+        command scripting = "make -C $SOURCE_DIRECTORY build -j 4"
 
     [[unit_test_with_{{name}}]]
         inherit = None, REMOTE, {{compiler}}
-        command scripting = "make -C $SOURCE_DIRECTORY test"
+        command scripting = "make -C $SOURCE_DIRECTORY -j 4 test"
 
     [[run_{{name}}_dynamo]]
         inherit = None, REMOTE, {{compiler}}

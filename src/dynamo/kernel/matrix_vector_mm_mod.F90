@@ -7,10 +7,7 @@
 !
 !-------------------------------------------------------------------------------
 
-!> @brief Provides access to the members of the W2_solver_kernel  
-
-!> @details Accessor functions for the W2_solver_kernel class are defined in this module.
-
+!> @brief Provides access to the members of the matrix-vector mass matrix kernel
 module matrix_vector_mm_mod
 use argument_mod,            only : arg_type,                              &
                                     GH_READ, GH_INC, W2, FE, CELLS 

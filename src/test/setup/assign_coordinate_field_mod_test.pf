@@ -6,7 +6,7 @@
 !-------------------------------------------------------------------------------
 !
 !-------------------------------------------------------------------------------
-module assign_coordinate_kernel_mod_test
+module assign_coordinate_field_mod_test
   implicit none 
 
 contains
@@ -14,14 +14,14 @@ contains
   @test
   subroutine test_of_assign_coordinate()
     use pFUnit_Mod
-    use assign_coordinate_kernel_mod, only : assign_coordinate_code
+    use assign_coordinate_field_mod, only : assign_coordinate
     use constants_mod,                only : r_def
     
     implicit none
-
+    
     real(kind=r_def) :: tol, one
     
-    integer :: nlayers, ndf, nverts, i
+    integer :: nlayers, ndf, nverts, i, undf
     integer :: map(1)
     real(kind=r_def) :: x(1),y(1),z(1)
     real(kind=r_def) :: vertices_phys(3,8,1), vertices_comp(8,3), nodal_coord(3,1)
@@ -30,6 +30,7 @@ contains
     ndf     = 1
     nverts  = 8
     map(1)  = 1
+    undf = 1
     
     vertices_phys(1,:,1) = (/ 0.0_r_def, 2.0_r_def, 2.0_r_def, 0.0_r_def, 0.0_r_def, 2.0_r_def, 2.0_r_def, 0.0_r_def /)
     vertices_phys(2,:,1) = (/ 0.0_r_def, 0.0_r_def, 2.0_r_def, 2.0_r_def, 0.0_r_def, 0.0_r_def, 2.0_r_def, 2.0_r_def /)
@@ -44,7 +45,7 @@ contains
     
     nodal_coord(:,1) = (/ 0.5_r_def, 0.5_r_def, 0.5_r_def /)
     
-    call assign_coordinate_code(nlayers,ndf,nverts,map,x,y,z, &
+    call assign_coordinate(nlayers,ndf,nverts,undf,map,x,y,z, &
                                   vertices_phys,nodal_coord,vertices_comp)
     
     
@@ -55,5 +56,5 @@ contains
     @assertEqual( one, z(1), tol ) 
 
   end subroutine test_of_assign_coordinate
-
-end module assign_coordinate_kernel_mod_test
+  
+end module assign_coordinate_field_mod_test

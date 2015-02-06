@@ -27,6 +27,7 @@ program dynamo
   use field_mod,               only : field_type
   use function_space_mod,      only : function_space_type, W0, W1, W2, W3
   use set_up_mod,              only : set_up
+  use assign_coordinate_field_mod, only : assign_coordinate_field
   use field_io_mod,            only : write_state_netcdf                      &
                                     , write_state_plain_text
   use mesh_mod,                only : total_ranks, local_rank
@@ -132,6 +133,9 @@ program dynamo
   state(1) = theta
   call write_state_netcdf( n_fields, state, 'field_before.nc' )
   deallocate(state)
+
+  call log_event( "Dynamo: computing W0 coordinate fields", LOG_LEVEL_INFO )
+  call assign_coordinate_field( chi )
 
   call dynamo_algorithm_rk_timestep( chi, u, rho, theta, exner, xi)
 

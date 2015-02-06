@@ -154,57 +154,6 @@ contains
 
   end subroutine invoke_matrix_vector_mm
   
-
-!-------------------------------------------------------------------------------  
-!> Invoke_assign_coordinate_kernel: Invoke the projection of coordinate into a vspace  
-  subroutine invoke_assign_coordinate_kernel( chi )
-
-    use assign_coordinate_kernel_mod, only : assign_coordinate_code
-    use reference_element_mod,        only : nverts, x_vert
-    use mesh_generator_mod,           only : get_cell_coords
-
-    implicit none
-
-    type( field_type ), intent( in ) :: chi(3)
-
-    type( field_proxy_type)          :: chi_proxy(3)
-
-    integer :: cell
-    integer, pointer :: map(:) => null()
-    real(kind=r_def), pointer      :: dof_coords(:,:) => null()
-    real(kind=r_def), allocatable  :: vert_coords(:,:,:)
-    
-    chi_proxy(1) = chi(1)%get_proxy()
-    chi_proxy(2) = chi(2)%get_proxy()
-    chi_proxy(3) = chi(3)%get_proxy()
-
-    ! Unpack data
-    
-    allocate( vert_coords(3,nverts,chi_proxy(1)%vspace%get_nlayers() ) )
-
-    dof_coords => chi_proxy(1)%vspace%get_nodes( )
-    do cell = 1,chi_proxy(1)%vspace%get_ncell()
-       map => chi_proxy(1)%vspace%get_cell_dofmap( cell )
-       call get_cell_coords(cell, &
-                            chi_proxy(1)%vspace%get_ncell(), &
-                            chi_proxy(1)%vspace%get_nlayers(), &
-                            vert_coords)
-       
-       call assign_coordinate_code( chi_proxy(1)%vspace%get_nlayers(), &
-                                    chi_proxy(1)%vspace%get_ndf( ), &
-                                    nverts, &
-                                    map, &
-                                    chi_proxy(1)%data, &
-                                    chi_proxy(2)%data, &
-                                    chi_proxy(3)%data, &                                       
-                                    vert_coords, &                                    
-                                    dof_coords, &
-                                    x_vert &
-                                        )                                     
-    end do
-
-  end subroutine invoke_assign_coordinate_kernel
-  
 !-------------------------------------------------------------------------------  
 !> Invoke_initial_theta_kernel: Invoke the theta initialisation
   subroutine invoke_initial_theta_kernel( theta, chi )

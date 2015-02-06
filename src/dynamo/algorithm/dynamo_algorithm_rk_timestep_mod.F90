@@ -16,8 +16,7 @@ module dynamo_algorithm_rk_timestep_mod
                            log_scratch_space, &
                            LOG_LEVEL_INFO,    &
                            LOG_LEVEL_TRACE
-  use psy,           only: invoke_assign_coordinate_kernel,                  &
-                           invoke_initial_theta_kernel,                      &
+  use psy,           only: invoke_initial_theta_kernel,                      &
                            invoke_calc_exner_kernel,                         &
                            invoke_rtheta_kernel,                             &
                            invoke_ru_kernel,                                 &
@@ -120,8 +119,6 @@ contains
     !generator may parse and do its stuff.
 
     ! initialise
-    call log_event( "Dynamo: computing W0 coordinate fields", LOG_LEVEL_INFO )
-    call invoke_assign_coordinate_kernel( chi )
 
     ! Construct initial conditions
     call log_event( "Dynamo: computing initial fields", LOG_LEVEL_INFO )

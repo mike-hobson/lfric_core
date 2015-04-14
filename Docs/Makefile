@@ -6,24 +6,26 @@
 ##############################################################################
 
 DESIGN_DOCUMENTS = formulation/dynamo_formulation.lyx glossary/Glossary.lyx
-DESIGN_OUTPUTS = $(patsubst %.lyx,%.pdf,$(LYX_DOCUMENTS))
+DESIGN_OUTPUTS = $(patsubst %.lyx,%.pdf,$(DESIGN_DOCUMENTS))
 
 DOXYGEN ?= doxygen
 
 TOP := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
-$(info $(TOP))
+$(info ** TEXINPUTS = $(TOP))
 
 .PHONY: most
 most: api design
 
 .PHONY: api
 api:
+	echo Building API documentation
 	$(DOXYGEN) Doxyfile
 
 .PHONY: design
 design: $(DESIGN_OUTPUTS)
 
 %.pdf: %.lyx
+	echo Building $@
 	env TEXINPUTS=$(TOP)/tex//: lyx -e pdf $<
 
 .PHONY: gource

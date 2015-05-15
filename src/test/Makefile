@@ -10,11 +10,12 @@ EXTERNAL_LIBRARIES = netcdff esmf
 
 export ROOT = ../..
 
-include $(ROOT)/include.mk
+include $(ROOT)/make/include.mk
+include $(MAKE_DIR)/compiler.mk
+include $(MAKE_DIR)/fortran/$(FORTRAN_COMPILER).mk
+include $(MAKE_DIR)/mpi_link.mk
 
 PFUNIT_INSTALL_DIR = $(BUILD_DIR)/pfunit-install
-
-SPECIAL_FFLAGS := $(filter-out -Werror,$(FFLAGS)) # pFUnit isn't that well put together
 
 OBJ_DIR = $(BUILD_DIR)/tests
 OBJ_SUBDIRS = $(patsubst %,$(OBJ_DIR)/%,$(filter-out data,$(shell find * -type d)))
@@ -32,29 +33,31 @@ SUBJECT_DIR     = $(BUILD_DIR)/dynamo
 SUBJECT_SUBDIRS = $(shell find $(SUBJECT_DIR) -type d)
 SUBJECT_MODINC  = $(patsubst %,-I%,$(SUBJECT_SUBDIRS))
 
+export PFUNIT_INSTALL_DIR
+
 .PHONY: test
 test: $(OBJ_DIR)/test
 	$(Q)cd $(OBJ_DIR); ./test -robust
 
 .PRECIOUS: $(OBJ_DIR)/%.F90
 $(OBJ_DIR)/%.F90: %.pf | $(OBJ_DIR) $(OBJ_SUBDIRS) $(DRIVER_OBJ)
-	@echo Generating $@
+	@echo -e $(VT_BOLD)Generating$(VT_RESET) $@
 	$(Q)$(PFUNIT_INSTALL_DIR)/bin/pFUnitParser.py $< $@
 
 $(OBJ_DIR)/%.o: $(OBJ_DIR)/%.F90 $(SUPPORT_OBJECTS)
-	@echo Compiling $<
-	$(Q)$(FC) $(FPPFLAGS) $(SPECIAL_FFLAGS) $(FFLAGS_TESTS) \
+	@echo -e $(VT_BOLD)Compiling$(VT_RESET) $<
+	$(Q)$(FC) $(FPPFLAGS) $(FFLAGS) \
 	          $(F_MOD_DESTINATION_ARG)$(OBJ_DIR)/$(dir $@) \
 	          $(SUBJECT_MODINC) $(SUPPORT_MODINC) \
 	          -I$(PFUNIT_INSTALL_DIR)/mod -c -o $@ $<
 
 $(OBJ_DIR)/test: $(DRIVER_OBJ) $(SUPPORT_OBJECTS) $(TEST_OBJECTS) $(SUBJECT_DIR)/modules.a
-	@echo Linking $@
-	$(Q)$(FLINK) $(FLDFLAGS) -o $@ \
-	             $^ \
-	             $(SUBJECT_DIR)/modules.a \
-	             $(PFUNIT_INSTALL_DIR)/lib/libpfunit.a \
-	             $(patsubst %,-l%,$(EXTERNAL_LIBRARIES))
+	@echo -e $(VT_BOLD)Linking$(VT_RESET) $@
+	$(Q)$(MPI_LD) $(LDFLAGS) $(LDFLAGS_FORTRAN) -o $@ \
+	              $^ \
+	              $(SUBJECT_DIR)/modules.a \
+	              $(PFUNIT_INSTALL_DIR)/lib/libpfunit.a \
+	              $(patsubst %,-l%,$(EXTERNAL_LIBRARIES))
 
 # Replace OBJ_SUBDIR with mangling of % ?
 $(OBJ_DIR)/%.o: %.F90 | $(OBJ_DIR)/data $(OBJ_SUBDIRS)
@@ -66,15 +69,14 @@ $(OBJ_DIR)/%.o: %.f90 | $(OBJ_DIR)/data $(OBJ_SUBDIRS)
 	      $(SUBJECT_MODINC) $(SUPPORT_MODINC) -c -o $@ $<
 
 $(DRIVER_OBJ): | $(dir $(DRIVER_OBJ))
-	$(MAKE) -f pfunit.mk PFUNIT_INSTALL_DIR=$(PFUNIT_INSTALL_DIR) \
-	                     DRIVER_OBJ=$@
+	$(MAKE) -f pfunit.mk DRIVER_OBJ=$@
 
 $(OBJ_DIR)/data: data
 	@echo Copying data directory
 	$(Q)cp -r $< $@
 
-$(OBJ_DIR) $(OBJ_SUBDIRS):
-	@echo "Creating $@"
+$(OBJ_DIR) $(OBJ_SUBDIRS) $(dir $(DRIVER_OBJ)):
+	@echo -e $(VT_BOLD)Creating$(VT_RESET) $@
 	$(Q)mkdir -p $@
 
 .PHONY: ALWAYS

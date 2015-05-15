@@ -7,9 +7,11 @@
 
 AR ?= ar
 
+ROOT     = ../..
 BIN_DIR  = $(ROOT)/bin
 DATABASE = $(OBJ_DIR)/dependencies.db
 
+include $(ROOT)/make/include.mk
 include $(OBJ_DIR)/programs.mk $(OBJ_DIR)/dependencies.mk
 
 # Extract the program names from the program objects:
@@ -46,7 +48,7 @@ applications: $(patsubst %,$(BIN_DIR)/%,$(PROGRAMS))
 modules: $(OBJ_DIR)/modules.a
 
 $(BIN_DIR)/%: $(OBJ_DIR)/%.x | $(BIN_DIR)
-	@echo "Installing $@"
+	@echo -e $(VT_BOLD)Installing\$(VT_RESET) $@
 	$(Q)cp $(OBJ_DIR)/$(notdir $@).x $@
 
 # Directories
@@ -58,7 +60,7 @@ SUBDIRS = $(shell find * -type d -prune)
 OBJ_SUBDIRS = $(patsubst %,$(OBJ_DIR)/%/,$(SUBDIRS))
 
 $(BIN_DIR) $(OBJ_DIR):
-	@echo "Creating $@"
+	@echo -e $(VT_BOLD)Creating$(VT_RESET) $@
 	$(Q)mkdir -p $@
 
 # Build Rules
@@ -67,14 +69,14 @@ $(BIN_DIR) $(OBJ_DIR):
 INCLUDE_ARGS = -I$(OBJ_DIR) $(patsubst %, -I$(OBJ_DIR)/%, $(SUBDIRS))
 
 $(OBJ_DIR)/%.o $(OBJ_DIR)/%.mod: %.F90 | $(OBJ_DIR)
-	@echo "Compile $<"
-	$(Q)$(FC) $(CPPFLAGS) $(FFLAGS) \
+	@echo -e \$(VT_BOLD)Compile$(VT_RESET) $<
+	$(Q)$(FC) $(FPPFLAGS) $(FFLAGS) \
 	          $(F_MOD_DESTINATION_ARG)$(OBJ_DIR)/$(dir $@) \
 	          $(INCLUDE_ARGS) -c -o $(basename $@).o $<
 
 $(OBJ_DIR)/%.o $(OBJ_DIR)/%.mod: %.f90 | $(OBJ_DIR)
-	@echo "Compile $<"
-	$(Q)$(FC) $(CPPFLAGS) $(FFLAGS) \
+	@echo -e \$(VT_BOLD)Compile$(VT_RESET) $<
+	$(Q)$(FC) $(FPPFLAGS) $(FFLAGS) \
 	          $(F_MOD_DESTINATION_ARG)$(OBJ_DIR)/$(dir $@) \
 	          $(INCLUDE_ARGS) -c -o $(basename $@).o $<
 
@@ -82,11 +84,11 @@ $(OBJ_DIR)/modules.a: $(ALL_MODULES)
 	$(Q)$(AR) -r $@ $^
 
 $(OBJ_DIR)/%.x: $$($$(shell echo $$* | tr a-z A-Z)_OBJS)
-	@echo "Linking $@"
-	$(Q)$(FLINK) $(FLDFLAGS) -o $@ \
-	             $(patsubst %,-l%,$(EXTERNAL_DYNAMIC_LIBRARIES)) \
-	             $^ \
-	             $(patsubst %,-l%,$(EXTERNAL_STATIC_LIBRARIES))
+	@echo -e \$(VT_BOLD)Linking$(VT_RESET) $@
+	$(Q)$(MPI_LD) $(LDFLAGS) -o $@ \
+	              $(patsubst %,-l%,$(EXTERNAL_DYNAMIC_LIBRARIES)) \
+	              $^ \
+	              $(patsubst %,-l%,$(EXTERNAL_STATIC_LIBRARIES))
 
 # Dependencies
 

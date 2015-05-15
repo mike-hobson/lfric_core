@@ -6,52 +6,54 @@
 ##############################################################################
 
 export IGNORE_DEPENDENCIES = netcdf MPI ESMF
-export EXTERNAL_DYNAMIC_LIBRARIES = netcdf netcdff netcdf_c++ esmf
-export EXTERNAL_STATIC_LIBRARIES = 
+export EXTERNAL_DYNAMIC_LIBRARIES = netcdff esmf
+export EXTERNAL_STATIC_LIBRARIES =
 
 export ROOT = ../..
 
-include $(ROOT)/include.mk
-
-ifdef GFORTRAN_VERSION
-  ifeq ($(shell test $(GFORTRAN_VERSION) -lt 040601; echo $$?), 0)
-    $(error GFortran is too old. Must be at least 4.6.1)
-  endif
-endif
+include $(ROOT)/make/include.mk
+include $(MAKE_DIR)/compiler.mk
+include $(MAKE_DIR)/fortran/$(FORTRAN_COMPILER).mk
+include $(MAKE_DIR)/mpi_link.mk
+include make/fortran/$(FORTRAN_COMPILER).mk
 
 OBJ_DIR = $(BUILD_DIR)/dynamo
 
+LDFLAGS += $(FFLAGS_COMPILER)
+ifdef CRAY_ENVIRONMENT
+  LDFLAGS += -dynamic
+endif
+FFLAGS += $(FFLAGS_COMPILER) $(FFLAGS_WARNINGS)
+
 ifeq ($(OPTIMISATION),NONE)
-  export FFLAGS += $(FFLAGS_NO_OPTIMISATION)
+  FFLAGS += $(FFLAGS_NO_OPTIMISATION)
 else ifeq ($(OPTIMISATION),SAFE)
-  export FFLAGS += $(FFLAGS_SAFE_OPTIMISATION)
+  FFLAGS += $(FFLAGS_SAFE_OPTIMISATION)
 else ifeq ($(OPTIMISATION),RISKY)
-  export FFLAGS += $(FFLAGS_RISKY_OPTIMISATION)
+  FFLAGS += $(FFLAGS_RISKY_OPTIMISATION)
 endif
 
 ifeq ($(SYMBOLS),YES)
-  export FFLAGS += $(FFLAGS_DEBUG)
+  FFLAGS += $(FFLAGS_DEBUG)
 endif
 
 ifeq ($(CHECKS),YES)
-  export FFLAGS += $(FFLAGS_INIT) $(FFLAGS_RUNTIME)
+  FFLAGS += $(FFLAGS_INIT) $(FFLAGS_RUNTIME)
 endif
 
--include $(ESMFMKFILE)
-export FFLAGS += $(ESMF_F90COMPILEPATHS)
+export OBJ_DIR TOOL_DIR F_MOD_DESTINATION_ARG FFLAGS MPI_LD LDFLAGS
 
 .PHONY: all
 all: modules
 
 .PHONY: modules
 modules: applications
-	$(MAKE) -f dynamo.mk modules OBJ_DIR=$(OBJ_DIR) TOOL_DIR=$(TOOL_DIR)
+	$(MAKE) -f dynamo.mk modules
 
 .PHONY: applications
 applications:
-	$(MAKE) -f dynamo.mk applications OBJ_DIR=$(OBJ_DIR) \
-	                                  TOOL_DIR=$(TOOL_DIR)
+	$(MAKE) -f dynamo.mk applications
 
 .PHONY: clean
 clean:
-	$(MAKE) -f dynamo.mk clean OBJ_DIR=$(OBJ_DIR)
+	$(MAKE) -f dynamo.mk clean

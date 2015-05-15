@@ -4,6 +4,7 @@
 {% set module_setup_script = "/data/cr1/mhambley/modules/setup" %}
 
 {% set environment_commands = "source " + module_setup_script + "; module load environment/dynamo/base" %}
+{% set display_environment = "module list 2>&1" %}
 
 [cylc]
     UTC mode = True 
@@ -92,7 +93,8 @@
     [[{{family}}_ENVIRONMENT]]
         inherit = LOCATIONS
         pre-command scripting = """
-{{ environment_commands }}
+                                {{ environment_commands }}
+                                {{ display_environment }}
                                 """
         [[[environment]]]
             SOURCE_DIRECTORY      = $SOURCE_ROOT/{{label}}
@@ -139,8 +141,9 @@
     [[{{family}}_COMPILER]]
         inherit = {{family}}_ENVIRONMENT
         pre-command scripting = """
-{{ environment_commands }}
+                                {{ environment_commands }}
                                 module load environment/dynamo/compiler/{{compiler}}/{{version}}
+                                {{ display_environment }}
                                 """
         [[[environment]]]
             COMPILER              = {{compiler}}

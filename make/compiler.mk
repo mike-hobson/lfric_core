@@ -1,0 +1,70 @@
+##############################################################################
+# (c) The copyright relating to this work is owned jointly by the Crown,
+# Met Office and NERC 2014. However, it has been created with the help of the
+# GungHo Consortium, whose members are identified at
+# https://puma.nerc.ac.uk/trac/GungHo/wiki
+##############################################################################
+# Identify the compiler and bring in the correct specifics.
+# This file is intended to be "include"d from other make files.
+#
+$(info Make version $(MAKE_VERSION))
+ifeq ($(filter else-if,$(value .FEATURES)),)
+  $(error The build system requires else-if support from GMake)
+endif
+
+EMPTY :=
+SPACE := $(EMPTY) # Comment to highlight space character.
+
+# Identify the Fortran compiler
+#
+ifneq ($(origin FC),default)
+
+  FORTRAN_COMPILER := $(shell basename $(FC))
+  # Some compiler names are sometimes extended so we special-case them.
+  ifeq ( $(findstring gfortran,$(FORTRAN_COMPILER)), gfortran )
+    FORTRAN_COMPILER = gfortran
+  else ifeq ( $(findstring xlf,$(FORTRAN_COMPILER)), xlf )
+    FORTRAN_COMPILER = xlf
+  endif
+
+else # FC not defined
+
+  $(info No Fortran compiler specified in $$FC)
+
+  ifeq '$(OS)' 'Linux'
+    ifeq '$(MACHINE)' 'x86_64'
+      FC = ifort
+      FORTRAN_COMPILER = ifort
+    else
+      $(error Unrecognised processor: $(MACHINE))
+    endif
+  else ifeq '$(OS)' 'AIX'
+    FC = xlf2003_r
+    FORTRAN_COMPILER = xlf
+  else ifeq '$(OS)' 'Darwin'
+    FC = gfortran
+    FORTRAN_COMPILER = gfortran
+  else
+    $(error Unrecognised operating system: $(OS))
+  endif
+  $(info Chose: $(FORTRAN_COMPILER))
+
+endif # FC
+
+# Attempt to identify Cray systems...
+#
+ifdef PE_ENV
+
+    CRAY_ENVIRONMENT = true
+
+    ifeq '$(PE_ENV)' 'CRAY'
+        FORTRAN_COMPILER = crayftn
+    else ifeq '$(PE_ENV)' 'INTEL'
+        FORTRAN_COMPILER = ifort
+    else ifeq '$(PE_ENV)' 'GNU'
+        FORTRAN_COMPILER = gfortran
+    else
+        $(error Unrecognised Cray programming environment)
+    endif
+
+endif

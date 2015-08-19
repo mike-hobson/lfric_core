@@ -70,10 +70,10 @@ $(OBJ_DIR)/modules.a: $(ALL_MODULES)
 
 $(OBJ_DIR)/%.x: $$($$(shell echo $$* | tr a-z A-Z)_OBJS)
 	@echo -e \$(VT_BOLD)Linking$(VT_RESET) $@
-	$(Q)$(MPI_LD) $(LDFLAGS) -o $@ \
-	              $(patsubst %,-l%,$(EXTERNAL_DYNAMIC_LIBRARIES)) \
-	              $^ \
-	              $(patsubst %,-l%,$(EXTERNAL_STATIC_LIBRARIES))
+	$(Q)$(LDMPI) $(LDFLAGS) -o $@ \
+	             $(patsubst %,-l%,$(EXTERNAL_DYNAMIC_LIBRARIES)) \
+	             $^ \
+	             $(patsubst %,-l%,$(EXTERNAL_STATIC_LIBRARIES))
 
 # Dependencies
 

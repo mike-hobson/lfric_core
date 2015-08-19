@@ -183,6 +183,8 @@ if [ ! -e $INSTALLDIR/lib/libmpich.so ] ; then
   source_dir=$(download_extract 'http://www.mpich.org/static/downloads/3.1.4/mpich-3.1.4.tar.gz' ) || exit 1
   build_dir=$(configure $source_dir) || exit 1
   $(compile_install $build_dir) || exit 1
+else
+  export MPILD=mpif90
 fi
 
 # Compile and install the HDF5 library

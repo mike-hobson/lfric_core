@@ -62,8 +62,8 @@ MPI
 If you are attempting to build with MPI support do *not* set ``FC`` to
 ``mpif90``. For a start some compilers (Cray, IBM) deal with MPI themselves.
 
-Instead define the variable ``MPI``, e.g. ``make MPI=1``. This will
-use an apropriate mechanism for the build.
+Instead define the variable ``LDMPI`` with the command to link against the MPI
+libraries.
 
 Cleaning
 ^^^^^^^^

@@ -66,7 +66,7 @@ which it finds itself.
 +---------------+----------------------+------------------------------------------------------------------------------+
 | FPP           | Fortran preprocessor | This will be ``cpp -traditional-cpp`` for GNU Fortran and ``fpp`` for Intel. |
 +---------------+----------------------+------------------------------------------------------------------------------+
-| MPI_LD        | MPI linker           | The automatic choice used if this is not defined is usually correct.         |
+| LDMPI         | MPI linker           | The automatic choice used if this is not defined is usually correct.         |
 +---------------+----------------------+------------------------------------------------------------------------------+
 
 The build system expects paths to libraries to be presented in compiler

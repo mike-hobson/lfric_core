@@ -15,41 +15,19 @@ endif
 EMPTY :=
 SPACE := $(EMPTY) # Comment to highlight space character.
 
-# Identify the Fortran compiler
-#
-ifneq ($(origin FC),default)
+# The default value of FC is almost always "f77" which is of no use to us.
+# An empty FC is also of no use.
+ifneq "$(or $(filter default, $(origin FC)), $(filter x, x$(FC)))" ""
+  $(error The FC environment variable must be set to a Fortran compiler command)
+endif
 
-  FORTRAN_COMPILER := $(shell basename $(FC))
-  # Some compiler names are sometimes extended so we special-case them.
-  ifeq ( $(findstring gfortran,$(FORTRAN_COMPILER)), gfortran )
-    FORTRAN_COMPILER = gfortran
-  else ifeq ( $(findstring xlf,$(FORTRAN_COMPILER)), xlf )
-    FORTRAN_COMPILER = xlf
-  endif
-
-else # FC not defined
-
-  $(info No Fortran compiler specified in $$FC)
-
-  ifeq '$(OS)' 'Linux'
-    ifeq '$(MACHINE)' 'x86_64'
-      FC = ifort
-      FORTRAN_COMPILER = ifort
-    else
-      $(error Unrecognised processor: $(MACHINE))
-    endif
-  else ifeq '$(OS)' 'AIX'
-    FC = xlf2003_r
-    FORTRAN_COMPILER = xlf
-  else ifeq '$(OS)' 'Darwin'
-    FC = gfortran
-    FORTRAN_COMPILER = gfortran
-  else
-    $(error Unrecognised operating system: $(OS))
-  endif
-  $(info Chose: $(FORTRAN_COMPILER))
-
-endif # FC
+FORTRAN_COMPILER := $(shell basename $(FC))
+# Some compiler names are sometimes extended so we special-case them.
+ifeq ( $(findstring gfortran,$(FORTRAN_COMPILER)), gfortran )
+  FORTRAN_COMPILER = gfortran
+else ifeq ( $(findstring xlf,$(FORTRAN_COMPILER)), xlf )
+  FORTRAN_COMPILER = xlf
+endif
 
 # Attempt to identify Cray systems...
 #

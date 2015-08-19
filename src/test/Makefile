@@ -61,7 +61,7 @@ $(OBJ_DIR)/%.o: $(OBJ_DIR)/%.F90 $(SUPPORT_OBJECTS)
 
 $(OBJ_DIR)/test: $(SUPPORT_OBJECTS) $(DRIVER_OBJ) $(TEST_OBJECTS) $(SUBJECT_DIR)/modules.a
 	@echo -e $(VT_BOLD)Linking$(VT_RESET) $@
-	$(Q)$(MPI_LD) $(LDFLAGS) $(LDFLAGS_FORTRAN) -o $@ \
+	$(Q)$(LDMPI) $(LDFLAGS) $(LDFLAGS_FORTRAN) -o $@ \
 	              $^ \
 	              $(SUBJECT_DIR)/modules.a \
 	              $(PFUNIT_INSTALL_DIR)/lib/libpfunit.a \

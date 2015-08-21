@@ -25,6 +25,7 @@ module set_up_mod
 
   use dofmap_mod,                 only : get_dofmap, get_orientation, &
               w0_dofmap, w1_dofmap, w2_dofmap, w3_dofmap, wtheta_dofmap
+  use mesh_colouring_mod,         only : set_colours
   implicit none
   
 contains 
@@ -111,6 +112,7 @@ contains
                               total_ranks)
 
     mesh = mesh_type(partition, global_mesh, nlayers, dz)
+    call mesh%set_colours()
 
 ! -----------------------------------------------------------
 ! Initialise FE elements on the mesh constructed above

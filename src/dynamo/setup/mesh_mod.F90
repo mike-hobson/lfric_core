@@ -23,7 +23,8 @@ module mesh_mod
   use slush_mod,       only: l_spherical
   use log_mod,         only: log_event,                                       &
                              log_scratch_space,                               &
-                             LOG_LEVEL_DEBUG
+                             LOG_LEVEL_DEBUG,                                 &
+                             LOG_LEVEL_ERROR
 
   implicit none
 
@@ -160,6 +161,17 @@ module mesh_mod
     !> The rank of the "owner" of each of the edge entities around each cell
     integer(i_def), allocatable :: edge_ownership( :, : )
 
+    !==========================================================================
+    ! Colouring storage: these form the arguments to set_colours().
+    !==========================================================================
+    integer(i_def), private                   :: ncolours
+    integer(i_def), allocatable, private       :: ncells_per_colour_w0(:)
+    integer(i_def), allocatable, private      :: ncells_per_colour_w1(:)
+    integer(i_def), allocatable, private      :: ncells_per_colour_w2(:)
+    integer(i_def), allocatable, private      :: cells_in_colour_w0(:,:)
+    integer(i_def), allocatable, private      :: cells_in_colour_w1(:,:)
+    integer(i_def), allocatable, private      :: cells_in_colour_w2(:,:)
+
   contains
 
     procedure, public :: get_id
@@ -207,6 +219,12 @@ module mesh_mod
     !> @return halo_cells The total number of halo cells of the particular depth 
     !> on the local partition
     procedure, public :: get_num_cells_halo
+    procedure, public :: set_colours
+    procedure, public :: get_ncolours
+    procedure, public :: get_colours_w0
+    procedure, public :: get_colours_w1
+    procedure, public :: get_colours_w2
+    procedure, public :: is_coloured
 
   end type mesh_type
 
@@ -736,7 +754,158 @@ contains
 
   end function get_num_cells_halo
 
+  !============================================================================
+  !> @brief  Returns count of colours used in colouring mesh.
+  !> @param[in] self   The mesh_type instance.
+  !> 
+  !> @return           Number of colours used to colour this mesh. 
+  !============================================================================
+  function get_ncolours(self) result(ncolours)
+    implicit none
+    class(mesh_type), intent(in) :: self
+    integer(i_def)               :: ncolours
 
+    ncolours = self%ncolours
+
+  end function get_ncolours
+
+  !============================================================================
+  !> @brief Populates args with colouring info for w0 space.
+  !> @param[in] self  The mesh_type instance.
+  !> @param[out] ncolours  Number of colours used to colour this mesh. 
+  !> @param[out] ncells_per_colour  Count of cells in each colour.
+  !> @param[out] colour_map  Indices of cells in each colour.
+  !============================================================================
+  subroutine get_colours_w0(self, ncolours, ncells_per_colour, colour_map)
+    implicit none
+    class(mesh_type), intent(in)              :: self
+    integer(i_def), intent(out)               :: ncolours
+    integer(i_def), allocatable, intent(out)  :: ncells_per_colour(:)
+    integer(i_def), allocatable, intent(out)  :: colour_map(:,:)
+  
+    integer                      :: astat
+
+
+    allocate(ncells_per_colour(size(self%ncells_per_colour_w0)), stat=astat)
+    if(astat.ne.0) call log_event("[Mesh Mod] Unable to allocate "//&
+                                  "ncells_per_colour_w0.", LOG_LEVEL_ERROR)
+
+    allocate(colour_map(self%ncolours, size(self%cells_in_colour_w0, 2)), &
+             stat=astat)
+    if(astat.ne.0) call log_event("[Mesh Mod] Unable to allocate "//&
+                                  "w0 colour_map.", LOG_LEVEL_ERROR)
+
+    ncolours = self%ncolours
+    ncells_per_colour = self%ncells_per_colour_w0
+    colour_map = self%cells_in_colour_w0
+
+  end subroutine get_colours_w0
+
+  !============================================================================
+  !> @brief Populates args with colouring info for w1 space.
+  !> @param[in] self  The mesh_type instance.
+  !> @param[out] ncolours  Number of colours used to colour this mesh. 
+  !> @param[out] ncells_per_colour  Count of cells in each colour.
+  !> @param[out] colour_map  Indices of cells in each colour.
+  !============================================================================
+  subroutine get_colours_w1(self, ncolours, ncells_per_colour, colour_map)
+    implicit none
+    class(mesh_type), intent(in)             :: self
+    integer(i_def), intent(out)              :: ncolours
+    integer(i_def), allocatable, intent(out) :: ncells_per_colour(:)
+    integer(i_def), allocatable, intent(out) :: colour_map(:,:)
+
+    integer                      :: astat
+
+
+    allocate(ncells_per_colour(size(self%ncells_per_colour_w1)), stat=astat)
+    if(astat.ne.0) call log_event("[Mesh Mod] Unable to allocate "//&
+                                  "ncells_per_colour_w1.", LOG_LEVEL_ERROR)
+
+    allocate(colour_map(self%ncolours, size(self%cells_in_colour_w1, 2)), &
+             stat=astat)
+    if(astat.ne.0) call log_event("[Mesh Mod] Unable to allocate "//&
+                                  "w1 colour_map.", LOG_LEVEL_ERROR)
+
+    ncolours = self%ncolours
+    ncells_per_colour = self%ncells_per_colour_w1
+    colour_map = self%cells_in_colour_w1
+
+  end subroutine get_colours_w1
+
+  !============================================================================
+  !> @brief Populates args with colouring info for w2 space.
+  !> @param[in] self  The mesh_type instance.
+  !> @param[out] ncolours  Number of colours used to colour this mesh. 
+  !> @param[out] ncells_per_colour  Count of cells in each colour.
+  !> @param[out] colour_map  Indices of cells in each colour.
+  !============================================================================
+  subroutine get_colours_w2(self, ncolours, ncells_per_colour, colour_map)
+    implicit none
+    class(mesh_type), intent(in)             :: self
+    integer(i_def), intent(out)              :: ncolours
+    integer(i_def), allocatable, intent(out) :: ncells_per_colour(:)
+    integer(i_def), allocatable, intent(out) :: colour_map(:,:)
+
+    integer                      :: astat
+
+
+    allocate(ncells_per_colour(size(self%ncells_per_colour_w2)), stat=astat)
+    if(astat.ne.0) call log_event("[Mesh Mod] Unable to allocate "//&
+                                  "ncells_per_colour_w2.", LOG_LEVEL_ERROR)
+
+    allocate(colour_map(self%ncolours, size(self%cells_in_colour_w2, 2)), &
+             stat=astat)
+    if(astat.ne.0) call log_event("[Mesh Mod] Unable to allocate "//&
+                                  "w2 colour_map.", LOG_LEVEL_ERROR)
+
+    ncolours = self%ncolours
+    ncells_per_colour = self%ncells_per_colour_w2
+    colour_map = self%cells_in_colour_w2
+
+  end subroutine get_colours_w2
+
+  !============================================================================
+  !> @brief  Returns state of colouring: has colouring yet been applied to
+  !>         this mesh?
+  !>
+  !> @return  Logical true is mesh coloured, false if not. 
+  !============================================================================
+  function is_coloured(self) result(cstat)
+    implicit none
+    class(mesh_type), intent(in) :: self
+    logical                      :: cstat
+
+    if(self%ncolours <= 0) then
+      cstat = .false.
+    else
+      cstat = .true.
+    end if
+
+  end function is_coloured 
+
+  !============================================================================
+  !> @brief  Invoke calculation of colouring for this mesh.
+  !>
+  !> @param[in] self  The mesh_type instance.
+  !============================================================================
+  subroutine set_colours(self)
+    use mesh_colouring_mod, only : colour_mod_set_colours => set_colours
+    implicit none
+    class(mesh_type), intent(inout) :: self
+
+
+    call colour_mod_set_colours(self%get_ncells_2d(), &
+                                self%cell_next, &
+                                self%ncolours, &
+                                self%ncells_per_colour_w0, &
+                                self%ncells_per_colour_w1, &
+                                self%ncells_per_colour_w2, &
+                                self%cells_in_colour_w0, &
+                                self%cells_in_colour_w1, &
+                                self%cells_in_colour_w2)
+
+  end subroutine set_colours
 
   !============================================================================
   !> @brief Stucture-Constructor
@@ -791,9 +960,11 @@ contains
     self%ncells_2d  = ncells_2d
     self%ncells     = ncells_2d * nlayers
     self%domain_top = dz * real(nlayers)
+    self%ncolours   = -1     ! Initialise ncolours to error status
 
     ncells          = self%ncells
     nlayers         = self%nlayers
+
 
     allocate ( self % cell_next    ( nfaces, ncells ) )
     allocate ( self % vert_on_cell ( nverts, ncells ) )
@@ -882,7 +1053,6 @@ contains
     deallocate( cells_on_edge )
 
   end function mesh_constructor
-
 
 
   !============================================================================

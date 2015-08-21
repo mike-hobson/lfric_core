@@ -1,0 +1,165 @@
+!-------------------------------------------------------------------------------
+! (c) The copyright relating to this work is owned jointly by the Crown, 
+! Met Office and NERC 2014. 
+! However, it has been created with the help of the GungHo Consortium, 
+! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
+!-------------------------------------------------------------------------------
+!> @brief Test suite to verify computation of colour map.
+!>
+!> @details Fixture provides ESMF init to allow creation of 
+!> prerequistes to perform colouring.
+!>
+!-------------------------------------------------------------------------------
+module mesh_colouring_mod_test
+!-------------------------------------------------------------------------------
+  use pFUnit_Mod
+  use suite_fixture_mod, only : get_esmf_handle
+  implicit none 
+
+  private
+  public setUp, tearDown, test_compute_colours_cubedsphere
+
+@testCase
+type, public, extends(TestCase) :: compute_colours_test_type
+  integer       :: total_ranks, local_rank
+  integer       :: xproc, yproc
+  integer       :: num_layers
+  integer       :: element_order
+contains
+  procedure     :: setUp
+  procedure     :: tearDown
+  procedure     :: test_compute_colours_cubedsphere
+end type compute_colours_test_type
+!-------------------------------------------------------------------------------
+contains
+!-------------------------------------------------------------------------------
+subroutine setUp(this)
+  use ESMF
+  use reference_element_mod,      only : reference_cube
+  implicit none
+
+  class(compute_colours_test_type), intent(inout)  :: this 
+  type(ESMF_VM)  :: vm
+  integer        :: rc, local_pet, pet_count
+
+
+  call ESMF_VMGet(get_esmf_handle(),  &
+                  localPet=local_pet, &
+                  petCount=pet_count, &
+                  rc=rc)
+  if (rc .ne. ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  call reference_cube()
+
+  this%total_ranks = 1
+  this%local_rank = 0
+  this%xproc = 1
+  this%yproc = 1
+  this%num_layers = 5
+  this%element_order = 0
+
+end subroutine setUp
+!-------------------------------------------------------------------------------
+subroutine tearDown(this)
+  use pFUnit_Mod
+  use ESMF
+  use reference_element_mod,      only : deallocate_reference
+  implicit none
+
+  class(compute_colours_test_type), intent(inout) :: this
+
+  integer  :: rc
+
+  call deallocate_reference()
+
+end subroutine tearDown
+!-------------------------------------------------------------------------------
+@test
+subroutine test_compute_colours_cubedsphere(this)
+  use pFUnit_Mod
+  use mesh_mod, only              : mesh_type
+  use partition_mod, only         : partition_type, &
+                                    partitioner_interface, &
+                                    partitioner_cubedsphere_serial
+
+  use global_mesh_mod, only       : global_mesh_type
+  use constants_mod, only         : i_def, r_def, str_def, QUAD
+  implicit none
+
+  class(compute_colours_test_type), intent(inout)  :: this
+
+  character(len=str_def)           :: filename
+  integer                          :: total_colours, total_cells, colour_idx
+  integer                          :: nc_colour, cic_colour
+  type(partition_type)             :: partition
+  type(global_mesh_type)           :: global_mesh
+  procedure(partitioner_interface), pointer  :: partitioner_ptr => null()
+
+  integer(i_def)                   :: num_cells
+  integer(i_def)                   :: num_colours
+  integer(kind=i_def), allocatable :: num_cell_per_colour_w0(:)
+  integer(kind=i_def), allocatable :: num_cell_per_colour_w1(:)
+  integer(kind=i_def), allocatable :: num_cell_per_colour_w2(:)
+
+  integer(kind=i_def), allocatable :: cells_in_colour_w0(:,:)
+  integer(kind=i_def), allocatable :: cells_in_colour_w1(:,:)
+  integer(kind=i_def), allocatable :: cells_in_colour_w2(:,:)
+
+  type(mesh_type)                  :: mesh
+
+
+  filename = "data/ugrid_quads_2d_cubedsphere_6x4x4.nc"
+  global_mesh = global_mesh_type(filename)
+  partitioner_ptr => partitioner_cubedsphere_serial
+
+  partition=partition_type(global_mesh, &
+                           partitioner_ptr, &
+                           this%xproc, &
+                           this%yproc, &
+                           1, & 
+                           this%local_rank, &
+                           this%total_ranks)
+
+  mesh = mesh_type(partition, global_mesh, this%num_layers, 2000.0_r_def)
+  ! Mesh is not yet coloured...
+  @assertFalse(mesh%is_coloured(), "Mesh is unexpectedly coloured")
+  call mesh%set_colours()
+  ! Mesh is now coloured...
+  @assertTrue(mesh%is_coloured(), "Mesh uncoloured after set_colours()")
+
+  num_cells = partition%get_num_cells_in_layer()
+  num_colours = mesh%get_ncolours()
+
+  call mesh%get_colours_w0(num_colours, num_cell_per_colour_w0, cells_in_colour_w0)
+  call mesh%get_colours_w1(num_colours, num_cell_per_colour_w1, cells_in_colour_w1)
+  call mesh%get_colours_w2(num_colours, num_cell_per_colour_w2, cells_in_colour_w2)
+
+  ! Is there storage for colour maps...
+  @assertTrue(allocated(cells_in_colour_w0), "Colours not set for w0 space.")
+  @assertTrue(allocated(cells_in_colour_w1), "Colours not set for w1 space.")
+  @assertTrue(allocated(cells_in_colour_w2), "Colours not set for w2 space.")
+
+  ! Is total number of colours used meaningful...
+  @assertTrue(num_colours > 0, "Non-positive used colour count.")
+
+  ! Did we colour everything...
+  total_cells = sum(num_cell_per_colour_w0)
+  @assertEqual(total_cells, num_cells, "Not all cells coloured.")
+
+  ! Did we use all claimed colours...
+  total_colours = size(cells_in_colour_w0, 1)
+  @assertEqual(total_colours, num_colours, "Reported used colours unequal to actual used total.")
+
+  ! Does the total in each colour match the cells in the colour map...
+  do colour_idx=1, num_colours
+    nc_colour = num_cell_per_colour_w0(colour_idx)
+    cic_colour = count(cells_in_colour_w0(colour_idx,:).ne.0)
+    @assertEqual(nc_colour, cic_colour, "Mismatch between num-per-colour total and cell count.")
+  end do
+
+
+end subroutine test_compute_colours_cubedsphere
+!-------------------------------------------------------------------------------
+end module mesh_colouring_mod_test
+!-------------------------------------------------------------------------------
+! vim: set ft=fortran :

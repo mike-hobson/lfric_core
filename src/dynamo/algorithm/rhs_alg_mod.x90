@@ -1,0 +1,111 @@
+!-------------------------------------------------------------------------------
+! (c) The copyright relating to this work is owned jointly by the Crown,
+! Met Office and NERC 2014.
+! However, it has been created with the help of the GungHo Consortium,
+! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
+!-------------------------------------------------------------------------------
+
+!>@brief wrapper algorithm to compute the rhs of the prognostic
+!>       equations
+module rhs_alg_mod
+  use psy,                               only: invoke_axpy,                   &
+                                               invoke_set_field_scalar,       &
+                                               invoke_copy_field_data
+
+  use ru_kernel_mod,                     only: ru_kernel_type
+  use rotation_kernel_mod,               only: rotation_kernel_type
+  use pressure_gradient_kernel_mod,      only: pressure_gradient_kernel_type
+  use kinetic_energy_gradient_kernel_mod,only: kinetic_energy_gradient_kernel_type
+  use geopotential_gradient_kernel_mod,  only: geopotential_gradient_kernel_type
+  use matrix_vector_mm_mod,              only: matrix_vector_kernel_mm_type
+
+  use mesh_mod,                          only: mesh_type
+  use field_mod,                         only: field_type
+  use solver_mod,                        only: solver_algorithm
+  use constants_mod,                     only: r_def, SOLVER_OPTION, L_ROTATING
+  use quadrature_mod,                    only: quadrature_type, QR3
+  use operator_mod,                      only: operator_type
+  use function_space_mod,                only: function_space_type
+  use runtime_constants_mod,             only: runtime_constants_type
+
+  implicit none
+
+  private
+  public :: rhs_alg
+
+contains
+!>@details A wrapper algorithm for computing the rhs of the prognostic
+!>         equations, without advection terms, namely:
+!>         \f[
+!>            \mathbf{R_u} = \mathbf{u} 
+!>                         + \alpha\Delta t\left[ 2\Omega \times \mathbf{u} 
+!>                         + \nabla\left(\Phi + 1/2\mathbf{u}.\mathbf{u}\right)
+!>                         + Cp\theta\nabla\Pi \right]
+!>         \f]
+!>         \f[ R_\rho = \rho \f]
+!>         \f[ R_\theta = \theta \f]
+!>         This can be given either timelevel n or n+1 fields to compute
+!>         the appropriate part of the full right hand side
+!> @param[inout] rhs The state vector to compute
+!> @param[in]    alpha_dt The offcentring parameter times the timestep
+!> @param[in]    state The current model prognostic state
+!> @param[in]    runtime_constants Runtime constants for the model
+  subroutine rhs_alg(rhs, alpha_dt, state, runtime_constants)
+  
+  implicit none
+
+  real(kind=r_def),             intent(in)    :: alpha_dt
+  ! Form of state and rhs is [u,theta,rho] & [r_u,r_theta,r_rho]
+  type(field_type), target,     intent(in)    :: state(3)
+  type(field_type),             intent(inout) :: rhs(3)
+  type(runtime_constants_type), intent(in)    :: runtime_constants
+
+  type(field_type), pointer :: chi(:), geopotential => null()
+  type(operator_type), pointer :: mm_w2, mm_w0 => null()
+  type(mesh_type), pointer    :: mesh => null()
+
+  type( quadrature_type ), pointer :: qr => null()
+  type(field_type), pointer :: u ,theta, rho
+  type(field_type)          :: r_u
+  type(function_space_type) :: fs
+  integer                   :: u_fs
+ 
+  mesh         => runtime_constants%get_mesh()
+  geopotential => runtime_constants%get_geopotential()
+  mm_w0        => runtime_constants%get_mass_matrix(0)
+  mm_w2        => runtime_constants%get_mass_matrix(2)
+  chi          => runtime_constants%get_coordinates()
+
+  u     => state(1)
+  theta => state(2)
+  rho   => state(3)
+ 
+  u_fs      = u%which_function_space() 
+
+  r_u       = field_type( vector_space = fs%get_instance(mesh, u_fs) )
+
+  qr => qr%get_instance(QR3,9,3)
+
+  ! Compute r_u
+  call invoke_set_field_scalar( 0.0_r_def, r_u )
+  call invoke( pressure_gradient_kernel_type( r_u, rho, theta, qr ) )
+  call invoke( kinetic_energy_gradient_kernel_type( r_u, u, chi, qr ) )
+  call invoke( geopotential_gradient_kernel_type( r_u, geopotential, qr ) )
+  if ( L_ROTATING ) call invoke( rotation_kernel_type( r_u, u, chi, qr ) )
+  call invoke( ru_kernel_type( r_u ) )
+  call invoke_set_field_scalar( 0.0_r_def, rhs(1) )
+  call invoke( matrix_vector_kernel_mm_type( rhs(1), u, mm_w2) )
+  call invoke_axpy( alpha_dt, r_u, rhs(1), rhs(1) ) 
+ 
+  ! Compute r_theta
+  call invoke_set_field_scalar( 0.0_r_def, rhs(2) )
+  call invoke( matrix_vector_kernel_mm_type( rhs(2), theta, mm_w0) )
+
+  ! Compute r_rho
+  call invoke_copy_field_data( rho, rhs(3) )
+
+  end subroutine rhs_alg
+
+end module rhs_alg_mod
+
+

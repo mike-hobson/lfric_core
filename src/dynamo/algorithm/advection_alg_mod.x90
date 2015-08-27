@@ -1,0 +1,120 @@
+!-------------------------------------------------------------------------------
+! (c) The copyright relating to this work is owned jointly by the Crown,
+! Met Office and NERC 2014.
+! However, it has been created with the help of the GungHo Consortium,
+! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
+!-------------------------------------------------------------------------------
+
+!>@brief wrapper algorithm to compute the advection of the prognostic
+!>       equations
+module advection_alg_mod
+  use psy,                               only: invoke_set_field_scalar, &
+                                               invoke_flux_rhs, &
+                                               invoke_multiply_field
+ 
+  use rtheta_kernel_mod,                 only: rtheta_kernel_type
+  use ru_kernel_mod,                     only: ru_kernel_type
+  use rrho_kernel_mod,                   only: rrho_kernel_type
+  use vorticity_advection_kernel_mod,    only: vorticity_advection_kernel_type
+  use vorticity_rhs_kernel_mod,          only: vorticity_rhs_kernel_type
+
+  use mesh_mod,                          only: mesh_type
+  use field_mod,                         only: field_type
+  use solver_mod,                        only: solver_algorithm
+  use constants_mod,                     only: r_def, SOLVER_OPTION, DT
+  use quadrature_mod,                    only: quadrature_type, QR3
+  use operator_mod,                      only: operator_type
+  use function_space_mod,                only: function_space_type
+  use runtime_constants_mod,             only: runtime_constants_type
+
+  implicit none
+
+  private
+  public :: advection_alg
+
+contains
+!>@details A wrapper algorithm for computing the advection of the prognostic
+!>         equations, namely:
+!>         \f[ \mathbf{R_u} = \xi \times \frac{\mathbf{F}}{\rho} \f]
+!>         \f[ R_\theta = \frac{\mathbf{F}}{\rho}.\nabla\theta \f]
+!>         \f[ R_\rho = \nabla.\mathbf{F} \f]
+!>         with diagnostic fields:
+!>
+!>         Mass flux: \f[ \mathbf{F} = \mathbf{u}\rho \f]
+!>         Vorticity: \f[ \xi = \nabla\times\mathbf{u} \f]
+!> @param[inout] advection Field array containing the advective terms
+!> @param[in]    state Field array. Current state of the model prognostics (u, theta, rho)
+!> @param[in]    xi The relative vorticity field
+!> @param[in]    runtime constants Container of various constant operators and
+!>               fields
+  subroutine advection_alg( advection, &
+                            state, &
+                            xi, &
+                            runtime_constants )
+  
+  implicit none
+  ! Form of state and advection is [u,theta,rho] & [r_u,r_theta,r_rho]
+  type(field_type), intent(in),    target  :: state(3)
+  type(field_type), intent(inout)          :: advection(3)
+  type(field_type), intent(inout)          :: xi
+  type(runtime_constants_type), intent(in) :: runtime_constants
+
+  type(field_type),    pointer :: chi(:) => null()
+  type(operator_type), pointer :: mm_w2, mm_w1 => null()
+  type(mesh_type),     pointer :: mesh => null()
+
+  type(function_space_type) :: fs
+  type( quadrature_type ), pointer :: qr => null()
+  type(field_type), pointer :: u ,theta, rho
+  type(field_type)          :: r_xi, mass_flux, r_rho 
+  integer                   :: xi_fs, u_fs, rho_fs, theta_fs
+ 
+  mesh         => runtime_constants%get_mesh()
+  mm_w1        => runtime_constants%get_mass_matrix(1)
+  mm_w2        => runtime_constants%get_mass_matrix(2)
+  chi          => runtime_constants%get_coordinates()
+
+  u     => state(1)
+  theta => state(2)
+  rho   => state(3)
+ 
+  u_fs   = u%which_function_space() 
+  xi_fs  = xi%which_function_space()
+  theta_fs = theta%which_function_space() 
+  rho_fs   = rho%which_function_space() 
+
+  mass_flux = field_type( vector_space = fs%get_instance(mesh, u_fs) )
+  r_xi      = field_type( vector_space = fs%get_instance(mesh, xi_fs) )
+  r_rho     = field_type( vector_space = fs%get_instance(mesh, rho_fs) )
+
+  qr => qr%get_instance(QR3,9,3)
+
+  ! Compute advection terms
+  ! 1) mass flux ( F = rho * u )
+  call invoke_set_field_scalar( 0.0_r_def, advection(1) ) 
+  call invoke_flux_rhs( advection(1), u, rho, chi, qr ) 
+  call invoke_set_field_scalar( 0.0_r_def, mass_flux ) 
+  call solver_algorithm( mass_flux, advection(1), mesh, chi, solver_option, mm=mm_w2)
+
+  ! 2) Vorticity advection dt*( F/rho \cross curl(u))
+  call invoke_set_field_scalar( 0.0_r_def, r_xi )
+  call invoke( vorticity_rhs_kernel_type( r_xi, u, chi, qr ) )
+  call solver_algorithm( xi, r_xi, mesh, chi, solver_option, mm=mm_w1 ) 
+  call invoke_set_field_scalar( 0.0_r_def, advection(1) ) 
+  call invoke( vorticity_advection_kernel_type( advection(1), mass_flux, rho, xi, chi, qr ) )
+  call invoke( ru_kernel_type( advection(1) ) )
+  call invoke_multiply_field( DT, advection(1), advection(1) )
+
+  ! 3) theta_advection dt*( F/rho . grad(theta) )
+  call invoke_set_field_scalar( 0.0_r_def, advection(2) )
+  call invoke( rtheta_kernel_type( advection(2), theta, mass_flux, rho, qr) )
+
+  ! 4) divergence of mass flux: dt * M3^-1(div(F))
+  call invoke( rrho_kernel_type( r_rho, mass_flux, qr ) )
+  call solver_algorithm( advection(3), r_rho, mesh, chi, SOLVER_OPTION, qr=qr )
+
+  end subroutine advection_alg
+
+end module advection_alg_mod
+
+

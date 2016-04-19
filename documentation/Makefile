@@ -10,6 +10,9 @@ DOXYGEN  ?= doxygen
 DOCUMENT_DIRECTORIES = $(patsubst %/,%,$(dir $(wildcard */*.latex)))
 API_COLLECTIONS = $(patsubst Doxyfile.%,api/%,$(wildcard Doxyfile.*))
 
+DYNAMO_COMMON_FIGURES := $(shell pwd)/common-figures
+export DYNAMO_COMMON_FIGURES
+
 .PHONY: most
 most: design-documents api-documents
 

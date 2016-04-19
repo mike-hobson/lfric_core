@@ -1,0 +1,547 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="915.41144"
+   height="659.72266"
+   viewBox="-62 -46 505.76874 362.57741"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.47 r22583"
+   sodipodi:docname="numberedHexMesh.dia">
+  <metadata
+     id="metadata216">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs214">
+    <inkscape:perspective
+       sodipodi:type="inkscape:persp3d"
+       inkscape:vp_x="0 : 336.61417 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_z="921.25983 : 336.61417 : 1"
+       inkscape:persp3d-origin="460.62991 : 224.40944 : 1"
+       id="perspective218" />
+  </defs>
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="640"
+     inkscape:window-height="497"
+     id="namedview212"
+     showgrid="false"
+     inkscape:zoom="0.35054971"
+     inkscape:cx="456.8322"
+     inkscape:cy="324.79345"
+     inkscape:window-x="0"
+     inkscape:window-y="25"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg2" />
+  <g
+     id="g4"
+     transform="translate(-2.0982514,-4.0831702)">
+    <polygon
+       style="fill:#ffffff"
+       points="63.0357,107.75 0.464286,107.75 -41.25,41.75 0.464286,-24.25 63.0357,-24.25 104.75,41.75 "
+       id="polygon6" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="63.0357,107.75 0.464286,107.75 -41.25,41.75 0.464286,-24.25 63.0357,-24.25 104.75,41.75 "
+       id="polygon8" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="63.0357,107.75 0.464286,107.75 -41.25,41.75 0.464286,-24.25 63.0357,-24.25 104.75,41.75 "
+       id="polygon10" />
+  </g>
+  <g
+     id="g12"
+     transform="translate(-2.0982514,-4.0831702)">
+    <polygon
+       style="fill:#ffffff"
+       points="166.786,173.25 104.214,173.25 62.5,107.25 104.214,41.25 166.786,41.25 208.5,107.25 "
+       id="polygon14" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="166.786,173.25 104.214,173.25 62.5,107.25 104.214,41.25 166.786,41.25 208.5,107.25 "
+       id="polygon16" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="166.786,173.25 104.214,173.25 62.5,107.25 104.214,41.25 166.786,41.25 208.5,107.25 "
+       id="polygon18" />
+  </g>
+  <g
+     id="g20"
+     transform="translate(-2.0982514,-4.0831702)">
+    <polygon
+       style="fill:#ffffff"
+       points="270.536,106.75 207.964,106.75 166.25,40.75 207.964,-25.25 270.536,-25.25 312.25,40.75 "
+       id="polygon22" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="270.536,106.75 207.964,106.75 166.25,40.75 207.964,-25.25 270.536,-25.25 312.25,40.75 "
+       id="polygon24" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="270.536,106.75 207.964,106.75 166.25,40.75 207.964,-25.25 270.536,-25.25 312.25,40.75 "
+       id="polygon26" />
+  </g>
+  <g
+     id="g28"
+     transform="translate(-2.0982514,-4.0831702)">
+    <polygon
+       style="fill:#ffffff"
+       points="374.036,172.75 311.464,172.75 269.75,106.75 311.464,40.75 374.036,40.75 415.75,106.75 "
+       id="polygon30" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="374.036,172.75 311.464,172.75 269.75,106.75 311.464,40.75 374.036,40.75 415.75,106.75 "
+       id="polygon32" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="374.036,172.75 311.464,172.75 269.75,106.75 311.464,40.75 374.036,40.75 415.75,106.75 "
+       id="polygon34" />
+  </g>
+  <g
+     id="g36"
+     transform="translate(-2.0982514,-4.0831702)">
+    <polygon
+       style="fill:#ffffff"
+       points="270.286,239 207.714,239 166,173 207.714,107 270.286,107 312,173 "
+       id="polygon38" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="270.286,239 207.714,239 166,173 207.714,107 270.286,107 312,173 "
+       id="polygon40" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="270.286,239 207.714,239 166,173 207.714,107 270.286,107 312,173 "
+       id="polygon42" />
+  </g>
+  <g
+     id="g44"
+     transform="translate(-2.0982514,-4.0831702)">
+    <polygon
+       style="fill:#ffffff"
+       points="62.2857,239 -0.285714,239 -42,173 -0.285714,107 62.2857,107 104,173 "
+       id="polygon46" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="62.2857,239 -0.285714,239 -42,173 -0.285714,107 62.2857,107 104,173 "
+       id="polygon48" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="62.2857,239 -0.285714,239 -42,173 -0.285714,107 62.2857,107 104,173 "
+       id="polygon50" />
+  </g>
+  <g
+     id="g52"
+     transform="translate(-2.0982514,-4.0831702)">
+    <polygon
+       style="fill:#ffffff"
+       points="166.036,305 103.464,305 61.75,239 103.464,173 166.036,173 207.75,239 "
+       id="polygon54" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="166.036,305 103.464,305 61.75,239 103.464,173 166.036,173 207.75,239 "
+       id="polygon56" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="166.036,305 103.464,305 61.75,239 103.464,173 166.036,173 207.75,239 "
+       id="polygon58" />
+  </g>
+  <g
+     id="g60"
+     transform="translate(-2.0982514,-4.0831702)">
+    <polygon
+       style="fill:#ffffff"
+       points="374.786,305 312.214,305 270.5,239 312.214,173 374.786,173 416.5,239 "
+       id="polygon62" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="374.786,305 312.214,305 270.5,239 312.214,173 374.786,173 416.5,239 "
+       id="polygon64" />
+    <polygon
+       style="fill:none;stroke:#000000;stroke-width:2"
+       points="374.786,305 312.214,305 270.5,239 312.214,173 374.786,173 416.5,239 "
+       id="polygon66" />
+  </g>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="-56.40625"
+     y="171.51883"
+     id="text68">
+    <tspan
+       x="-56.40625"
+       y="171.51883"
+       id="tspan70">1</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="-12.406152"
+     y="248.51883"
+     id="text72">
+    <tspan
+       x="-12.406152"
+       y="248.51883"
+       id="tspan74">2</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="51.59375"
+     y="249.51883"
+     id="text76">
+    <tspan
+       x="51.59375"
+       y="249.51883"
+       id="tspan78">3</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="81.59375"
+     y="174.51883"
+     id="text80">
+    <tspan
+       x="81.59375"
+       y="174.51883"
+       id="tspan82">4</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="51.59375"
+     y="121.51883"
+     id="text84">
+    <tspan
+       x="51.59375"
+       y="121.51883"
+       id="tspan86">5</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="-24.406252"
+     y="106.51883"
+     id="text88">
+    <tspan
+       x="-24.406252"
+       y="106.51883"
+       id="tspan90">6</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="105.59375"
+     y="28.519232"
+     id="text92">
+    <tspan
+       x="105.59375"
+       y="28.519232"
+       id="tspan94">7</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="63.59375"
+     y="-37.48077"
+     id="text96">
+    <tspan
+       x="63.59375"
+       y="-37.48077"
+       id="tspan98">8</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="-13.406152"
+     y="-35.48077"
+     id="text100">
+    <tspan
+       x="-13.406152"
+       y="-35.48077"
+       id="tspan102">9</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="-63.40625"
+     y="41.51923"
+     id="text104">
+    <tspan
+       x="-63.40625"
+       y="41.51923"
+       id="tspan106">10</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="81.59375"
+     y="317.51883"
+     id="text108">
+    <tspan
+       x="81.59375"
+       y="317.51883"
+       id="tspan110">11</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="166.59375"
+     y="315.51883"
+     id="text112">
+    <tspan
+       x="166.59375"
+       y="315.51883"
+       id="tspan114">12</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="174.59375"
+     y="239.51883"
+     id="text116">
+    <tspan
+       x="174.59375"
+       y="239.51883"
+       id="tspan118">13</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="146.59375"
+     y="186.51883"
+     id="text120">
+    <tspan
+       x="146.59375"
+       y="186.51883"
+       id="tspan122">14</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="179.59375"
+     y="110.51883"
+     id="text124">
+    <tspan
+       x="179.59375"
+       y="110.51883"
+       id="tspan126">15</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="148.59375"
+     y="27.51923"
+     id="text128">
+    <tspan
+       x="148.59375"
+       y="27.51923"
+       id="tspan130">16</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="248.59375"
+     y="252.51881"
+     id="text132">
+    <tspan
+       x="248.59375"
+       y="252.51881"
+       id="tspan134">17</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="313.59372"
+     y="157.51883"
+     id="text136">
+    <tspan
+       x="313.59372"
+       y="157.51883"
+       id="tspan138">18</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="250.59375"
+     y="121.51883"
+     id="text140">
+    <tspan
+       x="250.59375"
+       y="121.51883"
+       id="tspan142">19</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="312.59372"
+     y="24.51923"
+     id="text144">
+    <tspan
+       x="312.59372"
+       y="24.51923"
+       id="tspan146">20</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="270.59372"
+     y="-36.48077"
+     id="text148">
+    <tspan
+       x="270.59372"
+       y="-36.48077"
+       id="tspan150">21</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="190.59375"
+     y="-33.48077"
+     id="text152">
+    <tspan
+       x="190.59375"
+       y="-33.48077"
+       id="tspan154">22</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="300.59372"
+     y="313.51883"
+     id="text156">
+    <tspan
+       x="300.59372"
+       y="313.51883"
+       id="tspan158">23</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="364.59372"
+     y="315.51883"
+     id="text160">
+    <tspan
+       x="364.59372"
+       y="315.51883"
+       id="tspan162">24</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="426.59372"
+     y="238.51883"
+     id="text164">
+    <tspan
+       x="426.59372"
+       y="238.51883"
+       id="tspan166">25</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="384.59372"
+     y="169.51883"
+     id="text168">
+    <tspan
+       x="384.59372"
+       y="169.51883"
+       id="tspan170">26</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="428.59372"
+     y="107.51883"
+     id="text172">
+    <tspan
+       x="428.59372"
+       y="107.51883"
+       id="tspan174">27</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="379.59372"
+     y="28.519232"
+     id="text176">
+    <tspan
+       x="379.59372"
+       y="28.519232"
+       id="tspan178">28</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="33.641949"
+     y="171.91682"
+     id="text180">
+    <tspan
+       x="33.641949"
+       y="171.91682"
+       id="tspan182">C1</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="137.39175"
+     y="237.91682"
+     id="text184">
+    <tspan
+       x="137.39175"
+       y="237.91682"
+       id="tspan186">C3</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="34.391949"
+     y="40.666828"
+     id="text188">
+    <tspan
+       x="34.391949"
+       y="40.666828"
+       id="tspan190">C2</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="138.14175"
+     y="106.16683"
+     id="text192">
+    <tspan
+       x="138.14175"
+       y="106.16683"
+       id="tspan194">C4</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="241.64175"
+     y="171.91682"
+     id="text196">
+    <tspan
+       x="241.64175"
+       y="171.91682"
+       id="tspan198">C5</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="241.89175"
+     y="39.666828"
+     id="text200">
+    <tspan
+       x="241.89175"
+       y="39.666828"
+       id="tspan202">C6</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="346.14172"
+     y="237.91682"
+     id="text204">
+    <tspan
+       x="346.14172"
+       y="237.91682"
+       id="tspan206">C7</tspan>
+  </text>
+  <text
+     style="font-size:12.80000019px;font-style:normal;font-weight:normal;text-anchor:start;fill:#000000;font-family:sanserif"
+     x="345.39172"
+     y="105.66683"
+     id="text208">
+    <tspan
+       x="345.39172"
+       y="105.66683"
+       id="tspan210">C8</tspan>
+  </text>
+</svg>

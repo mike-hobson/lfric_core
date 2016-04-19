@@ -143,11 +143,13 @@
 
     [[api_documentation]]
         inherit = TECHNICAL
+        pre-script = {{command_list(LOCAL_BASE_SETUP)}}
         script = "make -C $DYNAMO_SOURCE_DIRECTORY/documentation api-documents"
         pre-script = {{command_list( LOCAL_BASE_SETUP, LOCAL_REVEAL_SETUP) }}
 
     [[design_documentation]]
         inherit = TECHNICAL
+        pre-script = {{command_list(LOCAL_BASE_SETUP)}}
         script = "make -C $DYNAMO_SOURCE_DIRECTORY/documentation design-documents"
         pre-script = {{command_list( LOCAL_BASE_SETUP, LOCAL_REVEAL_SETUP) }}
 

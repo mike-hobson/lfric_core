@@ -42,7 +42,7 @@ module runtime_constants_mod_test
     subroutine setUp( this )
 
       use finite_element_config_mod, only : finite_element_shape_quadrilateral
-      use frig_config_mod,           only : frig_planet_config
+      use feign_config_mod,          only : feign_planet_config
       use reference_element_mod,     only : reference_cube,   &
                                             reference_element
 
@@ -50,7 +50,7 @@ module runtime_constants_mod_test
 
       class(runtime_constants_test_type), intent(inout) :: this
 
-      call frig_planet_config( radius, gravity, omega, rd, cp, p_zero, scaling )
+      call feign_planet_config( cp, gravity, omega, p_zero, radius, rd, scaling )
 
       reference_element = finite_element_shape_quadrilateral
       call reference_cube()

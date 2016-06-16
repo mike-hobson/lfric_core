@@ -37,13 +37,13 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use frig_config_mod, only : frig_planet_config
+    use feign_config_mod, only : feign_planet_config
 
     implicit none
 
     class(calc_exner_pointwise_test_type), intent(inout) :: this
 
-    call frig_planet_config( radius, gravity, omega, rd, cp, p_zero, scaling )
+    call feign_planet_config( gravity, radius, omega, rd, cp, p_zero, scaling )
 
   end subroutine setUp
 

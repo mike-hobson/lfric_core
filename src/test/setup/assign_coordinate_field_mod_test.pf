@@ -31,16 +31,16 @@ contains
 
     use base_mesh_config_mod, only : base_mesh_geometry_planar, &
                                      base_mesh_partitioner_planar
-    use frig_config_mod,      only : frig_base_mesh_config
+    use feign_config_mod,     only : feign_base_mesh_config
 
     implicit none
 
     class(assign_coordinate_file_test_type), intent(inout) :: this
 
-    call frig_base_mesh_config( 'foo',                        &
-                                base_mesh_geometry_planar,    &
-                                base_mesh_partitioner_planar, &
-                                0.0_r_def )
+    call feign_base_mesh_config( 'foo',                        &
+                                 base_mesh_geometry_planar,    &
+                                 base_mesh_partitioner_planar, &
+                                 .false., 0.0_r_def )
 
   end subroutine setUp
 

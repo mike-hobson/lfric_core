@@ -15,7 +15,7 @@ module mesh_mod_test
   use global_mesh_mod,      only: global_mesh_type
   use partition_mod,        only: partition_type
   use mesh_mod,             only: mesh_type, domain_limits
-  use pFUnit_Mod                                            
+  use pFUnit_Mod
 
   implicit none
 
@@ -64,20 +64,21 @@ contains
     use base_mesh_config_mod,      only : base_mesh_geometry_spherical, &
                                           base_mesh_partitioner_cubedsphere
     use finite_element_config_mod, only : finite_element_shape_quadrilateral
-    use frig_config_mod,           only : frig_base_mesh_config, &
-                                          frig_planet_config,    &
-                                          frig_extrusion_config
+    use feign_config_mod,          only : feign_base_mesh_config, &
+                                          feign_extrusion_config, &
+                                          feign_planet_config
     use reference_element_mod,     only : reference_cube, reference_element
 
     implicit none
 
     class( mesh_test_type ), intent( inout ) :: this
 
-    call frig_base_mesh_config( 'foo',                             &
-                                base_mesh_geometry_spherical,      &
-                                base_mesh_partitioner_cubedsphere, &
-                                0.0_r_def )
-    call frig_planet_config( radius, gravity, omega, rd, cp, p_zero, scaling )
+    call feign_base_mesh_config( 'foo',                             &
+                                 base_mesh_geometry_spherical,      &
+                                 base_mesh_partitioner_cubedsphere, &
+                                 .false., 0.0_r_def )
+    call feign_extrusion_config( extrusion_method_uniform, domain_top, nlayers )
+    call feign_planet_config( gravity, radius, omega, rd, cp, p_zero, scaling )
 
     reference_element = finite_element_shape_quadrilateral
     call reference_cube()

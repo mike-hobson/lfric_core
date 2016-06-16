@@ -57,7 +57,7 @@ contains
   subroutine setUp( this )
 
     use finite_element_config_mod, only : finite_element_shape_quadrilateral
-    use frig_config_mod,           only : frig_planet_config
+    use feign_config_mod,           only : feign_planet_config
     use mesh_mod,                  only : PLANE_BI_PERIODIC
     use reference_element_mod,     only : reference_cube, reference_element
 
@@ -72,7 +72,7 @@ contains
                       ndf_pv, undf_pv, &
                       nqp_h, nqp_v
 
-    call frig_planet_config( radius, gravity, omega, rd, cp, p_zero, scaling )
+    call feign_planet_config( radius, gravity, omega, rd, cp, p_zero, scaling )
 
     reference_element = finite_element_shape_quadrilateral
     call reference_cube()

@@ -56,7 +56,7 @@ contains
     use base_mesh_config_mod,      only : base_mesh_geometry_planar, &
                                           base_mesh_partitioner_planar
     use finite_element_config_mod, only : finite_element_shape_quadrilateral
-    use frig_config_mod,           only : frig_base_mesh_config
+    use feign_config_mod,           only : feign_base_mesh_config
     use mesh_mod,                  only : PLANE_BI_PERIODIC
     use reference_element_mod,     only : reference_cube, reference_element
     use reference_profile_mod,     only : reference_profile
@@ -75,10 +75,10 @@ contains
 
     integer :: i
 
-    call frig_base_mesh_config( 'foo',                        &
-                                base_mesh_geometry_planar,    &
-                                base_mesh_partitioner_planar, &
-                                0.0_r_def )
+    call feign_base_mesh_config( 'foo',                        &
+                                 base_mesh_geometry_planar,    &
+                                 base_mesh_partitioner_planar, &
+                                 .false., 0.0_r_def )
 
     reference_element = finite_element_shape_quadrilateral
     call reference_cube()

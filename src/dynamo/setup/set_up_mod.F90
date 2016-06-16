@@ -88,7 +88,7 @@ contains
 !>       sensible
 
 
-
+write(56,*) auto, panel_xproc, panel_yproc
     call log_event( "set_up: Generating/reading the mesh", LOG_LEVEL_INFO )
 
     reference_element = shape

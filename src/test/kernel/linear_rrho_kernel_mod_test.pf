@@ -64,9 +64,9 @@ contains
   subroutine setUp( this )
 
     use finite_element_config_mod, only : finite_element_shape_quadrilateral
-    use frig_config_mod,           only : frig_idealised_config,           &
-                                          frig_initial_temperature_config, &
-                                          frig_planet_config
+    use feign_config_mod,           only : feign_idealised_config,           &
+                                          feign_initial_temperature_config, &
+                                          feign_planet_config
     use idealised_config_mod,      only : idealised_test_cold_bubble
     use mesh_mod,                  only : PLANE_BI_PERIODIC
     use reference_element_mod,     only : reference_cube, reference_element
@@ -86,9 +86,9 @@ contains
 
     integer :: i
 
-    call frig_idealised_config( idealised_test_cold_bubble )
-    call frig_initial_temperature_config( bvf_square )
-    call frig_planet_config( radius, gravity, omega, rd, cp, p_zero, scaling )
+    call feign_idealised_config( idealised_test_cold_bubble )
+    call feign_initial_temperature_config( bvf_square )
+    call feign_planet_config( gravity, radius, omega, rd, cp, p_zero, scaling )
 
     reference_element = finite_element_shape_quadrilateral
     call reference_cube()

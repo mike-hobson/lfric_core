@@ -12,16 +12,15 @@ Turns namelist descriptions into namelist modules.
 
 from __future__ import print_function
 
+import collections
 import jinja2    as jinja
 import pyparsing as parsing
+
+import jinjamacros
 
 ###############################################################################
 class NamelistDescriptionException(Exception):
     pass
-
-###############################################################################
-def _prefaceMacro( subject, prefix ):
-    return [prefix+value for value in subject]
 
 ###############################################################################
 class _FortranType:
@@ -66,10 +65,10 @@ class NamelistDescription():
     def __init__( self, name ):
         self._engine = jinja.Environment( \
                    loader=jinja.PackageLoader( 'configurator', 'templates') )
-        self._engine.filters['preface'] = _prefaceMacro
+        self._engine.filters['decorate'] = jinjamacros.decorateMacro
 
         self._name         = name
-        self._parameters   = {}
+        self._parameters   = collections.OrderedDict()
         self._enumerations = {}
         self._computed     = {}
         self._constants    = set()
@@ -100,6 +99,18 @@ class NamelistDescription():
 
         self._parameters[name] = _FortranType( self._fortranTypeMap[xtype].xtype, \
                                                self._fortranTypeMap[xtype].kindMap[kind] )
+
+    ###########################################################################
+    def getParameters( self ):
+        return self._parameters
+
+    ###########################################################################
+    def getEnumerations( self ):
+        return self._enumerations
+
+    ###########################################################################
+    def getComputations( self ):
+        return self._computed
 
     ###########################################################################
     def writeModule( self, fileObject ):
@@ -209,9 +220,17 @@ class NamelistDescriptionParser():
         variable = parsing.Group( label + colon + typedef \
                                   + parsing.Optional( argumentList ) )
 
+        self._argumentOrder = {}
+        def catchNamelist( tokens ):
+            name = tokens[0][0]
+            self._argumentOrder[name] = []
+            arguments = tokens[0][1:]
+            for blob in arguments:
+                self._argumentOrder[name].append( blob[0] )
         definition = parsing.Group( definitionStart                           \
                               + parsing.Dict( parsing.OneOrMore( variable ) ) \
                               + definitionEnd )
+        definition.setParseAction( catchNamelist )
 
         self._parser = parsing.Dict( definition )
 
@@ -232,7 +251,8 @@ class NamelistDescriptionParser():
         for name, variables in parseTree.items():
             description = NamelistDescription( name )
 
-            for key, value in variables.items():
+            for key in self._argumentOrder[name]:
+                value = variables[key]
                 if isinstance(value, parsing.ParseResults) :
                     description.addParameter( key,         \
                                               value.xtype, \

@@ -47,7 +47,7 @@ contains
   subroutine setUp( this )
 
     use finite_element_config_mod, only : finite_element_shape_quadrilateral
-    use frig_config_mod,           only : frig_finite_element_config
+    use feign_config_mod,          only : feign_finite_element_config
     use mesh_mod,                  only : PLANE_BI_PERIODIC
     use reference_element_mod,     only : reference_cube, reference_element
 
@@ -56,9 +56,8 @@ contains
     class(function_space_collection_test_type), intent(inout) :: this
 
 
-    call frig_finite_element_config( finite_element_shape_quadrilateral, &
-                                     0,                                  &
-                                     .true. )
+    call feign_finite_element_config( finite_element_shape_quadrilateral, &
+                                      0, .true. )
 
     reference_element = finite_element_shape_quadrilateral
     call reference_cube()

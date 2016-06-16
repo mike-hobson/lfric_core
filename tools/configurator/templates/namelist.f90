@@ -1,3 +1,5 @@
+{#- This is the skeleton of the namelist loading module.                   -#}
+{#- The Jinja templating library is used to insert the actual code.        -#}
 !------------------------------------------------------------------------------
 ! (c) The copyright relating to this work is owned jointly by the Crown,
 ! Met Office and NERC 2014.
@@ -131,7 +133,7 @@ contains
   !
   subroutine read_namelist( file_unit
 {%- if enumerations -%}
-, {{ enumerations.keys() | sort | preface( 'dummy_' ) | join( ', ' ) }}
+, {{ enumerations.keys() | sort | decorate( 'dummy_' ) | join( ', ' ) }}
 {%- endif -%}
                           {{' '}})
 

@@ -63,8 +63,8 @@ contains
     use base_mesh_config_mod,      only : base_mesh_geometry_planar, &
                                           base_mesh_partitioner_planar
     use finite_element_config_mod, only : finite_element_shape_quadrilateral
-    use frig_config_mod,           only : frig_base_mesh_config, &
-                                          frig_planet_config
+    use feign_config_mod,           only : feign_base_mesh_config, &
+                                          feign_planet_config
     use mesh_mod,                  only : PLANE_BI_PERIODIC
     use reference_element_mod,     only : reference_cube, reference_element
 
@@ -83,11 +83,11 @@ contains
 
     integer :: i
 
-    call frig_planet_config( radius, gravity, omega, rd, cp, p_zero, scaling )
-    call frig_base_mesh_config( 'foo',                        &
-                                base_mesh_geometry_planar,    &
-                                base_mesh_partitioner_planar, &
-                                f_lat )
+    call feign_planet_config( cp, gravity, omega, p_zero, radius, rd, scaling )
+    call feign_base_mesh_config( 'foo',                        &
+                                 base_mesh_geometry_planar,    &
+                                 base_mesh_partitioner_planar, &
+                                 .false., f_lat )
 
     reference_element = finite_element_shape_quadrilateral
     call reference_cube()

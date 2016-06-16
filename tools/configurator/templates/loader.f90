@@ -1,3 +1,5 @@
+{#- This is the skeleton of the configuration loading module.              -#}
+{#- The Jinja templating library is used to insert the actual code.        -#}
 !------------------------------------------------------------------------------
 ! (c) The copyright relating to this work is owned jointly by the Crown,
 ! Met Office and NERC 2014.
@@ -10,10 +12,12 @@ module configuration_mod
 
   use constants_mod, only : i_native, l_def, str_def, str_max_filename
   use log_mod,       only : log_scratch_space, log_event, LOG_LEVEL_ERROR
+{%- if namelists %}
 {{-'\n'}}
-{%- for listname in namelists %}
+{%-   for listname in namelists %}
   use {{listname}}_config_mod, only : read_{{listname}}_namelist, {{listname}}_is_loadable, {{listname}}_is_loaded
-{%- endfor %}
+{%-   endfor %}
+{%- endif %}
 
   implicit none
 

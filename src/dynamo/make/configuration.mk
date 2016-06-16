@@ -7,6 +7,7 @@
 
 CONFIGURATOR ?= $(TOOL_DIR)/GenerateNamelist
 CONFIGULOADER ?= $(TOOL_DIR)/GenerateLoader
+CONFIGUFEIGNER ?= $(TOOL_DIR)/GenerateFeigns
 
 CONFIGURATION_PATH = configuration
 AUTO_CONFIGURATION_PATH = $(OBJ_DIR)/configuration

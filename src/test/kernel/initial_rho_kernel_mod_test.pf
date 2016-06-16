@@ -69,11 +69,11 @@ contains
     use base_mesh_config_mod,      only : base_mesh_geometry_planar, &
                                           base_mesh_partitioner_planar
     use finite_element_config_mod, only : finite_element_shape_quadrilateral
-    use frig_config_mod,           only : frig_base_mesh_config,           &
-                                          frig_idealised_config,           &
-                                          frig_initial_density_config,     &
-                                          frig_initial_temperature_config, &
-                                          frig_planet_config
+    use feign_config_mod,          only : feign_base_mesh_config,           &
+                                          feign_idealised_config,           &
+                                          feign_initial_density_config,     &
+                                          feign_initial_temperature_config, &
+                                          feign_planet_config
     use idealised_config_mod,      only : idealised_test_gravity_wave
     use mesh_mod,                  only : PLANE_BI_PERIODIC
     use reference_element_mod,     only : reference_cube, reference_element
@@ -92,15 +92,16 @@ contains
 
     integer :: i
 
-    call frig_base_mesh_config( 'foo',                        &
-                                base_mesh_geometry_planar,    &
-                                base_mesh_partitioner_planar, &
-                                0.0_r_def )
-    call frig_idealised_config( idealised_test_gravity_wave )
-    call frig_initial_density_config( tracer_max, tracer_background, &
-                                      y1, y2 )
-    call frig_initial_temperature_config( bvf_square )
-    call frig_planet_config( radius, gravity, omega, rd, cp, p_zero, scaling )
+    call feign_base_mesh_config( 'foo',                        &
+                                 base_mesh_geometry_planar,    &
+                                 base_mesh_partitioner_planar, &
+                                 .false., 0.0_r_def )
+    call feign_idealised_config( idealised_test_gravity_wave )
+    call feign_initial_density_config( 0.0_r_def, 0.0_r_def, &
+                                       tracer_background, tracer_max, &
+                                       0.0_r_def, 0.0_r_def, y1, y2 )
+    call feign_initial_temperature_config( bvf_square )
+    call feign_planet_config( gravity, radius, omega, rd, cp, p_zero, scaling )
 
     reference_element = finite_element_shape_quadrilateral
     call reference_cube()

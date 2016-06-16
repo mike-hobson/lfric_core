@@ -40,15 +40,15 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use frig_config_mod, only : frig_initial_temperature_config, &
-                                frig_planet_config
+    use feign_config_mod, only : feign_initial_temperature_config, &
+                                feign_planet_config
 
     implicit none
 
     class(generate_global_gw_fields_test_type), intent(inout) :: this
 
-    call frig_initial_temperature_config( bvf_square )
-    call frig_planet_config( radius, gravity, omega, rd, cp, p_zero, scaling )
+    call feign_initial_temperature_config( bvf_square )
+    call feign_planet_config( radius, gravity, omega, rd, cp, p_zero, scaling )
 
   end subroutine setUp
 

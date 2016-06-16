@@ -42,20 +42,20 @@ contains
     use base_mesh_config_mod,      only : base_mesh_geometry_planar, &
                                           base_mesh_partitioner_planar
     use finite_element_config_mod, only : finite_element_shape_quadrilateral
-    use frig_config_mod,           only : frig_base_mesh_config,           &
-                                          frig_initial_temperature_config, &
-                                          frig_planet_config
+    use feign_config_mod,           only : feign_base_mesh_config,           &
+                                          feign_initial_temperature_config, &
+                                          feign_planet_config
 
     implicit none
 
     class(reference_profile_test_type), intent(inout) :: this
 
-    call frig_base_mesh_config( 'foo',                        &
-                                base_mesh_geometry_planar,    &
-                                base_mesh_partitioner_planar, &
-                                0.0_r_def )
-    call frig_initial_temperature_config( bvf_square )
-    call frig_planet_config( radius, gravity, omega, rd, cp, p_zero, scaling )
+    call feign_base_mesh_config( 'foo',                        &
+                                 base_mesh_geometry_planar,    &
+                                 base_mesh_partitioner_planar, &
+                                 .false., 0.0_r_def )
+    call feign_initial_temperature_config( bvf_square )
+    call feign_planet_config( gravity, radius, omega, rd, cp, p_zero, scaling )
 
   end subroutine setUp
 

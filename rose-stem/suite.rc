@@ -219,15 +219,17 @@
 
     [[compile_with_{{label}}]]
         inherit    = {{family}}, {{family}}_BUILD_ENVIRONMENT
-        pre-script = {{command_list(TARGET_BASE_SETUP, TARGET_BUILD_SETUP, compiler_setup[compiler], TARGET_REVEAL_SETUP, "mkdir -p $DYNAMO_BUILD_ROOT")}}
+        pre-script = {{command_list(TARGET_BASE_SETUP, TARGET_BUILD_SETUP, compiler_setup[compiler], TARGET_REVEAL_SETUP, "rm -rf $DYNAMO_BUILD_ROOT", "mkdir -p $DYNAMO_BUILD_ROOT")}}
         script     = "rose task-run --app-key=compile --command-key={{build}}"
-        post-script = "cp -rp $DYNAMO_BUILD_ROOT $DYNAMO_SOURCE_DIRECTORY/build; rm -rf $DYNAMO_BUILD_ROOT"
+        post-script = {{command_list("cp -rp $DYNAMO_BUILD_ROOT $DYNAMO_SOURCE_DIRECTORY/build", "rm -rf $DYNAMO_BUILD_ROOT")}}
 
     [[unit_test_with_{{label}}]]
         inherit = {{family}}, {{family}}_BUILD_ENVIRONMENT
         pre-script = {{command_list(TARGET_BASE_SETUP, TARGET_BUILD_SETUP, compiler_setup[compiler], TARGET_REVEAL_SETUP, "mkdir -p $DYNAMO_BUILD_ROOT", "cp -rp $DYNAMO_SOURCE_DIRECTORY/build/* $DYNAMO_BUILD_ROOT")}}
         script = "make -C $DYNAMO_SOURCE_DIRECTORY test"
-        post-script = "cp -rp $DYNAMO_BUILD_ROOT $DYNAMO_SOURCE_DIRECTORY/build; rm -rf $DYNAMO_BUILD_ROOT"
+        post-script = {{command_list("cp -rp $DYNAMO_BUILD_ROOT $DYNAMO_SOURCE_DIRECTORY/build", "rm -rf $DYNAMO_BUILD_ROOT")}}
+        [[[environment]]]
+            VERBOSE=1
 
     [[clean_build_{{label}}]]
         inherit = {{family}}, {{family}}_BUILD_ENVIRONMENT

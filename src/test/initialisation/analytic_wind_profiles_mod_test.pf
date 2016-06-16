@@ -38,13 +38,13 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use frig_config_mod, only : frig_planet_config
+    use feign_config_mod, only : feign_planet_config
 
     implicit none
 
     class(analytic_wind_profiles_test_type), intent(inout) :: this
 
-    call frig_planet_config( radius, gravity, omega, rd, cp, p_zero, scaling )
+    call feign_planet_config( cp, gravity, omega, p_zero, radius, rd, scaling )
 
   end subroutine setUp
 

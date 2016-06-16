@@ -28,6 +28,7 @@ PFUNIT_INSTALL_DIR      = $(DYNAMO_BUILD_ROOT)/pfunit-install
 PFUNIT_EXTRA_USAGE      = suite_fixture_mod
 PFUNIT_EXTRA_INITIALIZE = set_up_suite
 PFUNIT_EXTRA_FINALIZE   = tear_down_suite
+FFLAGS += -I$(OBJ_DIR)/support
 
 OBJ_DIR = $(DYNAMO_BUILD_ROOT)/tests
 OBJ_SUBDIRS = $(patsubst %,$(OBJ_DIR)/%,$(filter-out data,$(shell find . -type d -not -path '*/.*' )))
@@ -38,9 +39,11 @@ TEST_SOURCES = $(shell find -name "*.pf")
 TEST_OBJECTS = $(patsubst %.pf,$(OBJ_DIR)/%.o,$(TEST_SOURCES))
 
 SUPPORT_SOURCE  = $(shell find -name "*.[Ff]90")
-SUPPORT_OBJECTS = $(addprefix $(OBJ_DIR)/,$(addsuffix .o,$(basename $(SUPPORT_SOURCE))))
+SUPPORT_OBJECTS = $(OBJ_DIR)/support/feign_config_mod.o \
+                  $(addprefix $(OBJ_DIR)/,$(addsuffix .o,$(basename $(SUPPORT_SOURCE))))
 SUPPORT_MODINC  = $(patsubst %,-I%,$(dir $(SUPPORT_OBJECTS)))
 
+SUBJECT_SOURCE  = $(ROOT)/src/dynamo
 SUBJECT_DIR     = $(DYNAMO_BUILD_ROOT)/dynamo
 SUBJECT_SUBDIRS = $(shell find $(SUBJECT_DIR) -type d)
 SUBJECT_MODINC  = $(patsubst %,-I%,$(SUBJECT_SUBDIRS))
@@ -50,6 +53,7 @@ export PFUNIT_INSTALL_DIR \
 
 .PHONY: test
 test: $(OBJ_DIR)/test | $(OBJ_DIR)/data
+	@echo Running $@
 	$(Q)$(OBJ_DIR)/test -robust \
 	                    -max-timeout-duration $(UNIT_TEST_RUN_TIME) \
 	                    -max-launch-duration  $(UNIT_TEST_LAUNCH_TIME)
@@ -77,6 +81,9 @@ $(OBJ_DIR)/test: $(SUPPORT_OBJECTS) $(TEST_OBJECTS) $(DRIVER_OBJ) \
 	             -lpfunit $(patsubst %,-l%,$(EXTERNAL_LIBRARIES)) \
 	             $(patsubst %,-l%,$(LD_COMPILER_LIBRARIES))
 
+$(OBJ_DIR)/support/feign_config_mod.f90: $(wildcard $(SUBJECT_SOURCE)/configuration/*.nld) | $(OBJ_DIR)/support
+	$(TOOL_DIR)/GenerateFeigns -output $@ $^
+
 # Replace OBJ_SUBDIR with mangling of % ?
 $(OBJ_DIR)/%.o: %.F90 | $(OBJ_SUBDIRS)
 	$(Q)$(FC) $(FPPFLAGS) $(FFLAGS) \
@@ -84,6 +91,11 @@ $(OBJ_DIR)/%.o: %.F90 | $(OBJ_SUBDIRS)
 	          $(SUBJECT_MODINC) $(SUPPORT_MODINC) -c -o $@ $<
 
 $(OBJ_DIR)/%.o: %.f90 | $(OBJ_DIR)/data $(OBJ_SUBDIRS)
+	$(Q)$(FC) $(FPPFLAGS) $(FFLAGS) \
+	          $(F_MOD_DESTINATION_ARG)$(dir $@) \
+	          $(SUBJECT_MODINC) $(SUPPORT_MODINC) -c -o $@ $<
+
+$(OBJ_DIR)/%.o: $(OBJ_DIR)/%.f90
 	$(Q)$(FC) $(FPPFLAGS) $(FFLAGS) \
 	          $(F_MOD_DESTINATION_ARG)$(dir $@) \
 	          $(SUBJECT_MODINC) $(SUPPORT_MODINC) -c -o $@ $<
@@ -96,7 +108,7 @@ $(OBJ_DIR)/data: data | $(OBJ_DIR)
 	# We use rsync so we can ignore hidden objects.
 	$(Q)rsync -a --exclude='.*' $</ $@/
 
-$(OBJ_DIR) $(OBJ_SUBDIRS) $(dir $(DRIVER_OBJ)):
+$(OBJ_DIR) $(OBJ_SUBDIRS) $(dir $(DRIVER_OBJ)) $(OBJ_DIR)/support:
 	@echo -e $(VT_BOLD)Creating$(VT_RESET) $@
 	$(Q)mkdir -p $@
 

@@ -62,7 +62,6 @@ contains
     character(*), intent(in) :: filename
 
     integer(i_native) :: unit
-    integer(i_native) :: success
 
     unit = open_file( filename )
     call read_configuration_unit( unit )
@@ -93,7 +92,6 @@ contains
 
       if (buffer(1:1) == '&') then
         select case (trim(buffer(2:)))
-
           case default
             inquire( unit, name=filename )
             write( log_scratch_space, '(A, A, A, A)' ) &
@@ -128,16 +126,15 @@ contains
 
     if (present(success_mask) &
         .and. (size(success_mask, 1) /= size(names, 1))) then
-      call log_event( 'Arguments "name" and "success_mask" to function' &
-                      // '"ensure_configuration" are different shapes', &
+      call log_event( 'Arguments "names" and "success_mask" to function' &
+                      // '"ensure_configuration" are different shapes',  &
                       LOG_LEVEL_ERROR )
     end if
 
     ensure_configuration = .True.
 
     name_loop: do i = 1, size(names)
-      select cae(trim( names(i) ))
-
+      select case(trim( names(i) ))
         case default
           write( log_scratch_space, '(A, A, A)' )          &
                "Tried to ensure unrecognised namelist """, &
@@ -165,7 +162,7 @@ end module configuration_mod
                                    outputFile.getvalue() )
 
     ###########################################################################
-    def testEmpty( self ):
+    def testWithContent( self ):
         expectedSource = '''
 !------------------------------------------------------------------------------
 ! (c) The copyright relating to this work is owned jointly by the Crown,

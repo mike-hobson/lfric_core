@@ -18,9 +18,6 @@ ifeq '$(FORTRAN_COMPILER)' 'ifort'
   PFUNIT_COMPILER_ID = Intel
   ifeq ($(shell test $(IFORT_VERSION) -lt 0130000; echo $$?), 0)
     $(error pFUnit will only compile with ifort v13 or later.)
-  else ifeq ($(shell test $(IFORT_VERSION) -lt 0140000; echo $$?), 0)
-    export CPPFLAGS += -DINTEL_13
-    export FPPFLAGS += -DINTEL_13
   endif
 else ifeq '$(FORTRAN_COMPILER)' 'gfortran'
   PFUNIT_COMPILER_ID = GNU
@@ -36,6 +33,8 @@ else ifeq '$(FORTRAN_COMPILER)' 'crayftn'
 else
   $(error Unrecognised compiler "$(FORTRAN_COMPILER)")
 endif
+
+FFLAGS += -DDEFERRED_LENGTH_CHARACTER
 
 ifdef CRAY_ENVIRONMENT
   CMAKE_FLAGS = -DCMAKE_TOOLCHAIN_FILE=$(ROOT)/src/test/cmake/cray.$(FORTRAN_COMPILER).cmake

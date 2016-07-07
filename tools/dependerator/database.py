@@ -65,13 +65,13 @@ class SQLiteDatabase(_Database):
         super(SQLiteDatabase, self).__init__()
 
         self._database = sqlite3.connect( filename, timeout=5.0 )
-        self._database.isolation_level = 'EXCLUSIVE'
         self._database.row_factory     = sqlite3.Row
 
     ###########################################################################
     # Destructor.
     #
     def __del__( self ):
+        self._database.commit()
         self._database.close()
 
     ###########################################################################
@@ -93,7 +93,6 @@ class SQLiteDatabase(_Database):
         else:
             query = ';\n'.join( query ) + ';'
             cursor.executescript( query )
-        self._database.commit()
         return cursor.fetchall()
 
 ###############################################################################

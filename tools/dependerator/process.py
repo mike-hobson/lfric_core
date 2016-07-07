@@ -44,6 +44,9 @@ class FortranProcessor():
         currentObject = None
         for unit, unitFilename, prerequisite, prerequisiteFilename \
                 in self._database.getAllDependencies():
+            self._logger.logEvent( '{} depends on {}'.format( unit, \
+                                                              prerequisite ) )
+
             objectFilename = replaceExtension( unitFilename, 'o' )
             objectPathname = os.path.join( self._objectDirectory, \
                                            objectFilename )
@@ -72,6 +75,8 @@ class FortranProcessor():
     #
     def determineProgramDependencies( self ):
         for program in self._database.getPrograms():
+            self._logger.logEvent( 'Program {}'.format( program ) )
+
             prerequisites = set()
             self._descend( program, prerequisites )
             unit, unit_file, prereq, prereq_file = self._database.getDependencies( program ).next()
@@ -83,7 +88,12 @@ class FortranProcessor():
     def _descend( self, programUnit, prerequisites ):
         for unit, unit_file, prereq, prereq_file \
                               in self._database.getDependencies( programUnit ):
+            self._logger.logEvent( '  Requires {}'.format( unit ) )
+
             prereq_object_file = replaceExtension( prereq_file, 'o' )
 
-            self._descend( prereq, prerequisites )
-            prerequisites.add( prereq_object_file )
+            if prereq_object_file in prerequisites:
+                self._logger.logEvent( '    Seen already, stopping descent' )
+            else:
+                prerequisites.add( prereq_object_file )
+                self._descend( prereq, prerequisites )

@@ -11,6 +11,7 @@
 from __future__ import print_function
 
 import abc
+import sys
 
 ###############################################################################
 # Abstract logging provider class
@@ -35,3 +36,4 @@ class PrintLogger( Logger ):
 
     def logEvent( self, description ):
         print( '{}'.format( description ), file=self.stream )
+        sys.stdout.flush()

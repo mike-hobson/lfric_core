@@ -24,7 +24,8 @@ module function_space_mod_test
   private
   public :: test_function_space_constructor, getParameters,   &
             test_space, test_stencil_point, test_stencil_1dx, &
-            test_stencil_1dy, test_stencil_cross, test_mesh, test_colouring
+            test_stencil_1dy, test_stencil_cross, test_mesh, test_colouring, &
+            test_get_whole_dofmap
 
   @testParameter
   type, public, extends(AbstractTestParameter) :: function_space_parameter_type
@@ -44,6 +45,7 @@ module function_space_mod_test
     procedure setUp
     procedure tearDown
     procedure test_space
+    procedure test_get_whole_dofmap
     procedure test_stencil_point
     procedure test_stencil_1dx
     procedure test_stencil_1dy
@@ -272,7 +274,49 @@ contains
 
   end subroutine test_space
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @test
+  subroutine test_get_whole_dofmap( this )
+
+    implicit none
+
+    class(test_function_space_type), intent(inout) :: this
+
+    type(function_space_type), pointer :: test_fs => null()
+
+    integer(i_def),            pointer :: map_cell (:)       => null()
+    integer(i_def),            pointer :: map_whole(:,:)     => null()
+
+    integer(i_def)                     :: test_ncells
+    integer(i_def)                     :: test_ndof_cell
+
+    integer(i_def)                     :: cell_counter,dof_counter
+    logical                            :: identical
+
+    test_fs => function_space_type( this%mesh_id,         &
+                                    element_order,        &
+                                    this%function_space )
+
+    test_ncells    = test_fs%get_ncell()
+    test_ndof_cell = test_fs%get_ndf()
+
+    identical = .true.
+    map_whole => test_fs%get_whole_dofmap()
+    ! Check that all the dofs are the same whether obtained from the cell dof-map
+    ! or the whole dof-map
+    do cell_counter = 1,test_ncells
+      map_cell => test_fs%get_cell_dofmap(cell_counter)
+      do dof_counter = 1, test_ndof_cell
+        if (map_cell(dof_counter) /= map_whole(dof_counter,cell_counter)) then
+          identical = .false.
+        end if
+      end do
+    end do
+    @assertEqual( identical, .true.)
+    
+  end subroutine test_get_whole_dofmap
+
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine test_stencil_point( this )
 
     use stencil_dofmap_mod,    only: stencil_dofmap_type, STENCIL_POINT

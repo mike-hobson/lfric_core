@@ -171,6 +171,9 @@ contains
   !> @return The pointer which points to a slice of the dofmap
   procedure, public :: get_cell_dofmap
 
+  !> @brief Returns a pointer to the dofmap for all cells 
+  !> @return The pointer which points to the cell-ordered dofmap
+  procedure, public :: get_whole_dofmap
 
   !> @brief Obtains the number of dofs per cell
   !> @return Integer, the number of dofs per cell
@@ -656,6 +659,19 @@ function get_cell_dofmap(self,cell_lid) result(map)
   map => self%master_dofmap%get_master_dofmap(cell_lid)
   return
 end function get_cell_dofmap
+
+!-----------------------------------------------------------------------------
+! Gets the dofmap for the whole domain
+!-----------------------------------------------------------------------------
+function get_whole_dofmap(self) result(map)
+
+  implicit none
+  class(function_space_type), target, intent(in) :: self
+  integer(i_def), pointer                        :: map(:,:)
+
+  map => self%master_dofmap%get_whole_master_dofmap()
+  return
+end function get_whole_dofmap
 
 !-----------------------------------------------------------------------------
 ! Gets the nodal coordinates of the function_space

@@ -18,6 +18,7 @@ type, public :: master_dofmap_type
   integer(i_def), allocatable :: dofmap(:,:) 
 contains
   procedure :: get_master_dofmap
+  procedure :: get_whole_master_dofmap
   procedure :: clear
 end type master_dofmap_type
 
@@ -53,7 +54,7 @@ end function master_dofmap_constructor
 !-----------------------------------------------------------------------------
 ! Get the master dofmap for a single cell
 !-----------------------------------------------------------------------------
-!> Subroutine Returns a pointer to the dofmap for the cell 
+!> Returns a pointer to the dofmap for the cell 
 !! @param[in] self The calling function_space
 !! @param[in] cell Which cell
 !! @return The pointer which points to a slice of the dofmap
@@ -66,6 +67,22 @@ function get_master_dofmap(self,cell) result(map)
   map => self%dofmap(:,cell)
   return
 end function get_master_dofmap
+
+!-----------------------------------------------------------------------------
+! Get the whole master dofmap for all cells
+!-----------------------------------------------------------------------------
+!> Returns a pointer to the dofmap for the whole domain
+!! @param[in] self The calling function_space
+!! @return The pointer which points to the whole dofmap
+function get_whole_master_dofmap(self) result(map)
+  implicit none
+  class(master_dofmap_type), target, intent(in) :: self
+  integer(i_def), pointer                       :: map(:,:)
+
+  ! Point to element 1 as dofmap address starts from unused 0
+  map => self%dofmap(:,1:)
+  return
+end function get_whole_master_dofmap
 
 !-----------------------------------------------------------------------------
 !> @details Explcitly deallocates any allocatable arrays in the object

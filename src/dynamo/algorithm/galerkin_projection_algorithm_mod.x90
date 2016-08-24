@@ -43,13 +43,13 @@ contains
 !> @param[in]  mesh id of the mesh object the model for fields
 !> @param[in]  chi   A 3D coordinate field
 !> @param[in]  space_dimension The dimension of the space f_in (scalar or vector)
-  subroutine galerkin_projection_algorithm( f_out           &
-                                          , f_in            &
-                                          , mesh            &
-                                          , chi             &
-                                          , space_dimension &
-                                          , qr              &
-                                          , mm ) 
+  subroutine galerkin_projection_algorithm( f_out,          &
+                                            f_in,           &
+                                            mesh,           &
+                                            chi,            &
+                                            space_dimension,&
+                                            qr,             &
+                                            mm ) 
     
     implicit none
 
@@ -107,19 +107,19 @@ contains
        space = f_out(1)%which_function_space()
        do dir = 1,space_dimension
           if( present(mm) .and. space /= W3 ) then
-             call solver_algorithm( f_out(dir)    &
-                                  , rhs(dir)      &
-                                  , mesh          &
-                                  , chi           &
-                                  , method &
-                                  , mm=mm )
+             call solver_algorithm( f_out(dir),   &
+                                    rhs(dir),     &
+                                    mesh,         &
+                                    chi,          &
+                                    method,       &
+                                    mm=mm )
           else
-             call solver_algorithm( f_out(dir)    & 
-                                  , rhs(dir)      &
-                                  , mesh          &
-                                  , chi           &
-                                  , method &
-                                  , qr=qr )
+             call solver_algorithm( f_out(dir),   & 
+                                    rhs(dir),     &
+                                    mesh,         &
+                                    chi,          &
+                                    method,       &
+                                    qr=qr )
           end if
        end do
     end if

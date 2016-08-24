@@ -141,6 +141,13 @@ program dynamo
 
   geopotential = get_geopotential()
 
+  ! Initial output
+  ts_init = max( (restart%ts_start() - 1), 0 ) ! 0 or t previous.
+  call output_alg('theta', ts_init, theta, mesh_id)
+  call output_alg('xi',    ts_init, xi,    mesh_id)
+  call output_alg('u',     ts_init, u,     mesh_id)
+  call output_alg('rho',   ts_init, rho,   mesh_id)
+
   !-----------------------------------------------------------------------------
   ! model step 
   !-----------------------------------------------------------------------------
@@ -160,8 +167,6 @@ program dynamo
             call runge_kutta_init()
             call rk_transport_init( mesh_id, u, rho, theta)
             call log_event( "Dynamo: Outputting initial fields", LOG_LEVEL_INFO )
-            ts_init = max( (restart%ts_start() - 1), 0 ) ! 0 or t previous.
-            call output_alg(ts_init, theta, xi, u, rho, chi, mesh_id)
           end if
           call rk_transport_step( mesh_id, chi, u, rho, theta)
         case ( transport_scheme_cosmic)
@@ -169,8 +174,6 @@ program dynamo
             ! Initialise and output initial conditions on first timestep
             call cosmic_transport_init(mesh_id, u)
             call log_event( "Dynamo: Outputting initial fields", LOG_LEVEL_INFO )
-            ts_init = max( (restart%ts_start() - 1), 0 ) ! 0 or t previous.
-            call output_alg(ts_init, theta, xi, u, rho, chi, mesh_id)
           end if
           call cosmic_transport_step( mesh_id, chi, rho)
         case default
@@ -188,8 +191,6 @@ program dynamo
              if (timestep == restart%ts_start()) then 
                call iter_alg_init(mesh_id, u, rho, theta)
                call log_event( "Dynamo: Outputting initial fields", LOG_LEVEL_INFO )
-               ts_init = max( (restart%ts_start() - 1), 0 ) ! 0 or t previous.
-               call output_alg(ts_init, theta, xi, u, rho, chi, mesh_id)
                call conservation_algorithm(timestep, mesh_id, rho, u, theta, xi, geopotential, chi)
              end if
              call iter_alg_step(chi, u, rho, theta, xi)
@@ -200,8 +201,6 @@ program dynamo
                call runge_kutta_init()
                call rk_alg_init( mesh_id, u, rho, theta)
                call log_event( "Dynamo: Outputting initial fields", LOG_LEVEL_INFO )
-               ts_init = max( (restart%ts_start() - 1), 0 ) ! 0 or t previous.
-               call output_alg(ts_init, theta, xi, u, rho, chi, mesh_id)
                call conservation_algorithm(timestep, mesh_id, rho, u, theta, xi, geopotential, chi)
              end if
              call rk_alg_step( mesh_id, chi, u, rho, theta, xi)
@@ -222,8 +221,6 @@ program dynamo
                call runge_kutta_init()
                call lin_rk_alg_init( mesh_id, u, rho, theta)
                call log_event( "Dynamo: Outputting initial fields", LOG_LEVEL_INFO ) 
-               ts_init = max( (restart%ts_start() - 1), 0 ) ! 0 or t previous.
-               call output_alg(ts_init, theta, xi, u, rho, chi, mesh_id)
              end if
                call lin_rk_alg_step( mesh_id, chi, u, rho, theta)
            case default
@@ -250,7 +247,10 @@ program dynamo
 
     if ( mod(timestep, diagnostic_frequency) == 0 ) then
       call log_event("Dynamo: writing diagnostic output", LOG_LEVEL_INFO)
-      call output_alg(timestep, theta, xi, u, rho, chi, mesh_id)
+      call output_alg('theta', timestep, theta, mesh_id)
+      call output_alg('xi',    timestep, xi,    mesh_id)
+      call output_alg('u',     timestep, u,     mesh_id)
+      call output_alg('rho',   timestep, rho,   mesh_id)
     end if
 
 

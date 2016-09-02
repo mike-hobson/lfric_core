@@ -66,26 +66,25 @@ type(compute_mass_matrix_kernel_w1_type) &
 end function compute_mass_matrix_constructor
 
 !> @brief This subroutine computes the mass matrix for the w1 space
-!! @param[in] cell Integer: The cell number
-!! @param[in] nlayers Integer: The number of layers.
-!! @param[in] ndf_w1 Integer: The number of degrees of freedom per cell.
-!! @param[in] ncell_3d Integer: ncell*ndf
-!! @param[in] basis_w1 VECTOR basis functions evaluated at quadrature points.
-!! @param[in] mm Real array, the local stencil or mass matrix
-!! @param[in] ndf_chi number of degrees of freedum per cell for chi field
-!! @param[in] undf_chi number of unique degrees of freedum  for chi field
-!! @param[in] map_chi DoFmap for the cell at the base of the column, for the
+!! @param[in] cell Cell number
+!! @param[in] nlayers Number of layers.
+!! @param[in] ndf_w1 Number of degrees of freedom per cell.
+!! @param[in] ncell_3d ncell*ndf
+!! @param[in] basis_w1 Vector basis functions evaluated at quadrature points.
+!! @param[in] mm Local stencil or mass matrix
+!! @param[in] ndf_chi Number of degrees of freedum per cell for chi field
+!! @param[in] undf_chi Number of unique degrees of freedum  for chi field
+!! @param[in] map_chi Dofmap for the cell at the base of the column, for the
 !!                    space on which the chi field lives
-!! @param[in] diff_basis_chi VECTOR differential basis functions evaluated at
+!! @param[in] diff_basis_chi Vector differential basis functions evaluated at
 !!                           quadrature points.
-!! @param[inout] chi1 Real: The data array for chi in the first dir
-!! @param[inout] chi2 Real: The data array for chi in the 2nd dir
-!! @param[inout] chi3 Real: The data array for chi in the 3rd dir
-!! @param[in] nqp_h Integer number of horizontal quadrature points
-!! @param[in] nqp_v Integer number of vertical quadrature points
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
-
+!! @param[inout] chi1 Physical coordinates in the 1st dir
+!! @param[inout] chi2 Physical coordinates in the 2nd dir
+!! @param[inout] chi3 Physical coordinates in the 3rd dir
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 subroutine compute_mass_matrix_w1_code(cell, nlayers, ncell_3d,          &
                                        mm,                               &
                                        chi1, chi2, chi3,                 &

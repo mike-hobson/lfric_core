@@ -8,7 +8,7 @@
 !-------------------------------------------------------------------------------
 
 !> @brief Kernel to compute the fractional level a dof lives on. This is given
-!! by the layer index (k) + the nodal coordinate (\hat{chi})
+!! by the layer index (k) + the nodal coordinate (hat{chi})
 module compute_dof_level_kernel_mod
 use kernel_mod,              only : kernel_type
 use argument_mod,            only : arg_type, func_type,                     &
@@ -55,12 +55,12 @@ type(compute_dof_level_kernel_type) function compute_dof_level_kernel_constructo
   return
 end function compute_dof_level_kernel_constructor
 
-!> @param[in] nlayers Integer the number of layers
-!> @param[in] ndf The number of degrees of freedom per cell for the output field
-!> @param[in] undf The number of unique degrees of freedom for the output field
-!> @param[in] map Integer array holding the dofmap for the cell at the base of the column for the output field
-!> @param[inout] level the data array containing the fractional level of the dof's
-!> @param[in] nodes, nodal coordinates of the dofs
+!> @param[in] nlayers Number of layers
+!> @param[in] ndf Number of degrees of freedom per cell for the output field
+!> @param[in] undf Number of unique degrees of freedom for the output field
+!> @param[in] map Dofmap for the cell at the base of the column for the output field
+!> @param[out] level Fractional level of the dof's
+!> @param[in] nodes Nodal coordinates of the dofs
 subroutine compute_dof_level_code(nlayers,                                  &
                                   level,                                    &
                                   ndf, undf, map,                           &

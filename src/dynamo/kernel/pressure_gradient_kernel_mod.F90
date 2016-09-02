@@ -12,16 +12,16 @@
 !!        and potential temperature
 
 
-!> @detail The kernel computes the pressure gradient part of the 
+!> @details The kernel computes the pressure gradient part of the 
 !>         rhs of the momentum equation for the nonlinear equations,
 !>         written in the vector invariant form
 !>         This rhs consists of four terms:
-!>         Pressure gradient: cp*theta*grad(pi)
-!>         geopotential gradient: grad(Phi) ( \quiv g for some domains)
-!>         gradient of kinetic energy: grad(1/2*u.u) = 
-!>         vorticity advection: xi/rho \cross F (with vorticity xi and mass flux F)
+!>         Pressure gradient: \f[ cp*\theta*\nabla(\Pi)\f]
+!>         geopotential gradient: \f[ \nabla(\Phi) ( \equiv g for some domains)\f]
+!>         gradient of kinetic energy: \f[ \nabla(1/2*u.u) \f] 
+!>         vorticity advection: \f[ \xi/\rho \times F (with vorticity \xi and mass flux F) \f]
 !>         This results in:
-!>         pressure_gradient = -xi/rho x F - grad(Phi + 1/2*u.u) - cp*theta*grad(exner)
+!>         \f[ r_u = -\xi/\rho \times F - \nabla(\Phi + 1/2*u.u) - cp*\theta*\nabla(\Pi) \f]
 module pressure_gradient_kernel_mod
 
 use argument_mod,      only : arg_type, func_type,                 &
@@ -74,29 +74,29 @@ type(pressure_gradient_kernel_type) function pressure_gradient_kernel_constructo
   return
 end function pressure_gradient_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf_w2 The number of degrees of freedom per cell for w2
-!! @param[in] undf_w2 The number unique of degrees of freedom  for w2
-!! @param[in] map_w2 Integer array holding the dofmap for the cell at the base of the column for w2
-!! @param[in] w2_basis Real 4-dim array holding basis functions evaluated at quadrature points 
-!! @param[in] w2_diff_basis Real 4-dim array holding differntial of the basis functions evaluated at  quadrature points
-!! @param[inout] r_u Real array the data 
-!! @param[in] ndf_w3 The number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 The number unique of degrees of freedom  for w3
-!! @param[in] map_w3 Integer array holding the dofmap for the cell at the base of the column for w3
-!! @param[in] w3_basis Real 4-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] rho Real array. The density
-!! @param[in] ndf_w0 The number of degrees of freedom per cell for w0
-!! @param[in] undf_w0 The number unique of degrees of freedom  for w0
-!! @param[in] map_w0 Integer array holding the dofmap for the cell at the base of the column for w0
-!! @param[in] w0_basis Real 4-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] w0_diff_basis Real 4-dim array holding differntial of the basis functions evaluated at gaussian quadrature point
-!! @param[in] theta Real array. potential temperature
-!! @param[in] nqp_h Integer, number of quadrature points in the horizontal
-!! @param[in] nqp_v Integer, number of quadrature points in the vertical
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!> @brief Compute the pressure gradient component of the momentum equation
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
+!! @param[in] undf_w2 Number unique of degrees of freedom  for w2
+!! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
+!! @param[in] w2_basis Basis functions evaluated at quadrature points 
+!! @param[in] w2_diff_basis Differential of the basis functions evaluated at  quadrature points
+!! @param[inout] r_u Momentum equation right hand side
+!! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
+!! @param[in] undf_w3 Number unique of degrees of freedom  for w3
+!! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
+!! @param[in] w3_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[in] rho Density
+!! @param[in] ndf_w0 Number of degrees of freedom per cell for w0
+!! @param[in] undf_w0 Number unique of degrees of freedom  for w0
+!! @param[in] map_w0 Dofmap for the cell at the base of the column for w0
+!! @param[in] w0_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[in] w0_diff_basis Differential of the basis functions evaluated at gaussian quadrature point
+!! @param[in] theta Potential temperature
+!! @param[in] nqp_h Number of quadrature points in the horizontal
+!! @param[in] nqp_v Number of quadrature points in the vertical
+!! @param[in] wqp_h horizontal quadrature weights
+!! @param[in] wqp_v vertical quadrature weights
 subroutine pressure_gradient_code(nlayers,                                          &
                                   r_u, rho, theta,                                  &
                                   ndf_w2, undf_w2, map_w2, w2_basis, w2_diff_basis, &

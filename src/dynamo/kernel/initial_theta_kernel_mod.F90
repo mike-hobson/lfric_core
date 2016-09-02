@@ -7,10 +7,10 @@
 !
 !-------------------------------------------------------------------------------
 
-!> @brief Kernel computes the initial theta field
+!> @brief Computes the initial theta field
 
-!> @detail The kernel computes initial theta perturbation field for theta in the space
-!>         of horizontally discontinuous, vertically continuous polynomials
+!> @details The kernel computes initial theta perturbation field for theta in the space
+!>          of horizontally discontinuous, vertically continuous polynomials
 
 module initial_theta_kernel_mod
 
@@ -60,23 +60,20 @@ contains
         return
     end function initial_theta_kernel_constructor
 
-      !> @brief The subroutine which is called directly by the Psy layer
-      !! @param[in] nlayers Integer the number of layers
-      !! @param[in] ndf_wtheta The number of degrees of freedom per cell for wtheta
-      !! @param[in] udf_wtheta The number of total degrees of freedom for wtheta
-      !! @param[in] map_wtheta Integer array holding the dofmap for the cell at the base of the column
-      !! @param[inout] theta Real array the data
-      !! @param[in] wtheta_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points
-      !! @param[in] ndf_w0 The number of degrees of freedom per cell
-      !! @param[in] ndf_w0 The total number of degrees of freedom
-      !! @param[in] map_w0 Integer array holding the dofmap for the cell at the base of the column
-      !! @param[in] w0_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points
-      !! @param[inout] chi_1 Real array, the x component of the w0 coordinate field
-      !! @param[inout] chi_2 Real array, the y component of the w0 coordinate field
-      !! @param[inout] chi_3 Real array, the z component of the w0 coordinate field
-
-      ! In Psyclone
-
+    !> @brief Computes the initial theta field
+    !! @param[in] nlayers Number of layers
+    !! @param[in] ndf_wtheta Number of degrees of freedom per cell for wtheta
+    !! @param[in] undf_wtheta Number of total degrees of freedom for wtheta
+    !! @param[in] map_wtheta Dofmap for the cell at the base of the column
+    !! @param[inout] theta Potential temperature
+    !! @param[in] ndf_w0 Number of degrees of freedom per cell
+    !! @param[in] ndf_w0 Total number of degrees of freedom
+    !! @param[in] undf_w0 Number of total degrees of freedom for w0
+    !! @param[in] map_w0 Dofmap for the cell at the base of the column
+    !! @param[in] w0_basis Basis functions evaluated at gaussian quadrature points
+    !! @param[inout] chi_1 X component of the w0 coordinate field
+    !! @param[inout] chi_2 Y component of the w0 coordinate field
+    !! @param[inout] chi_3 Z component of the w0 coordinate field
     subroutine initial_theta_code(nlayers, ndf_wtheta, undf_wtheta, map_wtheta, theta, &
                                   ndf_w0, undf_w0, map_w0, w0_basis, chi_1, chi_2, chi_3)
 

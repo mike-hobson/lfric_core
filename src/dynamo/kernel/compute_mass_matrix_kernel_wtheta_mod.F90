@@ -62,24 +62,23 @@ type(compute_mass_matrix_kernel_wtheta_type) function compute_mass_matrix_constr
 end function compute_mass_matrix_constructor
 
 !> @brief This subroutine computes the mass matrix for the wtheta space
-!! @param[in] cell Integer: The cell number
-!! @param[in] nlayers Integer: The number of layers.
-!! @param[in] ndf Integer: The number of degrees of freedom per cell.
-!! @param[in] ncell_3d Integer: ncell*ndf
-!! @param[inout] mm Real: The mass matrix data array
-!! @param[in] ndf_wtheta Integer: The number of degrees of freedom per cell for the operator space.
-!! @param[in] basis_wtheta Real: 4-dim array holding SCALAR basis functions evaluated at quadrature points.
-!! @param[in] ndf_chi Integer: The number of degrees of freedom per cell for the coordinate field.
-!! @param[in] undf_chi Integer: number of unique degrees of freedum  for chi field
-!! @param[in] map_chi Integer: Array holding the dofmap for the cell at the base of the column.
-!! @param[in] diff_basis_chi Real: 4-dim array holding VECTOR differential basis functions evaluated at quadrature points.
-!! @param[inout] chi1 Real: The data array for chi in the first dir
-!! @param[inout] chi2 Real: The data array for chi in the 2nd dir
-!! @param[inout] chi3 Real: The data array for chi in the 3rd dir
-!! @param[in] nqp_h Integer number of horizontal quadrature points
-!! @param[in] nqp_v Integer number of vertical quadrature points
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!! @param[in] cell Cell number
+!! @param[in] nlayers Number of layers.
+!! @param[in] ncell_3d ncell*ndf
+!! @param[inout] mm Mass matrix data array
+!! @param[in] ndf_wtheta Number of degrees of freedom per cell for the operator space.
+!! @param[in] basis_wtheta Scalar basis functions evaluated at quadrature points.
+!! @param[in] ndf_chi Number of degrees of freedom per cell for the coordinate field.
+!! @param[in] undf_chi Number of unique degrees of freedum  for chi field
+!! @param[in] map_chi Dofmap for the cell at the base of the column.
+!! @param[in] diff_basis_chi Vector differential basis functions evaluated at quadrature points.
+!! @param[inout] chi1 Physical coordinate in the first dir
+!! @param[inout] chi2 Physical coordinate in the 2nd dir
+!! @param[inout] chi3 Physical coordinate in the 3rd dir
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 !!
 subroutine compute_mass_matrix_wtheta_code(    &
                    cell, nlayers, ncell_3d,    &

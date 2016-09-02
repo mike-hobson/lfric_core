@@ -55,17 +55,17 @@ type(invert_local_operator_kernel_type) function invert_local_operator_construct
   return
 end function invert_local_operator_constructor
   
-subroutine invert_local_operator_code(cell, nlayers, ncell3d_inv,       &
-                                      mm_inv, ncell3d, mm,          &
-                                      ndf)
 !> @brief This subroutine computes the mass matrix for the w0 space
-!! @param[in] cell Integer: The cell number
-!! @param[in] nlayers Integer: The number of layers.
-!! @param[in] ndf Integer: The number of degrees of freedom per cell.
-!! @param[in] ncell3d Integer: ncell*nlayers
-!! @param[in] ncell3d_inv Integer: ncell*nlayers
-!! @param[inout] mm_inv Real: The inverse mass matrix data array
-!! @param[in] mm Real: The mass matrix data array
+!! @param[in] cell cell Number
+!! @param[in] nlayers Number of layers.
+!! @param[in] ndf Number of degrees of freedom per cell.
+!! @param[in] ncell3d ncell*nlayers
+!! @param[in] ncell3d_inv ncell*nlayers
+!! @param[inout] matrix_inv Inverse matrix
+!! @param[in] matrix Input matrix
+subroutine invert_local_operator_code(cell, nlayers, ncell3d_inv,       &
+                                      matrix_inv, ncell3d, matrix,          &
+                                      ndf)
 
   !Arguments
   integer, intent(in)     :: cell
@@ -73,8 +73,8 @@ subroutine invert_local_operator_code(cell, nlayers, ncell3d_inv,       &
   integer, intent(in)     :: ncell3d, ncell3d_inv
 
 
-  real(kind=r_def), dimension(ndf,ndf,ncell3d),     intent(in)     :: mm
-  real(kind=r_def), dimension(ndf,ndf,ncell3d_inv), intent(inout)  :: mm_inv
+  real(kind=r_def), dimension(ndf,ndf,ncell3d),     intent(in)     :: matrix
+  real(kind=r_def), dimension(ndf,ndf,ncell3d_inv), intent(inout)  :: matrix_inv
 
   !Internal variables
   integer                                      :: k, ik
@@ -82,8 +82,8 @@ subroutine invert_local_operator_code(cell, nlayers, ncell3d_inv,       &
   !loop over layers: Start from 1 as in this loop k is not an offset
   do k = 1, nlayers
     ik = k + (cell-1)*nlayers
-    call matrix_invert(mm(:,:,ik),mm_inv(:,:,ik),ndf)
-  end do ! end of k loop
+    call matrix_invert(matrix(:,:,ik),matrix_inv(:,:,ik),ndf)
+  end do
 
 end subroutine invert_local_operator_code
 

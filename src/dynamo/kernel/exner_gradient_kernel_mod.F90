@@ -7,11 +7,11 @@
 !
 !-------------------------------------------------------------------------------
 
-!> @brief Kernel which computes the exner gradient for rhs of the momentum equation
+!> @brief Computes the exner gradient for rhs of the momentum equation
 !!        with the exner field passed in as an argument
 
 
-!> @detail The kernel computes the exner gradient part of the 
+!> @details Computes the exner gradient part of the 
 !>         rhs of the momentum equation for the nonlinear equations,
 !>         Pressure gradient: cp*theta*grad(pi)
 module exner_gradient_kernel_mod
@@ -66,29 +66,29 @@ type(exner_gradient_kernel_type) function exner_gradient_kernel_constructor() re
   return
 end function exner_gradient_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf_w2 The number of degrees of freedom per cell for w2
-!! @param[in] undf_w2 The number unique of degrees of freedom  for w2
-!! @param[in] map_w2 Integer array holding the dofmap for the cell at the base of the column for w2
-!! @param[in] w2_basis Real 4-dim array holding basis functions evaluated at quadrature points 
-!! @param[in] w2_diff_basis Real 4-dim array holding differntial of the basis functions evaluated at  quadrature points
-!! @param[inout] r_u Real array the data 
-!! @param[in] ndf_w3 The number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 The number unique of degrees of freedom  for w3
-!! @param[in] map_w3 Integer array holding the dofmap for the cell at the base of the column for w3
-!! @param[in] w3_basis Real 4-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] exner Real array. The exner pressure
-!! @param[in] ndf_w0 The number of degrees of freedom per cell for w0
-!! @param[in] undf_w0 The number unique of degrees of freedom  for w0
-!! @param[in] map_w0 Integer array holding the dofmap for the cell at the base of the column for w0
-!! @param[in] w0_basis Real 4-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] w0_diff_basis Real 4-dim array holding differntial of the basis functions evaluated at gaussian quadrature point
-!! @param[in] theta Real array. potential temperature
-!! @param[in] nqp_h Integer, number of quadrature points in the horizontal
-!! @param[in] nqp_v Integer, number of quadrature points in the vertical
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!> @brief Computes the pressure gradient for rhs of the momentum equation
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
+!! @param[in] undf_w2 Number unique of degrees of freedom  for w2
+!! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
+!! @param[in] w2_basis Basis functions evaluated at quadrature points 
+!! @param[in] w2_diff_basis Differntial of the basis functions evaluated at  quadrature points
+!! @param[inout] r_u Right hand side of the momentum equation 
+!! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
+!! @param[in] undf_w3 Number unique of degrees of freedom  for w3
+!! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
+!! @param[in] w3_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[in] exner Exner pressure
+!! @param[in] ndf_w0 Number of degrees of freedom per cell for w0
+!! @param[in] undf_w0 Number unique of degrees of freedom  for w0
+!! @param[in] map_w0 Integer Dofmap for the cell at the base of the column for w0
+!! @param[in] w0_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[in] w0_diff_basis Differntial of the basis functions evaluated at gaussian quadrature point
+!! @param[in] theta Potential temperature
+!! @param[in] nqp_h Number of quadrature points in the horizontal
+!! @param[in] nqp_v Number of quadrature points in the vertical
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 subroutine exner_gradient_code(nlayers,                                          &
                                r_u, exner, theta,                                &
                                ndf_w2, undf_w2, map_w2, w2_basis, w2_diff_basis, &

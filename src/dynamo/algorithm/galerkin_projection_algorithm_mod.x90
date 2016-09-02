@@ -39,10 +39,12 @@ contains
 !>          orthogonal components and the galerkin projection of each
 !>          component is computed.
 !> @param[out] f_out A field to project to
-!> @param[in]  f_in  The field to project
+!> @param[in]  f_in  Field to project
 !> @param[in]  mesh id of the mesh object the model for fields
-!> @param[in]  chi   A 3D coordinate field
-!> @param[in]  space_dimension The dimension of the space f_in (scalar or vector)
+!> @param[in]  chi   3D coordinate field
+!> @param[in]  space_dimension Dimension of the space f_in (scalar or vector)
+!> @param[in]  qr Quadrature rule to perform integrations
+!> @param[in]  mm Optional mass matrix operator to use for projecting to f_out fields
   subroutine galerkin_projection_algorithm( f_out,          &
                                             f_in,           &
                                             mesh,           &

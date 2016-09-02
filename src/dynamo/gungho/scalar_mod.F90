@@ -7,7 +7,7 @@
 !
 !> @brief A module providing scalar related classes.
 !>
-!> @detail A representation of a scalar which provides both easy access to the
+!> @details A representation of a scalar which provides both easy access to the
 !> scalar data and a method by which the PSy layer can access the distributed
 !> memory aspects of the scalar
 

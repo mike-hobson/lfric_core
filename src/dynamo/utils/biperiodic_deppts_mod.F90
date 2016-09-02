@@ -27,14 +27,13 @@ contains
 !!          x_departure < x_arrival. The distance is negative if the wind is
 !!          negative.
 !!
-!!  @param[in]   x_arrival    real, Arrival position
-!!  @param[in]   nCellEdges   integer, Number of velocity values
-!!  @param[in]   u_n          real array, velocity at cell edges at time n
-!!  @param[in]   u_np1        real array, velocity at cell edges at time n+1
-!!  @param[in]   deltaT       real, time step length
-!!  @param[in]   method       integer, integration method
-!!  @param[in]   n_dep_pt_iterations integer, number of solver iterations
-!!  @param[out]  distance     real, distance between arrival and departure point
+!!  @param[in]   x_arrival    Arrival position
+!!  @param[in]   nCellEdges   Number of velocity values
+!!  @param[in]   u_n          Velocity at cell edges at time n
+!!  @param[in]   u_np1        Velocity at cell edges at time n+1
+!!  @param[in]   deltaT       Time step length
+!!  @param[in]   method       Integration method
+!!  @param[in]   n_dep_pt_iterations Number of solver iterations
 !--------------------------------------------------------------------------------
   function calc_dep_point(  x_arrival,           &
                             nCellEdges,          &
@@ -115,10 +114,10 @@ contains
 !>  @brief  Calculates the location of a value x_in within a given stencil of
 !!          length nCellEdges
 !!
-!!  @param[in]    x_in  real, The arrival value, typically equal to 0.0.
-!!  @param[in]    nCellEdges  integer, Equal to number of cell edges in a stencil
-!!  @param[out]   iEdge       integer, index of cell edge to the left of x_in
-!!  @param[out]   fractional_x_value  real, fractional value of x_in
+!!  @param[in]    x_in  Arrival value, typically equal to 0.0.
+!!  @param[in]    nCellEdges  Number of cell edges in a stencil
+!!  @param[out]   iEdge       Index of cell edge to the left of x_in
+!!  @param[out]   fractional_x_value  Fractional value of x_in
 !--------------------------------------------------------------------------------
   subroutine find_local_x_value(x_in,nCellEdges,iEdge,fractional_x_value)
     real(kind=r_def), intent(in)    :: x_in
@@ -147,9 +146,9 @@ contains
 !>  @brief  Subroutine which checks whether departure points are outside the
 !!          domain of interest defined by the stencil length
 !!
-!!  @param[in]   x_in         real, x value to be tested
-!!  @param[in]   left_limit   real, left hand bound
-!!  @param[in]   right_limit  real, right hand bound
+!!  @param[in]   x_in         X value to be tested
+!!  @param[in]   left_limit   Left hand bound
+!!  @param[in]   right_limit  Right hand bound
 !--------------------------------------------------------------------------------
   subroutine test_value_in_limits(x_in,left_limit,right_limit)
     real(kind=r_def), intent(in) ::   x_in
@@ -166,10 +165,10 @@ contains
 !--------------------------------------------------------------------------------
 !>  @brief  Returns an interpolated wind field value at x_in
 !!
-!!  @param[in]    x_in        real, position at which to interpolate wind
-!!  @param[in]    nCellEdges  integer, number of values in the local u field
-!!  @param[in]    u_wind      real array, wind values
-!!  @param[out]   u_out       real, interpolated wind value
+!!  @param[in]    x_in        Position at which to interpolate wind
+!!  @param[in]    nCellEdges  Number of values in the local u field
+!!  @param[in]    u_wind      Wind values
+!!  @result       u_out       Interpolated wind value
 !--------------------------------------------------------------------------------
   function calc_u_at_x(x_in,nCellEdges,u_wind) result(u_out)
     real(kind=r_def), intent(in)  ::  x_in

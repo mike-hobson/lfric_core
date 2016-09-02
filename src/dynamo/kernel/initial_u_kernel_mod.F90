@@ -66,20 +66,24 @@ end function initial_u_kernel_constructor
 !>          field is computed for each component, this allows a vector field to
 !>          be projected into three separate scalar fields suitable for further
 !>          manipulation
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf The number of degrees of freedom per cell
-!! @param[in] map Integer array holding the dofmap for the cell at the base of the column
-!! @param[in] basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points
-!! @param[inout] rhs Real array, the ths field to compute
-!! @param[in] gq Type, gaussian quadrature rule
-!! @param[in] ndf_chi the numbe rof dofs per cell for the coordinate field
-!! @param[in] map_chi the dofmap for the coordinate field
-!! @param[in] chi_diff_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points
-!! @param[in] chi_1 Real array, the x component of the coordinate field
-!! @param[in] chi_2 Real array, the y component of the coordinate field
-!! @param[in] chi_3 Real array, the z component of the coordinate field
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf Number of degrees of freedom per cell
+!! @param[in] undf Total number of degrees of freedom
+!! @param[in] map Dofmap for the cell at the base of the column
+!! @param[in] basis Basis functions evaluated at gaussian quadrature points
+!! @param[inout] rhs Right hand side field to compute
+!! @param[in] ndf_chi Number of dofs per cell for the coordinate field
+!! @param[in] undf_chi Total number of degrees of freedom
+!! @param[in] map_chi Dofmap for the coordinate field
+!! @param[in] chi_basis Basis functions evaluated at gaussian quadrature points
+!! @param[in] chi_diff_basis Basis functions evaluated at gaussian quadrature points
+!! @param[in] chi_1 X component of the coordinate field
+!! @param[in] chi_2 Y component of the coordinate field
+!! @param[in] chi_3 Z component of the coordinate field
+!! @param[in] nqp_h Number of quadrature points in the horizontal
+!! @param[in] nqp_v Number of quadrature points in the vertical
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 subroutine initial_u_code(nlayers, &
                           rhs, & 
                           chi_1, chi_2, chi_3, &

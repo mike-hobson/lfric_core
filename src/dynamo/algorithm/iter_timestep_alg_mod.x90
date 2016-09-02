@@ -76,10 +76,10 @@ module iter_timestep_alg_mod
 contains
   !> @details Initialisation procedure for the timestepping algorithm
   !>         Initialises various internal fields
-  !> @param[in]    mesh Mesh object on which the model runs
-  !> @param[inout] u  The 3D wind field
-  !> @param[inout] rho The density
-  !> @param[inout] theta The potential temperature
+  !> @param[in]    mesh_id Mesh id of the mesh object on which the model runs
+  !> @param[inout] u  3D wind field
+  !> @param[inout] rho Density
+  !> @param[inout] theta Potential temperature
 
 
   subroutine iter_alg_init( mesh_id, u, rho, theta)
@@ -159,11 +159,11 @@ contains
   !>         by default. This means that there is one evaluation of old time
   !>         level terms, 2 evaluation of advective terms and 4 evaluations 
   !>         of new time level terms and increment updates per timestep
-  !> @param[inout] chi  The finite element form of the coordinates
-  !> @param[inout] u  The 3D wind field
-  !> @param[inout] rho The density
-  !> @param[inout] theta The potential temperature
-  !> @param[inout] xi The vorticity field
+  !> @param[inout] chi  Finite element form of the coordinates
+  !> @param[inout] u  3D wind field
+  !> @param[inout] rho Density
+  !> @param[inout] theta Potential temperature
+  !> @param[inout] xi Vorticity field
 
   subroutine iter_alg_step(chi, u, rho, theta, xi)
 

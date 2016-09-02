@@ -9,7 +9,7 @@
 
 !> @brief Kernel which projection of the flux of a field into a vector space
 
-!> @detail Compute the flux of a field f when transported by a velocity field
+!> @details Compute the flux of a field f when transported by a velocity field
 !> u as int(u*f) this can be used to compute a flux field F = u*f.
 module flux_rhs_kernel_mod
 use kernel_mod,              only : kernel_type
@@ -64,29 +64,29 @@ type(flux_rhs_kernel_type) function flux_rhs_kernel_constructor() result(self)
 end function flux_rhs_kernel_constructor
 
 !> @brief 
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf_u The number of degrees of freedom per cell for w2
-!! @param[in] undf_u The number of unique degrees of freedom for w2
-!! @param[in] map_u Integer array holding the dofmap for the cell at the base of the column for w2
-!! @param[in] basis_u Real 4-dim array holding basis functions evaluated at gaussian quadrature points
-!! @param[inout] rhs Real array the field to contain the right hand side to be computed
-!! @param[in] u Real array the advecting field
-!! @param[in] ndf_f The number of degrees of freedom per cell for the field to be advected
-!! @param[in] undf_f  The number of unique degrees of freedom for the advected field
-!! @param[in] map_f Integer array holding the dofmap for the cell at the base of the column for the field to be advected
-!! @param[in] basis_f Real 4-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] f Real array the advected field
-!! @param[in] ndf_chi The number of degrees of freedom per cell for the function space containing chi
-!! @param[in] undf_chi The number of unique degrees of freedom for chi arrays
-!! @param[in] map_chi Integer array holding the dofmap for the cell at the base of the column for the function space containing chi
-!! @param[in] chi_diff_basis Real 4-dim array holding differntial of the basis functions evaluated at gaussian quadrature point
-!! @param[in] chi_1 Real array. the physical x coordinate in w0
-!! @param[in] chi_2 Real array. the physical y coordinate in w0
-!! @param[in] chi_3 Real array. the physical z coordinate in w0
-!! @param[in] nqp_h the number of horizontal quadrature points
-!! @param[in] nqp_v the number of vertical quadrature points
-!! @param[in] wqp_h the weights of the horizontal quadrature points
-!! @param[in] wqp_v the weights of the vertical quadrature points
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf_u Number of degrees of freedom per cell for w2
+!! @param[in] undf_u Number of unique degrees of freedom for w2
+!! @param[in] map_u Dofmap for the cell at the base of the column for w2
+!! @param[in] basis_u Basis functions evaluated at gaussian quadrature points
+!! @param[inout] rhs Field to contain the right hand side to be computed
+!! @param[in] u Advecting field
+!! @param[in] ndf_f Number of degrees of freedom per cell for the field to be advected
+!! @param[in] undf_f Number of unique degrees of freedom for the advected field
+!! @param[in] map_f Dofmap for the cell at the base of the column for the field to be advected
+!! @param[in] basis_f Basis functions evaluated at gaussian quadrature points 
+!! @param[in] f Advected field
+!! @param[in] ndf_chi Number of degrees of freedom per cell for the function space containing chi
+!! @param[in] undf_chi Number of unique degrees of freedom for chi arrays
+!! @param[in] map_chi Dofmap for the cell at the base of the column for the function space containing chi
+!! @param[in] diff_basis_chi Differntial of the basis functions evaluated at gaussian quadrature point
+!! @param[in] chi_1 Physical x coordinate in w0
+!! @param[in] chi_2 Physical y coordinate in w0
+!! @param[in] chi_3 Physical z coordinate in w0
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Weights of the horizontal quadrature points
+!! @param[in] wqp_v Weights of the vertical quadrature points
 subroutine flux_rhs_code(nlayers, rhs, u, f, chi_1, chi_2, chi_3, &
                          ndf_u, undf_u, map_u, basis_u,              &
                          ndf_f, undf_f, map_f, basis_f,                      &

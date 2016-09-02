@@ -18,10 +18,10 @@ module field_bundle_mod
 
 contains
 
-!> Create a bundle y of fields on the same function space as bundle x
-!> @param[in]  x The input bundle to clone
-!> @param[out] y The output bundle to contain fields of the same type as x
-!> @param[in]  bundle_size Integer, the number of fields in the bundle
+!> @brief Create a bundle y of fields on the same function space as bundle x
+!> @param[in]  x Input bundle to clone
+!> @param[out] y Output bundle to contain fields of the same type as x
+!> @param[in]  bundle_size Number of fields in the bundle
 
   subroutine clone_bundle(x, y, bundle_size)
 
@@ -45,10 +45,10 @@ contains
   end subroutine clone_bundle
 !=============================================================================!
 
-!> Set all fields in a bundle x to the scalar value a
-!> @param [in] a The scalar
-!> @param [inout] x The field bundle
-!> @param [in] bundle_size the number of fields in the bundle x
+!> @brief Set all fields in a bundle x to the scalar value a
+!> @param [in] a Scalar
+!> @param [inout] x Field bundle
+!> @param [in] bundle_size Number of fields in the bundle x
   subroutine set_bundle_scalar(a, x, bundle_size)
     use psykal_lite_mod, only: invoke_set_field_scalar
     implicit none
@@ -63,11 +63,11 @@ contains
   end subroutine set_bundle_scalar
 !=============================================================================!
 
-!> Compute the inner product of two field bundles
-!> @param [result] a The inner product
-!> @param [in] x The first field bundle
-!> @param [in] y The second field bundle
-!> @param [in] bundle_size the number of fields in the bundle x
+!> @brief Compute the inner product of two field bundles
+!> @result a Inner product
+!> @param [in] x First field bundle
+!> @param [in] y Second field bundle
+!> @param [in] bundle_size Number of fields in the bundle x
   function bundle_inner_product(x, y, bundle_size) result(a)
     use psykal_lite_mod, only: invoke_inner_prod
     implicit none
@@ -85,12 +85,12 @@ contains
   end function bundle_inner_product
 !=============================================================================!
 
-!> Compute z = a*x + y for bundles x, y, z and scalar a
-!> @param [in] a The scalar
-!> @param [in] x The first field bundle
-!> @param [in] y The second field bundle
-!> @param [inout] z The result field bundle
-!> @param [in] bundle_size the number of fields in the bundle
+!> @brief Compute z = a*x + y for bundles x, y, z and scalar a
+!> @param [in] a Scalar
+!> @param [in] x First field bundle
+!> @param [in] y Second field bundle
+!> @param [inout] z Result field bundle
+!> @param [in] bundle_size Number of fields in the bundle
   subroutine bundle_axpy(a, x, y, z, bundle_size)
     use psykal_lite_mod, only: invoke_axpy
     implicit none
@@ -106,10 +106,10 @@ contains
   end subroutine bundle_axpy
 !=============================================================================!
 
-!> Copy the data from bundle x to bundle y (y = x)
-!> @param [in] x The first field bundle
-!> @param [inout] y The second field bundle
-!> @param [in] bundle_size the number of fields in the bundle
+!> @brief Copy the data from bundle x to bundle y (y = x)
+!> @param [in] x First field bundle
+!> @param [inout] y Second field bundle
+!> @param [in] bundle_size Number of fields in the bundle
   subroutine copy_bundle(x, y, bundle_size)
     use psykal_lite_mod, only: invoke_copy_field_data
     implicit none
@@ -123,11 +123,11 @@ contains
     end do
   end subroutine copy_bundle
 !=============================================================================!
-!> Compute z = x - y for field bundles x, y and z
-!> @param [in] x The first field bundle
-!> @param [in] y The second field bundle
-!> @param [inout] z The result field bundle
-!> @param [in] bundle_size the number of fields in the bundle
+!> @brief Compute z = x - y for field bundles x, y and z
+!> @param [in] x First field bundle
+!> @param [in] y Second field bundle
+!> @param [inout] z Result field bundle
+!> @param [in] bundle_size Number of fields in the bundle
   subroutine minus_bundle(x, y, z, bundle_size)
     use psykal_lite_mod, only: invoke_minus_field_data
     implicit none
@@ -141,11 +141,11 @@ contains
     end do
   end subroutine minus_bundle
 !=============================================================================!
-!> Compute y = a*x for bundles x and y and scaler a
-!> @param [in] a The scalar
-!> @param [in] x The first field bundle
-!> @param [inout] y The second field bundle
-!> @param [in] bundle_size the number of fields in the bundle
+!> @brief Compute y = a*x for bundles x and y and scaler a
+!> @param [in] a Scalar
+!> @param [in] x First field bundle
+!> @param [inout] y Second field bundle
+!> @param [in] bundle_size Number of fields in the bundle
   subroutine bundle_ax(a, x, y, bundle_size)
     use psykal_lite_mod, only: invoke_copy_scaled_field_data
     implicit none
@@ -160,10 +160,10 @@ contains
     end do
   end subroutine bundle_ax
 !=============================================================================!
-!> Divide the dofs in  bundle x by those in bundle y
-!> @param [inout] x The first field bundle
-!> @param [inout] y The second field bundle
-!> @param [in] bundle_size the number of fields in the bundle
+!> @brief Divide the dofs in bundle x by those in bundle y
+!> @param [inout] x First field bundle
+!> @param [inout] y Second field bundle
+!> @param [in] bundle_size Number of fields in the bundle
   subroutine bundle_divide(x, y, bundle_size)
     use psykal_lite_mod, only: invoke_divide_field
     implicit none
@@ -176,9 +176,9 @@ contains
     end do
   end subroutine bundle_divide
 !=============================================================================!
-!> Write the min and max values of a field bundle to the log file
-!> @param [in] x The first field bundle
-!> @param [in] bundle_size the number of fields in the bundle
+!> @brief Write the min and max values of a field bundle to the log file
+!> @param [in] x First field bundle
+!> @param [in] bundle_size Number of fields in the bundle
   subroutine bundle_minmax(x, bundle_size)
 
     use psykal_lite_mod,           only: invoke_copy_field_data
@@ -207,13 +207,13 @@ contains
   end subroutine bundle_minmax
 
 !=============================================================================!
-!> Compute z = a*x + b*y for bundles x, y, z and scalars a and b
-!> @param [in] a The scalar
-!> @param [in] b The scalar
-!> @param [in] x The first field bundle
-!> @param [in] y The second field bundle
-!> @param [inout] z The result field bundle
-!> @param [in] bundle_size the number of fields in the bundle
+!> @brief Compute z = a*x + b*y for bundles x, y, z and scalars a and b
+!> @param [in] a Scalar
+!> @param [in] b Scalar
+!> @param [in] x First field bundle
+!> @param [in] y Second field bundle
+!> @param [inout] z Result field bundle
+!> @param [in] bundle_size Number of fields in the bundle
   subroutine bundle_axpby(a, x, b, y, z, bundle_size)
     use psykal_lite_mod, only: invoke_axpby
     implicit none
@@ -228,11 +228,11 @@ contains
     end do
   end subroutine bundle_axpby
 !=============================================================================!
-!> Compute z = x + y for field bundles x, y and z
-!> @param [in] x The first field bundle
-!> @param [in] y The second field bundle
-!> @param [inout] z The result field bundle
-!> @param [in] bundle_size the number of fields in the bundle
+!> @brief Compute z = x + y for field bundles x, y and z
+!> @param [in] x First field bundle
+!> @param [in] y Second field bundle
+!> @param [inout] z Result field bundle
+!> @param [in] bundle_size Number of fields in the bundle
   subroutine add_bundle(x, y, z, bundle_size)
     use psykal_lite_mod, only: invoke_axpy
     implicit none

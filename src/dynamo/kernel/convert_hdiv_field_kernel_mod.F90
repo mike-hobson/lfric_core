@@ -61,22 +61,22 @@ type(convert_hdiv_field_kernel_type) function convert_hdiv_field_kernel_construc
   return
 end function convert_hdiv_field_kernel_constructor
 
-!> @param[in] nlayers Integer the number of layers
-!> @param[in] ndf The number of degrees of freedom per cell for the output field
-!> @param[in] undf The number of unique degrees of freedom for the output field
-!> @param[in] map Integer array holding the dofmap for the cell at the base of the column for the output field
-!> @param[inout] physical_field1 The first component of the output field in physical units
-!> @param[inout] physical_field2 The second component of the  output field in physical units
-!> @param[inout] physical_field3 The third component of the  output field in physical units
-!> @param[in] computationall_field The output field in computational units
-!> @param[in] chi1 the array of coordinates in the first direction
-!> @param[in] chi2 the array of coordinates in the second direction
-!> @param[in] chi3 the array of coordinates in the third direction
-!> @param[in] ndf_chi The number of degrees of freedom per cell for the coordinate field
-!> @param[in] undf_chi The number of unique degrees of freedom for the coordinate field
-!> @param[in] map_chi Integer array holding the dofmap for the cell at the base of the column for the coordinate field
-!> @param[in] basis the basis functions of the output field evaluated at its nodal points
-!> @param[in] diff_basis_chi the diff basis functions of the coordinate space evaluated at the nodal points  
+!> @param[in] nlayers Number of layers
+!> @param[in] ndf Number of degrees of freedom per cell for the output field
+!> @param[in] undf Number of unique degrees of freedom for the output field
+!> @param[in] map Dofmap for the cell at the base of the column for the output field
+!> @param[inout] physical_field1 First component of the output field in physical units
+!> @param[inout] physical_field2 Second component of the  output field in physical units
+!> @param[inout] physical_field3 Third component of the  output field in physical units
+!> @param[in] computational_field Output field in computational units
+!> @param[in] chi1 Coordinates in the first direction
+!> @param[in] chi2 Coordinates in the second direction
+!> @param[in] chi3 Coordinates in the third direction
+!> @param[in] ndf_chi Number of degrees of freedom per cell for the coordinate field
+!> @param[in] undf_chi Number of unique degrees of freedom for the coordinate field
+!> @param[in] map_chi Dofmap for the cell at the base of the column for the coordinate field
+!> @param[in] basis Basis functions of the output field evaluated at its nodal points
+!> @param[in] diff_basis_chi Differential basis functions of the coordinate space evaluated at the nodal points  
 subroutine convert_hdiv_field_code(nlayers,                                  &
                                    physical_field1,                          &
                                    physical_field2,                          &

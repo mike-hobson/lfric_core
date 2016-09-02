@@ -57,16 +57,16 @@ contains
   return
 end function mm_diagonal_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer, strores the diagonal of a mass_matrix
-!> @param[in]  cell the horizontal cell index
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf The number of degrees of freedom per cell
-!! @param[in] undf The unique number of degrees of freedom 
-!! @param[in] map Integer array holding the dofmap for the cell at the base of the column
-!! @param[inout] mm_diag Real array the field array to store the diagonal entries
+!> @brief Stores the diagonal of a mass_matrix
+!> @param[in] cell Horizontal cell index
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf Number of degrees of freedom per cell
+!! @param[in] undf Unique number of degrees of freedom 
+!! @param[in] map Dofmap for the cell at the base of the column
+!! @param[inout] mm_diag Field array to store the diagonal entries
 !!               of the mass matrix
-!! @param[in] ncell_3d total number of cells
-!! @param[in] mass_matrix Real: Array holding mass matrix values
+!! @param[in] ncell_3d Total number of cells
+!! @param[in] mass_matrix Array holding mass matrix values
 subroutine mm_diagonal_kernel_code(cell,        &
                                    nlayers,     &
                                    mm_diag,     &

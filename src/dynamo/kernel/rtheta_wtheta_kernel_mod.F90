@@ -10,7 +10,7 @@
 !> @brief The kernel computes the rhs of the thermodynamic equation for the nonlinear equations
 !>         for horizontally discontinuous temperature basis functions,
 !>         this consists of the term theta*gamma*div(u) + theta u*grad(gamma)
-!> @detail Kernel to  compute the rhs of thermodynamic equation for the nonlinear equations, in
+!> @details Kernel to  compute the rhs of thermodynamic equation for the nonlinear equations, in
 !>         the absense of source terms this is
 !>         rtheta = theta*gamma*div(u) + theta u*grad(gamma)
 module rtheta_wtheta_kernel_mod
@@ -63,25 +63,25 @@ type(rtheta_wtheta_kernel_type) function rtheta_wtheta_kernel_constructor() resu
   return
 end function rtheta_wtheta_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @param[inout] r_theta Real array the data
-!! @param[inout] theta Real array the potential temperature
-!! @param[inout] u Real array the velocity
-!! @param[in] ndf_w2 The number of degrees of freedom per cell for w2
-!! @param[in] undf_w2  The number of unique degrees of freedom  for w2
-!! @param[in] map_w2 Integer array holding the dofmap for the cell at the base of the column for w2
-!! @param[in] w2_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points
-!! @param[in] w2_diff_basis Real 5-dim array holding differential basis functions evaluated at gaussian quadrature points
-!! @param[in] ndf_wtheta The number of degrees of freedom per cell for wtheta
-!! @param[in] undf_wtheta  The number of unique degrees of freedom  for wtheta
-!! @param[in] map_wtheta Integer array holding the dofmap for the cell at the base of the column for wtheta
-!! @param[in] wtheta_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points
-!! @param[in] wtheta_diff_basis Real 5-dim array holding differential basis functions evaluated at gaussian quadrature points
-!! @param[in] nqp_h the number of horizontal quadrature points
-!! @param[in] nqp_v the number of vertical quadrature points
-!! @param[in] wqp_h the weights of the horizontal quadrature points
-!! @param[in] wqp_v the weights of the vertical quadrature points
+!> @brief Compute right hand side of the thermodynamic equation
+!! @param[in] nlayers Number of layers
+!! @param[inout] r_theta Right hand side of the thermodynamic equation
+!! @param[inout] theta Potential temperature
+!! @param[inout] u Velocity
+!! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
+!! @param[in] undf_w2  Number of unique degrees of freedom  for w2
+!! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
+!! @param[in] w2_basis Basis functions evaluated at gaussian quadrature points
+!! @param[in] w2_diff_basis Differential basis functions evaluated at gaussian quadrature points
+!! @param[in] ndf_wtheta Number of degrees of freedom per cell for wtheta
+!! @param[in] undf_wtheta  Number of unique degrees of freedom  for wtheta
+!! @param[in] map_wtheta Dofmap for the cell at the base of the column for wtheta
+!! @param[in] wtheta_basis Basis functions evaluated at gaussian quadrature points
+!! @param[in] wtheta_diff_basis Differential basis functions evaluated at gaussian quadrature points
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Weights of the horizontal quadrature points
+!! @param[in] wqp_v Weights of the vertical quadrature points
 
 subroutine rtheta_wtheta_code(nlayers,                                                        &
                        r_theta, theta, u,                                                     &

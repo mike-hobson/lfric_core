@@ -64,28 +64,28 @@ end function gp_rhs_kernel_constructor
 !> @details   Computes int( gamma * f  dx) to compute the right hand side of the
 !>            galerkin projection of scalar field f into another space of which gamma 
 !>            is the test function
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf The number of degrees of freedom per cell
-!! @param[in] undf The number of (local) unique degrees of freedom of the field rhs
-!! @param[in] map Integer array holding the dofmap for the cell at the base of the column
-!! @param[in] basis Real 4-dim array holding basis functions evaluated at quadrature points
-!! @param[inout] rhs Real array, the rhs field containing the intergral of test_function * field
-!! @param[in] ndf_f The number of degrees of freedom per cell for the field to be projected
-!! @param[in] undf_f The number of (local) unique degrees of freedom of the proj. field 
-!! @param[in] map_f Integer array holding the dofmap for the cell at the base of the column
-!! @param[in] basis_f Real 4-dim array holding basis functions evaluated at quadrature points
-!! @param[in] field The field to be projected
-!! @param[in] ndf_chi the numbe rof dofs per cell for the coordinate field
-!! @param[in] undf_chi The number of (local) unique degrees of freedom of the chi field 
-!! @param[in] map_chi the dofmap for the coordinate field
-!! @param[in] chi_diff_basis Real 4-dim array holding basis functions evaluated at gaussian quadrature points
-!! @param[in] chi_1 Real array, the x component of the coordinate field
-!! @param[in] chi_2 Real array, the y component of the coordinate field
-!! @param[in] chi_3 Real array, the z component of the coordinate field
-!! @param[in] nqp_h Integer number of horizontal quadrature points
-!! @param[in] nqp_v Integer number of vertical quadrature points
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf Number of degrees of freedom per cell
+!! @param[in] undf Number of (local) unique degrees of freedom of the field rhs
+!! @param[in] map Dofmap for the cell at the base of the column
+!! @param[in] basis Basis functions evaluated at quadrature points
+!! @param[inout] rhs Field containing the intergral of test_function * field
+!! @param[in] ndf_f Number of degrees of freedom per cell for the field to be projected
+!! @param[in] undf_f Number of (local) unique degrees of freedom of the proj. field 
+!! @param[in] map_f Dofmap for the cell at the base of the column
+!! @param[in] f_basis Basis functions evaluated at quadrature points
+!! @param[in] field Field to be projected
+!! @param[in] ndf_chi Number of dofs per cell for the coordinate field
+!! @param[in] undf_chi Number of (local) unique degrees of freedom of the chi field 
+!! @param[in] map_chi Dofmap for the coordinate field
+!! @param[in] chi_diff_basis Basis functions evaluated at gaussian quadrature points
+!! @param[in] chi_1 X component of the coordinate field
+!! @param[in] chi_2 Y component of the coordinate field
+!! @param[in] chi_3 Z component of the coordinate field
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 subroutine gp_rhs_code(nlayers, &
                        rhs, field, &
                        chi_1, chi_2, chi_3, &

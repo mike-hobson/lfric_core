@@ -23,7 +23,7 @@ contains
   !!
   !!  @param[in]   a       Estimate of slope
   !!  @param[in]   b       Estimate of slope
-  !!  @param[out]  f       Output slope
+  !!  @result      f       Output slope
   !--------------------------------------------------------------------------------
   function minmod_function(a,b) result(f)
     implicit none
@@ -47,7 +47,7 @@ contains
   !!
   !!  @param[in]   a       Estimate of slope
   !!  @param[in]   b       Estimate of slope
-  !!  @param[out]  f       Output slope
+  !!  @result      f       Output slope
   !--------------------------------------------------------------------------------
   function maxmod_function(a,b) result(f)
     implicit none
@@ -72,10 +72,12 @@ contains
   !!          order in which the density values are supplied is | 1 | 2 | 3 | 4 | 5 |
   !!          where the subgrid coefficients are estimated for cell 3 i.e. the middle cell.
   !!
-  !!  @param[in]   density(1:5)   Density values of five cells which have the ordering
+  !!  @param[in]   density        Density values of five cells which have the ordering
   !!                              | 1 | 2 | 3 | 4 | 5 |
-  !!  @param[out]  coeffs(1:3)    Coefficients for cell 3 with coeffs(1)=a0,
+  !!  @param[out]  coeffs         Coefficients for cell 3 with coeffs(1)=a0,
   !!                              coeffs(2)=a1, coeffs(3)=a2
+  !!  @param[in]   positive       Ensures returned estimate of rho at the cell edge is positive
+  !!  @param[in]   monotone       Ensures no over or undershoots are produced
   !--------------------------------------------------------------------------------
   subroutine return_ppm_output(density,coeffs,positive,monotone)
     implicit none
@@ -107,10 +109,12 @@ contains
   !!          The dofmap for the density values is of the form | 1 | 2 | 3 | 4 | 5 |
   !!          where the subgrid coefficients are  being estimated for cell 3.
   !!
-  !!  @param[in]   density(1:5)   Density values of five cells which have the ordering
+  !!  @param[in]   density        Density values of five cells which have the ordering
   !!                              | 1 | 2 | 3 | 4 | 5 |
-  !!  @param[out]  coeffs(1:3)    Coefficients for cell 3 with coeffs(1)=a0,
+  !!  @param[out]  coeffs         Coefficients for cell 3 with coeffs(1)=a0,
   !!                              coeffs(2)=a1, coeffs(3)=a2
+  !!  @param[in]   positive       Ensures returned estimate of rho at the cell edge is positive
+  !!  @param[in]   monotone       Ensures no over or undershoots are produced
   !--------------------------------------------------------------------------------
   subroutine second_order_coeffs(density,coeffs,positive,monotone)
     implicit none
@@ -140,12 +144,12 @@ contains
   !!          the estimated density value between cells 2 and 3.
   !!          Positivity and monotonicity options are provided.
   !!
-  !!  @param[in]   cell_widths(1:4)   All are assumed to be equal to 1.0 (computational domain)
-  !!  @param[in]   density(1:4)       Has dof map of the form | 1 | 2 | 3 | 4 |
-  !!  @param[in]   positivity         Ensures returned estimate of rho at the cell edge is positive
+  !!  @param[in]   cell_widths        All are assumed to be equal to 1.0 (computational domain)
+  !!  @param[in]   density            Has dof map of the form | 1 | 2 | 3 | 4 |
+  !!  @param[in]   positive           Ensures returned estimate of rho at the cell edge is positive
   !!  @param[in]   monotone           Ensures no over or undershoots are produced
-  !!  @param[out]  density_at_edge    Coefficients for cell 3 with coeffs(1)=a0,
-  !!                              coeffs(2)=a1, coeffs(3)=a2
+  !!  @result      density_at_edge    Coefficients for cell 3 with coeffs(1)=a0,
+  !!                                  coeffs(2)=a1, coeffs(3)=a2
   !--------------------------------------------------------------------------------
   function calc_density_at_cell_edge(cell_widths,density,positive,monotone) result(density_at_edge)
     implicit none
@@ -222,7 +226,7 @@ contains
   !!  @param[in]   density_cell_edge_right  Estimate of the density at x=1
   !!  @param[in]   density_of_cell          Average density of the cell
   !!  @param[in]   monotone                 Ensures no over or undershoots
-  !!  @param[out]  coeffs(1:3)              coeffs(1)=a0, coeffs(2)=a1, coeffs(3)=a2
+  !!  @param[out]  coeffs                   coeffs(1)=a0, coeffs(2)=a1, coeffs(3)=a2
   !--------------------------------------------------------------------------------
   subroutine ppm_output(density_cell_edge_left,density_cell_edge_right,density_of_cell,monotone,coeffs)
     implicit none

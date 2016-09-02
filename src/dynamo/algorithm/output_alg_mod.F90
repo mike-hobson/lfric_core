@@ -41,10 +41,9 @@ contains
 !>          continuous function space before they are interpolated
 !> @param[in] field_name Character giving the name to be applied to the field
 !>            file
-!> @param[in] n integer giving the time step index
-!> @param[inout] field the field to output 
-!> @param[inout] chi the fem coordinate field array
-!> @param[in] mesh_id  The id of the mesh all fields are on
+!> @param[in] n Time step index
+!> @param[inout] field Field to output 
+!> @param[in] mesh_id  Id of the mesh all fields are on
   subroutine output_alg(field_name,n, field, mesh_id)
 
     implicit none

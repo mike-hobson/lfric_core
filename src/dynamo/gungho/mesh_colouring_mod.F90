@@ -28,7 +28,7 @@ module mesh_colouring_mod
 !-----------------------------------------------------------------------------
 !>  @brief  Set colouring pattern for vector spaces
 !>
-!>  @detail Acquires details of cells in partition and applies colouring
+!>  @details Acquires details of cells in partition and applies colouring
 !>          to this space according to the specified colouring policy.
 !>
 !>  @param[in]  num_cells   Number of cells defined on the mesh.
@@ -173,7 +173,7 @@ end subroutine set_colours
 !-----------------------------------------------------------------------------
 !> @brief  Display colour map on console
 !>
-!> @detail Subroutine to print colour map to stdout; useful for debugging.
+!> @details Subroutine to print colour map to stdout; useful for debugging.
 !> 
 !> @param[in] colour_map     array of colours assigned by set_colours()
 !> @param[in] display_width  Optional integer number of cells per line
@@ -207,7 +207,7 @@ subroutine write_colours(colour_map, display_width)
 end subroutine write_colours
 !-----------------------------------------------------------------------------
 !> @brief  Choose next available colour using greedy algorithm
-!> @detail Function to select the next available colour; creates an imbalanced
+!> @details Function to select the next available colour; creates an imbalanced
 !>         palette using a minimal number of colours.
 !>
 !> @param[in] used_colours array of colours already used
@@ -231,7 +231,7 @@ end function choose_colour_greedy
 !-----------------------------------------------------------------------------
 !> @brief   Choose next available colour using balanced algorithm
 !-----------------------------------------------------------------------------
-!> @detail  Function to select the next available colour; creates a balanced
+!> @details Function to select the next available colour; creates a balanced
 !>          palette using all available colours. 
 !>
 !> @param[in] used_colours array of colours already used

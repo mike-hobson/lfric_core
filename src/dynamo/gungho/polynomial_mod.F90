@@ -21,11 +21,10 @@ contains
 ! Evaluate 1D basis functions of arbitary order at the points of quadrature
 !----------------------------------------------------------------------------
 !> Function computes the value of a arbritrary order polynomial at a given point
-!> @param[in] self the calling quadrature rule
-!> @param[in] order the order of the polynomial
-!> @param[in] xi  the point to evaluate the polynomial at
-!> @param[in] x the coordinate array
-!> @param[in] i the index of x at which P(x(i)) = 1
+!> @param[in] order Order of the polynomial
+!> @param[in] xi  Point to evaluate the polynomial at
+!> @param[in] x Coordinate array
+!> @param[in] i Index of x at which P(x(i)) = 1
 pure function poly1d(order, xi, x, i)
   implicit none
   ! order of the basis function 
@@ -58,11 +57,10 @@ end function poly1d
 ! evaluate derivative of 1D basis function of arbitrary order at xk
 !-----------------------------------------------------------------------------
 !> Function computes the value of the derivative of a arbritrary order polynomial at a given point
-!> @param[in] self the calling quadrature rule
-!> @param[in] order the order of the polynomial
-!> @param[in] xi  the point to evaluate the polynomial at
-!> @param[in] x the coordinate array
-!> @param[in] i the index of x at which P(x(i)) = 1
+!> @param[in] order Order of the polynomial
+!> @param[in] xi  Point to evaluate the polynomial at
+!> @param[in] x Coordinate array
+!> @param[in] i Index of x at which P(x(i)) = 1
 pure function poly1d_deriv(order,xi,x,i)
   
   implicit none

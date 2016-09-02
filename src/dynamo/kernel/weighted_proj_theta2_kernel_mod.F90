@@ -59,27 +59,26 @@ type(weighted_proj_theta2_kernel_type) function weighted_proj_theta2_kernel_cons
   return
 end function weighted_proj_theta2_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] cell Integer the current cell index
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ncell_3d Integer The total number of cells in the 3d mesh
-!! @param[inout] projection Real array the locally assembled projection operator
-!! @param[in] theta Real array. The potential temperature array
-!! @param[in] ndf_w0 The number of degrees of freedom per cell for w0
-!! @param[in] undf_w0  The number of unique degrees of freedom  for w0
-!! @param[in] map_w0 Integer array holding the dofmap for the cell at the base of the column for w0
-!! @param[in] w0_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] w0_diff_basis Real 5-dim array holding differnetial basis functions evaluated at gaussian quadrature points 
-!! @param[in] ndf_w2 The number of degrees of freedom per cell for w2
-!! @param[in] w2_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] nqp_h the number of horizontal quadrature points
-!! @param[in] nqp_v the number of vertical quadrature points
-!! @param[in] wqp_h the weights of the horizontal quadrature points
-!! @param[in] wqp_v the weights of the vertical quadrature points
-
+!> @brief Compute the weighted projection operator that maps from W2 to Wtheta
+!! @param[in] cell Current cell index
+!! @param[in] nlayers Number of layers
+!! @param[in] ncell_3d Total number of cells in the 3d mesh
+!! @param[inout] projection Locally assembled projection operator
+!! @param[in] theta Potential temperature array
+!! @param[in] ndf_w0 Number of degrees of freedom per cell for w0
+!! @param[in] undf_w0 Number of unique degrees of freedom  for w0
+!! @param[in] map_w0 Dofmap for the cell at the base of the column for w0
+!! @param[in] w0_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[in] w0_diff_basis Differential basis functions evaluated at gaussian quadrature points 
+!! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
+!! @param[in] w2_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Weights of the horizontal quadrature points
+!! @param[in] wqp_v Weights of the vertical quadrature points
 subroutine weighted_proj_theta2_code(cell, nlayers, ncell_3d,  &
-                                     projection, &
-                                     theta,           &
+                                     projection,               &
+                                     theta,                    &
                                      ndf_w0, undf_w0, map_w0,  &
                                      w0_basis, w0_diff_basis,  &
                                      ndf_w2, w2_basis,         &

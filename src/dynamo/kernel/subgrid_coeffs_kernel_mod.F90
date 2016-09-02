@@ -10,7 +10,7 @@
 !>        here x simply represents a local coordinate within a cell in either
 !>        the chi1, chi2, or chi3 directions.
 
-!> @detail The kernel computes the coefficients a0,a1,a2 where rho is represented in 1D
+!> @details The kernel computes the coefficients a0,a1,a2 where rho is represented in 1D
 !>         by the approximation rho(x) = a0+a1*x+a2*x**2
 !>         Various cases for calculating a0,a1 and a2 are available, including 
 !>         constant,linear and quadratic subgrid representations of rho.
@@ -81,14 +81,17 @@ type(subgrid_coeffs_kernel_type) function subgrid_coeffs_kernel_constructor() re
   return
 end function subgrid_coeffs_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] subgridrho_option Integer Option for which approximation to use
-!! @param[in] undf_w3 Integer The number unique of degrees of freedom for W3
-!! @param[in] rho Real array The density
-!! @param[in] stencil_length Integer The local length of a stencil (5 for PPM)
-!! @param[in] local_dofmap Integer array Local array containg dofmaps of the local stencil
-!! @param[out] coeffs Real array Array containing the three coefficients, a0,a1,a2
+!> @brief Compute the subgrid reconstruction coeffiecients for a density field
+!! @param[in] nlayers Number of layers
+!! @param[in] subgridrho_option Option for which approximation to use
+!! @param[in] ndf_w3 Number of degrees of freedom for W3 per cell
+!! @param[in] undf_w3 Number unique of degrees of freedom for W3
+!! @param[in] rho Density
+!! @param[in] stencil_length Local length of a stencil (5 for PPM)
+!! @param[in] stencil_map Dofmap foe the stencil
+!! @param[out] a0 Coefficient a0
+!! @param[out] a1 Coefficient a1
+!! @param[out] a2 Coefficient a2
 subroutine subgrid_coeffs_code(                                               &
                                 nlayers,                                      &
                                 subgridrho_option,                            &

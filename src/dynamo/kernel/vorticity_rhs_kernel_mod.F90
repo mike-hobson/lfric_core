@@ -9,7 +9,7 @@
 
 !> @brief Kernel which computes the absolute vorticity
 
-!> @detail Compute the projection of the absolute vorticity into the w1 space. 
+!> @details Compute the projection of the absolute vorticity into the w1 space. 
 !>         The is: curl(u) + 2*Omega -> curl(c).u + 2*c.Omega
 module vorticity_rhs_kernel_mod
 use kernel_mod,              only : kernel_type
@@ -61,28 +61,29 @@ type(vorticity_rhs_kernel_type) function vorticity_rhs_kernel_constructor() resu
   return
 end function vorticity_rhs_kernel_constructor
 
-!> @brief 
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf_xi The number of degrees of freedom per cell for w1
-!! @param[in] undf_xi The unique number of degrees of freedom for w1
-!! @param[in] map_xi Integer array holding the dofmap for the cell at the base of the column for w1
-!! @param[inout] rhs Real array the field to contain the right hand side to be computed
-!! @param[in] ndf_u The number of degrees of freedom per cell for the velocity field
-!! @param[in] undf_u The unique number of degrees of freedom for the velocity field
-!! @param[in] map_u Integer array holding the dofmap for the cell at the base of the column for the velocity field
-!! @param[in] basis_u Real 4-dim array holding basis functions evaluated at gaussian quadrature points
-!! @param[in] u Real array the velocity field
-!! @param[in] ndf_chi The number of degrees of freedom per cell for the function space containing chi
-!! @param[in] undf_chi The unique number of degrees of freedom for the chi arrays
-!! @param[in] map_chi Integer array holding the dofmap for the cell at the base of the column for the function space containing chi
-!! @param[in] chi_diff_basis Real 4-dim array holding differntial of the basis functions evaluated at gaussian quadrature point
-!! @param[in] chi_1 Real array. the physical x coordinate in w0
-!! @param[in] chi_2 Real array. the physical y coordinate in w0
-!! @param[in] chi_3 Real array. the physical z coordinate in w0
-!! @param[in] nqp_h the number of horizontal quadrature points
-!! @param[in] nqp_v the number of vertical quadrature points
-!! @param[in] wqp_h the weights of the horizontal quadrature points
-!! @param[in] wqp_v the weights of the vertical quadrature points
+!> @brief Compute the projection of curl(u) into the vorticity function space
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf_xi Number of degrees of freedom per cell for w1
+!! @param[in] undf_xi Unique number of degrees of freedom for w1
+!! @param[in] map_xi Dofmap for the cell at the base of the column for w1
+!! @param[in] diff_basis_xi Differential of the basis functions evaluated at gaussian quadrature point
+!! @param[inout] rhs Right hand side to be computed
+!! @param[in] ndf_u Number of degrees of freedom per cell for the velocity field
+!! @param[in] undf_u Unique number of degrees of freedom for the velocity field
+!! @param[in] map_u Dofmap for the cell at the base of the column for the velocity field
+!! @param[in] basis_u Basis functions evaluated at gaussian quadrature points
+!! @param[in] u Velocity field
+!! @param[in] ndf_chi Number of degrees of freedom per cell for the function space containing chi
+!! @param[in] undf_chi Unique number of degrees of freedom for the chi arrays
+!! @param[in] map_chi Dofmap for the cell at the base of the column for the function space containing chi
+!! @param[in] diff_basis_chi Differntial of the basis functions evaluated at gaussian quadrature point
+!! @param[in] chi_1 Physical x coordinate in w0
+!! @param[in] chi_2 Physical y coordinate in w0
+!! @param[in] chi_3 Physical z coordinate in w0
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Weights of the horizontal quadrature points
+!! @param[in] wqp_v Weights of the vertical quadrature points
 subroutine vorticity_rhs_code(nlayers,                                          &
                          rhs, u, chi_1, chi_2, chi_3,                           &
                          ndf_xi, undf_xi, map_xi, diff_basis_xi,                &

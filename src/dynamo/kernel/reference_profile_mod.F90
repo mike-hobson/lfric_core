@@ -29,11 +29,11 @@ contains
 ! Contained functions/subroutines
 !-------------------------------------------------------------------------------
 !> Subroutine Computes the analytic reference profile at a single point
-!! @param[out] exner_s   Real Holds the exner reference profile
-!! @param[out] rho_s     Real Holds the rho reference profile
-!! @param[out] theta_s   Real Holds the theta reference profile
-!! @param[in] x          Real Holds the (x,y,z) coordinate field
-!! @param[in] itest_option Integer Choice of idealised profile
+!! @param[out] exner_s   Pressure reference profile
+!! @param[out] rho_s     Density reference profile
+!! @param[out] theta_s   Potential temperature reference profile
+!! @param[in] x          (x,y,z) coordinate field
+!! @param[in] itest_option Choice of idealised profile
 subroutine reference_profile(exner_s, rho_s, theta_s, x, itest_option)
 
 real(kind=r_def), intent(in)     :: x(3)

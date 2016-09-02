@@ -69,44 +69,44 @@ type(rtheta_supg_kernel_type) function rtheta_supg_kernel_constructor() &
                               result(self)
   return
 end function rtheta_supg_kernel_constructor
-!> @detail Kernel to  compute the application of streamline upwind
+!> @details Kernel to  compute the application of streamline upwind
 !>         Petrov-Galerkin (supg) method to the thermodynamic equation. This
 !>         replaces the test function
-!>         \[f 
+!>         \f[ 
 !!         \gamma \longrightarrow \gamma^* \equiv \gamma
-!!         + \frac{\alpha}\{\Delta}\frac{\mathbf{F}}{\left|\mathbf{F}\right|}
+!!         + \frac{\alpha}{\Delta}\frac{\mathbf{F}}{\left|\mathbf{F}\right|}
 !!         .\nabla\gamma
-!!         \]f
+!!         \f]
 !!
 !!         where \f$\alpha\f$ is some parameter and \f$\Delta\f$ is a measure
 !!         of the grid spacing.
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf_w0 The number of degrees of freedom per cell for w0
-!! @param[in] undf_w0  The number of unique degrees of freedom  for w0
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf_w0 Number of degrees of freedom per cell for w0
+!! @param[in] undf_w0  Number of unique degrees of freedom  for w0
 !! @param[in] map_w0 Dofmap for the cell at the base of the column for w0
 !! @param[in] w0_basis Basis functions evaluated at gaussian quadrature points
 !! @param[in] w0_diff_basis Differential basis functions evaluated at gaussian
 !!                          quadrature points
-!! @param[inout] r_theta Real array the data 
-!! @param[in] theta Real array the potential temperature
-!! @param[in] theta_n Real array the potential temperature at timelevel n
-!! @param[in] ndf_w2 The number of degrees of freedom per cell for w2
-!! @param[in] undf_w2  The number of unique degrees of freedom  for w2
+!! @param[inout] r_theta right hand side of the thermodynamic equation
+!! @param[in] theta Potential temperature
+!! @param[in] theta_n Potential temperature at timelevel n
+!! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
+!! @param[in] undf_w2  Number of unique degrees of freedom  for w2
 !! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
 !! @param[in] w2_basis Basis functions evaluated at gaussian quadrature points
-!! @param[in] f the mass flux field
-!! @param[in] ndf_w3 The number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 The number of unique degrees of freedom  for w3
+!! @param[in] f Mass flux
+!! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
+!! @param[in] undf_w3 Number of unique degrees of freedom  for w3
 !! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
 !! @param[in] w3_basis Basis functions evaluated at gaussian quadrature points
-!! @param[in] rho the density field
-!! @param[inout] chi1 Real: The data array for chi in the 1st dir
-!! @param[inout] chi2 Real: The data array for chi in the 2nd dir
-!! @param[inout] chi3 Real: The data array for chi in the 3rd dir
-!! @param[in] nqp_h the number of horizontal quadrature points
-!! @param[in] nqp_v the number of vertical quadrature points
-!! @param[in] wqp_h the weights of the horizontal quadrature points
-!! @param[in] wqp_v the weights of the vertical quadrature points
+!! @param[in] rho Density
+!! @param[inout] chi1 Chi in the 1st dir
+!! @param[inout] chi2 Chi in the 2nd dir
+!! @param[inout] chi3 Chi in the 3rd dir
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Weights of the horizontal quadrature points
+!! @param[in] wqp_v Weights of the vertical quadrature points
 subroutine rtheta_supg_code(nlayers,                                          &
                             r_theta, theta, theta_n,                           &
                             f, rho,                                            &

@@ -82,10 +82,10 @@ contains
 
   !> @details Initialisation procedure for the rk timestepping algorithm
   !>          Initialises various internal fields
-  !> @param[in]    mesh id of mesh object on which the model runs
-  !> @param[inout] u The 3D wind field
-  !> @param[inout] rho The density
-  !> @param[inout] theta The potential temperature
+  !> @param[in]    mesh_id Id of mesh object on which the model runs
+  !> @param[inout] u 3D wind field
+  !> @param[inout] rho Density
+  !> @param[inout] theta Potential temperature
 
   subroutine rk_alg_init( mesh_id, u, rho, theta)
     implicit none
@@ -157,12 +157,12 @@ contains
   !>          modifying the (currently hardwired) Butcher tableau (ak array)
   !>          The current set up uses the 3rd-order three stage
   !>          Strong-Stability-Preserving (SSP3) method
-  !> @param[in]    mesh id of mesh object on which the model runs
-  !> @param[inout] chi  The finite element form of the coordinates
-  !> @param[inout] u The 3D wind field
-  !> @param[inout] rho The density
-  !> @param[inout] theta The potential temperature
-  !> @param[inout] xi The vorticity field  
+  !> @param[in]    mesh_id Id of mesh object on which the model runs
+  !> @param[inout] chi  Finite element form of the coordinates
+  !> @param[inout] u 3D wind field
+  !> @param[inout] rho Density
+  !> @param[inout] theta Potential temperature
+  !> @param[inout] xi Vorticity field  
 
   subroutine rk_alg_step(mesh_id, chi, u, rho, theta, xi)
 

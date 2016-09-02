@@ -7,13 +7,12 @@
 !
 !-------------------------------------------------------------------------------
 
-! Kernel to compute the coordinates fields at nodal points of another
-! function space. In general this will give a polynomial approximation to the
-! mesh, i.e. if the mesh is spherical then the nodal coordinates will not lie on
-! spherical shells but will instead represent a polynomial approximation to the
-! spherical shell.
+!> @details Kernel to compute the coordinates fields at nodal points of another
+!> function space. In general this will give a polynomial approximation to the
+!> mesh, i.e. if the mesh is spherical then the nodal coordinates will not lie on
+!> spherical shells but will instead represent a polynomial approximation to the
+!> spherical shell.
 
-!> @detail 
 module nodal_coordinates_kernel_mod
 use kernel_mod,              only : kernel_type
 use argument_mod,            only : arg_type, func_type,                     &
@@ -61,21 +60,22 @@ contains
 type(nodal_coordinates_kernel_type) function nodal_coordinates_kernel_constructor() result(self)
   return
 end function nodal_coordinates_kernel_constructor
-
-!nlayers Integer the number of layers
-!ndf_x The number of degrees of freedom per cell for the output field
-!undf_x The number of unique degrees of freedom for the output field
-!map_x Integer array holding the dofmap for the cell at the base of the column for the output field
-!ndf_chi The number of degrees of freedom per cell for the input field
-!undf_chi The number of unique degrees of freedom for the input field
-!map_chi Integer array holding the dofmap for the cell at the base of the column for the input field
-!nodal_x the array of nodal coordinates in the first direction
-!nodal_y the array of nodal coordinates in the second direction
-!nodal_z the array of nodal coordinates in the third direction
-!chi1 the array of fem coordinates in the first direction
-!chi2 the array of fem coordinates in the second direction
-!chi3 the array of fem coordinates in the third direction
-!basis_chi the basis functions of the chi function space evaluated at the nodal points of the x function space
+!> @brief   Compute the coordinates fields at nodal points of another
+!>          function space
+!>@param[in] nlayers Number of layers
+!>@param[in] ndf_x Number of degrees of freedom per cell for the output field
+!>@param[in] undf_x Number of unique degrees of freedom for the output field
+!>@param[in] map_x Dofmap for the cell at the base of the column for the output field
+!>@param[in] ndf_chi Number of degrees of freedom per cell for the input field
+!>@param[in] undf_chi Number of unique degrees of freedom for the input field
+!>@param[in] map_chi Dofmap for the cell at the base of the column for the input field
+!>@param[out] nodal_x Nodal coordinates in the first direction
+!>@param[out] nodal_y Nodal coordinates in the second direction
+!>@param[out] nodal_z Nodal coordinates in the third direction
+!>@param[in] chi1 Coordinates in the first direction
+!>@param[in] chi2 Coordinates in the second direction
+!>@param[in] chi3 Coordinates in the third direction
+!>@param[in] basis_chi Basis functions of the chi function space evaluated at the nodal points of the x function space
 subroutine nodal_coordinates_code(nlayers,                                    &
                                   nodal_x, nodal_y, nodal_z,                  &
                                   chi1, chi2, chi3,                           &

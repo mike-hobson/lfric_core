@@ -50,12 +50,12 @@ contains
 !>          calculated for each W2 nodal point at lowest order. The departure
 !>          points is an input variable as well as the density. Output variable
 !>          is the mass flux in one direction.
-!> @param[in] direction   direction in which to calculate the mass fluxes
-!> @param[in] u           wind values
-!> @param[in] dep_pts     departure points
-!> @param[in] rho_in   density values
+!> @param[in] direction   Direction in which to calculate the mass fluxes
+!> @param[in] u           Wind values
+!> @param[in] dep_pts     Departure points
+!> @param[in] rho_in   Density values
 !> @param[inout] mass_flux   1D conservative mass flux values in the specified direction
-!> @param[in] mesh        mesh object on which the model runs
+!> @param[in] mesh_id        Mesh id of the mesh object on which the model runs
   subroutine oned_conservative_flux_alg( direction,    &
                                          u,            &
                                          dep_pts,      &

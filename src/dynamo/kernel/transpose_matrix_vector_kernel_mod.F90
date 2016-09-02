@@ -52,20 +52,19 @@ contains
   return
 end function transpose_matrix_vector_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer, computes lhs = matrix^T*x
-!> where matrix^T is the transpose of the matrix
-!> @param[in] cell the horizontal cell index
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ncell_3d total number of cells
-!! @param[in] ndf1 The number of degrees of freedom per cell for the output field
-!! @param[in] undf1 The unique number of degrees of freedom  for the output field
-!! @param[in] map1 Integer array holding the dofmap for the cell at the base of the column for the output field
-!! @param[in] map2 Integer array holding the dofmap for the cell at the base of the column for the input field
-!! @param[in] ndf2 The number of degrees of freedom per cell for the input field
-!! @param[in] undf2 The unique number of degrees of freedom for the input field 
-!! @param[in] x Real array the data
-!> @param[inout] lhs Real array, the output lhs (A^T*x)
-!! @param[in] mass_matrix Real: Array holding mass matrix values
+!> @brief Computes lhs = matrix^T*x where matrix^T is the transpose of the matrix
+!> @param[in] cell Horizontal cell index
+!! @param[in] nlayers Number of layers
+!! @param[in] ncell_3d Total number of cells
+!! @param[in] ndf1 Number of degrees of freedom per cell for the output field
+!! @param[in] undf1 Unique number of degrees of freedom  for the output field
+!! @param[in] map1 Dofmap for the cell at the base of the column for the output field
+!! @param[in] map2 Dofmap for the cell at the base of the column for the input field
+!! @param[in] ndf2 Number of degrees of freedom per cell for the input field
+!! @param[in] undf2 Unique number of degrees of freedom for the input field 
+!! @param[in] x Input data
+!> @param[inout] lhs Output lhs (A^T*x)
+!! @param[in] matrix Matrix values
 subroutine transpose_matrix_vector_code(cell,        &
                                         nlayers,     &
                                         lhs, x,      & 

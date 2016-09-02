@@ -9,7 +9,7 @@
 
 !> @brief Kernel computes the departure points in 1D
 
-!> @detail The kernel computes the departure points using the departure wind.
+!> @details The kernel computes the departure points using the departure wind.
 !>         The kernel works in 1D only.
 
 module calc_departure_point_kernel_mod
@@ -66,18 +66,16 @@ end function calc_departure_point_kernel_constructor
 ! Contained functions/subroutines
 !-------------------------------------------------------------------------------
 !> @brief Subroutine to calculate the departure point
-!> @details
-!>
-!! @param[in]  nlayers  integer, the number of model levels
-!! @param[inout] dep_pts  real array, departure point values in W2 space
-!! @param[in]  departure_pt_stencil_length  integer, length of stencil
-!! @param[in]  undf_w2  The number of unique degrees of freedom for W2
-!! @param[in]  ndf_w2   The number of degrees of freedom per cell in W2
-!! @param[in]  map_w2   integer, dofmap for W2
-!! @param[in]  stencil_map_w2  integer, stencil map in W2 space in Y direction
-!! @param[in]  u_n      real array, data values for wind in W2 space at time n
-!! @param[in]  u_np1    real array, data values for wind in W2 space at time n+1
-!! @param[in]  direction   integer, direction in which to calculate departure points
+!! @param[in]    nlayers Number of model levels
+!! @param[inout] dep_pts Departure point values in W2 space
+!! @param[in]    departure_pt_stencil_length  Length of stencil
+!! @param[in]    undf_w2 Number of unique degrees of freedom for W2
+!! @param[in]    ndf_w2 Number of degrees of freedom per cell in W2
+!! @param[in]    stencil_map_w2  Stencil map in W2 space in Y direction
+!! @param[in]    u_n Wind in W2 space at time n
+!! @param[in]    u_np1 Wind in W2 space at time n+1
+!! @param[in]    direction Direction in which to calculate departure points
+!! @param[in]    dep_pt_method Enumaration of method to use
 subroutine calc_departure_point_code( nlayers,                       &
                                       dep_pts,                       &
                                       departure_pt_stencil_length,   &

@@ -9,7 +9,7 @@
 
 !> @brief Kernel to sample a flux at nodal points: F = u*q
 
-!> @detail Samples a flux field F at nodal points where the flux
+!> @details Samples a flux field F at nodal points where the flux
 !> is defined as the product of a velocity u and a scalar q
 !> The quadrature rule is overloaded to give the nodal points 
 !> of the flux space
@@ -63,20 +63,19 @@ type(sample_flux_kernel_type) function sample_flux_kernel_constructor() result(s
   return
 end function sample_flux_kernel_constructor
 
-!> @brief 
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf_f The number of degrees of freedom per cell for w2
-!! @param[in] undf_f The number of unique degrees of freedom for w2
-!! @param[in] map_f Integer array holding the dofmap for the cell at the base of the column for w2
-!! @param[in] basis_f Real 4-dim array holding basis functions evaluated at gaussian quadrature points
-!! @param[inout] flux Real array the field to contain the right hand side to be computed
-!! @param[in] multiplicity Real array indicating how many times the dof has been visited in total
-!! @param[in] u Real array the advecting field
-!! @param[in] ndf_q The number of degrees of freedom per cell for the field to be advected
-!! @param[in] undf_q  The number of unique degrees of freedom for the advected field
-!! @param[in] map_q Integer array holding the dofmap for the cell at the base of the column for the field to be advected
-!! @param[in] basis_q Real 4-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] q Real array the advected field
+!> @brief Kernel to sample a flux at nodal points: F = u*q
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf_f Number of degrees of freedom per cell for w2
+!! @param[in] undf_f Number of unique degrees of freedom for w2
+!! @param[in] map_f Dofmap for the cell at the base of the column for w2
+!! @param[inout] flux Field to contain the right hand side to be computed
+!! @param[in] multiplicity How many times the dof has been visited in total
+!! @param[in] u Advecting wind
+!! @param[in] ndf_q Number of degrees of freedom per cell for the field to be advected
+!! @param[in] undf_q  Number of unique degrees of freedom for the advected field
+!! @param[in] map_q Dofmap for the cell at the base of the column for the field to be advected
+!! @param[in] basis_q Basis functions evaluated at gaussian quadrature points 
+!! @param[in] q Advected field
 subroutine sample_flux_code(nlayers,                                           &
                             flux, multiplicity, u, q,                          &
                             ndf_f, undf_f, map_f,                              &

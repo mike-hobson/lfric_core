@@ -56,15 +56,18 @@ type(compound_operator_kernel_type) function compound_operator_kernel_constructo
 end function compound_operator_kernel_constructor
 
 !> @brief This subroutine computes the div operator 
-!! @param[in] cell Integer: The cell number
-!! @param[in] nlayers Integer: The number of layers.
-!! @param[in] ncell_3d Integer: ncell*ndf
-!! @param[inout] compound_operator The compound operator to create
-!! @param[in] mass_matrix1 The first mass matrix
-!! @param[in] mass_matrix2 The second mass matrix
-!! @param[in] differential_matrix  The  third operator
-!! @param[in] ndf1 The number of dofs per cell for space 1
-!! @param[in] ndf2 The number of dofs per cell for space 2
+!! @param[in] cell Cell number
+!! @param[in] nlayers Number of layers.
+!! @param[in] ncell_3d_1 Ncell*ndf
+!! @param[in] ncell_3d_2 Ncell*ndf
+!! @param[in] ncell_3d_3 Ncell*ndf
+!! @param[in] ncell_3d_4 Ncell*ndf
+!! @param[inout] compound_operator LMA operator to create
+!! @param[in] mass_matrix1 First mass matrix
+!! @param[in] mass_matrix2 Second mass matrix
+!! @param[in] differential_matrix Third operator
+!! @param[in] ndf1 Number of dofs per cell for space 1
+!! @param[in] ndf2 Number of dofs per cell for space 2
 subroutine compound_operator_kernel_code(cell, nlayers, &
                                          ncell_3d_1,  &
                                          compound_operator, &

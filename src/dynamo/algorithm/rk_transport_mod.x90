@@ -90,8 +90,9 @@ contains
   !> @details Rho and u fields are initialised before
   !>          this algorithm is called. State items are created,
   !> @param[in]    mesh_id Mesh id of mesh on which the model runs
-  !> @param[in]    u The 3D wind field
-  !> @param[inout] rho The density
+  !> @param[in]    u 3D wind field
+  !> @param[inout] rho Density like field
+  !> @param[inout] theta Temperature like field
   subroutine rk_transport_init( mesh_id, u, rho, theta)
     use mesh_mod,                          only: mesh_type
     use mesh_collection_mod,               only: mesh_collection
@@ -178,10 +179,10 @@ contains
   !>          If fem advection is used theta must be in W0,
   !>          If fv advection is used theta must be in Wtheta
   !> @param[in]    mesh_id Mesh id of mesh on which the model runs
-  !> @param[inout] chi  The finite element form of the coordinates
-  !> @param[in]    u The 3D wind field
-  !> @param[inout] rho The density like tracer
-  !> @param[inout] theta The temperature like tracer
+  !> @param[inout] chi  Finite element form of the coordinates
+  !> @param[in]    u 3D wind field
+  !> @param[inout] rho Density like tracer
+  !> @param[inout] theta Temperature like tracer
 
   subroutine rk_transport_step( mesh_id, chi, u, rho, theta)
 
@@ -282,8 +283,10 @@ contains
   end subroutine rk_transport_step
 
   !> @brief Final routine for rk transport timestepping algorithm
-  !> @param[in] rho The density
-  !> @param[in] theta The potential temperature field
+
+  !> @param[in] mesh_id Mesh id of mesh on which the model runs
+  !> @param[in] rho Density
+  !> @param[in] theta Potential temperature field
   subroutine rk_transport_final( mesh_id, rho, theta)
     use psykal_lite_mod,          only: invoke_minus_field_data, &
                                         invoke_set_field_scalar, &

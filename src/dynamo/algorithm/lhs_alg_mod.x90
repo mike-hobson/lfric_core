@@ -83,9 +83,10 @@ contains
 !>
 !>         Where primed terms are increments to the n+1 timelevel field and
 !>         star terms are a reference profile
-!> @param[inout] lhs The state vector to compute
-!> @param[in]    tau_dt The relaxation parameter times the timestep
-!> @param[inout] state The current model prognostic state
+!> @param[inout] lhs State vector to compute
+!> @param[in]    tau_dt Relaxation parameter times the timestep
+!> @param[inout] state Current model prognostic state
+!> @param[in] ref_state Reference state of the model fields
   subroutine lhs_alg(lhs, state, ref_state, tau_dt)
   use derived_config_mod, only: si_bundle_size, bundle_size
   use solver_config_mod,  only: use_operators

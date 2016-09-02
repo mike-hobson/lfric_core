@@ -7,7 +7,10 @@
 !
 !> @brief A module providing operator related classes.
 !>
-!> @detail 
+!> @details  A module for operator objects that map fields from one function
+!>           space to another (that might be the same space). The operators
+!>           use LMA (Local Matrix Assembly) format to store the mappings for 
+!>           each cell
 
 
 module operator_mod

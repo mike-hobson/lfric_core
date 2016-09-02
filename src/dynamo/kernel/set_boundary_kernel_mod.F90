@@ -8,7 +8,7 @@
 !-------------------------------------------------------------------------------
 
 !> @brief Kernel which applies boundary conditions to a field
-!> @detail Code for applying constant boundary conditions to a field
+!> @details Code for applying constant boundary conditions to a field
 module set_boundary_kernel_mod
 use kernel_mod,              only : kernel_type
 use argument_mod,            only : arg_type, func_type,                     &
@@ -53,17 +53,15 @@ type(set_boundary_kernel_type) function set_boundary_kernel_constructor() result
   return
 end function set_boundary_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @param[inout] field Real array the data 
-!! @param[in] ndf The number of degrees of freedom per cell
-!! @param[in] undf The number unique of degrees of freedom
-!! @param[in] map Integer array holding the dofmap for the cell at the base of the column
-!! @param[in] boundary_flag array of flags (= 0) for dofs that live on the
+!> @brief right some values to boundary terms of a field
+!! @param[in] nlayers Number of layers
+!! @param[inout] field fireld to write data to
+!! @param[in] ndf Number of degrees of freedom per cell
+!! @param[in] undf Number unique of degrees of freedom
+!! @param[in] map Dofmap for the cell at the base of the column
+!! @param[in] boundary_flag Flags (= 0) for dofs that live on the
 !!            vertical boundaries of the cell (=1 for other dofs)
-!! @param[in] boundary_value value to set field to on vertical boundaries
-
-
+!! @param[in] boundary_value Value to set field to on vertical boundaries
 subroutine set_boundary_code(nlayers,                        &
                              field,                          &
                              ndf, undf, map, boundary_flag,  &

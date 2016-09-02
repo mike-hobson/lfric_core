@@ -9,7 +9,7 @@
 
 !> @brief Provides access to the members of the w2_kernel class.
 !>
-!> @detail Accessor functions for the w2_kernel class are defined in this
+!> @details Accessor functions for the w2_kernel class are defined in this
 !>         module.
 !
 module compute_mass_matrix_kernel_w2_mod
@@ -69,24 +69,23 @@ end function compute_mass_matrix_constructor
 !!
 !! @param[in] cell     Identifying number of cell.
 !! @param[in] nlayers  Number of layers.
-!! @param[in] ndf      Degrees of freedom per cell.
+!! @param[in] ndf_w2   Degrees of freedom per cell.
 !! @param[in] ncell_3d ncell*ndf
-!! @param[in] basis    VECTOR basis functions evaluated at quadrature points.
+!! @param[in] basis_w2 Vector basis functions evaluated at quadrature points.
 !! @param[in] mm       Local stencil or mass matrix.
 !! @param[in] ndf_chi  Degrees of freedum per cell for chi field.
 !! @param[in] undf_chi Unique degrees of freedum  for chi field.
-!! @param[in] map_chi  DoFmap for the cell at the base of the column, for the
+!! @param[in] map_chi  Dofmap for the cell at the base of the column, for the
 !!                     space on which the chi field lives
-!! @param[in] diff_basis_chi VECTOR differential basis functions evaluated at
+!! @param[in] diff_basis_chi Vector differential basis functions evaluated at
 !!                           quadrature points.
-!! @param[inout] chi1  Chi data in the 1st dir.
-!! @param[inout] chi2  Chi data in the 2nd dir.
-!! @param[inout] chi3  Chi data in the 3rd dir.
-!! @param[in] nqp_h    Horizontal quadrature points.
-!! @param[in] nqp_v    Vertical quadrature points.
-!! @param[in] wqp_h    Quadrature weights horizontal.
-!! @param[in] wqp_v    Quadrature weights vertical.
-
+!! @param[inout] chi1  Physical coordinate in the 1st dir.
+!! @param[inout] chi2  Physical coordinate in the 2nd dir.
+!! @param[inout] chi3  Physical coordinate in the 3rd dir.
+!! @param[in] nqp_h    Number of horizontal quadrature points.
+!! @param[in] nqp_v    Number of vertical quadrature points.
+!! @param[in] wqp_h    Horizontal quadrature weights.
+!! @param[in] wqp_v    Vertical quadrature weights.
 subroutine compute_mass_matrix_w2_code(cell, nlayers, ncell_3d,     &
                                        mm,                          &
                                        chi1, chi2, chi3,            &

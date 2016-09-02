@@ -7,8 +7,8 @@
 !
 !-------------------------------------------------------------------------------
 !> @brief Compute the divergence operatore weigthed by the potential temperature
-!> @details compute the locally assembled operator <\sigma,div(theta*v)> 
-!>          where \sigma is the W3 test function, v is the W2 trial function
+!> @details compute the locally assembled operator \f[<\sigma,\nabla.(\theta*\mathbf{v})> \f]
+!>          where sigma is the W3 test function, v is the W2 trial function
 !>          and theta is the potential temperature
 module weighted_div_kernel_mod
 use constants_mod,           only: r_def, i_def
@@ -61,20 +61,26 @@ type(weighted_div_kernel_type) function weighted_div_kernel_constructor() result
   return
 end function weighted_div_kernel_constructor
 
-!> @brief This subroutine computes the div operator 
-!! @param[in] cell Integer: The cell number
-!! @param[in] nlayers Integer: The number of layers.
-!! @param[in] ncell_3d Integer: ncell*ndf
-!! @param[in] ndf_w3 Integer: The number of degrees of freedom per cell.
-!! @param[in] basis_w3 Real: 4-dim array holding scalar basis functions evaluated at quadrature points.
-!! @param[in] ndf_w2 Integer: The number of degrees of freedom per cell.
-!! @param[in] diff_basis_w2 Real: 4-dim array holding differential VECTOR basis functions evaluated at quadrature points.
-!! @param[in] div real array, the local stencil of the div operator
-!! @param[in] nqp_h Integer number of horizontal quadrature points
-!! @param[in] nqp_v Integer number of vertical quadrature points
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
-
+!> @brief Computes the LMA form of the divegence operator 
+!! @param[in] cell Cell number
+!! @param[in] nlayers Number of layers.
+!! @param[in] ncell_3d ncell*ndf
+!! @param[in] ndf_w3 Number of degrees of freedom per cell.
+!! @param[in] basis_w3 Basis functions evaluated at quadrature points.
+!! @param[in] ndf_w2 Number of degrees of freedom per cell.
+!! @param[in] basis_w2 Scalar basis functions evaluated at quadrature points.
+!! @param[in] diff_basis_w2 Differential vector basis functions evaluated at quadrature points.
+!! @param[in] ndf_w0 Number of degrees of freedom per cell.
+!! @param[in] undf_w0 Total number of degrees of freedom
+!! @param[in] map_w0 Dofmap for W0
+!! @param[in] basis_w0 Basis functions evaluated at quadrature points.
+!! @param[in] diff_basis_w0 Differential vector basis functions evaluated at quadrature points.
+!! @param[in] div Local stencil of the div operator
+!! @param[in] theta Potential temperature
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 subroutine weighted_div_code(cell, nlayers, ncell_3d,          &
                              div,                              &
                              theta,                            &

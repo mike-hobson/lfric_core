@@ -61,34 +61,33 @@ type(compute_grad_operator_kernel_type) &
   return
 end function compute_grad_operator_constructor
 
-!> @brief This subroutine computes the grad operator 
-!! @param[in] cell Integer: The cell number
-!! @param[in] nlayers Integer: The number of layers.
-!! @param[in] ncell_3d Integer: ncell*ndf
-!! @param[in] ndf_w1 Integer: The number of degrees of freedom per cell.
-!! @param[in] basis_w1 Real: 4-dim array holding VECTOR basis functions
+!> @brief Computes the grad operator 
+!! @param[in] cell Cell number
+!! @param[in] nlayers Number of layers.
+!! @param[in] ncell_3d ncell*ndf
+!! @param[in] ndf_w1 Number of degrees of freedom per cell.
+!! @param[in] basis_w1 Vector basis functions
 !!                    evaluated at quadrature points.
-!! @param[in] ndf_w0 Integer: The number of degrees of freedom per cell.
-!! @param[in] diff_basis_w0 Real: 4-dim array holding differential of scalar
+!! @param[in] ndf_w0 Number of degrees of freedom per cell.
+!! @param[in] diff_basis_w0 Differential of scalar
 !!                    basis functions evaluated at quadrature points.
-!! @param[in] grad real array, the local stencil of the grad operator
-!! @param[in] ndf_chi Integer: number of degrees of freedom per cell for chi
+!! @param[in] grad Local stencil of the grad operator
+!! @param[in] ndf_chi Number of degrees of freedom per cell for chi
 !!                    field
-!! @param[in] undf_chi Integer: number of unique degrees of freedom  for chi
+!! @param[in] undf_chi Number of unique degrees of freedom  for chi
 !!                    field
-!! @param[in] map_chi Integer: Array holding the dofmap for the cell at the
+!! @param[in] map_chi Array holding the dofmap for the cell at the
 !!                    base of the column, for the space on which the chi field
 !!                    lives
-!! @param[in] diff_basis_chi Real: 4-dim array holding VECTOR differential
+!! @param[in] diff_basis_chi Vector differential
 !!                    basis functions evaluated at quadrature points.
-!! @param[inout] chi1 Real: The data array for chi in the first dir
-!! @param[inout] chi2 Real: The data array for chi in the 2nd dir
-!! @param[inout] chi3 Real: The data array for chi in the 3rd dir
-!! @param[in] nqp_h Integer number of horizontal quadrature points
-!! @param[in] nqp_v Integer number of vertical quadrature points
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
-
+!! @param[inout] chi1 Physical coordinates in the 1st dir
+!! @param[inout] chi2 Physical coordinates in the 2nd dir
+!! @param[inout] chi3 Physical coordinates in the 3rd dir
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 subroutine compute_grad_operator_code(cell, nlayers, ncell_3d,          &
                                       grad,                             &
                                       chi1, chi2, chi3,                 &

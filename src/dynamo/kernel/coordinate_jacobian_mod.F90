@@ -19,17 +19,21 @@ contains
 ! Contained functions/subroutines
 !-------------------------------------------------------------------------------
 !> @brief Subroutine Computes the element Jacobian of the coordinate transform from
-!! reference space \hat{\chi} to physical space \chi assuming the coordinate
+!! reference space \f[ \hat{\chi} \f] to physical space chi assuming the coordinate
 !! field is in W0
-!! @param[in] ndf        Integer. The size of the chi arrays
-!! @param[in] ngp_h      Integer. The number of quadrature points in horizontal direction
-!! @param[in] ngp_v      Integer. The number of quadrature points in vertical direction
-!! @param[in] chi_1      Real 1-dim array. Holds the chi_1 coordinate field
-!! @param[in] chi_2      Real 1-dim array. Holds the chi_2 coordinate field
-!! @param[in] chi_3      Real 1-dim array. Holds the chi_3 coordinate field
-!! @param[in] diff_basis Real 5-dim array. holds the the grad of W0 basis functions
-!! @param[out] jac       Real 5-dim array. Holds the values of the Jacobian on quadrature points
-!! @param[out] dj        Real 3-dim array  Holds the values of the determinant of the Jacobian on quadrature points
+!> @details Compute the Jacobian of the coordinate transform from
+!> reference space \f[ \hat{\chi} \f] to physical space \f[ \chi \f]
+!> \f[ J^{i,j} = \frac{\partial \chi_i} / {\partial \hat{\chi_j}} \f] 
+!> and the derterminant det(J)
+!! @param[in] ndf        Size of the chi arrays
+!! @param[in] ngp_h      Number of quadrature points in horizontal direction
+!! @param[in] ngp_v      Number of quadrature points in vertical direction
+!! @param[in] chi_1      Coordinate field
+!! @param[in] chi_2      Coordinate field
+!! @param[in] chi_3      Coordinate field
+!! @param[in] diff_basis Grad of W0 basis functions
+!! @param[out] jac       Jacobian on quadrature points
+!! @param[out] dj        Determinant of the Jacobian on quadrature points
 subroutine coordinate_jacobian(ndf, ngp_h, ngp_v, chi_1, chi_2, chi_3, diff_basis, jac, dj)
 !-------------------------------------------------------------------------------
 ! Compute the Jacobian J^{i,j} = d chi_i / d \hat{chi_j} and the 
@@ -78,18 +82,16 @@ end do
 end subroutine coordinate_jacobian
 
 !> @brief Subroutine Computes the inverse of the Jacobian of the coordinate transform from
-!! reference space \hat{\chi} to physical space \chi 
-!! @param[in] ngp_h      Integer. The number of quadrature points in horizontal direction
-!! @param[in] ngp_v      Integer. The number of quadrature points in vertical direction
-!! @param[in] jac        Real 3-dim array. Holds the values of the Jacobian 
-!!                       on quadrature points
-!! @param[out] jac_inv   Real 3-dim array  Holds the values of the inverse of the Jacobian
-!!                       on quadrature points
+!! reference space \f[\hat{\chi}\f] to physical space \f[ \chi \f] 
+!> @details Compute the inverse of the Jacobian 
+!> \f[ J^{i,j} = \frac{\partial \chi_i} / {\partial \hat{\chi_j}} \f] 
+!> and the derterminant det(J)
+!! @param[in] ngp_h      Number of quadrature points in horizontal direction
+!! @param[in] ngp_v      Number of quadrature points in vertical direction
+!! @param[in] jac        Jacobian on quadrature points
+!! @param[in] dj         Determinant of the Jacobian
+!! @param[out] jac_inv   Inverse of the Jacobian on quadrature points
 subroutine coordinate_jacobian_inverse(ngp_h, ngp_v, jac, dj, jac_inv)
-!-------------------------------------------------------------------------------
-! Compute the inverse of the Jacobian J^{i,j} = d chi_i / d \hat{chi_j} and the 
-! derterminant det(J)
-!-------------------------------------------------------------------------------
 
 use matrix_invert_mod, only: matrix_invert_3x3
 

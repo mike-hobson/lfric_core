@@ -17,14 +17,14 @@ implicit none
 
 contains
 !>@brief  function to find which horizontal grid cell a given point lies in
-!>@detail Finds the horizontal cell (out_cell) that a given point (x_in)
-!>        lies within as measured by the least distance from the cell centre
+!>@details Finds the horizontal cell (out_cell) that a given point (x_in)
+!>         lies within as measured by the least distance from the cell centre
 !>@deprecated This is a temporary solution until a better output routine is
 !>implemented as which point this routine will be reviewed to see if it will be
 !>needed elsewhere in the model
-!>@param[in]  chi      The 3D coordinate field
-!>@param[in]  x_in     The point to find which cell it lies in
-!>@param[out] out_cell The cell x_in lies in or zero if there were no cells.
+!>@param[in]  chi      3D coordinate field
+!>@param[in]  x_in     Point to find which cell it lies in
+!>@result     out_cell Cell x_in lies in or zero if there were no cells.
   function find_output_cell( chi, x_in ) result( out_cell )
 
   type(field_type), intent(in)    :: chi(3)

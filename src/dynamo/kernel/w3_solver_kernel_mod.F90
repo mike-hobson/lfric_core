@@ -58,24 +58,29 @@ type(w3_solver_kernel_type) function w3_solver_kernel_constructor() result(self)
   return
 end function w3_solver_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf_w3 The number of degrees of freedom per cell
-!! @param[in] map_w3 Integer array holding the dofmap for the cell at the base of the column
-!! @param[in] w3_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[inout] X Real array the data 
-!! @param[in] rhs Real array. the data
-!! @param[inout] gq The gaussian quadrature rule 
-!! @param[in] ndf_w0 The number of degrees of freedom per cell
-!! @param[in] map_w0 Integer array holding the dofmap for the cell at the base of the column
-!! @param[in] w0_diff_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points
-!! @param[inout] chi_1 Real array, the x component of the w0 coordinate field
-!! @param[inout] chi_2 Real array, the y component of the w0 coordinate field
-!! @param[inout] chi_3 Real array, the z component of the w0 coordinate field
+!> @brief Invert and apply the W3 mass matrix
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf_w3 Number of degrees of freedom per cell
+!! @param[in] undf_w3 Total number of degrees of freedom for w3
+!! @param[in] map_w3 Dofmap for the cell at the base of the column
+!! @param[in] w3_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[inout] x Output vector 
+!! @param[in] rhs Input vectort 
+!! @param[in] ndf_w0 Number of degrees of freedom per cell
+!! @param[in] undf_w0 Total number of degrees of freedom for w0
+!! @param[in] map_w0 Dofmap for the cell at the base of the column
+!! @param[in] w0_diff_basis Basis functions evaluated at gaussian quadrature points
+!! @param[inout] chi_1 X component of the w0 coordinate field
+!! @param[inout] chi_2 Y component of the w0 coordinate field
+!! @param[inout] chi_3 Z component of the w0 coordinate field
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Weights of the horizontal quadrature points
+!! @param[in] wqp_v Weights of the vertical quadrature points
 subroutine solver_w3_code(nlayers,                                    &
-                          x, rhs, &
-                          chi_1, chi_2, chi_3, &
-                          ndf_w3, undf_w3, map_w3, w3_basis, &
+                          x, rhs,                                     &
+                          chi_1, chi_2, chi_3,                        &
+                          ndf_w3, undf_w3, map_w3, w3_basis,          &
                           ndf_w0, undf_w0, map_w0, w0_diff_basis,     &
                           nqp_h, nqp_v, wqp_h, wqp_v                  &
                          )

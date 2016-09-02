@@ -7,11 +7,11 @@
 !
 !-------------------------------------------------------------------------------
 
-!> @brief Kernel which computes lhs of the equation of state for the nonlinear equations 
+!> @brief Computes lhs of the equation of state for the nonlinear equations 
 
-!> @detail The kernel computes the lhs of the equation of state for the nonlinear equations, 
-!>         That is: lhs_exner = (1-kappa)/kappa * exner'/exner_ref - rho'/rho_ref - theta'/theta_ref
-!>         Where ' are increments to the fields and _ref are the reference states
+!> @details The kernel computes the lhs of the equation of state for the nonlinear equations, 
+!>          That is: \f[ lhs_{\Pi} = (1-\kappa)/\kappa * \Pi'/\Pi^* - \rho'/\rho^* - \theta'/\theta^* \f]
+!>          Where ' are increments to the fields and ^* are the reference states
 module lhs_exner_kernel_mod
 use kernel_mod,              only : kernel_type
 use argument_mod,            only : arg_type, func_type,                     &
@@ -58,7 +58,7 @@ end interface
 
 !-------------------------------------------------------------------------------
 ! Contained functions/subroutines
-!-------------------------------------------------------------------------------
+!------------^*---------------------------------------------------------------
 public lhs_exner_code
 contains
 
@@ -66,30 +66,30 @@ type(lhs_exner_kernel_type) function lhs_exner_kernel_constructor() result(self)
   return
 end function lhs_exner_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @param[inout] l_exner the lhs array for the equation of state
-!! @param[in] theta, the potential temperature increment
-!! @param[in] rho, the density increment
-!! @param[in] exner, the exner pressure increment
-!! @param[in] theta_ref, the potential temperature reference state
-!! @param[in] rho_ref, the density reference state
-!! @param[in] chi1, the first coordinate array
-!! @param[in] chi2, the second coordinate array
-!! @param[in] chi3, the thrid coordinate array
-!! @param[in] ndf_w3 The number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 The number of (local) unique degrees of freedom
-!! @param[in] map_w3 Integer array holding the dofmap for the cell at the base of the column for w3
-!! @param[in] w3_basis Real 4-dim array holding basis functions evaluated at quadrature points 
-!! @param[in] ndf_w0 The number of degrees of freedom per cell for w0
-!! @param[in] undf_w0 The number of (local) unique degrees of freedom
-!! @param[in] map_w0 Integer array holding the dofmap for the cell at the base of the column for w0
-!! @param[in] w0_basis Real 4-dim array holding basis functions evaluated at quadrature points 
-!! @param[in] w0_diff_basis Real 4-dim array holding differential basis functions evaluated at quadrature points 
-!! @param[in] nqp_h Integer, number of quadrature points in the horizontal
-!! @param[in] nqp_v Integer, number of quadrature points in the vertical
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!> @brief Computes lhs of the equation of state for the nonlinear equations 
+!! @param[in] nlayers Number of layers
+!! @param[inout] l_exner LHS array for the equation of state
+!! @param[in] theta Potential temperature increment
+!! @param[in] rho Density increment
+!! @param[in] exner Exner pressure increment
+!! @param[in] theta_ref Potential temperature reference state
+!! @param[in] rho_ref Density reference state
+!! @param[in] chi1 First coordinate array
+!! @param[in] chi2 Second coordinate array
+!! @param[in] chi3 Third coordinate array
+!! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
+!! @param[in] undf_w3 Number of (local) unique degrees of freedom
+!! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
+!! @param[in] w3_basis Basis functions evaluated at quadrature points 
+!! @param[in] ndf_w0 Number of degrees of freedom per cell for w0
+!! @param[in] undf_w0 Number of (local) unique degrees of freedom
+!! @param[in] map_w0 Dofmap for the cell at the base of the column for w0
+!! @param[in] w0_basis Basis functions evaluated at quadrature points 
+!! @param[in] w0_diff_basis Differential basis functions evaluated at quadrature points 
+!! @param[in] nqp_h Number of quadrature points in the horizontal
+!! @param[in] nqp_v Number of quadrature points in the vertical
+!! @param[in] wqp_h horizontal quadrature weights
+!! @param[in] wqp_v vertical quadrature weights
 subroutine lhs_exner_code(nlayers,                                         &
                           l_exner, theta, rho, exner,                      &
                           theta_ref, rho_ref,                              &

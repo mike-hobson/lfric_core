@@ -812,7 +812,7 @@ end subroutine calc_coords
 !!  @param[out]  num_faces            The number of faces on the mesh.
 !!  @param[out]  num_nodes_per_face   The number of nodes around each face.
 !!  @param[out]  num_edges_per_face   The number of edges around each face.
-!!  @param[out]  num_nodes_per_face   The number of nodes around each edge.
+!!  @param[out]  num_nodes_per_edge   The number of nodes around each edge.
 !-------------------------------------------------------------------------------
 subroutine get_dimensions(self, num_nodes, num_edges, num_faces,        &
                                 num_nodes_per_face, num_edges_per_face, &

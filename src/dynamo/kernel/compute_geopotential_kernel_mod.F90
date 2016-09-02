@@ -9,7 +9,7 @@
 
 !> @brief Kernel computes the geopotential field
 
-!> @detail Computes the geopotential field Phi = g*r or g*z for Cartesian
+!> @details Computes the geopotential field Phi = g*r or g*z for Cartesian
 !!         domains
 
 module compute_geopotential_kernel_mod
@@ -61,14 +61,14 @@ type(compute_geopotential_kernel_type) function compute_geopotential_kernel_cons
   return
 end function compute_geopotential_kernel_constructor
 
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf The number of degrees of freedom per cell
-!! @param[in] undf The number of unique degrees of freedom
-!! @param[in] map Integer array holding the dofmap for the cell at the base of the column
-!! @param[inout] theta Real array, the actual data
-!! @param[in] chi_1 Real array, the physical x coordinates
-!! @param[in] chi_2 Real array, the physical y coordinates
-!! @param[in] chi_3 Real array, the physical z coordinates
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf Number of degrees of freedom per cell
+!! @param[in] undf Number of unique degrees of freedom
+!! @param[in] map Dofmap for the cell at the base of the column
+!! @param[inout] phi Geopotential field
+!! @param[in] chi_1 Physical x coordinates
+!! @param[in] chi_2 Physical y coordinates
+!! @param[in] chi_3 Physical z coordinates
 subroutine compute_geopotential_code(nlayers,phi, &
                                      chi_1,chi_2,chi_3, &
                                      ndf,undf,map)

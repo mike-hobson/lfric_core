@@ -9,8 +9,8 @@
 
 !> @brief Kernel which computes the cell integrated axial angular momentum
 
-!> @detail The kernel computes the  cell integrated axial angular momentum: 
-!> int ( rho * z_hat . [r \cross { u + \Omega \cross r } ] ) dV
+!> @details The kernel computes the  cell integrated axial angular momentum:
+!> \f[ \int ( \rho * \hat{z} . [r \times { u + \Omega \times r } ] ) dV \f]
 module compute_total_aam_kernel_mod
 use argument_mod,      only : arg_type, func_type,         &
                               GH_FIELD, GH_READ, GH_WRITE, &
@@ -64,31 +64,31 @@ type(compute_total_aam_kernel_type) function compute_total_aam_kernel_constructo
   return
 end function compute_total_aam_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @parma[out] aam the cell integrated aam
-!! @param[in] ndf_w2 The number of degrees of freedom per cell for w2
-!! @param[in] undf_w2 The number unique of degrees of freedom  for w2
-!! @param[in] map_w2 Integer array holding the dofmap for the cell at the base of the column for w2
-!! @param[in] w2_basis Real 4-dim array holding basis functions evaluated at quadrature points 
-!! @param[in] u The velocity array
-!! @param[in] ndf_w3 The number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 The number unique of degrees of freedom  for w3
-!! @param[in] map_w3 Integer array holding the dofmap for the cell at the base of the column for w3
-!! @param[in] w3_basis Real 4-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] rho Real array. The density
-!! @param[in] ndf_w0 The number of degrees of freedom per cell for w0
-!! @param[in] undf_w0 The number unique of degrees of freedom  for w0
-!! @param[in] map_w0 Integer array holding the dofmap for the cell at the base of the column for w0
-!! @param[in] w0_basis Real 4-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] w0_diff_basis Real 4-dim array holding differntial of the basis functions evaluated at gaussian quadrature point
-!! @param[in] chi_1 Real array. the physical x coordinate in w0
-!! @param[in] chi_2 Real array. the physical y coordinate in w0
-!! @param[in] chi_3 Real array. the physical z coordinate in w0
-!! @param[in] nqp_h Integer, number of quadrature points in the horizontal
-!! @param[in] nqp_v Integer, number of quadrature points in the vertical
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!> @brief The subroutine to compute the total axial angular momentum
+!! @param[in] nlayers Number of layers
+!! @param[out] aam Cell integrated axial angular momentum
+!! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
+!! @param[in] undf_w2 Number unique of degrees of freedom  for w2
+!! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
+!! @param[in] w2_basis Basis functions evaluated at quadrature points 
+!! @param[in] u Velocity array
+!! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
+!! @param[in] undf_w3 Number unique of degrees of freedom  for w3
+!! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
+!! @param[in] w3_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[in] rho density
+!! @param[in] ndf_w0 Number of degrees of freedom per cell for w0
+!! @param[in] undf_w0 Number unique of degrees of freedom  for w0
+!! @param[in] map_w0 Dofmap for the cell at the base of the column for w0
+!! @param[in] w0_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[in] w0_diff_basis Differntial of the basis functions evaluated at gaussian quadrature point
+!! @param[in] chi_1 Physical x coordinate in w0
+!! @param[in] chi_2 Physical y coordinate in w0
+!! @param[in] chi_3 Physical z coordinate in w0
+!! @param[in] nqp_h Number of quadrature points in the horizontal
+!! @param[in] nqp_v Number of quadrature points in the vertical
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 subroutine compute_total_aam_code(                                                   &
                                   nlayers,                                           &
                                   aam, u, rho, chi_1, chi_2, chi_3,                  &

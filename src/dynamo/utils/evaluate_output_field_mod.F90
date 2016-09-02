@@ -22,22 +22,21 @@ implicit none
 contains
 !>@brief  Evaluates a field at a point (x_in) that horizontally lies within a 
 !>        given cell
-!>@detail Subroutine that evaluates a field at a vertical column of given
-!>        points.
-!>        The column of points is taken to lie within a given column of grid
-!>        cells. A newton method is used to compute the exact point within each
-!>        cell where a point lies and then the field is evaluated at this point
-!>        using the known basis functions.
+!>@details Subroutine that evaluates a field at a vertical column of given
+!>         points.
+!>         The column of points is taken to lie within a given column of grid
+!>         cells. A newton method is used to compute the exact point within each
+!>         cell where a point lies and then the field is evaluated at this point
+!>         using the known basis functions.
 !>@deprecated This is a temporary solution until a better output routine is
 !>implemented as which point this routine will be reviewed to see if it will be
 !>needed elsewhere in the model
-!>@param[in]  mesh_id   The id of the 3D mesh object this field is connected with
-!>@param[in]  field     The field object to evaluate
-!>@param[in]  chi       The 3D coordinate field
-!>@param[in]  x_in      The point to evaluate the field at
-!>@param[in]  cell      The horizontal cell that x_in lies within
-!>@param[in]  nz        The number of vertical points to evaluate
-!>@param[out] field_out The array containing field evaluates at x_in
+!>@param[in]  field     Field object to evaluate
+!>@param[in]  chi       3D coordinate field
+!>@param[in]  x_in      Point to evaluate the field at
+!>@param[in]  cell      Horizontal cell that x_in lies within
+!>@param[in]  nz        Number of vertical points to evaluate
+!>@param[out] field_out Array containing field evaluates at x_in
 subroutine evaluate_output_field( field, chi, x_in, cell, nz, field_out )
 
   type(field_type), intent(in)  :: field, chi(3) 

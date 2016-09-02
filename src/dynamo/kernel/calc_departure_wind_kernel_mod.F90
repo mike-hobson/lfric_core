@@ -66,20 +66,20 @@ type(calc_departure_wind_kernel_type) function calc_departure_wind_kernel_constr
   return
 end function calc_departure_wind_kernel_constructor
 
-!> @param[in] nlayers Integer the number of layers
-!> @param[in] ndf The number of degrees of freedom per cell for the output field
-!> @param[in] undf The number of unique degrees of freedom for the output field
-!> @param[in] map Integer array holding the dofmap for the cell at the base of the column for the output field
-!> @param[in] nodal_basis_u The nodal basis functions evaluated at the nodal points for the W2 field
-!> @param[inout] u_departure_wind The output field containing the departure wind used to calculate departure points
-!> @param[in] u_piola The input field for the Piola wind
-!> @param[in] chi1 the array of coordinates in the first direction
-!> @param[in] chi2 the array of coordinates in the second direction
-!> @param[in] chi3 the array of coordinates in the third direction
-!> @param[in] ndf_chi The number of degrees of freedom per cell for the coordinate field
-!> @param[in] undf_chi The number of unique degrees of freedom for the coordinate field
-!> @param[in] map_chi Integer array holding the dofmap for the cell at the base of the column for the coordinate field
-!> @param[in] diff_basis_chi the diff basis functions of the coordinate space evaluated at the nodal points
+!> @param[in] nlayers Number of layers
+!> @param[in] ndf Number of degrees of freedom per cell for the output field
+!> @param[in] undf Number of unique degrees of freedom for the output field
+!> @param[in] map Dofmap for the cell at the base of the column for the output field
+!> @param[in] nodal_basis_u Basis functions evaluated at the nodal points for the W2 field
+!> @param[inout] u_departure_wind Output field containing the departure wind used to calculate departure points
+!> @param[in] u_piola Field for the Piola wind
+!> @param[in] chi1 Coordinates in the first direction
+!> @param[in] chi2 Coordinates in the second direction
+!> @param[in] chi3 Coordinates in the third direction
+!> @param[in] ndf_chi Number of degrees of freedom per cell for the coordinate field
+!> @param[in] undf_chi Number of unique degrees of freedom for the coordinate field
+!> @param[in] map_chi Dofmap for the cell at the base of the column for the coordinate field
+!> @param[in] diff_basis_chi Differential basis functions of the coordinate space evaluated at the nodal points
 subroutine calc_departure_wind_code(nlayers,                                  &
                                     u_departure_wind,                         &
                                     u_piola,                                  &

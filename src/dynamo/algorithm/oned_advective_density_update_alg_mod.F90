@@ -44,12 +44,12 @@ contains
 !>          direction variable. An advective update is performed but using the
 !>          conservative flux operator, a multiplicative correction is made to
 !>          ensure the advective update is performed.
-!> @param[inout] direction the direction in which to perform the 1D advective update
-!> @param[inout] u  wind values
-!> @param[inout] dep_pts departure points for W2 points at lowest order
-!> @param[inout] rho_in   density at time n
-!> @param[inout] rho_out  density after advective update
-!> @param[inout] mesh     mesh object on which the model runs
+!> @param[inout] direction Direction in which to perform the 1D advective update
+!> @param[inout] u  Wind values
+!> @param[inout] dep_pts Departure points for W2 points at lowest order
+!> @param[inout] rho_in   Density at time n
+!> @param[inout] rho_out  Density after advective update
+!> @param[inout] mesh_id  Mesh id of the mesh object on which the model runs
   subroutine oned_advective_density_update_alg(   direction,    &
                                                   u,            &
                                                   dep_pts,      &

@@ -65,32 +65,33 @@ type(weighted_m3_exner_kernel_type) function weighted_m3_exner_constructor() res
   return
 end function weighted_m3_exner_constructor
   
-!> @brief This subroutine computes the mass matrix for the w3 space
-!! @param[in] cell Integer: The cell number
-!! @param[in] nlayers Integer: The number of layers.
-!! @param[in] ncell_3d Integer: ncell*ndf
-!! @param[inout] mm Real: The mass matrix data array
-!! @param[in] rho Real: The data array for the density
-!! @param[in] theta Real: The data array for the potential temperature
-!! @param[in] chi1 Real: The data array for chi in the first dir
-!! @param[in] chi2 Real: The data array for chi in the 2nd dir
-!! @param[in] chi3 Real: The data array for chi in the 3rd dir
-!! @param[in] ndf_w3 Integer: The number of degrees of freedom per cell for the operator space.
-!! @param[in] undf_w3 Integer: number of unique degrees of freedum for the w3 space
-!! @param[in] map_w3 Integer: Array holding the dofmap for the cell at the base of the column.
-!! @param[in] basis_w3 Real: 4-dim array holding SCALAR basis functions evaluated at quadrature points.
-!! @param[in] ndf_w0 Integer: The number of degrees of freedom per cell for the operator space.
-!! @param[in] undf_w0 Integer: number of unique degrees of freedum for the w0 space
-!! @param[in] map_w0 Integer: Array holding the dofmap for the cell at the base of the column.
-!! @param[in] basis_w0 Real: 4-dim array holding SCALAR basis functions evaluated at quadrature points.
-!! @param[in] ndf_chi Integer: The number of degrees of freedom per cell for the coordinate field.
-!! @param[in] undf_chi Integer: number of unique degrees of freedum  for chi field
-!! @param[in] map_chi Integer: Array holding the dofmap for the cell at the base of the column.
-!! @param[in] diff_basis_chi Real: 4-dim array holding VECTOR differential basis functions evaluated at quadrature points.
-!! @param[in] nqp_h Integer number of horizontal quadrature points
-!! @param[in] nqp_v Integer number of vertical quadrature points
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!> @brief Computes the mass matrix for the w3 space weighted by
+!!        the reference pressure
+!! @param[in] cell Cell number
+!! @param[in] nlayers Number of layers.
+!! @param[in] ncell_3d ncell*ndf
+!! @param[inout] mm Matrix data array
+!! @param[in] rho Density
+!! @param[in] theta Potential temperature
+!! @param[in] chi1 Chi in the first dir
+!! @param[in] chi2 Chi in the 2nd dir
+!! @param[in] chi3 Chi in the 3rd dir
+!! @param[in] ndf_w3 Number of degrees of freedom per cell for the operator space.
+!! @param[in] undf_w3 Number of unique degrees of freedum for the w3 space
+!! @param[in] map_w3 Dofmap for the cell at the base of the column.
+!! @param[in] basis_w3 Basis functions evaluated at quadrature points.
+!! @param[in] ndf_w0 Number of degrees of freedom per cell for the operator space.
+!! @param[in] undf_w0 Number of unique degrees of freedum for the w0 space
+!! @param[in] map_w0 Dofmap for the cell at the base of the column.
+!! @param[in] basis_w0 Basis functions evaluated at quadrature points.
+!! @param[in] ndf_chi Number of degrees of freedom per cell for the coordinate field.
+!! @param[in] undf_chi Number of unique degrees of freedum  for chi field
+!! @param[in] map_chi Dofmap for the cell at the base of the column.
+!! @param[in] diff_basis_chi Differential basis functions evaluated at quadrature points.
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 subroutine weighted_m3_exner_code(cell, nlayers, ncell_3d,            &
                                   mm,                                 &
                                   rho, theta,                         &

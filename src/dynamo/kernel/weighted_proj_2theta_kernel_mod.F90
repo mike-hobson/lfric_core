@@ -67,30 +67,29 @@ type(weighted_proj_2theta_kernel_type) function weighted_proj_2theta_constructor
   return
 end function weighted_proj_2theta_constructor
 
-!> @brief This subroutine computes the div operator 
-!! @param[in] cell Integer: The cell number
-!! @param[in] nlayers Integer: The number of layers.
-!! @param[in] ncell_3d Integer: ncell*ndf
-!! @param[inout] proj The projection operator to compute
-!! @param[in] theta The potential temperature array
-!! @param[in] rho The density array
-!! @param[in] ndf_w3 Integer: The number of degrees of freedom per cell.
-!! @param[in] undf_w3 Integer: The total number of degrees.
-!! @param[in] map_w3 Integer: the dofmap at the base of the column
-!! @param[in] basis_w3 Real: 4-dim array holding scalar basis functions evaluated at quadrature points.
-!! @param[in] ndf_w2 Integer: The number of degrees of freedom per cell.
-!! @param[in] undf_w2 Integer: The total number of degrees.
-!! @param[in] basis_w2 Real: 4-dim array holding vecotr basis functions evaluated at quadrature points.
-!! @param[in] diff_basis_w2 Real: 4-dim array holding differential vector basis functions evaluated at quadrature points.
-!! @param[in] ndf_w0 Integer: The number of degrees of freedom per cell.
-!! @param[in] undf_w0 Integer: The total number of degrees.
-!! @param[in] map_w0 Integer: the dofmap at the base of the column
-!! @param[in] basis_w0 Real: 4-dim array holding scalar basis functions evaluated at quadrature points.
-!! @param[in] diff_basis_w0 Real: 4-dim array holding differential vector basis functions evaluated at quadrature points.
-!! @param[in] nqp_h Integer number of horizontal quadrature points
-!! @param[in] nqp_v Integer number of vertical quadrature points
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!> @brief Compute the weigthed projection fro Wtheta to W2
+!! @param[in] cell Cell number
+!! @param[in] nlayers Number of layers.
+!! @param[in] ncell_3d ncell*ndf
+!! @param[inout] projection Projection operator to compute
+!! @param[in] theta Potential temperature
+!! @param[in] rho Density
+!! @param[in] ndf_w3 Number of degrees of freedom per cell.
+!! @param[in] undf_w3 Total number of degrees.
+!! @param[in] map_w3 Dofmap at the base of the column
+!! @param[in] basis_w3 Basis functions evaluated at quadrature points.
+!! @param[in] ndf_w2 Number of degrees of freedom per cell.
+!! @param[in] basis_w2 Basis functions evaluated at quadrature points.
+!! @param[in] diff_basis_w2 Differential vector basis functions evaluated at quadrature points.
+!! @param[in] ndf_w0 Number of degrees of freedom per cell.
+!! @param[in] undf_w0 Total number of degrees.
+!! @param[in] map_w0 Dofmap at the base of the column
+!! @param[in] basis_w0 Basis functions evaluated at quadrature points.
+!! @param[in] diff_basis_w0 Differential vector basis functions evaluated at quadrature points.
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 subroutine weighted_proj_2theta_code(cell, nlayers, ncell_3d,          &
                                      projection,                       &
                                      theta,                            &

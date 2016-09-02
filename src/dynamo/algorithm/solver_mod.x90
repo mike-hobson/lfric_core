@@ -64,17 +64,17 @@ contains
 !! cg: Conjugate gradient method without preconditioning
 !! bicgstab: bi-conjugate gradient, stabilised without preconditioning
 !! jacobi: a fixed number of jacobi iterations
-!> @param[inout] lhs The field to be solved for (x)
-!> @param[inout] rhs The right hand side field (b)
-!> @param[in]    mesh The mesh object the model for fields
-!> @param[inout] chi The coordinate array fields
-!> @param[in]    solver_type (optional) The type of iterative solver to use for
+!> @param[inout] lhs Field to be solved for (x)
+!> @param[inout] rhs Right hand side field (b)
+!> @param[in]    mesh Mesh object the model for fields
+!> @param[inout] chi Coordinate array fields
+!> @param[in]    solver_type (optional) Type of iterative solver to use for
 !>               continuous systems
-!> @param[inout] mm Operator type, optional. This is the mass matrix
-!> @param[in] qr Quadrature type, optional. The quadrature rule.
+!> @param[in] qr (optional) Quadrature rule.
+!> @param[inout] mm (optional) Mass matrix
 !! Either qr or mm are required, but not both.
-!> @param[in] preconditioner_choice optional coice of preconditioner type
-!> @param[in] mmd, optional Matrix diagonal
+!> @param[in] preconditioner_choice (optional) Choice of preconditioner type
+!> @param[in] mmd (optional) Matrix diagonal
 
   subroutine solver_algorithm( lhs, rhs, mesh, chi, solver_type, qr, mm, &
                                preconditioner_choice, mmd )
@@ -159,12 +159,12 @@ contains
 !! @details solves A.x = b where the operation A.x is encoded in a kernel using
 !! the stabilised bi-conjugate gradient method. The choice of matrix is
 !! encoded in the matrix vector kernel that is called
-!! @param[in]  rhs_field The input b
+!! @param[in]  rhs_field Input b
 !! @param[inout] lhs_field The answer, x
-!! @param[in] mm operator type, the mass matrix
-!! @param[in] mesh The id of the mesh object the model for fields#
+!! @param[in] mm operator type, Mass matrix
+!! @param[in] mesh Id of the mesh object the model for fields#
 !! @param[in] precond_option Choice of preconditioner
-!! @param[in] mmd (optional) the mass matrix diagonal
+!! @param[in] mmd (optional) Mass matrix diagonal
   subroutine bicg_solver_algorithm(lhs, rhs, mm, mesh, precond_option, mmd)
     implicit none
     type(field_type),    intent(inout) :: lhs
@@ -290,12 +290,12 @@ contains
 !! @details solves A.x = b where the operation A.x is encoded in a kernel using
 !! the conjugate gradient method. The choice of matrix is
 !! encoded in the matrix vector kernel that is called.
-!! @param[in] rhs_field The input b
+!! @param[in] rhs_field Input b
 !! @param[inout] lhs_field The answer, x
-!! @param[in] mm The mass matrix
-!! @param[in] mesh The id of mesh object the model for fields
+!! @param[in] mm Mass matrix
+!! @param[in] mesh Id of mesh object the model for fields
 !! @param[in] precond_option Choice of preconditioner
-!! @param[in] mmd The mass matrix diagonal
+!! @param[in] mmd Mass matrix diagonal
   subroutine cg_solver_algorithm(lhs, rhs, mm, mesh, precond_option, mmd)
     implicit none
     type(field_type),    intent(inout) :: lhs
@@ -410,11 +410,11 @@ contains
 !! encoded in the matrix vector kernel that is called. No measure of convergence
 !! is used instead the algorithm is assumed to have converged sufficiently
 !! after (n_iter) iterations
-!! @param[in] rhs_field The input b
-!! @param[inout] lhs_field The answser, x
-!! @param[in] mm operator type, the mass matrix
-!! @param[in] mesh The id of mesh object the model for fields
-!! @param[in] n_iter The number of Jacobi iterations to perform
+!! @param[in] rhs_field Input b
+!! @param[inout] lhs_field The answer, x
+!! @param[in] mm Mass matrix
+!! @param[in] mesh Id of mesh object the model for fields
+!! @param[in] n_iter Number of Jacobi iterations to perform
   subroutine jacobi_solver_algorithm(lhs, rhs, mm, mesh, n_iter)
 
   use mm_diagonal_kernel_mod, only: mm_diagonal_kernel_type
@@ -466,13 +466,13 @@ contains
 !! encoded in the matrix vector kernel that is called. No measure of convergence
 !! is used instead the algorithm is assumed to have converged sufficiently
 !! after (n_iter) iterations
-!! @param[in] rhs_field The input b
-!! @param[inout] lhs_field The answser, x
-!! @param[inout] mm The mass matrix
-!! @param[in] mesh The id of  mesh object the model for fields
-!! @param[in] precond_option The choice of preconditioner
-!! @param[in] pstcond_option The choice of postconditioner
-!! @param[in] mmd Optional diagonal mass matrix used for conditioning
+!! @param[in] rhs Input b
+!! @param[inout] lhs Answer, x
+!! @param[inout] mm Mass matrix
+!! @param[in] mesh Id of  mesh object the model for fields
+!! @param[in] precond_option Choice of preconditioner
+!! @param[in] pstcond_option Choice of postconditioner
+!! @param[in] mmd (optional) Diagonal mass matrix used for conditioning
   subroutine gmres_solver_algorithm(lhs, rhs, mm, mesh, &
                                     precond_option, pstcond_option, mmd)
 
@@ -632,12 +632,12 @@ contains
 !! encoded in the matrix vector kernel that is called. No measure of convergence
 !! is used instead the algorithm is assumed to have converged sufficiently
 !! after (n_iter) iterations
-!! @param[in] rhs_field The input b
-!! @param[inout] lhs_field The answser, x
-!! @param[inout] mm operator type, the mass matrix
-!! @param[in] mesh The id mesh object the model for fields
+!! @param[in] rhs_field Input b
+!! @param[inout] lhs_field Answer, x
+!! @param[inout] mm Mass matrix
+!! @param[in] mesh Id mesh object the model for fields
 !! @param[in] precond_option Choice of preconditioner
-!! @param[in] mmd optional, mass matrix diagonal
+!! @param[in] mmd (optional) Mass matrix diagonal
   subroutine gcr_solver_algorithm( lhs, rhs, mm, mesh , precond_option, mmd )
 
     implicit none
@@ -737,9 +737,9 @@ end subroutine gcr_solver_algorithm
 !! @details Applies one of s number of preconditioners to a field x
 !! and returns the preconditioned field y. Currently no preconditioner
 !! is applied and y = x.
-!! @param[in]    x The input field
-!! @param[inout] y The output field
-!! @param[in] preconditioner The type of preconditioner to be used
+!! @param[in]    x Input field
+!! @param[inout] y Output field
+!! @param[in] preconditioner Type of preconditioner to be used
 !! routine to use
   subroutine precondition(y, x, preconditioner, diagonal)
 

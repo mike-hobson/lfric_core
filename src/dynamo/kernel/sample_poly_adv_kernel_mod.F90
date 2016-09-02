@@ -80,19 +80,18 @@ type(sample_poly_adv_kernel_type) function sample_poly_adv_kernel_constructor() 
 end function sample_poly_adv_kernel_constructor
 
 !> @brief Computes the advective update
-!! @param[in]  nlayers Integer the number of layers
-!! @param[out] advection The advective update to compute 
-!! @param[in]  wind The wind field
-!! @param[in]  tracer The tracer field
-!! @param[in]  undf_wt Integer the number of unique degrees of freedom for the tracer field
-!! @param[in]  ndf_wt Integer the number of degrees of freedom per cell
-!! @param[in]  undf_w2 Integer the number of unique degrees of freedom for the wind field
-!! @param[in]  ndf_w2 Integer the number of degrees of freedom per cell
-!! @param[in]  map_w2 Integer array holding the dofmap for the cell at the base of the column
-!! @param[in]  basis_w2 basis function array evaluated at wt nodes
-!! @param[in]  stencil_size The size of the stencil (number of cells)
-!! @param[in]  stencil_map Integer array holding the dofmaps for the stencil
-
+!! @param[in]  nlayers Number of layers
+!! @param[out] advection Advective update to compute 
+!! @param[in]  wind Wind field
+!! @param[in]  tracer Tracer field
+!! @param[in]  undf_wt Number of unique degrees of freedom for the tracer field
+!! @param[in]  ndf_wt Number of degrees of freedom per cell
+!! @param[in]  undf_w2 Number of unique degrees of freedom for the wind field
+!! @param[in]  ndf_w2 Number of degrees of freedom per cell
+!! @param[in]  map_w2 Dofmap for the cell at the base of the column
+!! @param[in]  basis_w2 Basis function array evaluated at wt nodes
+!! @param[in]  stencil_size Size of the stencil (number of cells)
+!! @param[in]  stencil_map Dofmaps for the stencil
 subroutine sample_poly_adv_code( nlayers,              &
                                  advection,            &
                                  tracer,               &
@@ -225,7 +224,7 @@ end subroutine sample_poly_adv_code
 !=============================================================================!
 !>@brief Initialise various quantities needed for sample_poly_adv_code
 !>@param[in] order Polynomial order for advective computations
-!>@param[in] nlayers number of vertical layers
+!>@param[in] nlayers Number of vertical layers
 subroutine sample_poly_adv_init(order, nlayers)
 
   use matrix_invert_mod, only: matrix_invert

@@ -38,10 +38,20 @@ contains
 !>          and the number of dofs associated with various entities, primitive
 !>          and composite. This is a private routine used in the construction
 !>          of function spaces.
-!> @param[inout] self The function space object being constructed
-subroutine ndof_setup( mesh, element_order, dynamo_fs                          &
-                     , ndof_vert, ndof_edge, ndof_face, ndof_vol, ndof_cell    &
-                     , ndof_glob, ndof_interior, ndof_exterior )
+!> @param[in] mesh Mesh to define the function space on
+!> @param[in] element_order Polynomial order of the function space
+!> @param[in] dynamo_fs Integer enumeration of the function space
+!> @param[out] ndof_vert Number dofs on each vertex
+!> @param[out] ndof_edge Number of dofs on each edge
+!> @param[out] ndof_face Number of dofs on each face
+!> @param[out] ndof_vol Number of dofs in each volume
+!> @param[out] ndof_cell Total number of dofs associated with a cell
+!> @param[out] ndof_glob Total number of global dofs
+!> @param[out] ndof_interior Number of dofs with no  vertical connectivity
+!> @param[out] ndof_exterior Number of dofs with vertical connectivity
+ subroutine ndof_setup( mesh, element_order, dynamo_fs,                         &
+                       ndof_vert, ndof_edge, ndof_face, ndof_vol, ndof_cell,   &
+                       ndof_glob, ndof_interior, ndof_exterior )
 
   ! NOTE: ndofs will be used as short hand for Number of Degrees Of Freedom
   implicit none
@@ -242,11 +252,20 @@ end subroutine ndof_setup
 !>          computes the arrays required for "on-the-fly" basis function
 !>          generation. This is a private routine used in the construction
 !>          of function spaces. This routine is only valid for cube elements
-!> @param[inout] self The function space object being constructed
-
-subroutine basis_setup( element_order, dynamo_fs, ndof_vert,  ndof_cell        &
-                      , basis_index, basis_order, basis_vector, basis_x        &
-                      , nodal_coords, dof_on_vert_boundary )
+!> @param[in] element_order Polynomial order of the function space
+!> @param[in] dynamo_fs Enumeration of the function space
+!> @param[in] ndof_vert Number dofs on each vertex
+!> @param[in] ndof_cell Total number of dofs associated with a cell 
+!> @param[out] basis_index Array containing index of polynomial function
+!> @param[out] basis_order Polynomial order of basis function
+!> @param[out] basis_vector Direction of basis for vector functions
+!> @param[out] basis_x Array of nodal points of the basis functions
+!> @param[out] nodal_coords 3D coordinates of zeros of the basis functions
+!> @param[out] dof_on_vert_boundary Array indication if a dof is on the top or
+!>            bottom boundary of a cell
+subroutine basis_setup( element_order, dynamo_fs, ndof_vert,  ndof_cell,       &
+                        basis_index, basis_order, basis_vector, basis_x,       &
+                        nodal_coords, dof_on_vert_boundary )
 
   implicit none
 
@@ -1005,12 +1024,24 @@ end subroutine basis_setup
 !>          master dofmap object. The master dofmap is the same as a stencil
 !>          dofmap of a single dof. This is a private
 !>          routine used in the construction of function spaces.
-!> @param[inout] self The function space object being constructed
-subroutine dofmap_setup( mesh, dynamo_fs, ncells_2d_with_ghost                 &
-                       , ndof_vert, ndof_edge, ndof_face                       &
-                       , ndof_vol,  ndof_cell, last_dof_owned                  &
-                       , last_dof_annexed, last_dof_halo, dofmap               &
-                       , global_dof_id )
+!> @param[in] mesh Mesh to define the function space on
+!> @param[in] dynamo_fs Enumeration of the function space 
+!> @param[in] ncells_2d_with_ghost number of 2d cells with ghost cells
+!> @param[in] ndof_vert Number of dofs on vertices
+!> @param[in] ndof_edge Number of dofs on edges
+!> @param[in] ndof_face Number of dofs on faces
+!> @param[in] ndof_vol Number of dofs in volumes
+!> @param[in] ndof_cell Number of dofs associated with a cell
+!> @param[out] last_dof_owned Index of last owned dof for the partition 
+!> @param[out] last_dof_annexed Index of last annexed dof for the partition
+!> @param[out] last_dof_halo Index of last halo dof for the partition
+!> @param[out] dofmap Array containing the dofmap indexed by cells
+!> @param[out] global_dof_id Global id of of dofs
+subroutine dofmap_setup( mesh, dynamo_fs, ncells_2d_with_ghost,                &
+                         ndof_vert, ndof_edge, ndof_face,                      &
+                         ndof_vol,  ndof_cell, last_dof_owned,                 &
+                         last_dof_annexed, last_dof_halo, dofmap,              &
+                         global_dof_id )
 
   implicit none
 

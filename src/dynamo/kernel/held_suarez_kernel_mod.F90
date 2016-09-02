@@ -7,9 +7,9 @@
 !
 !-------------------------------------------------------------------------------
 
-!> @brief Kernel adds a Held-Suarez forcing
+!> @brief Adds a Held-Suarez forcing
 
-!> @detail Kernel adds a Held-Suarez forcing based on Wedi and Smolarkiewicz 2009:
+!> @details Kernel adds a Held-Suarez forcing based on Wedi and Smolarkiewicz 2009:
 !> Wedi, N. P. and Smolarkiewicz, P. K. (2009), A framework for testing global 
 !> non-hydrostatic models. Q.J.R. Meteorol. Soc., 135: 469–484. doi: 10.1002/qj.377
 
@@ -86,34 +86,33 @@ type(held_suarez_kernel_type) function held_suarez_kernel_constructor() result(s
   return
 end function held_suarez_kernel_constructor
 
-!> @brief The subroutine which is called directly by the psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @param[inout] dtheta Real array, theta increment data
-!! @param[in] theta Real array, theta data
-!! @param[inout] du Real array, u increment data
-!! @param[in] rho Real array. The density
-!! @param[in] chi_1 Real array, chi_1 data
-!! @param[in] chi_2 Real array, chi_2 data
-!! @param[in] chi_3 Real array, chi_3 data
-!! @param[in] ndf_w0 The number of degrees of freedom per cell for w0
-!! @param[in] undf_w0 The number of unique degrees of freedom for w0
-!! @param[in] map_w0 Integer array holding the dofmap for the cell at the 
-!>            base of the column for w0
+!> @brief Adds a Held-Suarez forcing
+!! @param[in] nlayers Number of layers
+!! @param[inout] dtheta Theta increment
+!! @param[in] theta Potential temperature
+!! @param[inout] du Wind increment
+!! @param[inout] u Wind
+!! @param[in] rho Density
+!! @param[in] chi_1 X component of the coordinate 
+!! @param[in] chi_2 Y component of the coordinate 
+!! @param[in] chi_3 Z component of the coordinate
+!! @param[in] ndf_w0 Number of degrees of freedom per cell for w0
+!! @param[in] undf_w0 Number of unique degrees of freedom for w0
+!! @param[in] map_w0 Dofmap for the cell at the base of the column for w0
 !! @param[in] basis_w0 Basis functions evaluated at gaussian quadrature points for w0
-!! @param[in] ndf_w2 The number of degrees of freedom per cell for w2
-!! @param[in] undf_w2 The number of unique degrees of freedom for w2
-!! @param[in] map_w2 Integer array holding the dofmap for the cell at the 
-!>            base of the column for w2
+!! @param[in] diff_basis_w0 Differential basis functions evaluated at gaussian quadrature points for w0
+!! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
+!! @param[in] undf_w2 Number of unique degrees of freedom for w2
+!! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
 !! @param[in] basis_w2 Basis functions evaluated at gaussian quadrature points for w2
-!! @param[in] ndf_w3 The number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 The number of unique degrees of freedom for w3
-!! @param[in] map_w3 Integer array holding the dofmap for the cell at the 
-!>            base of the column for w3
+!! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
+!! @param[in] undf_w3 Number of unique degrees of freedom for w3
+!! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
 !! @param[in] basis_w3 Basis functions evaluated at gaussian quadrature points for w3
-!! @param[in] nqp_h the number of horizontal quadrature points
-!! @param[in] nqp_v the number of vertical quadrature points
-!! @param[in] wqp_h the weights of the horizontal quadrature points
-!! @param[in] wqp_v the weights of the vertical quadrature points
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Weights of the horizontal quadrature points
+!! @param[in] wqp_v Weights of the vertical quadrature points
 subroutine held_suarez_code(nlayers,                                     &
                             du, dtheta, u, theta, rho,                   &
                             chi_1, chi_2, chi_3,                         &
@@ -299,7 +298,6 @@ end function held_suarez_newton_frequency
  
 !> @brief Function to calculate the damping coefficent for held-suarez
 !! @param[in] sigma nondimensional pressure p/p_surf
-!! @param[in] lat latitude
 function held_suarez_damping(sigma) result(held_suarez_damping_rate)
 
   implicit none

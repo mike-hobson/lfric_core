@@ -55,13 +55,14 @@ contains
 !>         \f[ R_\rho = \nabla.\mathbf{F} \f]
 !>         with diagnostic fields:
 !>
-!>         Mass flux: \f[ \mathbf{F} = \mathbf{u}\rho \f]
-!>         Vorticity: \f[ \xi = \nabla\times\mathbf{u} \f]
+!>         Mass flux: \f$ \mathbf{F} = \mathbf{u}\rho \f$
+!>         Vorticity: \f$ \xi = \nabla\times\mathbf{u} \f$
 !>
-!> @param[inout] advection Field array containing the advective terms
-!> @param[in]    state Field array. Current state of the model prognostics (u, theta, rho)
-!> @param[in]    xi The relative vorticity field
-
+!> @param[inout] advection Advective terms
+!> @param[in]    state Current state of the model prognostics
+!> @param[in]    state_np1 State at the next time level of the model prognostics
+!> @param[in]    state_n State at the old time level of the model prognostics
+!> @param[in]    xi Relative vorticity field
   subroutine advection_alg( advection, &
                             state, &
                             state_np1, &

@@ -80,19 +80,18 @@ type(sample_poly_flux_kernel_type) function sample_poly_flux_kernel_constructor(
 end function sample_poly_flux_kernel_constructor
 
 !> @brief Computes the fluxes for a tracer density
-!! @param[in]  nlayers Integer the number of layers
-!! @param[out] flux The mass flux field to compute 
-!! @param[in]  wind The wind field
-!! @param[in]  density The tracer density
-!! @param[in]  undf_w2 Integer the number of unique degrees of freedom for the flux & wind fields
-!! @param[in]  ndf_w2 Integer the number of degrees of freedom per cell
-!! @param[in]  map_w2 Integer array holding the dofmap for the cell at the base of the column
-!! @param[in]  basis_w2 basis function array evaluated at w2 nodes
-!! @param[in]  undf_w3 Integer the number of unique degrees of freedom for the density field
-!! @param[in]  ndf_w3 Integer the number of degrees of freedom per cell
-!! @param[in]  stencil_size The size of the stencil (number of cells)
-!! @param[in]  stencil_map Integer array holding the dofmaps for the stencil
-
+!! @param[in]  nlayers Number of layers
+!! @param[out] flux Mass flux field to compute 
+!! @param[in]  wind Wind field
+!! @param[in]  density Tracer density
+!! @param[in]  undf_w2 Number of unique degrees of freedom for the flux & wind fields
+!! @param[in]  ndf_w2 Number of degrees of freedom per cell
+!! @param[in]  map_w2 Dofmap for the cell at the base of the column
+!! @param[in]  basis_w2 Basis function array evaluated at w2 nodes
+!! @param[in]  undf_w3 Number of unique degrees of freedom for the density field
+!! @param[in]  ndf_w3 Number of degrees of freedom per cell
+!! @param[in]  stencil_size Size of the stencil (number of cells)
+!! @param[in]  stencil_map Dofmaps for the stencil
 subroutine sample_poly_flux_code( nlayers,              &
                                   flux,                 &
                                   wind,                 &
@@ -223,7 +222,7 @@ end subroutine sample_poly_flux_code
 !=============================================================================!
 !>@brief Initialise various quantities needed for sample_poly_flux_code
 !>@param[in] order Polynomial order for flux computations
-!>@param[in] nlayers number of vertical layers
+!>@param[in] nlayers Number of vertical layers
 subroutine sample_poly_flux_init(order, nlayers)
 
   use matrix_invert_mod, only: matrix_invert

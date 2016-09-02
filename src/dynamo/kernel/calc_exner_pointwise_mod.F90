@@ -20,9 +20,9 @@ contains
 !> @brief Function to compute the exner pressure from the nonlinear equation of state
 !> @details Compute the exner pressure from the equation of state:
 !>          exner = ( Rd/p0 * rho * theta ) ^ (  kappa / ( 1 - kappa ) )
-!! @param[in]  rho      real, the density perturbation
-!! @param[in]  theta    real, the potential temperature perturbation
-!! @param[out] exner    real, the exner pressure perturbation
+!! @param[in] rho   Density perturbation
+!! @param[in] theta Potential temperature perturbation
+!! @result    exner Pressure perturbation
 function calc_exner_pointwise(rho, theta) result(exner)
 
   real(kind=r_def)              :: exner
@@ -37,12 +37,12 @@ end function calc_exner_pointwise
 !>           exner = kappa / ( 1- kappa ) * exner_s * ( rho/rho_s + theta/theta_s ) 
 !>@deprecated The Usefulness of the linear model is to be revaluated at 
 !>            the end of the Gung-Ho project and removied if possible
-!! @param[in]  rho      real, the density perturbation
-!! @param[in]  theta    real, the potential temperature perturbation
-!! @param[in]  exner_s  real, the reference exner pressure
-!! @param[in]  rho_s    real, the reference density
-!! @param[in]  theta_s  real, the reference potential temperature
-!! @param[out] exner    real, the exner pressure perturbation
+!! @param[in] rho     Density perturbation
+!! @param[in] theta   Potential temperature perturbation
+!! @param[in] exner_s Reference exner pressure
+!! @param[in] rho_s   Reference density
+!! @param[in] theta_s Reference potential temperature
+!! @result    exner   Pressure perturbation
 function linear_calc_exner_pointwise(rho, theta, exner_s, rho_s, theta_s) result(exner)
 
   real(kind=r_def)              :: exner

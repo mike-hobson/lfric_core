@@ -18,9 +18,9 @@ contains
 !> Subroutine Computes the inverse of a n x n 
 !! matrix, a and returns the inverse in b.
 !! uses Dolittle alogorithm for LU factorisation on a small, dense, matrix.
-!! @param[in] a Real 2-dim array. Holds the values of the matrix
-!! @param[out] b Real 2-dim array. Holds the values of the computed inverse
-!! @param[in] n Integer. The rank/dim size of the matrix/array
+!! @param[in] a Holds the matrix
+!! @param[out] b Holds the computed inverse
+!! @param[in] n Rank/dim size of the matrix/array
   subroutine matrix_invert(a,b,n)
     !-------------------------------------------------------------------------------
     ! Compute the inverse (b) of n x n matrix a
@@ -96,9 +96,9 @@ contains
     
   end subroutine matrix_invert
 
-!> @detailsComputes the inverse of 3x3 matrix using the exact formula
-!> @param[in] a Real 3x3 array. Holds the values of the matrix to be inverted
-!> @param[return] a_inv Real 3x3 array. Holds the values of the computed inverse
+!> @details Computes the inverse of 3x3 matrix using the exact formula
+!> @param[in] a Holds the values of the matrix to be inverted
+!> @result a_inv Holds the values of the computed inverse
   function matrix_invert_3x3(A) result ( A_inv )
     use constants_mod, only: r_def
 
@@ -127,9 +127,9 @@ contains
     return
   end function matrix_invert_3x3
 
-!> @detailsComputes the determinant of 3x3 matrix using the exact formula
-!> @param[in] j Real 3x3 array. Holds the values of the matrix to be inverted
-!> @param[return] determinant_3x3 Real. Holds the values of the computed
+!> @details Computes the determinant of 3x3 matrix using the exact formula
+!> @param[in] j Holds the values of the matrix to be inverted
+!> @result determinant_3x3 Holds the values of the computed
 !! determinant
 pure real(kind=r_def) function determinant_3x3(j)
   real(kind=r_def), intent(in) :: j(3,3)

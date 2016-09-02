@@ -61,32 +61,34 @@ contains
 type(pert_pressure_gradient_kernel_type) function pert_pressure_gradient_kernel_constructor() result(self)
   return
 end function pert_pressure_gradient_kernel_constructor
-!> @detail The kernel computes the perturbation pressure gradient part for the 
+!> @details The kernel computes the perturbation pressure gradient part for the 
 !>         lhs of the momentum equation for the nonlinear equations,
 !>         pert_pressure_gradient:
 !>         \f[  cp\left(\theta^{ref}\nabla\Pi' + \theta'\nabla\Pi^{ref}\right) \f]
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf_w2 The number of degrees of freedom per cell for w2
-!! @param[in] undf_w2 The number unique of degrees of freedom  for w2
-!! @param[in] map_w2 Integer array holding the dofmap for the cell at the base of the column for w2
-!! @param[in] w2_basis Real 4-dim array holding basis functions evaluated at quadrature points 
-!! @param[in] w2_diff_basis Real 4-dim array holding differntial of the basis functions evaluated at  quadrature points
-!! @param[inout] r_u Real array the data 
-!! @param[in] ndf_w3 The number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 The number unique of degrees of freedom  for w3
-!! @param[in] map_w3 Integer array holding the dofmap for the cell at the base of the column for w3
-!! @param[in] w3_basis Real 4-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] rho Real array. The density
-!! @param[in] ndf_w0 The number of degrees of freedom per cell for w0
-!! @param[in] undf_w0 The number unique of degrees of freedom  for w0
-!! @param[in] map_w0 Integer array holding the dofmap for the cell at the base of the column for w0
-!! @param[in] w0_basis Real 4-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] w0_diff_basis Real 4-dim array holding differntial of the basis functions evaluated at gaussian quadrature point
-!! @param[in] theta Real array. potential temperature
-!! @param[in] nqp_h Integer, number of quadrature points in the horizontal
-!! @param[in] nqp_v Integer, number of quadrature points in the vertical
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
+!! @param[in] undf_w2 Number unique of degrees of freedom  for w2
+!! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
+!! @param[in] w2_basis Basis functions evaluated at quadrature points 
+!! @param[in] w2_diff_basis Differntial of the basis functions evaluated at  quadrature points
+!! @param[inout] r_u Momentum equation residual
+!! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
+!! @param[in] undf_w3 Number unique of degrees of freedom  for w3
+!! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
+!! @param[in] w3_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[in] rho Density
+!! @param[in] rho_ref Reference density
+!! @param[in] ndf_w0 Number of degrees of freedom per cell for w0
+!! @param[in] undf_w0 Number unique of degrees of freedom  for w0
+!! @param[in] map_w0 Dofmap for the cell at the base of the column for w0
+!! @param[in] w0_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[in] w0_diff_basis Differntial of the basis functions evaluated at gaussian quadrature point
+!! @param[in] theta Potential temperature
+!! @param[in] theta_ref Reference potential temperature
+!! @param[in] nqp_h Number of quadrature points in the horizontal
+!! @param[in] nqp_v Number of quadrature points in the vertical
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 subroutine pert_pressure_gradient_code(nlayers,                                     &
                                   r_u, rho, rho_ref, theta, theta_ref,              &
                                   ndf_w2, undf_w2, map_w2, w2_basis, w2_diff_basis, &

@@ -7,11 +7,11 @@
 !
 !-------------------------------------------------------------------------------
 
-!> @brief Kernel which computes rhs of the thermodynamic equation for the linear equations with
-!>         no advection
+!> @brief Computes rhs of the thermodynamic equation for the linear equations
+!>        with no advection
 
 
-!> @detail The kernel computes the rhs of the thermodynamic equation 
+!> @details The kernel computes the rhs of the thermodynamic equation 
 !>         That is: rtheta = -N^2/g * theta_s * u.k
 
 !>@deprecated The Usefulness of the linear model is to be revaluated at 
@@ -72,19 +72,27 @@ type(linear_rtheta_kernel_type) function linear_rtheta_kernel_constructor() resu
   return
 end function linear_rtheta_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf_w0 The number of degrees of freedom per cell for w0
-!! @param[in] map_w0 Integer array holding the dofmap for the cell at the base of the column for w0
-!! @param[in] w0_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] w0_diff_basis Real 5-dim array holding differential of the basis functions evaluated at gaussian quadrature points 
-!! @param[inout] r_theta Real array the data 
-!! @param[in] phi Real array. The geopotential field
-!! @param[in] chi_1 Real array. the physical x coordinate in w0
-!! @param[in] chi_2 Real array. the physical x coordinate in w0
-!! @param[in] chi_3 Real array. the physical x coordinate in w0
-!! @param[in] u Real array. the velocity
-!! @param[inout] gq The gaussian quadrature rule 
+!> @brief Computes rhs of the thermodynamic equation for the linear equations
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf_w0 Number of degrees of freedom per cell for w0
+!! @param[in] undf_w0 Number of degrees of freedom for w0
+!! @param[in] map_w0 Dofmap for the cell at the base of the column for w0
+!! @param[in] w0_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[in] w0_diff_basis Differential of the basis functions evaluated at gaussian quadrature points 
+!! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
+!! @param[in] undf_w2 Total number of degrees of freedom for w2
+!! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
+!! @param[in] w2_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[inout] r_theta Right hand side of the potential temperature equation
+!! @param[in] phi Geopotential field
+!! @param[in] chi_1 Physical x coordinate in w0
+!! @param[in] chi_2 Physical x coordinate in w0
+!! @param[in] chi_3 Physical x coordinate in w0
+!! @param[in] u Velocity
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Weights of horizontal quadrature points
+!! @param[in] wqp_v Weights of vertical quadrature points
 subroutine linear_rtheta_code(nlayers,                                         &
                               r_theta, u, phi,  chi_1, chi_2, chi_3,           &
                               ndf_w0, undf_w0, map_w0, w0_basis, w0_diff_basis,&

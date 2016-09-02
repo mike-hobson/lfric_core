@@ -44,7 +44,7 @@ contains
   !> @details Rho and u fields are initialised before
   !>          this algorithm is called. State items are created,
   !> @param[in]    mesh_id Mesh id of mesh on which the model runs
-  !> @param[in]    u  The 3D wind field
+  !> @param[in]    u  3D wind field
 
   subroutine cosmic_transport_init(mesh_id, u)
 
@@ -79,9 +79,9 @@ contains
 !>          has currently been tested in the biperiodic planar domain and in
 !>          the horizontal direction only. The wind profile is defined
 !>          analytically.
-!> @param[inout] rho the density field
-!> @param[inout] chi the fem coordinate field array
-!> @param[in] mesh  The mesh all fields are on
+!> @param[inout] rho Density field
+!> @param[inout] chi Fem coordinate field array
+!> @param[in] mesh_id  Mesh id of the mesh all fields are on
   subroutine cosmic_transport_step(mesh_id, chi, rho)
 
     implicit none

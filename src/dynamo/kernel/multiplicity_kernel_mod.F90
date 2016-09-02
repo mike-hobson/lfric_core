@@ -8,8 +8,8 @@
 !-------------------------------------------------------------------------------
 
 !> @brief Kernel which computes the multiplicity of the dofs for a field
-!> @detail Computes how many times each dof in a field is visited when looping
-!>         over cells and all dof's asscociated with that cell 
+!> @details Computes how many times each dof in a field is visited when looping
+!>          over cells and all dof's asscociated with that cell 
 module multiplicity_kernel_mod
 use kernel_mod,              only : kernel_type
 use argument_mod,            only : arg_type, func_type,                     &
@@ -53,12 +53,12 @@ type(multiplicity_kernel_type) function multiplicity_kernel_constructor() result
   return
 end function multiplicity_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf The number of degrees of freedom per cell for the function space
-!! @param[in] undf The number unique of degrees of freedom  for the function space
-!! @param[in] map Integer array holding the dofmap for the cell at the base of the column for the function space
-!! @param[inout] field Real array the data 
+!> @brief ompute the mulitplicity of a field (number of cells each dof is shared by)
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf Number of degrees of freedom per cell for the function space
+!! @param[in] undf Number unique of degrees of freedom  for the function space
+!! @param[in] map Dofmap for the cell at the base of the column for the function space
+!! @param[inout] field Input/ouput field
 
 subroutine multiplicity_code(nlayers,                        &
                              field,                          &

@@ -61,19 +61,24 @@ type(compute_total_mass_kernel_type) function compute_total_mass_kernel_construc
 end function compute_total_mass_kernel_constructor
 
 !> @brief Computes the cell integrated mass for a single model column
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf_w3 The number of degrees of freedom per cell
-!! @param[in] map_w3 Integer array holding the dofmap for the cell at the base of the column
-!! @param[in] w3_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[out] mass The cell integrated mass array
-!! @param[in] rho The density array
-!! @param[inout] gq The gaussian quadrature rule 
-!! @param[in] ndf_w0 The number of degrees of freedom per cell
-!! @param[in] map_w0 Integer array holding the dofmap for the cell at the base of the column
-!! @param[in] w0_diff_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points
-!! @param[inout] chi_1 Real array, the x component of the w0 coordinate field
-!! @param[inout] chi_2 Real array, the y component of the w0 coordinate field
-!! @param[inout] chi_3 Real array, the z component of the w0 coordinate field
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf_w3 Number of degrees of freedom per cell
+!! @param[in] undf_w3 Total number of degrees of freedom for w3
+!! @param[in] map_w3 Dofmap for the cell at the base of the column
+!! @param[in] w3_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[out] mass Cell integrated mass
+!! @param[in] rho Density
+!! @param[in] ndf_w0 Number of degrees of freedom per cell
+!! @param[in] undf_w0 Total number of degrees of freedom for w0 
+!! @param[in] map_w0 Dofmap for the cell at the base of the column
+!! @param[in] w0_diff_basis Basis functions evaluated at gaussian quadrature points
+!! @param[inout] chi_1 X component of the w0 coordinate field
+!! @param[inout] chi_2 Y component of the w0 coordinate field
+!! @param[inout] chi_3 Z component of the w0 coordinate field
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Weights of horizontal quadrature points
+!! @param[in] wqp_v Weights of vertical quadrature points
 subroutine compute_total_mass_code(                                            &
                                    nlayers,                                    &
                                    mass, rho, chi_1, chi_2, chi_3,             &

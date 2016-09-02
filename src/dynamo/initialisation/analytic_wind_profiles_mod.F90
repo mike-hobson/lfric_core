@@ -27,9 +27,9 @@ contains
 !> @brief Compute an analytic wind field
 !> @param[in] chi Position in physical coordinates
 !> @param[in] choice Integer defining which specified formula to use
-!> @param[in] num_option Number of sclaer options to supply
+!> @param[in] num_options Number of sclaer options to supply
 !> @param[in] option Array of real values used to generate the initial profile
-!> @result u The result wind field vector (u,v,w)
+!> @result u Result wind field vector (u,v,w)
 function analytic_wind(chi, choice, num_options, option) result(u)
 
   implicit none

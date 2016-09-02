@@ -5,7 +5,7 @@
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
 !-------------------------------------------------------------------------------
 
-!> @mainpage boundary_test
+!> @details boundary_test
 !> Test program for the automatic generation of boundary condition enforcement
 !> by psyclone
 

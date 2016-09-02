@@ -11,15 +11,20 @@
 !>         written in the vector invariant form
 
 
-!> @detail The kernel computes the rhs of the momentum equation for the nonlinear equations,
+!> @details The kernel computes the rhs of the momentum equation for the nonlinear equations,
 !>         written in the vector invariant form
 !>         This consists of four terms:
-!>         Pressure gradient: cp*theta*grad(pi)
-!>         geopotential gradient: grad(Phi) ( \quiv g for some domains)
-!>         gradient of kinetic energy: grad(1/2*u.u) = 
-!>         vorticity advection: xi/rho \cross F (with vorticity xi and mass flux F)
+!>
+!>         Pressure gradient: \f$ cp\theta\nabla(\Pi) \f$
+!>
+!>         geopotential gradient: \f$ \nabla(\Phi) \f$ ( \f$\equiv g\f$ for some domains)
+!>
+!>         gradient of kinetic energy: \f$ \nabla(1/2u.u) \f$ 
+!>
+!>         vorticity advection: \f$ \xi/\rho \times F\f$ (with vorticity \f$\xi\f$ and mass flux F)
+!>
 !>         This results in:
-!>         ru = -xi/rho x F - grad(Phi + 1/2*u.u) - cp*theta*grad(exner)
+!>         \f[ r_u = -\xi/\rho \times F - \nabla(\Phi + 1/2u.u) - cp*\theta*\nabla(\Pi) \f]
 module geopotential_gradient_kernel_mod
 use kernel_mod,              only : kernel_type
 use argument_mod,            only : arg_type, func_type,                 &
@@ -68,22 +73,23 @@ type(geopotential_gradient_kernel_type) function geopotential_gradient_kernel_co
   return
 end function geopotential_gradient_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf_w2 The number of degrees of freedom per cell for w2
-!! @param[in] undf_w2 The number unique of degrees of freedom  for w2
-!! @param[in] map_w2 Integer array holding the dofmap for the cell at the base of the column for w2
-!! @param[in] w2_basis Real 4-dim array holding basis functions evaluated at quadrature points 
-!! @param[inout] r_u Real array the data 
-!! @param[in] ndf_w0 The number of degrees of freedom per cell for w0
-!! @param[in] undf_w0 The number unique of degrees of freedom  for w0
-!! @param[in] map_w0 Integer array holding the dofmap for the cell at the base of the column for w0
-!! @param[in] w0_diff_basis Real 4-dim array holding differntial of the basis functions evaluated at gaussian quadrature point
-!! @param[in] phi The geopotential
-!! @param[in] nqp_h Integer, number of quadrature points in the horizontal
-!! @param[in] nqp_v Integer, number of quadrature points in the vertical
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!> @brief Kernel which computes rhs of the momentum equation for the nonlinear equations,
+!>         written in the vector invariant form
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
+!! @param[in] undf_w2 Number unique of degrees of freedom  for w2
+!! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
+!! @param[in] w2_basis Basis functions evaluated at quadrature points 
+!! @param[inout] r_u Right hand side of the momentum equation 
+!! @param[in] ndf_w0 Number of degrees of freedom per cell for w0
+!! @param[in] undf_w0 Number unique of degrees of freedom  for w0
+!! @param[in] map_w0 Dofmap for the cell at the base of the column for w0
+!! @param[in] w0_diff_basis Differntial of the basis functions evaluated at gaussian quadrature point
+!! @param[in] phi Geopotential
+!! @param[in] nqp_h Number of quadrature points in the horizontal
+!! @param[in] nqp_v Number of quadrature points in the vertical
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 subroutine geopotential_gradient_code(nlayers,                                 &
                                       r_u, phi,                                &
                                       ndf_w2, undf_w2, map_w2, w2_basis,       &

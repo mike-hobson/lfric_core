@@ -7,7 +7,7 @@
 !
 !> @brief A module providing field related classes.
 !>
-!> @detail Both a representation of a field which provides no access to the
+!> @details Both a representation of a field which provides no access to the
 !> underlying data (to be used in the algorithm layer) and an accessor class
 !> (to be used in the Psy layer) are provided.
 

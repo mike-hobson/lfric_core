@@ -7,7 +7,7 @@
 !
 !> @brief A module providing various run time constants
 !>
-!> @detail A module holding various objects that are created at
+!> @details A module holding various objects that are created at
 !>         setup and are not changed thereafter but are needed
 !>         throughout the algorithm layers
 
@@ -87,8 +87,8 @@ module runtime_constants_mod
 
 contains
   !> Subroutine to create the runtime constants
-  !> @param[in] mesh_id the mesh_id
-  !> @param[inout] chi the coordinate field
+  !> @param[in] mesh_id Mesh_id
+  !> @param[inout] chi Coordinate field
   subroutine create_runtime_constants( mesh_id, chi)
     implicit none
 
@@ -230,7 +230,7 @@ contains
   end function get_mass_matrix
 
   !> Function to return a pointer to a mass matrix diagonal
-  !> @param[in] i the index of the desired mass matrix diagonal field
+  !> @param[in] i Index of the desired mass matrix diagonal field
   !> @return The mass matrix diagonal field
   function get_mass_matrix_diagonal(i) result(mmd)
 

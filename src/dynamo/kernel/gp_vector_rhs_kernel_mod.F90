@@ -74,23 +74,35 @@ end function gp_vector_rhs_kernel_constructor
 !>          field is computed for each component, this allows a vector field to
 !>          be projected into three separate scalar fields suitable for further
 !>          manipulation
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf The number of degrees of freedom per cell
-!! @param[in] map Integer array holding the dofmap for the cell at the base of the column
-!! @param[in] basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points
-!! @param[inout] rhs Real array, the ths field to compute
-!! @param[in] gq Type, gaussian quadrature rule
-!! @param[in] ndf_f The number of degrees of freedom per cell for the field to be projected
-!! @param[in] map_f Integer array holding the dofmap for the cell at the base of the column
-!! @param[in] field The field to be projected 
-!! @param[in] ndf_chi the numbe rof dofs per cell for the coordinate field
-!! @param[in] map_chi the dofmap for the coordinate field
-!! @param[in] chi_diff_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points
-!! @param[in] chi_1 Real array, the x component of the coordinate field
-!! @param[in] chi_2 Real array, the y component of the coordinate field
-!! @param[in] chi_3 Real array, the z component of the coordinate field
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf Number of degrees of freedom per cell
+!! @param[in] undf Number of degrees of freedom
+!! @param[in] map Dofmap for the cell at the base of the column
+!! @param[in] basis Basis functions evaluated at gaussian quadrature points
+!! @param[inout] rhs1 Field to compute
+!! @param[inout] rhs2 Field to compute
+!! @param[inout] rhs3 Field to compute
+!! @param[in] ndf_f Number of degrees of freedom per cell for the field to be projected
+!! @param[in] undf_f Number of degrees of freedom for the field to be projected
+!! @param[in] map_f Dofmap for the cell at the base of the column
+!! @param[in] f_basis Basis functions evaluated at gaussian quadrature points
+!! @param[in] field Field to be projected 
+!! @param[in] w2_field W2_field needed to get function space components
+!! @param[in] ndf_w2 Number of degrees of freedom per cell for the w2 field
+!! @param[in] undf_w2 Total number of degrees of freedom for the w2 field
+!! @param[in] map_w2 Dofmap for the cell at the base of the column
+!! @param[in] ndf_chi Number of dofs per cell for the coordinate field
+!! @param[in] undf_chi Total number of dofs for the coordinate field
+!! @param[in] map_chi Dofmap for the coordinate field
+!! @param[in] chi_basis Basis functions evaluated at gaussian quadrature points
+!! @param[in] chi_diff_basis Differential basis functions evaluated at gaussian quadrature points
+!! @param[in] chi_1 X component of the coordinate field
+!! @param[in] chi_2 Y component of the coordinate field
+!! @param[in] chi_3 Z component of the coordinate field
+!! @param[in] nqp_h Number of quadrature points in the horizontal
+!! @param[in] nqp_v Number of quadrature points in the vertical
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 subroutine gp_vector_rhs_code(nlayers, &
                               rhs1, rhs2, rhs3, field, &
                               chi_1, chi_2, chi_3, &

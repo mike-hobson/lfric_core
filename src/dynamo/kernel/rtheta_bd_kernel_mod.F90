@@ -10,9 +10,9 @@
 !> @brief Kernel which computes the boundary integral part of rhs of the thermodynamic equation for the nonlinear equations
 
 
-!> @detail The kernel computes the boundary integral on rhs of the thermodynamic equation for the nonlinear equations
-!>         This consists of
-!>         rtheta_bd = - theta * gamma * u * normal
+!> @details The kernel computes the boundary integral on rhs of the thermodynamic equation for the nonlinear equations
+!>          This consists of
+!>          rtheta_bd = - theta * gamma * u * normal
 module rtheta_bd_kernel_mod
     use kernel_mod,              only : kernel_type
     use argument_mod,            only : arg_type, func_type,                 &
@@ -65,41 +65,40 @@ contains
         return
     end function rtheta_bd_kernel_constructor
 
-    !> @brief The subroutine which is called directly by the Psy layer
-    !! @param[in] nlayers Integer the number of layers
-    !! @param[in] ndf_w2 The number of degrees of freedom per cell for w2
-    !! @param[in] undf_w2 The number unique of degrees of freedom  for w2
-    !! @param[in] map_w2 Integer array holding the dofmap for the cell at the base of the column for w2
-    !! @param[in] map_w2_W Integer array holding the dofmap for the western face of the cell at the base of the column for w2
-    !! @param[in] map_w2_S Integer array holding the dofmap for the southern face of the cell at the base of the column for w2
-    !! @param[in] map_w2_E Integer array holding the dofmap for the eastern face of the cell at the base of the column for w2
-    !! @param[in] map_w2_N Integer array holding the dofmap for the northern face of the cell at the base of the column for w2
-    !! @param[inout] r_theta_bd Real array the data
-    !! @param[in] ndf_w3 The number of degrees of freedom per cell for w3
-    !! @param[in] undf_w3 The number unique of degrees of freedom  for w3
-    !! @param[in] map_w3 Integer array holding the dofmap for the cell at the base of the column for w3
-    !! @param[in] map_w3_W Integer array holding the dofmap for the western face of the cell at the base of the column for w3
-    !! @param[in] map_w3_S Integer array holding the dofmap for the southern face of the cell at the base of the column for w3
-    !! @param[in] map_w3_E Integer array holding the dofmap for the eastern face of the cell at the base of the column for w3
-    !! @param[in] map_w3_N Integer array holding the dofmap for the northern face of the cell at the base of the column for w3
-    !! @param[in] rho Real array. The density
-    !! @param[in] theta Real array. potential temperature
-    !! @param[in] f The mass flux array F
-    !! @param[in] ndf_wtheta The number of degrees of freedom per cell for wtheta
-    !! @param[in] undf_wtheta The number unique of degrees of freedom  for wtheta
-    !! @param[in] map_wtheta Integer array holding the dofmap for the cell at the base of the column for wtheta
-    !! @param[in] map_wtheta_W Integer array holding the dofmap for the western face of the cell at the base of the column for wtheta
-    !! @param[in] map_wtheta_S Integer array holding the dofmap for the southern face of the cell at the base of the column for wtheta
-    !! @param[in] map_wtheta_E Integer array holding the dofmap for the eastern face of the cell at the base of the column for wtheta
-    !! @param[in] map_wtheta_N Integer array holding the dofmap for the northern face of the cell at the base of the column for wtheta
-    !! @param[in] nqp_v Integer, number of quadrature points in the vertical
-    !! @param[in] nqp_h_1d Integer, number of quadrature points in a single horizontal direction
-    !! @param[in] wqp_h Real array. Quadrature weights horizontal
-    !! @param[in] wqp_v Real array. Quadrature weights vertical
-    !! @param[in] w2_basis_face Real 5-dim array holding w2 basis functions evaluated at gaussian quadrature points on horizontal faces
-    !! @param[in] w3_basis_face Real 5-dim array holding w3 basis functions evaluated at gaussian quadrature points on horizontal faces
-    !! @param[in] wtheta_basis_face Real 5-dim array holding wtheta basis functions evaluated at gaussian quadrature points on horizontal faces
-
+    !> @brief Compute the boundary integral terms for the potential temperature
+    !!        equation
+    !! @param[in] nlayers Number of layers
+    !! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
+    !! @param[in] undf_w2 Number unique of degrees of freedom  for w2
+    !! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
+    !! @param[in] map_w2_W Dofmap for the western face of the cell at the base of the column for w2
+    !! @param[in] map_w2_S Dofmap for the southern face of the cell at the base of the column for w2
+    !! @param[in] map_w2_E Dofmap for the eastern face of the cell at the base of the column for w2
+    !! @param[in] map_w2_N Dofmap for the northern face of the cell at the base of the column for w2
+    !! @param[inout] r_theta_bd Right hand side of the thermodynamic equation
+    !! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
+    !! @param[in] undf_w3 Number unique of degrees of freedom  for w3
+    !! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
+    !! @param[in] map_w3_W Dofmap for the western face of the cell at the base of the column for w3
+    !! @param[in] map_w3_S Dofmap for the southern face of the cell at the base of the column for w3
+    !! @param[in] map_w3_E Dofmap for the eastern face of the cell at the base of the column for w3
+    !! @param[in] map_w3_N Dofmap for the northern face of the cell at the base of the column for w3
+    !! @param[in] rho Density
+    !! @param[in] theta Potential temperature
+    !! @param[in] f Mass flux
+    !! @param[in] ndf_wtheta Number of degrees of freedom per cell for wtheta
+    !! @param[in] undf_wtheta Number unique of degrees of freedom  for wtheta
+    !! @param[in] map_wtheta Dofmap for the cell at the base of the column for wtheta
+    !! @param[in] map_wtheta_W Dofmap for the western face of the cell at the base of the column for wtheta
+    !! @param[in] map_wtheta_S Dofmap for the southern face of the cell at the base of the column for wtheta
+    !! @param[in] map_wtheta_E Dofmap for the eastern face of the cell at the base of the column for wtheta
+    !! @param[in] map_wtheta_N Dofmap for the northern face of the cell at the base of the column for wtheta
+    !! @param[in] nqp_v Number of quadrature points in the vertical
+    !! @param[in] nqp_h_1d Number of quadrature points in a single horizontal direction
+    !! @param[in] wqp_v Vertical quadrature weights
+    !! @param[in] w2_basis_face Basis functions evaluated at gaussian quadrature points on horizontal faces
+    !! @param[in] w3_basis_face Basis functions evaluated at gaussian quadrature points on horizontal faces
+    !! @param[in] wtheta_basis_face Wtheta basis functions evaluated at gaussian quadrature points on horizontal faces
     subroutine rtheta_bd_code(nlayers,                              &
         ndf_w2, undf_w2, map_w2,                                    &
         map_w2_W, map_w2_S, map_w2_E, map_w2_N,                     &

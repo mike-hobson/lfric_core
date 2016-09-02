@@ -8,7 +8,7 @@
 !-------------------------------------------------------------------------------
 
 !> @brief The kernel computes the cell integrated potential vorticity
-!> int( xi . grad(theta) dV )
+!> \f[ \int( \xi . \nabla(\theta) dV ) \f]
 module compute_total_pv_kernel_mod
 
 use argument_mod,      only : arg_type, func_type,                     &
@@ -62,26 +62,29 @@ type(compute_total_pv_kernel_type) function compute_total_pv_kernel_constructor(
   return
 end function compute_total_pv_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @param[out] pv The cell integrated pv
-!! @param[in] ndf_w1 The number of degrees of freedom per cell for w1
-!! @param[in] undf_w1  The number of unique degrees of freedom  for w1
-!! @param[in] map_w1 Integer array holding the dofmap for the cell at the base of the column for w1
-!! @param[in] w1_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points 
-!! @param[in] xi The absolute vorticity
-!! @param[in] ndf_w0 The number of degrees of freedom per cell for w0
-!! @param[in] undf_w0  The number of unique degrees of freedom  for w0
-!! @param[in] map_w0 Integer array holding the dofmap for the cell at the base of the column for w0
-!! @param[in] w0_diff_basis Real 5-dim array holding differential basis functions evaluated at gaussian quadrature points 
-!! @param[in] theta Real array the potential temperature
-!! @param[in] chi1 The first component of the coordinate field
-!! @param[in] chi2 The second component of the coordinate field
-!! @param[in] chi3 The third component of the coordinate field
-!! @param[in] nqp_h the number of horizontal quadrature points
-!! @param[in] nqp_v the number of vertical quadrature points
-!! @param[in] wqp_h the weights of the horizontal quadrature points
-!! @param[in] wqp_v the weights of the vertical quadrature points
+!> @brief The kernel computes the cell integrated potential vorticity
+!! @param[in] nlayers Number of layers
+!! @param[out] pv Cell integrated potential vorticity
+!! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
+!! @param[in] undf_w3  Number of unique degrees of freedom  for w3
+!! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
+!! @param[in] ndf_w1 Number of degrees of freedom per cell for w1
+!! @param[in] undf_w1  Number of unique degrees of freedom  for w1
+!! @param[in] map_w1 Dofmap for the cell at the base of the column for w1
+!! @param[in] w1_basis Basis functions evaluated at gaussian quadrature points 
+!! @param[in] xi Absolute vorticity
+!! @param[in] ndf_w0 Number of degrees of freedom per cell for w0
+!! @param[in] undf_w0 Number of unique degrees of freedom  for w0
+!! @param[in] map_w0 Dofmap for the cell at the base of the column for w0
+!! @param[in] w0_diff_basis Differential basis functions evaluated at gaussian quadrature points 
+!! @param[in] theta Potential temperature
+!! @param[in] chi1 First component of the coordinate field
+!! @param[in] chi2 Second component of the coordinate field
+!! @param[in] chi3 Third component of the coordinate field
+!! @param[in] nqp_h Number of horizontal quadrature points
+!! @param[in] nqp_v Number of vertical quadrature points
+!! @param[in] wqp_h Weights of the horizontal quadrature points
+!! @param[in] wqp_v Weights of the vertical quadrature points
 subroutine compute_total_pv_code(                                                        &
                                  nlayers,                                                &
                                  pv,                                                     &

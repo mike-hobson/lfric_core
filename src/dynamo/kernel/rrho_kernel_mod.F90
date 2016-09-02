@@ -9,7 +9,7 @@
 
 !> @brief Kernel which computes rhs of the continuity equation for the nonlinear equations 
 
-!> @detail The kernel computes the rhs of the continuity equation for the nonlinear equations, 
+!> @details The kernel computes the rhs of the continuity equation for the nonlinear equations, 
 !>         That is: rrho = -div(F) where F is the mass flux 
 module rrho_kernel_mod
 use kernel_mod,              only : kernel_type
@@ -60,22 +60,22 @@ type(rrho_kernel_type) function rrho_kernel_constructor() result(self)
   return
 end function rrho_kernel_constructor
 
-!> @brief The subroutine which is called directly by the Psy layer
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] ndf_w3 The number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 The number of (local) unique degrees of freedom
-!! @param[in] map_w3 Integer array holding the dofmap for the cell at the base of the column for w3
-!! @param[in] w3_basis Real 4-dim array holding basis functions evaluated at quadrature points 
-!! @param[inout] r_rho Real array the data 
-!! @param[in] ndf_w2 The number of degrees of freedom per cell for w2
-!! @param[in] undf_w2 The number of (local) unique degrees of freedom
-!! @param[in] map_w2 Integer array holding the dofmap for the cell at the base of the column for w2
-!! @param[in] w2_diff_basis Real 4-dim array holding differential basis functions evaluated at quadrature points 
-!! @param[in] u Real array. The velocity data
-!! @param[in] nqp_h Integer, number of quadrature points in the horizontal
-!! @param[in] nqp_v Integer, number of quadrature points in the vertical
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!> @brief Compute the right hand side of the continuity equation
+!! @param[in] nlayers Number of layers
+!! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
+!! @param[in] undf_w3 Number of (local) unique degrees of freedom
+!! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
+!! @param[in] w3_basis Basis functions evaluated at quadrature points 
+!! @param[inout] r_rho Right hand side of the continuity equation
+!! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
+!! @param[in] undf_w2 Number of (local) unique degrees of freedom
+!! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
+!! @param[in] w2_diff_basis Differential basis functions evaluated at quadrature points 
+!! @param[in] u Velocity
+!! @param[in] nqp_h Number of quadrature points in the horizontal
+!! @param[in] nqp_v Number of quadrature points in the vertical
+!! @param[in] wqp_h Horizontal quadrature weights
+!! @param[in] wqp_v Vertical quadrature weights
 subroutine rrho_code(nlayers,                                                 &
                      r_rho, u,                                                &
                      ndf_w3, undf_w3, map_w3, w3_basis,                       &

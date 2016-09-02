@@ -60,24 +60,24 @@ type(conservative_flux_kernel_type) function conservative_flux_kernel_constructo
 end function conservative_flux_kernel_constructor
 
 !> @brief Computes the fluxes for the split advection scheme
-!! @param[in] nlayers Integer the number of layers
-!! @param[in] undf_w3 Integer the number of unique degrees of freedom
-!! @param[in] ndf_w3 Integer the number of degrees of freedom per cell
-!! @param[in] map_w3 Integer array holding the dofmap for the cell at the base of the column
-!! @param[in] rho Real array, the density values in W3
-!! @param[in] a0_coeffs Real array, the coefficients for the subgrid approximation of density
-!! @param[in] a1_coeffs Real array, the coefficients for the subgrid approximation of density
-!! @param[in] a2_coeffs Real array, the coefficients for the subgrid approximation of density
-!! @param[in] undf_w2 Integer, the number of unique degrees of freedom
-!! @param[in] ndf_w2 Integer, the number of degrees of freedom per cell
-!! @param[in] map_w2 Integer array holding the dofmap for the cell at the base of the column
-!! @param[inout] flux Real array, the flux values which are calculated
-!! @param[in] dep_pts Real array, the departure points
-!! @param[in] u_piola Real array, the Piola winds
-!! @param[in] stencil_length Integer The length of the 1D stencil
-!! @param[in] stencil_map Integer array holding the dofmaps for the stencil
-!! @param[in] direction Integer the direction in which to calculate the fluxes
-!! @param[in] deltaT Real the length of a timestep
+!! @param[in] nlayers Number of layers
+!! @param[in] undf_w3 Number of unique degrees of freedom
+!! @param[in] ndf_w3 Number of degrees of freedom per cell
+!! @param[in] map_w3 Dofmap for the cell at the base of the column
+!! @param[in] rho Density values in W3
+!! @param[in] a0_coeffs Coefficients for the subgrid approximation of density
+!! @param[in] a1_coeffs Coefficients for the subgrid approximation of density
+!! @param[in] a2_coeffs Coefficients for the subgrid approximation of density
+!! @param[in] undf_w2 Number of unique degrees of freedom
+!! @param[in] ndf_w2 Number of degrees of freedom per cell
+!! @param[in] map_w2 Dofmap for the cell at the base of the column
+!! @param[inout] flux Flux values which are calculated
+!! @param[in] dep_pts Departure points
+!! @param[in] u_piola Piola winds
+!! @param[in] stencil_length Length of the 1D stencil
+!! @param[in] stencil_map Dofmaps for the stencil
+!! @param[in] direction Direction in which to calculate the fluxes
+!! @param[in] deltaT Length of a timestep
 
 subroutine conservative_flux_code( nlayers,              &
                                    undf_w3,              &

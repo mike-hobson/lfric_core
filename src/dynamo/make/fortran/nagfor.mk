@@ -8,7 +8,7 @@
 #
 $(info ** Chosen NAG Fortran compiler)
 
-FFLAGS_COMPILER           = -openmp
+FFLAGS_COMPILER           =
 FFLAGS_NO_OPTIMISATION    = -O0
 FFLAGS_SAFE_OPTIMISATION  = -O2
 FFLAGS_RISKY_OPTIMISATION = -O4
@@ -16,5 +16,5 @@ FFLAGS_DEBUG              = -g -gline -colour
 FFLAGS_INIT               = -nan
 FFLAGS_RUNTIME            = -C=all -C=undefined -mtrace=all -nan
 
-LDFLAGS_COMPILER = -openmp
+LDFLAGS_COMPILER =
 

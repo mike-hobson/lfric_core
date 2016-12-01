@@ -11,3 +11,4 @@ PGFORTRAN_VERSION := $(shell pgfortran --version \
 $(info ** Portland Fortran version $(PGFORTRAN_VERSION))
 
 F_MOD_DESTINATION_ARG = -module$(SPACE)
+OPENMP_ARG = -mp

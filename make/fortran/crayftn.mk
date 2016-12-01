@@ -4,3 +4,6 @@
 # GungHo Consortium, whose members are identified at
 # https://puma.nerc.ac.uk/trac/GungHo/wiki
 ##############################################################################
+
+OPENMP_ARG = -h omp
+

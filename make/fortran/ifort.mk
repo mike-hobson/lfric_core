@@ -15,3 +15,4 @@ IFORT_VERSION := $(shell ifort -v 2>&1 \
 $(info ** Intel Fortran version $(IFORT_VERSION))
 
 F_MOD_DESTINATION_ARG  = -module$(SPACE)
+OPENMP_ARG = -qopenmp

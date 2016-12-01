@@ -14,3 +14,4 @@ GFORTRAN_VERSION     := $(shell $(FC) -dumpversion 2>&1 \
 $(info ** GNU Fortran version $(GFORTRAN_VERSION))
 
 F_MOD_DESTINATION_ARG     = -J
+OPENMP_ARG = -fopenmp

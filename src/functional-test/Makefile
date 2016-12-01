@@ -13,6 +13,9 @@ include $(ROOT)/make/fortran/$(FORTRAN_COMPILER).mk
 
 EXTERNAL_LIBRARIES = $(patsubst %,-l%,esmf netcdff netcdf)
 
+FFLAGS += $(OPENMP_ARG)
+LDFLAGS += $(OPENMP_ARG)
+
 OBJ_DIR = $(DYNAMO_BUILD_ROOT)/functional-test
 
 ALL_TESTS = $(shell find . -name testframework -prune -o -name "*.py" -print)

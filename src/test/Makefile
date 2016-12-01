@@ -15,7 +15,8 @@ include $(MAKE_DIR)/compiler.mk
 include $(MAKE_DIR)/fortran/$(FORTRAN_COMPILER).mk
 include $(MAKE_DIR)/mpi_link.mk
 
-FFLAGS += -O0 -g
+FFLAGS += $(OPENMP_ARG) -O0 -g
+LDFLAGS += $(OPENMP_ARG)
 
 ifdef CRAY_ENVIRONMENT
 LD_COMPILER_LIBRARIES = stdc++

@@ -12,7 +12,7 @@ ifeq ($(shell test $(GFORTRAN_VERSION) -lt 040900; echo $$?), 0)
   $(error GFortran is too old to build dynamo. Must be at least 4.9.0)
 endif
 
-FFLAGS_COMPILER           = -fopenmp -ffree-line-length-none
+FFLAGS_COMPILER           = -ffree-line-length-none
 FFLAGS_NO_OPTIMISATION    = -O0
 FFLAGS_SAFE_OPTIMISATION  = -Og
 FFLAGS_RISKY_OPTIMISATION = -Ofast
@@ -22,5 +22,5 @@ FFLAGS_INIT               = -finit-integer=31173 -finit-real=snan \
                             -finit-logical=true -finit-character=85
 FFLAGS_RUNTIME            = -fcheck=all -ffpe-trap=invalid,zero,overflow,underflow
 
-LDFLAGS_COMPILER = -fopenmp
+LDFLAGS_COMPILER =
 

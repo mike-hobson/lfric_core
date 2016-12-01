@@ -14,11 +14,11 @@ ifdef PGFORTRAN_VERSION
   endif
 endif
 
-FFLAGS_COMPILER           = -mp
+FFLAGS_COMPILER           = 
 FFLAGS_NO_OPTIMISATION    = -O0
 FFLAGS_SAFE_OPTIMISATION  = -O2
 FFLAGS_RISKY_OPTIMISATION = -O4
 FFLAGS_DEBUG              = -g -traceback
 FFLAGS_RUNTIME            = -Mbounds -Mchkptr -Mchkstk
 
-LDFLAGS_COMPILER = -g -mp
+LDFLAGS_COMPILER = -g

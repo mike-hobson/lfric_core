@@ -131,7 +131,7 @@ contains
   type(field_type), intent(inout)          :: xi
 
   type(field_type),    pointer :: chi(:) => null()
-  type(operator_type), pointer :: mm_w2, mm_w1, div, curl => null()
+  type(operator_type), pointer :: mm_wt,mm_w2, mm_w1, div, curl => null()
   type(field_type),    pointer :: mmd_w2, mmd_w1 => null()
   integer(i_def),              :: mesh 
 
@@ -142,8 +142,11 @@ contains
   type(function_space_type), pointer :: xi_fs, u_fs, rho_fs, theta_fs  => null()
   type(evaluator_xyz_type)           :: evaluator_u, evaluator_theta
 
+  type(field_type)                   :: mt_lumped, ones_wt, temp
+
   mm_w1  => get_mass_matrix(1)
   mm_w2  => get_mass_matrix(2)
+  mm_wt  => get_mass_matrix(5) 
   mmd_w1 => get_mass_matrix_diagonal(1)
   mmd_w2 => get_mass_matrix_diagonal(2)
   chi    => get_coordinates()
@@ -213,10 +216,23 @@ contains
   if ( wtheta_on ) then
     select case(operators)
       case(transport_operators_fv)
+        
+        ones_wt    = field_type( vector_space = theta_fs )
+        mt_lumped  = field_type( vector_space = theta_fs )
+        temp  = field_type( vector_space = theta_fs )
+        call invoke_set_field_scalar( 1.0_r_def, ones_wt )
+        call invoke_set_field_scalar( 0.0_r_def, mt_lumped)
+        call invoke_set_field_scalar( 0.0_r_def, temp)
+        call invoke(matrix_vector_kernel_type(mt_lumped, ones_wt, mm_wt) )
+        
         evaluator_theta = evaluator_xyz_type(theta_fs%get_ndf( ), theta_fs%get_nodes( ))
         call invoke_sample_poly_adv( advection(2), u, theta, &
                                      advective_stencil_extent, evaluator_theta )
-        call invoke_multiply_field(-1.0_r_def, advection(2), advection(2)) 
+        call invoke_multiply_field(-1.0_r_def, advection(2), advection(2))
+        call invoke_divide_field(advection(2), mt_lumped, temp)
+        call invoke_set_field_scalar( 0.0_r_def, advection(2))
+        call invoke(matrix_vector_kernel_type(advection(2), temp, mm_wt))
+         
       case(transport_operators_fem)
         call invoke (rtheta_wtheta_kernel_type ( advection(2), theta, u, qr))
         call invoke_rtheta_bd_kernel ( advection(2), theta, u, ones, qr )

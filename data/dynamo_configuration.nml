@@ -5,7 +5,6 @@
   fplane      = .false.
   f_lat_deg   = 45.0
 /
-/
 
 &extrusion
   method           = 'uniform'

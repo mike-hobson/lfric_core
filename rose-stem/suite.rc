@@ -470,7 +470,7 @@
         inherit = {{family}}, LOCAL
         script = """
                  mkdir -p `dirname $DYNAMO_SOURCE_DIRECTORY`
-                 svn export {{ SOURCE_DYNAMO }} $DYNAMO_SOURCE_DIRECTORY
+                 svn export {{ SOURCE_LFRIC }} $DYNAMO_SOURCE_DIRECTORY
                  HOST={{TARGET_HOST}}
                  DYNAMO_RELATIVE_SOURCE_DIRECTORY=`echo $DYNAMO_SOURCE_DIRECTORY | sed "s|$HOME/||"`
                  ssh $HOST mkdir -p $DYNAMO_RELATIVE_SOURCE_DIRECTORY

@@ -3864,4 +3864,73 @@ end subroutine invoke_sample_poly_adv
     end do
   end subroutine invoke_raise_field
 
+!-------------------------------------------------------------------------------
+! Implmented in #965, kernel requires stencil support. Note that the w2_field is
+! required to obtain the W2 stencil_cross which is used in determining
+! orientation of cells in the halo
+  subroutine invoke_mpi_calc_cell_orientation(w2_field,cell_orientation)
+
+    use mesh_mod, only: mesh_type
+    use stencil_dofmap_mod,               only : stencil_dofmap_type, &
+                                                 STENCIL_CROSS
+    use calc_cell_orientation_kernel_mod, only : calc_cell_orientation_code
+
+    implicit none
+
+    type(field_type), intent(in)      :: w2_field
+    type(field_type), intent(inout)   :: cell_orientation
+
+    integer                 :: cell, nlayers
+    integer                 :: ndf_w3
+    integer                 :: undf_w3
+    integer                 :: ndf_w2
+    integer, pointer        :: map_w3(:) => null()
+
+    type(field_proxy_type) :: cell_orientation_proxy
+    type(field_proxy_type) :: w2_field_proxy
+
+    type(mesh_type), pointer           :: mesh => null()
+    type(stencil_dofmap_type), pointer :: cross_stencil_w2 => null()
+    type(stencil_dofmap_type), pointer :: cross_stencil_w3 => null()
+
+    integer, pointer        :: cross_stencil_w2_map(:,:,:) => null()
+    integer, pointer        :: cross_stencil_w3_map(:,:,:) => null()
+    integer                 :: cross_stencil_w3_size
+
+    mesh => w2_field%get_mesh()
+
+    cell_orientation_proxy = cell_orientation%get_proxy()
+    w2_field_proxy = w2_field%get_proxy()
+
+    nlayers = cell_orientation_proxy%vspace%get_nlayers()
+    ndf_w3  = cell_orientation_proxy%vspace%get_ndf( )
+    undf_w3 = cell_orientation_proxy%vspace%get_undf()
+    ndf_w2  = w2_field_proxy%vspace%get_ndf( )
+
+    ! Obtain the stencil for core cells only
+    cross_stencil_w2 => w2_field_proxy%vspace%get_stencil_dofmap(             &
+                                        STENCIL_CROSS, mesh%get_halo_depth(), 0)
+    cross_stencil_w2_map => cross_stencil_w2%get_whole_dofmap()
+
+    cross_stencil_w3 => cell_orientation_proxy%vspace%get_stencil_dofmap(     &
+                                        STENCIL_CROSS, mesh%get_halo_depth(), 0)
+    cross_stencil_w3_map => cross_stencil_w3%get_whole_dofmap()
+    cross_stencil_w3_size = cross_stencil_w3%get_size()
+
+    do cell=1,mesh%get_last_edge_cell() ! Loop over core cells only
+      map_w3 => cell_orientation_proxy%vspace%get_cell_dofmap(cell)
+
+      call calc_cell_orientation_code(  nlayers,                              &
+                                        cell_orientation_proxy%data,          &
+                                        undf_w3,                              &
+                                        ndf_w3,                               &
+                                        map_w3,                               &
+                                        ndf_w2,                               &
+                                        cross_stencil_w3_size,                &
+                                        cross_stencil_w2_map(:,:,cell),       &
+                                        cross_stencil_w3_map(:,:,cell) )
+    end do
+
+  end subroutine invoke_mpi_calc_cell_orientation
+
 end module psykal_lite_mod

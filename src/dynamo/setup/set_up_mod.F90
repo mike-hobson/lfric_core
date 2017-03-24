@@ -209,6 +209,10 @@ contains
                               max(dep_pt_stencil_extent, &
                                   rho_approximation_stencil_extent))
     end if
+    if ( scheme == transport_scheme_cusph_cosmic ) then
+      max_stencil_depth = max(max_stencil_depth, &
+                       dep_pt_stencil_extent + rho_approximation_stencil_extent)
+    end if
     if ( wtheta_on ) max_stencil_depth = max(max_stencil_depth,1)
 
 

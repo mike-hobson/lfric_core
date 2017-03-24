@@ -19,6 +19,9 @@ module runtime_constants_mod
                                                LOG_LEVEL_ERROR
   ! Configuration
   use finite_element_config_mod,         only: element_order, wtheta_on
+  use formulation_config_mod,            only: transport_only
+  use transport_config_mod,              only: scheme,                     &
+                                               transport_scheme_cusph_cosmic
 
   ! Derived Types
   use field_mod,                         only: field_type
@@ -32,7 +35,8 @@ module runtime_constants_mod
   ! PsyKAl-lite kernels
   use psykal_lite_mod,                   only: invoke_set_field_scalar,  &
                                                invoke_compute_geopotential_kernel_type, &
-                                               invoke_raise_field
+                                               invoke_raise_field, &
+                                               invoke_mpi_calc_cell_orientation
 
   ! PsyKAl PSYClone kernels
   use compute_mass_matrix_kernel_w0_mod,     only: compute_mass_matrix_kernel_w0_type
@@ -48,8 +52,6 @@ module runtime_constants_mod
   use compute_div_operator_kernel_mod,       only: compute_div_operator_kernel_type
   use matrix_vector_kernel_mod,              only: matrix_vector_kernel_type
   use matrix_vector_nobc_kernel_mod,         only: matrix_vector_nobc_kernel_type
-
-
 
   implicit none
 
@@ -72,6 +74,8 @@ module runtime_constants_mod
   type(operator_type), target     :: mm_w3_inv
   type(operator_type), target     :: mm_wtheta
   type(field_type), target        :: geopotential
+  type(field_type), target        :: temp_w2_field
+  type(field_type), target        :: cell_orientation
   type(operator_type), target     :: grad, curl, div
   type(quadrature_type), target   :: qr
   type(field_type), target        :: m0_lumped_inv
@@ -84,8 +88,9 @@ module runtime_constants_mod
   public :: create_runtime_constants
   public :: get_coordinates
   public :: get_geopotential
-  public :: get_mass_matrix    
-  public :: get_mass_matrix_diagonal  
+  public :: get_cell_orientation
+  public :: get_mass_matrix
+  public :: get_mass_matrix_diagonal
   public :: get_grad
   public :: get_curl
   public :: get_div
@@ -128,6 +133,15 @@ contains
 
     geopotential = field_type( vector_space = w0_fs )
     call invoke_compute_geopotential_kernel_type( geopotential, chi )
+
+    !=================== Create cell orientation field ========================!
+    if ( transport_only .and. scheme == transport_scheme_cusph_cosmic ) then
+      temp_w2_field = field_type( vector_space = w2_fs )
+      cell_orientation = field_type( vector_space = w3_fs )
+      call invoke_set_field_scalar( 9999.0_r_def, temp_w2_field)
+      call invoke_set_field_scalar( 9999.0_r_def, cell_orientation)
+      call invoke_mpi_calc_cell_orientation( temp_w2_field, cell_orientation )
+    end if
 
     !=================== Create mass matrix operators =========================!
 
@@ -230,6 +244,19 @@ contains
     phi => geopotential
 
   end function get_geopotential
+
+  !> Function to return a pointer to the cell_orientation field
+  !> @return The cell_orientation field
+  function get_cell_orientation() result(orientation)
+
+    type(field_type), pointer :: orientation
+    if ( transport_only .and. scheme == transport_scheme_cusph_cosmic ) then
+      orientation => cell_orientation
+    else
+      call log_event( "Cell orientation variable has not been created", LOG_LEVEL_ERROR )
+    end if
+
+  end function get_cell_orientation
 
   !> Function to return a pointer to a mass matrix
   !> @param[in] i the index of the desired mass matrix field

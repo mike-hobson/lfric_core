@@ -64,6 +64,10 @@ module field_mod
     !! the field lives
     procedure, public :: which_function_space
 
+    !> function returns a pointer to the function space on which
+    !! the field lives
+    procedure, public :: get_function_space
+
     !> Routine to read field
     procedure         :: read_field
 
@@ -527,6 +531,20 @@ contains
     fs = self%vspace%which()
     return
   end function which_function_space
+
+  !> Function to get pointer to function space from the field.
+  !>
+  !> @return vspace
+  function get_function_space(self) result(vspace)
+    implicit none
+
+    class (field_type), target :: self
+    type( function_space_type ), pointer :: vspace
+
+    vspace => self%vspace
+
+    return
+  end function get_function_space
 
   !> Reads the field
   !! @param[in] io_strategy An IO strategy method to use for this read.

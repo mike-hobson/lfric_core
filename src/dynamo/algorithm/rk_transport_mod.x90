@@ -17,16 +17,17 @@ module rk_transport_mod
                                                LOG_LEVEL_TRACE
 
   ! Configuration and restart/checkpoint options
-  use finite_element_config_mod,         only: element_order, supg, wtheta_on
+  use finite_element_config_mod,         only: element_order, supg
   use restart_control_mod,               only: restart_type
-  use solver_config_mod,                 only: method,         &
-                                               preconditioner, &
-                                               solver_preconditioner_diagonal
   use timestepping_config_mod,           only: dt
   use runge_kutta_init_mod,              only: num_rk_stage, ak
   use runtime_constants_mod,             only: get_mass_matrix, &
                                                get_mass_matrix_diagonal, &
-                                               get_qr
+                                               get_qr, &
+                                               w2_id, w3_id, w3inv_id, &
+                                               wt_id, theta_space_id, &
+                                               get_coordinates
+
   use transport_config_mod,              only: operators,              &
                                                fv_flux_order,          &
                                                fv_advective_order,     &
@@ -52,7 +53,6 @@ module rk_transport_mod
   ! Derived Types
   use field_mod,                         only: field_type
   use function_space_mod,                only: function_space_type
-  use function_space_collection_mod,     only: function_space_collection
   use quadrature_mod,                    only: quadrature_type, GAUSSIAN
   use operator_mod,                      only: operator_type
 
@@ -107,20 +107,16 @@ contains
 
     ! Timestepping variables
     integer :: stage
-    type(operator_type)       :: mm_wt
+    type(operator_type), pointer :: mm_wt => null()
 
     allocate ( rr_prediction(num_rk_stage) )
     allocate ( rt_prediction(num_rk_stage) )
 
     !=== Section 1: Create field objects =====================================!
     ! Local fields
-    u_fs     => function_space_collection%get_fs(mesh_id, element_order, &
-                                                 u%which_function_space())
-    rho_fs   => function_space_collection%get_fs(mesh_id, element_order, &
-                                                 rho%which_function_space())
-    theta_fs => function_space_collection%get_fs(mesh_id, element_order, &
-                                                 theta%which_function_space())
-
+    u_fs     => u%get_function_space()
+    rho_fs   => rho%get_function_space()
+    theta_fs => theta%get_function_space()
 
     rho_n        = field_type( vector_space = rho_fs )
     r_rho        = field_type( vector_space = rho_fs )
@@ -150,7 +146,7 @@ contains
       else
         call log_event( "Dynamo: subgrid mappings needed for FV MoL with high order elements", LOG_LEVEL_ERROR )
       end if
-      mm_wt = get_mass_matrix(5)
+      mm_wt => get_mass_matrix(wt_id)
       ones  = field_type( vector_space = theta_fs )
       mt_lumped  = field_type( vector_space = theta_fs )
       call invoke( set_field_scalar(1.0_r_def, ones), &
@@ -173,38 +169,33 @@ contains
   !>          this algorithm is called.
   !>          If fem advection is used theta must be in W0,
   !>          If fv advection is used theta must be in Wtheta
-  !> @param[in]    mesh_id Mesh id of mesh on which the model runs
-  !> @param[inout] chi  Finite element form of the coordinates
   !> @param[in]    u 3D wind field
   !> @param[inout] rho Density like tracer
   !> @param[inout] theta Temperature like tracer
 
-  subroutine rk_transport_step( mesh_id, chi, u, rho, theta)
+  subroutine rk_transport_step( u, rho, theta)
 
     implicit none
 
-    ! Mesh id
-    integer(i_def),  intent(in) :: mesh_id
-    ! Coordinate fields
-    type( field_type ), intent( inout ) :: chi(3)
     ! Prognostic fields
     type( field_type ), intent( inout ) :: u, rho, theta
 
     ! the quadrature object
     type( quadrature_type )          :: qr
+    ! Coordinate fields
+    type( field_type ), pointer :: chi(:) => null()
 
     integer(i_def) :: stage, st
 
 
     ! temps for retrieving objects back from runtime constants
-    type(operator_type), pointer :: mm_w2, mm_w3_inv, mm_wt => null()
-    type(field_type),    pointer :: mm_wt_d => null()
+    type(operator_type), pointer :: mm_w3_inv => null()
 
     qr = get_qr()
+    chi => get_coordinates()
 
     ! Create operators needed for timestepping
-    mm_w2     => get_mass_matrix(2)
-    mm_w3_inv => get_mass_matrix(4)
+    mm_w3_inv => get_mass_matrix(w3inv_id)
     call invoke( copy_field(rho,   rho_n), &
                  copy_field(theta, theta_n) )
 
@@ -230,7 +221,7 @@ contains
           ! Rho advection, compute mass flux 
           call invoke( flux_rhs_kernel_type(r_u, u, rho, chi, qr) )
           call invoke( enforce_bc_kernel_type(r_u) )
-          call solver_algorithm( mass_flux, r_u, mesh_id, chi, method, mm=mm_w2 )
+          call solver_algorithm( mass_flux, r_u) 
 
           ! theta advection
           call invoke( rtheta_kernel_type( rt_prediction(stage), theta, u, qr) )
@@ -263,17 +254,7 @@ contains
           call invoke_divide_field(r_theta, mt_lumped, r_theta)
           call invoke_axpy(-dt,r_theta, theta_n, theta)
         case(transport_operators_fem)
-          if ( wtheta_on ) then
-            mm_wt => get_mass_matrix(5)
-            mm_wt_d => get_mass_matrix_diagonal(4)
-          else
-            mm_wt => get_mass_matrix(0)
-            mm_wt_d => get_mass_matrix_diagonal(0)
-          end if
-          call solver_algorithm( theta_inc, r_theta,       &
-                                 mesh_id, chi, method, mm=mm_wt,&
-                                 mmd=mm_wt_d, &
-                                 preconditioner_choice=preconditioner )
+          call solver_algorithm( theta_inc, r_theta)
           call invoke_axpy(-dt, theta_inc, theta_n, theta)
       end select      
     end do
@@ -283,17 +264,15 @@ contains
 
   !> @brief Final routine for rk transport timestepping algorithm
 
-  !> @param[in] mesh_id Mesh id of mesh on which the model runs
   !> @param[in] rho Density
   !> @param[in] theta Potential temperature field
-  subroutine rk_transport_final( mesh_id, rho, theta)
+  subroutine rk_transport_final( rho, theta)
     use psykal_lite_mod,          only: invoke_minus_field_data, &
                                         invoke_inner_prod
     use matrix_vector_kernel_mod, only: matrix_vector_kernel_type
 
    implicit none
 
-    integer(i_def),     intent(in) :: mesh_id
     type( field_type ), intent(in) :: rho, theta
  
     type( field_type )                 :: drho, dtheta, l2_rho, l2_theta
@@ -303,10 +282,8 @@ contains
     real(kind=r_def)                   :: l2
 
     ! Compute L errors
-    rho_fs   => function_space_collection%get_fs(mesh_id, element_order, &
-                                                 rho%which_function_space())
-    theta_fs => function_space_collection%get_fs(mesh_id, element_order, &
-                                                 theta%which_function_space())
+    rho_fs   => rho%get_function_space()
+    theta_fs =>  theta%get_function_space()
 
     drho   = field_type( vector_space = rho_fs )
     dtheta = field_type( vector_space = theta_fs )
@@ -314,12 +291,8 @@ contains
     call invoke_minus_field_data(theta, theta0, dtheta)
     
     ! L2 error
-    mm_w3 => get_mass_matrix(3)
-    if ( operators == transport_operators_fem ) then
-      mm_wt => get_mass_matrix(0)
-    else
-      mm_wt => get_mass_matrix(5)
-    end if
+    mm_w3 => get_mass_matrix(w3_id)
+    mm_wt => get_mass_matrix(theta_space_id)
     l2_theta = field_type( vector_space = theta_fs )
     l2_rho   = field_type( vector_space = rho_fs )
     call invoke( set_field_scalar(0.0_r_def, l2_theta), &

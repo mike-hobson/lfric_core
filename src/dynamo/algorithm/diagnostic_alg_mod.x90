@@ -20,7 +20,8 @@ contains
     use dg_matrix_vector_kernel_mod, only: dg_matrix_vector_kernel_type
     use output_alg_mod,              only: output_alg
     use runtime_constants_mod,       only: get_mass_matrix, &
-                                           get_div
+                                           get_div, &
+                                           w3inv_id
     use operator_mod,                only: operator_type
     use field_mod,                   only: field_type
     use fs_continuity_mod,           only: W3
@@ -40,7 +41,7 @@ contains
     divergence =  field_type( vector_space = function_space_collection%get_fs(mesh_id,element_order, W3) )
     div_u      =  field_type( vector_space = function_space_collection%get_fs(mesh_id,element_order, W3) )
     div    => get_div()
-    m3_inv => get_mass_matrix(4)
+    m3_inv => get_mass_matrix(w3inv_id)
     call invoke( dg_matrix_vector_kernel_type( div_u, u, div) )
 
     ! Compute l2 norm of area integrated quantity

@@ -15,7 +15,7 @@ module init_prognostic_fields_alg_mod
   use constants_mod,                   only: r_def, i_def
 
   use solver_mod,                      only: solver_algorithm
-  use solver_config_mod,               only: method
+  use runtime_constants_mod,           only: get_coordinates
 
   ! Configuration and restart/checkpoint options
   use finite_element_config_mod,       only: element_order, wtheta_on
@@ -38,7 +38,6 @@ module init_prognostic_fields_alg_mod
   ! PsyKAl PSYClone kernels
   use set_rho_kernel_mod,              only: set_rho_kernel_type
   use initial_u_kernel_mod,            only: initial_u_kernel_type
-  use compute_mass_matrix_kernel_w2_mod, only: compute_mass_matrix_kernel_w2_type
 
   ! Derived Types
   use function_space_collection_mod,   only: function_space_collection
@@ -60,20 +59,17 @@ contains
   !> @details An algorithm for initialising prognostic fields for 
   !>          all solvers.
   !> @param[in] mesh_id Id of Mesh object on which the model runs
-  !> @param[inout] chi  The finite element form of the coordinates
   !> @param[inout] u  The 3D wind field
   !> @param[inout] rho The density
   !> @param[inout] theta The potential temperature
   !> @param[inout] xi The vorticity field 
   !> @param[in] restart Checkpoint/restart type with timestepping information
-  subroutine init_prognostic_fields_alg( mesh_id, chi, u, rho, theta, rho_in_wth, mr, xi, restart)
+  subroutine init_prognostic_fields_alg( mesh_id, u, rho, theta, rho_in_wth, mr, xi, restart)
 
     implicit none
 
     ! Mesh id
     integer(i_def),  intent(in)         :: mesh_id
-    ! Coordinate fields
-    type( field_type ), intent( inout ) :: chi(3)
     ! Prognostic fields
     type( field_type ), intent( inout ) :: u, rho, theta, xi, mr(nummr), rho_in_wth
     ! Control
@@ -82,10 +78,8 @@ contains
     type( quadrature_type )             :: qr
     type( field_type ), allocatable     :: state(:)
     type( field_type )                  :: r_u
-    type( operator_type )               :: mm_w2
-    type(function_space_type), pointer  :: w2_fs => null(),    &
-                                           w3_fs => null(),    &
-                                           wtheta_fs => null()
+    ! Coordinate fields
+    type( field_type ), pointer         :: chi(:) => null()
 
     integer                             :: n_fields
 
@@ -95,7 +89,8 @@ contains
 
     real(kind=r_def) :: initial_time
 
-    qr = quadrature_type( element_order + 3, GAUSSIAN )
+    qr = quadrature_type( element_order + 3, GAUSSIAN )    
+    chi => get_coordinates()
 
     !=== Initialise global prognostic fields ==================================!
 
@@ -114,13 +109,7 @@ contains
       call invoke( set_field_scalar(0.0_r_def, u), &
                    set_field_scalar(0.0_r_def, r_u) )
       call invoke( initial_u_kernel_type(r_u, chi, qr) )
-      w2_fs    => function_space_collection%get_fs(mesh_id, &
-                                                   element_order, &
-                                                   W2)
-
-      mm_w2 = operator_type( w2_fs, w2_fs )
-      call invoke( compute_mass_matrix_kernel_w2_type(mm_w2, chi, qr) )
-      call solver_algorithm(u, r_u, mesh_id, chi, method, mm=mm_w2)
+      call solver_algorithm(u, r_u)
 
       initial_time = 0.0_r_def
       if(sample_init_rho) then
@@ -130,8 +119,8 @@ contains
       end if
 
       call log_event( "Dynamo: Mapping rho->rho_in_wth in same space as theta..", LOG_LEVEL_INFO )
-      call map_rho_to_theta(rho, theta, rho_in_wth, chi)     
- 
+
+      call map_rho_to_theta(rho, theta, rho_in_wth)      
       if (use_moisture) call invoke_initial_mr_kernel( theta, rho_in_wth, mr(:), chi )
 
       call log_event( "Dynamo: Initialised prognostic fields", LOG_LEVEL_INFO )
@@ -201,7 +190,7 @@ contains
       deallocate(state)
 
       call log_event( "Dynamo: Mapping rho->rho_in_wth in same space as theta..", LOG_LEVEL_INFO )
-      call map_rho_to_theta(rho, theta, rho_in_wth, chi)
+      call map_rho_to_theta(rho, theta, rho_in_wth)
 
       call log_event( "Dynamo: Read prognostic fields from files", LOG_LEVEL_INFO )
     end if

@@ -13,16 +13,13 @@
 module oned_advective_density_update_alg_mod
 
   use constants_mod,                     only: r_def, i_def
-  use mesh_mod,                          only: mesh_type
   use field_mod,                         only: field_type
   use function_space_mod,                only: function_space_type
-  use function_space_collection_mod,     only: function_space_collection
   use log_mod,                           only: log_event,            &
                                                log_scratch_space,    &
                                                LOG_LEVEL_INFO,       &
                                                LOG_LEVEL_TRACE
   use density_update_alg_mod,            only: density_update_alg
-  use finite_element_config_mod,         only: element_order
   use subgrid_config_mod,                only: dep_pt_stencil_extent,          &
                                                rho_approximation_stencil_extent
 
@@ -48,13 +45,11 @@ contains
 !> @param[inout] dep_pts Departure points for W2 points at lowest order
 !> @param[inout] rho_in   Density at time n
 !> @param[inout] rho_out  Density after advective update
-!> @param[inout] mesh_id  Mesh id of the mesh object on which the model runs
   subroutine oned_advective_density_update_alg(   direction,    &
                                                   u,            &
                                                   dep_pts,      &
                                                   rho_in,       &
-                                                  rho_out,      &
-                                                  mesh_id )
+                                                  rho_out)
 
     implicit none
 
@@ -63,7 +58,6 @@ contains
     type(field_type),    intent(in)     :: dep_pts
     type(field_type),    intent(in)     :: rho_in
     type(field_type),    intent(inout)  :: rho_out
-    integer(i_def),      intent(in)     :: mesh_id
 
     type( field_type ) :: a0, a1, a2
     type( field_type ) :: rho_adv, rho_hat_adv
@@ -73,8 +67,8 @@ contains
     type(function_space_type), pointer :: rho_fs   => null()
     type(function_space_type), pointer :: u_fs     => null()
 
-    rho_fs   => function_space_collection%get_fs( mesh_id, element_order, rho_in%which_function_space()   )
-    u_fs   => function_space_collection%get_fs( mesh_id, element_order, u%which_function_space()   )
+    rho_fs => rho_in%get_function_space()
+    u_fs   => u%get_function_space() 
 
     a0 = field_type( vector_space = rho_fs )
     a1 = field_type( vector_space = rho_fs )
@@ -88,28 +82,28 @@ contains
     mass_flux         = field_type( vector_space = u_fs )
 
     ! Calculate the conservative fluxes and update rho
-    call invoke( set_field_scalar(0.0_r_def, mass_flux), &
-                 set_field_scalar(0.0_r_def, a0),        & 
-                 set_field_scalar(0.0_r_def, a1),        &
-                 set_field_scalar(0.0_r_def, a2) )
+    call invoke( set_field_scalar(0.0_r_def,mass_flux), &
+                 set_field_scalar(0.0_r_def,a0),        &
+                 set_field_scalar(0.0_r_def,a1),        &
+                 set_field_scalar(0.0_r_def,a2) )
     call invoke_subgrid_coeffs(a0,a1,a2,rho_in,direction,rho_approximation_stencil_extent)
 
     call invoke_conservative_fluxes(  rho_in, dep_pts, u, mass_flux,  &
                                       a0, a1, a2, direction, dep_pt_stencil_extent )
-    call density_update_alg(rho_in, mass_flux, rho_adv_np1, mesh_id)
+    call density_update_alg(rho_in, mass_flux, rho_adv_np1)
 
     ! Calculate the fluxes for rho=1
-    call invoke( set_field_scalar(0.0_r_def, mass_flux),      &
-                 set_field_scalar(1.0_r_def, rho_constant_1), & 
-                 set_field_scalar(0.0_r_def, a0),             &
-                 set_field_scalar(0.0_r_def, a1),             &
-                 set_field_scalar(0.0_r_def, a2) )
+    call invoke( set_field_scalar(0.0_r_def,mass_flux), &
+                 set_field_scalar(1.0_r_def,rho_constant_1), &
+                 set_field_scalar(0.0_r_def,a0), &
+                 set_field_scalar(0.0_r_def,a1), &
+                 set_field_scalar(0.0_r_def,a2) )
     call invoke_subgrid_coeffs(a0,a1,a2,rho_constant_1,direction,rho_approximation_stencil_extent)
 
     call invoke_conservative_fluxes(  rho_constant_1, dep_pts, u, mass_flux,  &
                                       a0, a1, a2, direction, dep_pt_stencil_extent )
 
-    call density_update_alg(rho_constant_1, mass_flux, rho_constant_np1, mesh_id)
+    call density_update_alg(rho_constant_1, mass_flux, rho_constant_np1)
 
     ! Perform multiplicative correction to obtain the advective update of density
     call invoke_divide_field(rho_adv_np1,rho_constant_np1,rho_out)

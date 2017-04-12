@@ -11,7 +11,7 @@ module set_rho_alg_mod
   use constants_mod,                   only: r_def, i_def
   use finite_element_config_mod,       only: element_order
   use timestepping_config_mod,         only: dt
-
+  use runtime_constants_mod,           only: get_coordinates
   ! PsyKAl PSYClone kernels
   use set_rho_kernel_mod,              only: set_rho_kernel_type
 
@@ -26,27 +26,25 @@ module set_rho_alg_mod
 
 contains
   !> @details An algorithm for setting rho field
-  !> @param[in] mesh_id Id of Mesh object on which the model runs
-  !> @param[inout] chi  The finite element form of the coordinates
   !> @param[inout] rho Density field
   !> @param[in] timestep Loop counter for timestep iterations
-  subroutine set_rho_alg( mesh_id, chi, rho, timestep)
+  subroutine set_rho_alg( rho, timestep)
 
     implicit none
 
     ! Mesh id, timestep
-    integer(i_def),  intent(in)         :: mesh_id, timestep
-    ! Coordinate fields
-    type( field_type ), intent( inout ) :: chi(3)
+    integer(i_def),  intent(in)         :: timestep
     ! Prognostic fields
     type( field_type ), intent( inout ) :: rho
 
     type( quadrature_type )             :: qr
+    ! Coordinate fields
+    type( field_type ), pointer :: chi(:) => null()
 
     real(kind=r_def) :: time
 
     qr = quadrature_type( element_order + 3, GAUSSIAN )
-
+    chi => get_coordinates()
     ! Set rho according to formulation
     time = real(timestep,r_def)*dt
     call invoke( set_rho_kernel_type ( rho, chi, time, qr ) )

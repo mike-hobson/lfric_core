@@ -25,7 +25,7 @@ module cosmic_transport_alg_mod
 
   use density_update_alg_mod,            only: density_update_alg
   use split_transport_alg_mod,           only: split_transport_alg
-
+  use runtime_constants_mod,             only: get_coordinates
   implicit none
 
   private
@@ -66,8 +66,8 @@ contains
     u_np1     = field_type( vector_space = w2_fs )
     mass_flux = field_type( vector_space = w2_fs )
 
-    call invoke( copy_field(u, u_n) )
-    call invoke( copy_field(u, u_np1) )
+    call invoke( copy_field(u,u_n), &
+                 copy_field(u,u_np1) )
 
   end subroutine cosmic_transport_init
 
@@ -78,27 +78,26 @@ contains
 !>          the horizontal direction only. The wind profile is defined
 !>          analytically.
 !> @param[inout] rho Density field
-!> @param[inout] chi Fem coordinate field array
-!> @param[in] mesh_id  Mesh id of the mesh all fields are on
-  subroutine cosmic_transport_step(mesh_id, chi, rho)
+  subroutine cosmic_transport_step( rho)
 
     implicit none
 
-    integer(i_def),      intent(in)    :: mesh_id
-    type(field_type),    intent(inout) :: rho, chi(3)
+    type(field_type),    intent(inout) :: rho
+    type(field_type), pointer :: chi(:) => null()
 
+    chi => get_coordinates()
 
-    call invoke( copy_field(rho, rho_n) )
+    call invoke( copy_field(rho,rho_n) )
 
     ! Call algorithm to calculate mass fluxes using COSMIC scheme
-    call split_transport_alg( u_n, u_np1, rho_n, chi, mesh_id, mass_flux)
+    call split_transport_alg( u_n, u_np1, rho_n, chi, mass_flux)
 
     ! Update density field using rho_n+1 = rho_n + dt * div(mass_flux)
-    call density_update_alg(rho_n, mass_flux, rho_np1, mesh_id)
+    call density_update_alg(rho_n, mass_flux, rho_np1)
 
     call rho_np1%log_minmax(LOG_LEVEL_INFO, 'min max rho_np1')
 
-    call invoke( copy_field(rho_np1, rho) )
+    call invoke( copy_field(rho_np1,rho) )
 
   end subroutine cosmic_transport_step
 

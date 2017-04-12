@@ -15,10 +15,8 @@
 module solver_mod
 
   use constants_mod,                 only : r_def, str_def, i_def
-  use function_space_collection_mod, only : function_space_collection
   use field_mod,                     only : field_type
-  use finite_element_config_mod,     only : element_order
-  use fs_continuity_mod,             only : W3, fs_name
+  use fs_continuity_mod,             only : W0, W1, W2, W3, Wtheta, fs_name
   use function_space_mod,            only : function_space_type
   use log_mod,                   only : log_event,         &
                                         log_scratch_space, &
@@ -33,19 +31,22 @@ module solver_mod
                                         invoke_minus_field_data,        &
                                         invoke_divide_field,            &
                                         invoke_copy_scaled_field_data
-  use quadrature_mod,            only : quadrature_type
-  use solver_config_mod,         only : solver_method_cg,               &
+  use solver_config_mod,         only : method,                         &
+                                        solver_method_cg,               &
                                         solver_method_bicgstab,         &
                                         solver_method_jacobi,           &
                                         solver_method_gmres,            &
                                         solver_method_gcr,              &
                                         tolerance,                      &
                                         maximum_iterations,             &
+                                        preconditioner,                 &
                                         solver_preconditioner_none,     &
                                         solver_preconditioner_diagonal, &
                                         gcrk
-  use w3_solver_kernel_mod,      only : w3_solver_kernel_type
-
+  use runtime_constants_mod,     only : get_coordinates, &
+                                        get_mass_matrix, &
+                                        get_mass_matrix_diagonal, &
+                                        w3inv_id, w0_id, w1_id, w2_id, wt_id
   implicit none
 
   private
@@ -65,113 +66,80 @@ contains
 !! jacobi: a fixed number of jacobi iterations
 !> @param[inout] lhs Field to be solved for (x)
 !> @param[inout] rhs Right hand side field (b)
-!> @param[in]    mesh Mesh object the model for fields
-!> @param[inout] chi Coordinate array fields
-!> @param[in]    solver_type (optional) Type of iterative solver to use for
-!>               continuous systems
-!> @param[in] qr (optional) Quadrature rule.
-!> @param[inout] mm (optional) Mass matrix
-!! Either qr or mm are required, but not both.
-!> @param[in] preconditioner_choice (optional) Choice of preconditioner type
-!> @param[in] mmd (optional) Matrix diagonal
 
-  subroutine solver_algorithm( lhs, rhs, mesh, chi, solver_type, qr, mm, &
-                               preconditioner_choice, mmd )
+  subroutine solver_algorithm( lhs, rhs )
+    use dg_matrix_vector_kernel_mod,  only : dg_matrix_vector_kernel_type
 
     implicit none
 
     type(field_type), intent(inout) :: lhs
     type(field_type), intent(inout) :: rhs
-    integer(i_def),   intent(in)    :: mesh
 
-    ! chi is really intent(in) but this currently causes
-    ! problems because PSyclone makes everything (inout)
-    type(field_type), intent(inout) :: chi(3)
-
-    integer(i_def),                  intent(in)    :: solver_type
-    type(quadrature_type), optional, intent(in)    :: qr
-    type(operator_type),   optional, intent(inout) :: mm
-    integer(i_def),        optional, intent(in)    :: preconditioner_choice
-    type(field_type),      optional, intent(in)    :: mmd
-
-    integer(i_def), parameter :: NUM_JACOBI_ITERS = 5
+    type(operator_type), pointer :: mm => null()
+    type(field_type),    pointer :: mmd => null()
 
     integer(i_def) :: fs_l, fs_r
-    integer(i_def) :: prec
-
-    if ( present(preconditioner_choice) ) then
-      prec = preconditioner_choice
-    else
-      prec = solver_preconditioner_none
-    end if
 
     fs_l = lhs%which_function_space()
     fs_r = rhs%which_function_space()
-    ! check the arguments qr .or. mm not both or neither
-    if( present(qr) .and. .not.present(mm) ) then
-       ! quadrature present, only for W3
-       if( (fs_l == W3) .and. (fs_r == W3) ) then
-          ! we are on the right space
-          call invoke( w3_solver_kernel_type(lhs, rhs, chi, qr) )
-       else
-          write( log_scratch_space, '(A,I3,",",I3)' ) 'quadrature required for w3 solver, stopping',fs_l,fs_r
-          call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-       end if
-    else if( .not.present(qr) .and. present(mm) ) then
-       ! mass matrix
 
-       if(fs_l == W3) then
-         ! mm is inverse mass matrix
-         call invoke( matrix_vector_kernel_type(rhs, lhs, mm) )
-       else
-       select case ( solver_type )
-          case ( solver_method_cg )
-            call cg_solver_algorithm(lhs, rhs, mm, mesh, prec, mmd=mmd)
-          case ( solver_method_bicgstab )
-            call bicg_solver_algorithm(lhs, rhs, mm, mesh, prec, mmd=mmd)
-          case ( solver_method_jacobi )
-            call jacobi_solver_algorithm(lhs, rhs, mm, mesh, NUM_JACOBI_ITERS)
-          case ( solver_method_gmres )
-            call gmres_solver_algorithm( lhs, rhs, mm, mesh,               &
-                                         solver_preconditioner_none, prec, &
-                                         mmd )
-          case ( solver_method_gcr )
-            call gcr_solver_algorithm(lhs, rhs, mm, mesh, prec, mmd=mmd)
-          case default
-            write( log_scratch_space, '(A)' )  'Invalid linear solver choice, stopping'
-            call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-        end select
-       end if
-    else if( present(qr) .and. present(mm) ) then
-       ! both - bork
-       write( log_scratch_space, '(A)' )  'quadrature OR mass matrix required for solver not both. Whats a guy to do?, stopping'
-       call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+    if ( fs_l /= fs_r ) & 
+      call log_event('Non matching function spaces in solver algorithm', LOG_LEVEL_ERROR )
+
+    if(fs_l == W3) then
+      mm => get_mass_matrix(w3inv_id)
+      call invoke( dg_matrix_vector_kernel_type(lhs, rhs, mm) )
     else
-       ! neither - bork
-       write( log_scratch_space, '(A)' )  'quadrature OR mass matrix required for solver. Gimme something to work with, stopping'
-       call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+      ! Pull out correct operators
+      select case ( fs_l )
+        case ( W0 )
+          mm  => get_mass_matrix(w0_id)
+          mmd => get_mass_matrix_diagonal(w0_id)
+        case ( W1 )
+          mm  => get_mass_matrix(w1_id)
+          mmd => get_mass_matrix_diagonal(w1_id)
+        case ( W2 )
+          mm  => get_mass_matrix(w2_id)
+          mmd => get_mass_matrix_diagonal(w2_id)
+        case ( Wtheta )
+          mm  => get_mass_matrix(wt_id)
+          mmd => get_mass_matrix_diagonal(wt_id)
+        case default
+          call log_event('Unsupported function space in solver algorithm', LOG_LEVEL_ERROR )
+      end select
+      select case ( method )
+        case ( solver_method_cg )
+          call cg_solver_algorithm(lhs, rhs, mm, mmd)
+        case ( solver_method_bicgstab )
+          call bicg_solver_algorithm(lhs, rhs, mm, mmd)
+        case ( solver_method_jacobi )
+          call jacobi_solver_algorithm(lhs, rhs, mm)
+        case ( solver_method_gmres )
+          call gmres_solver_algorithm( lhs, rhs, mm, mmd )
+        case ( solver_method_gcr )
+          call gcr_solver_algorithm(lhs, rhs, mm, mmd)
+        case default
+          write( log_scratch_space, '(A)' )  'Invalid linear solver choice, stopping'
+          call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+      end select
     end if
 
   end subroutine solver_algorithm
 
-!> @brief BiCGStab solver with no preconditioning.
+!> @brief BiCGStab solver.
 !! @details solves A.x = b where the operation A.x is encoded in a kernel using
 !! the stabilised bi-conjugate gradient method. The choice of matrix is
 !! encoded in the matrix vector kernel that is called
 !! @param[in]  rhs_field Input b
 !! @param[inout] lhs_field The answer, x
 !! @param[in] mm operator type, Mass matrix
-!! @param[in] mesh Id of the mesh object the model for fields#
-!! @param[in] precond_option Choice of preconditioner
-!! @param[in] mmd (optional) Mass matrix diagonal
-  subroutine bicg_solver_algorithm(lhs, rhs, mm, mesh, precond_option, mmd)
+!! @param[in] mmd Mass matrix diagonal
+  subroutine bicg_solver_algorithm(lhs, rhs, mm, mmd)
     implicit none
     type(field_type),    intent(inout) :: lhs
     type(field_type),    intent(in)    :: rhs
-    type(operator_type), intent(inout) :: mm
-    integer(i_def),      intent(in)    :: mesh
-    type(field_type),    intent(in), optional :: mmd
-    integer(i_def),      intent(in)    :: precond_option
+    type(operator_type), intent(in)    :: mm
+    type(field_type),    intent(in)    :: mmd
 
     type(function_space_type), pointer :: rhs_fs => null()
 
@@ -197,9 +165,7 @@ contains
     omega  = 1.0_r_def
     norm   = 1.0_r_def
 
-    rhs_fs => function_space_collection%get_fs( mesh, &
-                                                element_order, &
-                                                rhs%which_function_space() )
+    rhs_fs => rhs%get_function_space()
 
     v   = field_type( vector_space = rhs_fs )
     z   = field_type( vector_space = rhs_fs )
@@ -235,14 +201,14 @@ contains
       ! p = r + beta*(p - omega*v)
       call invoke_axpy(beta,p,res,p)
       call invoke_axpy((-beta*omega),v,p,p)
-      call precondition( y, p, precond_option, diagonal=mmd )
+      call precondition( y, p, preconditioner, mmd )
       call invoke( set_field_scalar(0.0_r_def, v) )
       call invoke( matrix_vector_kernel_type(v, y, mm) )
 
       call invoke_inner_prod(rhs,v,norm)
       alpha = rho/norm
       call invoke_axpy(-alpha,v,res,s)
-      call precondition( z, s, precond_option, diagonal=mmd )
+      call precondition( z, s, preconditioner, mmd )
       call invoke( set_field_scalar(0.0_r_def, t) )
       call invoke( matrix_vector_kernel_type(t, z, mm) )
 
@@ -285,24 +251,20 @@ contains
   end subroutine bicg_solver_algorithm
 !--------------------------------------------------
 
-!> @brief CG solver for the system A.x = b with no preconditioning.
+!> @brief CG solver for the system A.x = b.
 !! @details solves A.x = b where the operation A.x is encoded in a kernel using
 !! the conjugate gradient method. The choice of matrix is
 !! encoded in the matrix vector kernel that is called.
 !! @param[in] rhs_field Input b
 !! @param[inout] lhs_field The answer, x
 !! @param[in] mm Mass matrix
-!! @param[in] mesh Id of mesh object the model for fields
-!! @param[in] precond_option Choice of preconditioner
 !! @param[in] mmd Mass matrix diagonal
-  subroutine cg_solver_algorithm(lhs, rhs, mm, mesh, precond_option, mmd)
+  subroutine cg_solver_algorithm(lhs, rhs, mm, mmd)
     implicit none
     type(field_type),    intent(inout) :: lhs
     type(field_type),    intent(in)    :: rhs
-    type(operator_type), intent(inout) :: mm
-    integer(i_def),      intent(in)    :: mesh
-    integer(i_def),      intent(in)    :: precond_option
-    type(field_type),    intent(in), optional :: mmd
+    type(operator_type), intent(in)    :: mm
+    type(field_type),    intent(in)    :: mmd
 
     type(function_space_type), pointer :: rhs_fs => null()
 
@@ -320,26 +282,18 @@ contains
 
     ! compute the residual this is a global sum to the PSy ---
 
-    rhs_fs => function_space_collection%get_fs( mesh, &
-                                                element_order, &
-                                                rhs%which_function_space() )
+    rhs_fs => rhs%get_function_space()
 
     res = field_type(vector_space = rhs_fs )
     p   = field_type(vector_space = rhs_fs )
     Ap  = field_type(vector_space = rhs_fs )
     z   = field_type(vector_space = rhs_fs )
 
-    if ( present(mmd) ) then
-    ! First guess: lhs = rhs/diag(M)
-      call invoke_divide_field(rhs,mmd,lhs)
-    else
-    ! First guess: lhs = 0
-      call invoke( set_field_scalar(0.0_r_def, lhs) )
-    end if
-    call invoke( matrix_vector_kernel_type(Ap, lhs, mm) )
+    call invoke( set_field_scalar(0.0_r_def, lhs) )
+    call invoke( matrix_vector_kernel_type(Ap,lhs,mm) )
 
     call invoke_minus_field_data( rhs, Ap, res )
-    call precondition( z, res, precond_option, diagonal=mmd )
+    call precondition( z, res, preconditioner, mmd )
     call invoke( copy_field(z, p) )
 
     call invoke_inner_prod( res, z, rs_old )
@@ -385,7 +339,7 @@ contains
         exit
       end if
 
-      call precondition( z, res, precond_option, diagonal=mmd )
+      call precondition( z, res, preconditioner, mmd )
       call invoke_inner_prod(z,res,rs_new)
       beta = rs_new/rs_old
       rs_old = rs_new
@@ -412,17 +366,13 @@ contains
 !! @param[in] rhs_field Input b
 !! @param[inout] lhs_field The answer, x
 !! @param[in] mm Mass matrix
-!! @param[in] mesh Id of mesh object the model for fields
-!! @param[in] n_iter Number of Jacobi iterations to perform
-  subroutine jacobi_solver_algorithm(lhs, rhs, mm, mesh, n_iter)
+  subroutine jacobi_solver_algorithm(lhs, rhs, mm)
 
   use mm_diagonal_kernel_mod, only: mm_diagonal_kernel_type
   implicit none
 
-  integer(i_def),      intent(in)    :: n_iter
   type(field_type),    intent(inout) :: lhs, rhs
-  type(operator_type), intent(inout) :: mm
-  integer(i_def),      intent(in)    :: mesh
+  type(operator_type), intent(in)    :: mm
   type(field_type)                   :: Ax, diagonal, res
 
   real(kind=r_def), parameter :: MU = 0.9_r_def
@@ -431,9 +381,7 @@ contains
 
   type(function_space_type), pointer :: rhs_fs => null()
 
-  rhs_fs => function_space_collection%get_fs( mesh, &
-                                              element_order, &
-                                              rhs%which_function_space() )
+  rhs_fs => rhs%get_function_space()
 
   diagonal = field_type( vector_space = rhs_fs )
   res      = field_type( vector_space = rhs_fs )
@@ -444,7 +392,7 @@ contains
 ! Initial guess
   call invoke( set_field_scalar(0.0_r_def, lhs) )
 
-  do iter = 1,n_iter
+  do iter = 1,maximum_iterations
     call invoke( set_field_scalar(0.0_r_def, Ax) )
     call invoke( matrix_vector_kernel_type(Ax, lhs, mm) )
 
@@ -467,21 +415,16 @@ contains
 !! after (n_iter) iterations
 !! @param[in] rhs Input b
 !! @param[inout] lhs Answer, x
-!! @param[inout] mm Mass matrix
-!! @param[in] mesh Id of  mesh object the model for fields
-!! @param[in] precond_option Choice of preconditioner
-!! @param[in] pstcond_option Choice of postconditioner
-!! @param[in] mmd (optional) Diagonal mass matrix used for conditioning
-  subroutine gmres_solver_algorithm(lhs, rhs, mm, mesh, &
-                                    precond_option, pstcond_option, mmd)
+!! @param[in] mm Mass matrix
+!! @param[in] mmd Diagonal mass matrix used for conditioning
+  subroutine gmres_solver_algorithm(lhs, rhs, mm, mmd)
 
     implicit none
     type(field_type),    intent(inout) :: lhs
     type(field_type),    intent(in)    :: rhs
-    type(operator_type), intent(inout) :: mm
-    integer(i_def),      intent(in)    :: mesh
-    integer(i_def),      intent(in)    :: precond_option, pstcond_option
-    type(field_type),    intent(in), optional :: mmd
+    type(operator_type), intent(in)    :: mm
+    type(field_type),    intent(in)    :: mmd
+  
     ! The temporary fields
     type(field_type)                   :: Ax, r, s, w, v(GCRK)
 
@@ -493,11 +436,12 @@ contains
     integer(i_def)                     :: iter, i, j, k, m
 
     type(function_space_type), pointer :: rhs_fs => null()
+    integer(i_def) :: precond_option, postcond_option
 
+    precond_option  = solver_preconditioner_none
+    postcond_option = preconditioner
 
-    rhs_fs => function_space_collection%get_fs( mesh, &
-                                                element_order, &
-                                                rhs%which_function_space() )
+    rhs_fs => rhs%get_function_space() 
 
     Ax = field_type(vector_space = rhs_fs)
     r  = field_type(vector_space = rhs_fs)
@@ -525,7 +469,7 @@ contains
 
     call invoke_minus_field_data( rhs, Ax, r )
 
-    call precondition( s, r, precond_option, diagonal=mmd )
+    call precondition( s, r, precond_option, mmd )
 
     call invoke_inner_prod( s, s, err )
     beta = sqrt(err)
@@ -541,11 +485,11 @@ contains
 
       do j = 1, GCRk
 
-        call precondition( w, v(j), pstcond_option, diagonal=mmd )
+        call precondition( w, v(j), postcond_option, mmd )
         call invoke( set_field_scalar(0.0_r_def, s) )
         call invoke( matrix_vector_kernel_type(s, w, mm) )
 
-        call precondition( w, s, precond_option, diagonal=mmd )
+        call precondition( w, s, precond_option, mmd )
 
         do k = 1, j
           call invoke_inner_prod( v(k), w, h(k,j)  )
@@ -585,7 +529,7 @@ contains
       end do
 
       do i = 1, GCRK
-        call precondition( s, v(i), pstcond_option, diagonal=mmd )
+        call precondition( s, v(i), postcond_option, mmd )
         call invoke_axpy( u(i), s, lhs, lhs )
       end do
 
@@ -607,7 +551,7 @@ contains
         exit
       end if
 
-      call precondition( s, r, precond_option, diagonal=mmd )
+      call precondition( s, r, precond_option, mmd )
       call invoke_copy_scaled_field_data(1.0_r_def/beta, s, v(1))
 
       g(:) = 0.0_r_def
@@ -633,20 +577,16 @@ contains
 !! after (n_iter) iterations
 !! @param[in] rhs_field Input b
 !! @param[inout] lhs_field Answer, x
-!! @param[inout] mm Mass matrix
-!! @param[in] mesh Id mesh object the model for fields
-!! @param[in] precond_option Choice of preconditioner
-!! @param[in] mmd (optional) Mass matrix diagonal
-  subroutine gcr_solver_algorithm( lhs, rhs, mm, mesh , precond_option, mmd )
+!! @param[in] mm Mass matrix
+!! @param[in] mmd Mass matrix diagonal
+  subroutine gcr_solver_algorithm( lhs, rhs, mm, mmd )
 
     implicit none
 
     type(field_type),    intent(inout) :: lhs
     type(field_type),    intent(in)    :: rhs
-    type(operator_type), intent(inout) :: mm
-    integer(i_def),      intent(in)    :: mesh
-    type(field_type),    intent(in), optional :: mmd
-    integer(i_def),      intent(in)    :: precond_option
+    type(operator_type), intent(in)    :: mm
+    type(field_type),    intent(in)    :: mmd
 
     ! The temporary fields
     type(field_type)                   :: Ax, r, s(GCRK), v(GCRK)
@@ -659,9 +599,7 @@ contains
 
     type(function_space_type), pointer :: rhs_fs => null()
 
-    rhs_fs => function_space_collection%get_fs( mesh, &
-                                                element_order, &
-                                                rhs%which_function_space() )
+    rhs_fs =>  rhs%get_function_space()
 
     Ax = field_type(vector_space = rhs_fs)
     r  = field_type(vector_space = rhs_fs)
@@ -690,7 +628,7 @@ contains
     do iter = 1, maximum_iterations
       do m = 1, GCRk
 ! This is the correct settings -> call Precon(s(:,:,m),r,prit,prec)
-        call precondition( s(m), r, precond_option, diagonal=mmd )
+        call precondition( s(m), r, preconditioner, mmd )
         call invoke( set_field_scalar(0.0_r_def, v(m)) )
         call invoke( matrix_vector_kernel_type(v(m), s(m), mm) )
 
@@ -749,15 +687,11 @@ end subroutine gcr_solver_algorithm
     type(field_type), intent(inout) :: y
     type(field_type), intent(in)    :: x
     integer(i_def),   intent(in)    :: preconditioner
-    type(field_type), intent(in), optional :: diagonal
+    type(field_type), intent(in)    :: diagonal
 
     select case ( preconditioner )
       case ( solver_preconditioner_diagonal )
-        if ( present(diagonal) ) then
-          call invoke_divide_field(x, diagonal, y)
-        else
-          call log_event( 'No mass matrix diagonal present', LOG_LEVEL_ERROR )
-        end if
+        call invoke_divide_field(x, diagonal, y)
       case default ! Do nothing
         call invoke( copy_field(x, y) )
     end select

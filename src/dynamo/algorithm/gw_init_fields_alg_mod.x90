@@ -11,11 +11,12 @@ module gw_init_fields_alg_mod
   use log_mod,                         only: log_event,         &
                                              log_scratch_space, &
                                              LOG_LEVEL_INFO,    &
-                                             LOG_LEVEL_TRACE
+                                             LOG_LEVEL_TRACE,   &
+                                             LOG_LEVEL_ERROR
   use constants_mod,                   only: r_def, i_def
 
   use solver_mod,                      only: solver_algorithm
-  use solver_config_mod,               only: method
+  use runtime_constants_mod,           only: get_coordinates 
 
   ! Configuration and restart/checkpoint options
   use finite_element_config_mod,       only: element_order
@@ -38,8 +39,10 @@ module gw_init_fields_alg_mod
   use operator_mod,                    only: operator_type
 
   ! Handles
-  use fs_continuity_mod,               only: W2, W3, Wtheta
+  use fs_continuity_mod,               only: W0, W2, W3, Wtheta
 
+  ! Field index
+  use field_indices_mod,               only: igw_u, igw_p, igw_b
   implicit none
 
   private
@@ -49,30 +52,33 @@ contains
   !> @details An algorithm for initialising prognostic fields for 
   !>          all solvers.
   !> @param[in] mesh_id Id of Mesh object on which the model runs
-  !> @param[inout] chi  The finite element form of the coordinates
   !> @param[inout] wind  The 3D wind field
   !> @param[inout] pressure The pressure
   !> @param[inout] buoyancy The buoyancy
   !> @param[in] restart Checkpoint/restart type with timestepping information
-  subroutine gw_init_fields_alg( mesh_id, chi, wind, pressure, buoyancy, restart)
-
+  subroutine gw_init_fields_alg( mesh_id, wind, pressure, buoyancy, restart)
+    use gw_miniapp_constants_config_mod, only: b_space, &
+                                               gw_miniapp_constants_b_space_w0, &
+                                               gw_miniapp_constants_b_space_w3, &
+                                               gw_miniapp_constants_b_space_wtheta
     implicit none
 
     ! Mesh id
-    integer(i_def),        intent(in)     :: mesh_id
-    ! Coordinate fields
-    type( field_type ),   intent( inout ) :: chi(3)
+    integer(i_def),  intent(in) :: mesh_id
     ! Prognostic fields
-    type( field_type ),   intent( inout ) :: wind, pressure, buoyancy
+    type( field_type ),   intent(inout) :: wind, pressure, buoyancy
     ! Control
-    type( restart_type ), intent(in)      :: restart
+    type( restart_type ), intent(in)    :: restart
 
     type( quadrature_type )            :: qr
     type( field_type ), allocatable    :: state(:)
     type( field_type )                 :: r_u
-    type( operator_type )              :: mm_w2
-    type(function_space_type), pointer :: w2_fs => null()
     integer :: n_fields
+    integer :: buoyancy_space
+    ! Coordinate fields
+    type( field_type ), pointer :: chi(:) => null()
+
+    chi => get_coordinates()
 
     qr = quadrature_type( element_order + 3, GAUSSIAN )
 
@@ -85,57 +91,58 @@ contains
       call invoke_initial_buoyancy_kernel( buoyancy, chi )
 
       ! Initialise U and p according to formulation
-      r_u = field_type( vector_space =                                           &
-                  function_space_collection%get_fs(mesh_id, element_order, W2) )
-      ! Set wind, pressure and rhs_u field to 0
+      r_u = field_type( vector_space = wind%get_function_space() )
       call invoke( set_field_scalar(0.0_r_def, wind), &
-                   set_field_scalar(0.0_r_def, r_u),  &  
+                   set_field_scalar(0.0_r_def, r_u), &
                    set_field_scalar(0.0_r_def, pressure) )
-      ! Run solver algorithm to initialise wind field
-      call invoke( initial_u_kernel_type(r_u, chi, qr) )
-      w2_fs => function_space_collection%get_fs(mesh_id, &
-                                                element_order, &
-                                                W2)
-      mm_w2 = operator_type( w2_fs, w2_fs )
-      call invoke( compute_mass_matrix_kernel_w2_type(mm_w2, chi, qr) )
-      call solver_algorithm(wind, r_u, mesh_id, chi, method, mm=mm_w2)
- 
+      call invoke( initial_u_kernel_type( r_u, chi, qr ) )
+      call solver_algorithm(wind, r_u)
+
       call log_event( "Gravity waves: Initialised prognostic fields", LOG_LEVEL_INFO )
 
     else                                   ! Recorded check point to start from
 
-      allocate(state(3))
+      allocate(state(igw_b))
       n_fields = 1
       write(log_scratch_space,'(A,A)') "Reading file:", &
             trim(restart%startfname("pressure"))
       call log_event(log_scratch_space,LOG_LEVEL_INFO)
 
-      state(1) = field_type(vector_space =                                     &
+      state(igw_u) = field_type(vector_space =                                     &
                         function_space_collection%get_fs(mesh_id,element_order, W3))
 
-      call read_state_netcdf(n_fields, state(1), trim(restart%startfname("pressure")))
-      pressure = state(1)
+      call read_state_netcdf(n_fields, state(igw_u), trim(restart%startfname("pressure")))
+      pressure = state(igw_u)
 
       write(log_scratch_space,'(A,A)') "Reading file:", &
             trim(restart%startfname("wind"))
       call log_event(log_scratch_space,LOG_LEVEL_INFO)
 
-      state(2) = field_type(vector_space =                                      &
+      state(igw_p) = field_type(vector_space =                                      &
                        function_space_collection%get_fs(mesh_id, element_order, W2))
 
-      call read_state_netcdf(n_fields, state(2), trim(restart%startfname("wind")))
-      wind = state(2)
+      call read_state_netcdf(n_fields, state(igw_p), trim(restart%startfname("wind")))
+      wind = state(igw_p)
 
       write(log_scratch_space,'(A,A)') "Reading file:", &
             trim(restart%startfname("buoyancy"))
       call log_event(log_scratch_space,LOG_LEVEL_INFO)
+      select case(b_space)
+        case(gw_miniapp_constants_b_space_w0)  
+          buoyancy_space = W0
+        case(gw_miniapp_constants_b_space_w3)  
+          buoyancy_space = W3
+        case(gw_miniapp_constants_b_space_wtheta)  
+          buoyancy_space = Wtheta
+        case default
+          call log_event( "Gravity waves: unknown buoyancy space", LOG_LEVEL_ERROR )
+      end select 
+      state(igw_b) = field_type(vector_space =                                      &
+                        function_space_collection%get_fs(mesh_id, element_order, buoyancy_space))
 
-      state(3) = field_type(vector_space =                                      &
-                        function_space_collection%get_fs(mesh_id, element_order, Wtheta))
-
-      call read_state_netcdf(n_fields, state(3), &
+      call read_state_netcdf(n_fields, state(igw_b), &
            trim(restart%startfname("buoyancy")))
-      buoyancy = state(3)
+      buoyancy = state(igw_b)
 
       deallocate(state)
       call log_event( "Gravity waves: Read prognostic fields from files", LOG_LEVEL_INFO )

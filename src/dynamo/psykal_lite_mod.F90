@@ -3864,23 +3864,14 @@ end subroutine invoke_sample_poly_adv
 
     xp = x%get_proxy()
 
-    undf = xp%vspace%get_undf()
+    undf = xp%vspace%get_last_dof_owned()
     !$omp parallel do schedule(static), default(none), shared(xp, undf, a),  private(i)
     do i = 1,undf
       xp%data(i) = xp%data(i)**a
     end do
     !$omp end parallel do
 
-    mesh => x%get_mesh()
-    depth = mesh%get_halo_depth()
-
-    do dplp = 1, depth
-      if( xp%is_dirty(depth=dplp) ) then
-        call xp%set_dirty()
-      else
-        call xp%set_clean(dplp)
-      end if
-    end do
+    call xp%set_dirty()
   end subroutine invoke_raise_field
 
 !-------------------------------------------------------------------------------

@@ -12,7 +12,9 @@ module gw_lhs_alg_mod
   use constants_mod,                     only: r_def, i_def
   use function_space_collection_mod,     only: function_space_collection
   use runtime_constants_mod,             only: get_div, &
-                                               get_mass_matrix
+                                               get_mass_matrix, &
+                                               w0_id, w2_id, w3_id, w3inv_id, &
+                                               wt_id
   use field_mod,                         only: field_type
   use operator_mod,                      only: operator_type
 
@@ -98,17 +100,17 @@ contains
   
   select case(b_space)
     case(gw_miniapp_constants_b_space_w0)  
-      mm_wt => get_mass_matrix(0)
+      mm_wt => get_mass_matrix(w0_id)
     case(gw_miniapp_constants_b_space_w3)  
-      mm_wt => get_mass_matrix(3)
+      mm_wt => get_mass_matrix(w3_id)
     case(gw_miniapp_constants_b_space_wtheta)  
-      mm_wt => get_mass_matrix(5)
+      mm_wt => get_mass_matrix(wt_id)
   end select
 
 
-  mm_w2 => get_mass_matrix(2)
+  mm_w2 => get_mass_matrix(w2_id)
   div   => get_div() 
-  m3_inv => get_mass_matrix(4)
+  m3_inv => get_mass_matrix(w3inv_id)
 
   u => state(1)
   p => state(2)

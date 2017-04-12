@@ -20,7 +20,6 @@ module gw_si_solver_alg_mod
                                      bundle_divide,                       &
                                      bundle_minmax,                       &
                                      bundle_inner_product
-  use runtime_constants_mod,   only: get_mass_matrix_diagonal
   use field_mod,               only: field_type
   use formulation_config_mod,  only: eliminate_p
   use gw_lhs_alg_mod,          only: gw_lhs_alg
@@ -46,6 +45,7 @@ module gw_si_solver_alg_mod
   use timestepping_config_mod, only: dt
   use derived_config_mod,      only: bundle_size
   use solver_config_mod,       only: helmholtz_solve
+  use field_indices_mod,       only: igw_u, igw_p, igw_b
 
   implicit none
 
@@ -66,13 +66,15 @@ contains
 !!         sets up terms for the Newton-Krylov method if needed
 !>@param[in] x0 The state array to used to clone field bundles
   subroutine gw_si_solver_init(x0)
-    use function_space_mod,              only: function_space_type
     use gw_lhs_alg_mod,                  only: gw_lhs_init
     use gw_miniapp_constants_config_mod, only: b_space, &
                                                gw_miniapp_constants_b_space_w0, &
                                                gw_miniapp_constants_b_space_w3, &
                                                gw_miniapp_constants_b_space_wtheta
     use mm_diagonal_kernel_mod,          only: mm_diagonal_kernel_type
+    use runtime_constants_mod,           only: get_mass_matrix, &
+                                               get_mass_matrix_diagonal, &  
+                                               w0_id, w2_id, w3_id, wt_id
     use gw_pressure_solver_alg_mod,      only: gw_pressure_solver_init
     implicit none
 
@@ -92,15 +94,15 @@ contains
               v          (bundle_size,gcrk) )
  
 
-    mm_diagonal(1) = get_mass_matrix_diagonal(2)
-    mm_diagonal(2) = get_mass_matrix_diagonal(3)
+    mm_diagonal(igw_u) = get_mass_matrix_diagonal(w2_id)
+    mm_diagonal(igw_p) = get_mass_matrix_diagonal(w3_id)
     select case(b_space)
       case(gw_miniapp_constants_b_space_w0)  
-        mm_diagonal(3) = get_mass_matrix_diagonal(0)
+        mm_diagonal(igw_b) = get_mass_matrix_diagonal(w0_id)
       case(gw_miniapp_constants_b_space_w3)  
-        mm_diagonal(3) = get_mass_matrix_diagonal(5)
+        mm_diagonal(igw_b) = get_mass_matrix_diagonal(w3_id)
       case(gw_miniapp_constants_b_space_wtheta)  
-        mm_diagonal(3) = get_mass_matrix_diagonal(4)
+        mm_diagonal(igw_b) = get_mass_matrix_diagonal(wt_id)
     end select   
     call clone_bundle(x0, dx,       bundle_size)
     call clone_bundle(x0, Ax,       bundle_size)
@@ -125,9 +127,9 @@ contains
     type(field_type),             intent(inout) :: x0(bundle_size)
     type(field_type),             intent(in)    :: rhs0(bundle_size)
 
-    call rhs0(1)%log_minmax(LOG_LEVEL_INFO,'max/min r_u = ')
-    call rhs0(2)%log_minmax(LOG_LEVEL_INFO,'max/min r_p = ')
-    call rhs0(3)%log_minmax(LOG_LEVEL_INFO,'max/min r_b = ')
+    call rhs0(igw_u)%log_minmax(LOG_LEVEL_INFO,'max/min r_u = ')
+    call rhs0(igw_p)%log_minmax(LOG_LEVEL_INFO,'max/min r_p = ')
+    call rhs0(igw_b)%log_minmax(LOG_LEVEL_INFO,'max/min r_b = ')
 
     if ( helmholtz_solve ) then
       ! Use jacobi method with a single iterations

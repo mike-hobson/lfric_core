@@ -24,8 +24,7 @@ module output_alg_mod
   use quadrature_mod,                    only: quadrature_type, GAUSSIAN
   use mesh_mod,                          only: mesh_type
   use mesh_collection_mod,               only: mesh_collection
-  use runtime_constants_mod,             only: get_mass_matrix, &
-                                               get_coordinates
+  use runtime_constants_mod,             only: get_coordinates
 
   implicit none
 
@@ -61,7 +60,6 @@ contains
     type(mesh_type ), pointer          :: mesh => null()
     character(len=str_max_filename)    :: fname
     character(len=str_max_filename)    :: rank_name
-    type(operator_type), pointer       :: mm => null()
     integer(kind=i_def)                :: d, dir, fs_handle
     type(function_space_type), pointer :: fs
     character(len=1)                   :: uchar
@@ -74,7 +72,6 @@ contains
     else
       write( rank_name, "("".Rank"", I6.6, A)") mesh%get_local_rank(), ".m"
     end if
-    chi  => get_coordinates()
 
     ! Compute projections
     if ( write_interpolated_output .or. output_projections_on_w3) then
@@ -82,19 +79,18 @@ contains
 
       ! Vector or Scalar space?
       fs_handle = field%which_function_space()    
-      fs => function_space_collection%get_fs(mesh_id,element_order, fs_handle)
+      fs => field%get_function_space()
       d = fs%get_dim_space()
       allocate( projected_field(d) )
       ! If its a vector field project to W0 otherwise just copy
       if ( d > 1 ) then
         ! Create fields needed for output (these can be in CG or DG space)
-        mm => get_mass_matrix(0)
         do dir = 1,d
           projected_field(dir) = field_type( vector_space = &
              function_space_collection%get_fs(mesh_id,element_order, W0) )
         end do
-        call galerkin_projection_algorithm(projected_field, field, mesh_id, chi, &
-           d, qr, mm=mm)
+        call galerkin_projection_algorithm(projected_field, field, mesh_id, &
+           d, qr)
       else
         projected_field(1) = field
       end if
@@ -102,6 +98,7 @@ contains
 
     ! Write interpolated output
     if ( write_interpolated_output ) then
+      chi  => get_coordinates()
       fname=trim(ts_fname("interp_",field_name,n, rank_name))
       call interpolated_output(d, projected_field(1:d), mesh_id, chi, &
                                fname)
@@ -110,25 +107,24 @@ contains
     ! Compute output on nodal points of the field itself
     if ( write_nodal_output ) then  
       fname=trim(ts_fname("nodal_", field_name, n, rank_name))
-      call nodal_output_alg(field, chi, fname, mesh_id)
+      call nodal_output_alg(field, fname)
       if (output_projections_on_w3)then
         if (d > 1)then ! For vectors (i.e. winds) output individual components
           do dir = 1,d
             write(uchar,'(i1)') dir
             fname=trim(ts_fname("nodal_"//uchar, field_name, n, rank_name))
-            call nodal_output_alg(projected_field(dir), chi, fname, mesh_id)
+            call nodal_output_alg(projected_field(dir), fname)
           end do
         end if
         
         ! Let's also output fields from theta space as a w3 projection
         if (fs_handle == Wtheta)then
-          mm => get_mass_matrix(3)
           projected_field(1) = field_type( vector_space = &
              function_space_collection%get_fs(mesh_id,element_order, W3) )
-          call galerkin_projection_algorithm(projected_field(1), field, mesh_id, chi, &
-             d, qr, mm=mm)
+          call galerkin_projection_algorithm(projected_field(1), field, mesh_id, &
+             d, qr)
           fname=trim(ts_fname("nodal_w3projection_", field_name, n, rank_name))
-          call nodal_output_alg(projected_field(1), chi, fname, mesh_id)
+          call nodal_output_alg(projected_field(1), fname)
         end if
       end if
     end if

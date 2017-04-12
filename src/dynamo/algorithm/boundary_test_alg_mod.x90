@@ -22,24 +22,13 @@ module boundary_test_alg_mod
 
 contains
 
-  subroutine boundary_test_alg_init(mesh_id, u, xi)
-    use finite_element_config_mod,         only: element_order
-    use function_space_collection_mod,     only: function_space_collection
-    use function_space_mod,                only: function_space_type    
+  subroutine boundary_test_alg_init(u, xi)
  
     implicit none
-    integer(i_def),     intent(in)    :: mesh_id 
     type( field_type ), intent(inout) :: u, xi
 
-    type(function_space_type), pointer :: u_fs  => null()
-    type(function_space_type), pointer :: xi_fs => null()
-
-    u_fs  => function_space_collection%get_fs ( mesh_id, element_order,        &
-                                                u%which_function_space()     )
-    xi_fs => function_space_collection%get_fs ( mesh_id, element_order,        &
-                                                xi%which_function_space()     )
-    Ax_u  = field_type( vector_space = u_fs )
-    Ax_xi = field_type( vector_space = xi_fs )
+    Ax_u  = field_type( vector_space = u%get_function_space() )
+    Ax_xi = field_type( vector_space = xi%get_function_space() )
     call log_event( "Dynamo: initialised boundary test algorithm", LOG_LEVEL_INFO )
 
   end subroutine boundary_test_alg_init
@@ -49,25 +38,26 @@ contains
     use psykal_lite_mod,          only: invoke_times_field, &
                                         invoke_set_boundary_kernel
     use matrix_vector_kernel_mod, only: matrix_vector_kernel_type
-    use runtime_constants_mod,    only: get_mass_matrix
+    use runtime_constants_mod,    only: get_mass_matrix, w2_id, w1_id
     use operator_mod,             only: operator_type
 
     implicit none
     type( field_type ), intent( inout ) :: u, xi
 
-    type(operator_type), pointer :: mm_w2, mm_w1 => null()
+    type(operator_type), pointer :: mm_w2 => null(), mm_w1 => null()
     real(r_def), parameter       :: bc_value = 3.0_r_def
 
     ! Allocate and initialise u and xi related fields
-    mm_w2 => get_mass_matrix(2)  
-    mm_w1 => get_mass_matrix(1)
     call invoke( set_field_scalar(0.0_r_def, u),    &
                  set_field_scalar(0.0_r_def, Ax_u), &
                  set_field_scalar(0.0_r_def, xi),   & 
                  set_field_scalar(0.0_r_def, Ax_xi) )
     ! Set BC and calculate matrices
+    mm_w2 => get_mass_matrix(w2_id)
     call invoke_set_boundary_kernel(u, bc_value)
     call invoke( matrix_vector_kernel_type(Ax_u, u, mm_w2) )
+
+    mm_w1 => get_mass_matrix(w1_id)
     call invoke_set_boundary_kernel(xi, bc_value)
     call invoke( matrix_vector_kernel_type(Ax_xi, xi, mm_w1) )
 

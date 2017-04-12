@@ -92,7 +92,7 @@ contains
 
     integer(i_def)            :: mesh_id
 
-    type(function_space_type), pointer :: w2_fs    => null()
+    type(function_space_type), pointer :: w2_fs    => null(), fs => null()
     type(mesh_type),           pointer :: mesh_out => null()
 
     integer(i_def) :: err
@@ -114,6 +114,10 @@ contains
     ! Check the the function space the field lives on is the one it was
     ! created with
     @assertEqual( f1%which_function_space(), W2 )
+
+    ! Check the get function space returns W2 by comparing undf
+    fs => f1%get_function_space()
+    @assertEqual( fs%get_undf(), w2_fs%get_undf() )
 
     !Initialise field data
     do i=1,f1_p%vspace%get_undf()

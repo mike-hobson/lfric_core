@@ -16,7 +16,6 @@ module helmholtz_solver_alg_mod
                                        get_div_star, &
                                        get_ptheta2, &
                                        get_p2theta, &
-                                       get_mt_lumped, &
                                        get_p3theta, &
                                        get_rho_at_u, &
                                        get_tri_precon, &
@@ -24,9 +23,12 @@ module helmholtz_solver_alg_mod
   use runtime_constants_mod,     only: get_coordinates, &
                                        get_mass_matrix, &
                                        get_mass_matrix_diagonal, &
-                                       get_div
+                                       get_div, &
+                                       get_inverse_lumped_mass_matrix, &
+                                       w2_id, w3inv_id, theta_space_id
   use solver_config_mod,         only: normalise
   use derived_config_mod,        only: si_bundle_size, bundle_size
+  use field_indices_mod,         only: igh_u, igh_t, igh_d, igh_p
   implicit none
 
   private 
@@ -67,24 +69,17 @@ contains
 !>@brief Create all the required fields for the Helmholtz solver
   subroutine helmholtz_solver_init(state)
     use function_space_mod,        only: function_space_type
-    use finite_element_config_mod, only: element_order
     use field_bundle_mod,          only: clone_bundle
-    use function_space_collection_mod,  &
-                                   only: function_space_collection
     implicit none
     type(field_type), intent(in)       :: state(bundle_size)
-    type(function_space_type), pointer :: w3, w2, wtheta => null()
-    integer(kind=i_def)                :: mesh
-    integer(kind=i_def)                :: fs_handle
+    type(function_space_type), pointer :: w3 => null(), &
+                                          w2 => null(), &
+                                          wtheta => null()
 
     ! Get needed function spaces
-    mesh = state(3)%get_mesh_id()
-    fs_handle = state(3)%which_function_space()
-    w3 => function_space_collection%get_fs(mesh, element_order, fs_handle)
-    fs_handle = state(1)%which_function_space()
-    w2 => function_space_collection%get_fs(mesh, element_order, fs_handle)
-    fs_handle = state(2)%which_function_space()
-    wtheta => function_space_collection%get_fs(mesh, element_order, fs_handle)
+    w3     => state(igh_d)%get_function_space()
+    w2     => state(igh_u)%get_function_space()
+    wtheta => state(igh_t)%get_function_space()
 
     helmholtz_rhs   = field_type(vector_space = w3)
     exner_increment = field_type(vector_space = w3)
@@ -164,14 +159,17 @@ contains
     type(field_type), intent(inout) :: Hx
     type(field_type), intent(in)    :: x
    
-    type(operator_type), pointer :: compound_div, ptheta2, p3theta => null()
-    type(field_type),    pointer :: mt_diag, rho_at_u => null()
+    type(operator_type), pointer :: compound_div => null(), &
+                                    ptheta2 => null(), &
+                                    p3theta => null()
+    type(field_type),    pointer :: mt_lumped_inv => null(), &
+                                    rho_at_u => null()
 
-    compound_div => get_compound_div()
-    ptheta2      => get_ptheta2()
-    mt_diag      => get_mt_lumped()
-    p3theta      => get_p3theta()
-    rho_at_u     => get_rho_at_u()
+    compound_div  => get_compound_div()
+    ptheta2       => get_ptheta2()
+    mt_lumped_inv => get_inverse_lumped_mass_matrix(theta_space_id)
+    p3theta       => get_p3theta()
+    rho_at_u      => get_rho_at_u()
  
     call invoke( set_field_scalar(0.0_r_def, theta_adv_term) )
     call invoke_multiply_field_data(rho_at_u, x, flux)
@@ -179,7 +177,7 @@ contains
     call invoke_scale_field_data(tau_r,Hx)
 
     call invoke(matrix_vector_kernel_type(theta_adv_term, x, ptheta2)) 
-    call invoke_divide_field_data(theta_adv_term, mt_diag)
+    call invoke_multiply_field_data(theta_adv_term, mt_lumped_inv, theta_adv_term)
     ! Multiply theta_adv_term by tau_theta
     call invoke_scale_field_data(tau_t,theta_adv_term)
     call invoke( matrix_vector_kernel_type(Hx, theta_adv_term, p3theta) )    
@@ -205,22 +203,24 @@ contains
     type(field_type),                intent(inout) :: helmholtz_rhs
     type(field_type),                intent(in)    :: rhs0(si_bundle_size)
 
-    type(operator_type), pointer :: m3_rho_star, m3_inv, &
-                                    p2theta, p3theta => null()
-    type(field_type),    pointer :: mt_diag => null()
+    type(operator_type), pointer :: m3_rho_star => null(), &
+                                    m3_inv => null(), &
+                                    p2theta => null(), &
+                                    p3theta => null()
+    type(field_type),    pointer :: mt_lumped_inv => null()
     type(field_type),    pointer :: H_diag => null()
 
     p2theta     => get_p2theta()
     p3theta     => get_p3theta()
     m3_rho_star => get_m3_rho_star()
-    mt_diag     => get_mt_lumped()
-    m3_inv      => get_mass_matrix(4)
+    mt_lumped_inv => get_inverse_lumped_mass_matrix(theta_space_id)
+    m3_inv      => get_mass_matrix(w3inv_id)
     
     ! r_u = rhs_u + tau*dt*cp*P02*M0^-1*rhs_t       
-    call invoke_divide_field(rhs0(2), mt_diag, mt_r_t)
+    call invoke_multiply_field_data(rhs0(igh_t), mt_lumped_inv, mt_r_t)
     call invoke( set_field_scalar(0.0_r_def, r_u) )
     call invoke( matrix_vector_kernel_type(r_u, mt_r_t, p2theta) )
-    call invoke_inc_axpy(tau_u*dt*cp, r_u, rhs0(1)) 
+    call invoke_inc_axpy(tau_u*dt*cp, r_u, rhs0(igh_u)) 
     ! Compute H_B * u_term = r_u
     call invoke( enforce_bc_kernel_type( r_u ) )
     call invoke_multiply_field_data(r_u, hb_inv, u_term)
@@ -231,7 +231,7 @@ contains
     ! r_pi = rhs_pi + P03*M0^-1*rhs_t + M3rho*M3^-1*rhs_r
     ! rhs_pi \equiv 0
     ! r_rho already contains M3^-1 factor
-    call invoke( dg_matrix_vector_kernel_type(r_p, rhs0(3), m3_rho_star) )
+    call invoke(dg_matrix_vector_kernel_type(r_p, rhs0(igh_d), m3_rho_star) )
     call invoke( matrix_vector_kernel_type(r_p, mt_r_t, p3theta) )
 
     call invoke_inc_axpy(-dt, helmholtz_rhs, r_p)
@@ -250,39 +250,28 @@ contains
   subroutine compute_inv_hb
     use timestepping_config_mod,       only: dt
     use planet_config_mod,             only: cp
-    use psykal_lite_mod,               only: invoke_divide_field_data,     &
-                                             invoke_inc_axpy,              &
+    use psykal_lite_mod,               only: invoke_multiply_field_data, &
+                                             invoke_inc_axpy,            &
                                              invoke_raise_field
     use matrix_vector_nobc_kernel_mod, only: matrix_vector_nobc_kernel_type
     use operator_mod,                  only: operator_type
     use enforce_bc_kernel_mod,         only: enforce_bc_kernel_type
-    use function_space_mod,            only: function_space_type
-    use finite_element_config_mod,     only: element_order
-    use function_space_collection_mod, only: function_space_collection
 
     implicit none
     type(operator_type), pointer                   :: m2, p2theta,         &
                                                       ptheta2 => null()
-    type(field_type),    pointer                   :: mt_diag => null()
+    type(field_type),    pointer                   :: mt_lumped_inv => null()
     real(kind=r_def)                               :: timestep_term
     type(field_type)                               :: ones
-    type(function_space_type), pointer             :: w2 => null()
-    integer(kind=i_def)                            :: mesh
-    integer(kind=i_def)                            :: fs_handle
-
-    ! Get needed function spaces
 
     timestep_term = cp*tau_u*tau_t*dt**2
 
-    m2 => get_mass_matrix(2)
-    p2theta => get_p2theta()
-    ptheta2 => get_ptheta2()
-    mt_diag => get_mt_lumped()
+    m2            => get_mass_matrix(w2_id)
+    p2theta       => get_p2theta()
+    ptheta2       => get_ptheta2()
+    mt_lumped_inv => get_inverse_lumped_mass_matrix(theta_space_id)
 
-    mesh = hb_inv%get_mesh_id()
-    fs_handle = hb_inv%which_function_space()
-    w2 => function_space_collection%get_fs(mesh, element_order, fs_handle)
-    ones = field_type( vector_space = w2 )
+    ones = field_type( vector_space = hb_inv%get_function_space() )
 
     call invoke(set_field_scalar(1.0_r_def, ones), &
                 set_field_scalar(0.0_r_def, hb_inv), &
@@ -290,7 +279,8 @@ contains
                 set_field_scalar(0.0_r_def, theta_adv_term) )
     call invoke( matrix_vector_nobc_kernel_type(m2_u, ones, m2), &
                  matrix_vector_nobc_kernel_type(theta_adv_term, ones, ptheta2) )
-    call invoke_divide_field_data(theta_adv_term, mt_diag)
+    call invoke_multiply_field_data(theta_adv_term, mt_lumped_inv, theta_adv_term)
+
     call invoke( matrix_vector_nobc_kernel_type(hb_inv, theta_adv_term, p2theta) )  
     call invoke_inc_axpy( timestep_term, hb_inv, m2_u )
     call invoke_raise_field(hb_inv, -1_i_def)
@@ -318,7 +308,7 @@ contains
     type(field_type),                intent(inout) :: Hp
     type(field_type),                intent(in)    :: p
 
-    type(operator_type), pointer :: m3_exner_star, div_star => null()
+    type(operator_type), pointer :: m3_exner_star => null(), div_star => null()
     real(kind=r_def)             :: timestep_term
     type(field_type),    pointer :: H_diag => null()
 
@@ -462,19 +452,18 @@ contains
 !>@brief Obtain the increments to each field from the pressure field given by
 !>       the helmholtz equation
   subroutine back_substitute( state, exner_inc, rhs)
-    use log_mod,                     only: LOG_LEVEL_DEBUG,                    &
+    use log_mod,                     only: LOG_LEVEL_DEBUG, &
                                            LOG_LEVEL_INFO
     use timestepping_config_mod,     only: dt
     use planet_config_mod,           only: cp
-    use psykal_lite_mod,          only: invoke_inc_axpy,            &
-                                        invoke_divide_field,        &
-                                        invoke_multiply_field_data, &
-                                        invoke_increment_field
+    use psykal_lite_mod,             only: invoke_inc_axpy,            &
+                                           invoke_multiply_field_data, &
+                                           invoke_increment_field
     use matrix_vector_kernel_mod,    only: matrix_vector_kernel_type
     use dg_matrix_vector_kernel_mod, only: dg_matrix_vector_kernel_type
     use transpose_matrix_vector_kernel_mod, &
                                      only: transpose_matrix_vector_kernel_type
-    use operator_mod,                only: operator_type
+    use operator_mod,                only: operator_type  
     use enforce_bc_kernel_mod,       only: enforce_bc_kernel_type
     use formulation_config_mod,      only: eliminate_p
 
@@ -483,48 +472,50 @@ contains
     type(field_type),                intent(in)    :: exner_inc
     type(field_type),                intent(in)    :: rhs(si_bundle_size)
 
-    type(field_type),    pointer :: mt_diag => null(), rho_at_u => null()
-    type(operator_type), pointer :: div_star => null(), ptheta2 => null(), &
-                                    div => null(), m3_inv => null()
+    type(field_type),    pointer :: mt_lumped_inv => null(), &
+                                    rho_at_u => null()
+    type(operator_type), pointer :: div_star => null(), &
+                                    ptheta2 => null(),  &
+                                    div => null(),      &
+                                    m3_inv => null()
 
     ! Need to pass in mathfrak{R}_u
-    mt_diag      => get_mt_lumped()
-    div_star     => get_div_star()
-    ptheta2      => get_ptheta2()
-    rho_at_u     => get_rho_at_u()
-    div          => get_div()
-    m3_inv       => get_mass_matrix(4)
-
+    mt_lumped_inv => get_inverse_lumped_mass_matrix(theta_space_id)
+    div_star      => get_div_star()
+    ptheta2       => get_ptheta2()
+    rho_at_u      => get_rho_at_u()
+    div           => get_div()
+    m3_inv        => get_mass_matrix(w3inv_id)
     ! Initialise increment fields
-    call invoke( set_field_scalar(0.0_r_def, rhs_inc(1)), &
-                 set_field_scalar(0.0_r_def, rhs_inc(2)) )
+    call invoke( set_field_scalar(0.0_r_def, rhs_inc(igh_u)), &
+                 set_field_scalar(0.0_r_def, rhs_inc(igh_t)) )
 
     ! u increment
-    call invoke( transpose_matrix_vector_kernel_type(rhs_inc(1), exner_inc, div_star) )
-    call invoke_inc_axpy((tau_u*dt*cp), rhs_inc(1), r_u)
-    call invoke( enforce_bc_kernel_type( rhs_inc(1) ) )
-    call invoke_multiply_field_data(rhs_inc(1), hb_inv, u_inc)
+    call invoke( transpose_matrix_vector_kernel_type(rhs_inc(igh_u), exner_inc, div_star) )
+    call invoke_inc_axpy((tau_u*dt*cp), rhs_inc(igh_u), r_u)
+    call invoke( enforce_bc_kernel_type( rhs_inc(igh_u) ) )
+    call invoke_multiply_field_data(rhs_inc(igh_u), hb_inv, u_inc)
 
     ! theta increment
-    call invoke( matrix_vector_kernel_type(rhs_inc(2), u_inc, ptheta2) )
-    call invoke_inc_axpy(-(tau_t*dt), rhs_inc(2), rhs(2) )  
-    call invoke_divide_field(rhs_inc(2), mt_diag, theta_inc)
+    call invoke( matrix_vector_kernel_type(rhs_inc(igh_t), u_inc, ptheta2) )
+    call invoke_inc_axpy(-(tau_t*dt), rhs_inc(igh_t), rhs(igh_t) )  
+    call invoke_multiply_field_data(rhs_inc(igh_t), mt_lumped_inv, theta_inc)
 
     ! rho increment
     call invoke_multiply_field_data(rho_at_u, u_inc, flux)
-    call invoke( dg_matrix_vector_kernel_type(rhs_inc(3), flux, div) )
-    call invoke( dg_matrix_vector_kernel_type(rho_inc, rhs_inc(3), m3_inv) )
-    call invoke_inc_axpy( -(tau_r*dt), rho_inc, rhs(3))
+    call invoke( dg_matrix_vector_kernel_type( rhs_inc(igh_d), flux, div ) )
+    call invoke( dg_matrix_vector_kernel_type( rho_inc, rhs_inc(igh_d), m3_inv) )
+    call invoke_inc_axpy( -(tau_r*dt), rho_inc, rhs(igh_d))
 
     call exner_inc%log_minmax(LOG_LEVEL_DEBUG, 'exner increment ') 
     call u_inc    %log_minmax(LOG_LEVEL_DEBUG, 'u increment     ') 
     call theta_inc%log_minmax(LOG_LEVEL_DEBUG, 'theta increment ') 
-    call rho_inc  %log_minmax(LOG_LEVEL_DEBUG, 'rho increment   ') 
-
-    call invoke_increment_field(u_inc,     state(1))
-    call invoke_increment_field(theta_inc, state(2))
-    call invoke_increment_field(rho_inc,   state(3))
-    if ( .not. eliminate_p ) call invoke_increment_field(exner_inc, state(4))
+    call rho_inc  %log_minmax(LOG_LEVEL_DEBUG, 'rho increment   ')
+ 
+    call invoke_increment_field(u_inc,     state(igh_u))
+    call invoke_increment_field(theta_inc, state(igh_t))
+    call invoke_increment_field(rho_inc,   state(igh_d))
+    if ( .not. eliminate_p ) call invoke_increment_field(exner_inc, state(igh_p))
   
   end subroutine back_substitute
 !=============================================================================!
@@ -556,12 +547,12 @@ contains
     end if
     select case ( precon )
       case ( solver_si_pressure_preconditioner_diagonal )       
-        m3_inv   => get_mass_matrix(4)
+        m3_inv   => get_mass_matrix(w3inv_id)
         call invoke( dg_matrix_vector_kernel_type(y, x, m3_inv) )     
       case ( solver_si_pressure_preconditioner_tridiagonal )
         z = y
         tri => get_tri_precon()
-        m3_inv   => get_mass_matrix(4)
+        m3_inv   => get_mass_matrix(w3inv_id)
         call invoke( dg_matrix_vector_kernel_type(z, x, m3_inv), &
                      tri_solve_kernel_type(y, z, tri) )
       case default

@@ -36,10 +36,6 @@ program gravity_wave
   use restart_config_mod,             only : restart_filename => filename
   use restart_control_mod,            only : restart_type
   use derived_config_mod,             only : set_derived_config
-  use runtime_constants_mod,          only : create_runtime_constants, &
-                                             get_geopotential, &
-                                             get_mass_matrix
-
   use output_config_mod,              only : diagnostic_frequency
   use output_alg_mod,                 only : output_alg
   use checksum_alg_mod,               only : checksum_alg
@@ -55,9 +51,6 @@ program gravity_wave
   type(restart_type) :: restart
 
   integer            :: mesh_id
-
-  ! coordinate fields
-  type( field_type ) :: chi(3)
 
   ! prognostic fields
   type( field_type ) :: wind, buoyancy, pressure
@@ -96,14 +89,7 @@ program gravity_wave
   call init_gungho(mesh_id, local_rank, total_ranks)
 
   ! Create and initialise prognostic fields
-  call init_gravity_wave(mesh_id, chi, wind, pressure, buoyancy, restart)
-
-
-  ! Create runtime_constants object. This in turn creates various things
-  ! needed by the timstepping algorithms such as mass matrix operators, mass
-  ! matrix diagonal fields and the geopotential field
-
-  call create_runtime_constants(mesh_id, chi)
+  call init_gravity_wave(mesh_id, wind, pressure, buoyancy, restart)
 
   !-----------------------------------------------------------------------------
   ! model step 

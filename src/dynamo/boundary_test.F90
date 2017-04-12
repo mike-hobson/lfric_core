@@ -23,7 +23,6 @@ program boundary_test
   use ESMF
   use field_io_mod,                   only : write_state_netcdf
   use field_mod,                      only : field_type
-  use finite_element_config_mod,      only : element_order
   use init_gungho_mod,                only : init_gungho
   use init_boundary_test_mod,         only : init_boundary_test
   use log_mod,                        only : log_event,         &
@@ -37,10 +36,6 @@ program boundary_test
   use operator_mod,                   only : operator_type
   use restart_config_mod,             only : restart_filename => filename
   use restart_control_mod,            only : restart_type
-  use runtime_constants_mod,          only : create_runtime_constants, &
-                                             get_geopotential, &
-                                             get_mass_matrix
-
 
   implicit none
 
@@ -54,9 +49,6 @@ program boundary_test
   type(restart_type) :: restart
 
   integer            :: mesh_id
-
-  ! coordinate fields
-  type( field_type ) :: chi(3)
 
   ! prognostic fields
   type( field_type ) :: u, xi
@@ -94,19 +86,12 @@ program boundary_test
   call init_gungho(mesh_id, local_rank, total_ranks)
 
   ! Create and initialise prognostic fields
-  call init_boundary_test(mesh_id, chi, u, xi, restart)
-
-
-  ! Create runtime_constants object. This in turn creates various things
-  ! needed by the timstepping algorithms such as mass matrix operators, mass
-  ! matrix diagonal fields and the geopotential field
-
-  call create_runtime_constants(mesh_id, chi)
+  call init_boundary_test(mesh_id, u, xi, restart)
 
   !-----------------------------------------------------------------------------
   ! model step 
   !-----------------------------------------------------------------------------
-  call boundary_test_alg_init(mesh_id, u, xi)
+  call boundary_test_alg_init(u, xi)
   call boundary_test_alg(u, xi)
 
   !-----------------------------------------------------------------------------

@@ -12,7 +12,9 @@ module gw_pressure_solver_alg_mod
   use constants_mod,                      only: i_def, r_def
   use runtime_constants_mod,              only: get_coordinates, &
                                                 get_mass_matrix, &
-                                                get_div
+                                                get_div, &
+                                                w0_id, w2_id, w3_id, &
+                                                w3inv_id, wt_id
   use initial_temperature_config_mod,     only: bvf_square  
   use timestepping_config_mod,            only: dt
   use gw_miniapp_constants_config_mod,    only: cs_square,                       &
@@ -21,6 +23,7 @@ module gw_pressure_solver_alg_mod
                                                 gw_miniapp_constants_b_space_w3, &
                                                 gw_miniapp_constants_b_space_wtheta
   use operator_mod,                       only: operator_type
+  use field_indices_mod,                  only: igw_u, igw_p, igw_b
 
   implicit none
 
@@ -64,7 +67,6 @@ contains
   subroutine gw_pressure_solver_init(state)
     use function_space_mod,            only: function_space_type
     use finite_element_config_mod,     only: element_order
-    use function_space_collection_mod, only: function_space_collection
     use quadrature_mod,                only: quadrature_type, GAUSSIAN
     use compute_q_operator_kernel_mod, only: compute_q_operator_type
     use matrix_vector_nobc_kernel_mod, only: matrix_vector_nobc_kernel_type
@@ -80,25 +82,16 @@ contains
     implicit none
 
     type(field_type), intent(in)       :: state(bundle_size)
-    type(function_space_type), pointer :: wp, wu, wb => null()
-    integer(kind=i_def)                :: mesh
-    integer(kind=i_def)                :: fs_handle
+    type(function_space_type), pointer :: wp => null(), wu => null(), wb => null()
     type(field_type)                   :: ones, M_lumped, QT1
-    type(operator_type), pointer       :: Mb, Mu => null()
+    type(operator_type), pointer       :: Mb => null(), Mu => null()
     type(quadrature_type)              :: qr
     call log_event( 'Constructing pressure solver...', LOG_LEVEL_INFO )
 
     ! Get needed function spaces
-    mesh = state(1)%get_mesh_id()
-
-    fs_handle = state(1)%which_function_space()
-    wu => function_space_collection%get_fs(mesh, element_order, fs_handle)
-
-    fs_handle = state(2)%which_function_space()
-    wp => function_space_collection%get_fs(mesh, element_order, fs_handle)
-
-    fs_handle = state(3)%which_function_space()
-    wb => function_space_collection%get_fs(mesh, element_order, fs_handle)
+    wu => state(igw_u)%get_function_space()
+    wp => state(igw_p)%get_function_space()
+    wb => state(igw_b)%get_function_space()
 
     pressure_rhs = field_type(vector_space = wp)
     p_inc        = field_type(vector_space = wp)
@@ -132,11 +125,11 @@ contains
     Mb_lumped_inv = field_type(vector_space = wb)
     select case(b_space)
       case(gw_miniapp_constants_b_space_w0)  
-        Mb => get_mass_matrix(0)
+        Mb => get_mass_matrix(w0_id)
       case(gw_miniapp_constants_b_space_w3)  
-        Mb => get_mass_matrix(3)
+        Mb => get_mass_matrix(w3_id)
       case(gw_miniapp_constants_b_space_wtheta)  
-        Mb => get_mass_matrix(5)
+        Mb => get_mass_matrix(wt_id)
     end select
     call invoke( set_field_scalar(1.0_r_def, ones), &
                  set_field_scalar(0.0_r_def, M_lumped) )
@@ -153,7 +146,7 @@ contains
     M_lumped      = field_type(vector_space = wu)
     QT1           = field_type(vector_space = wb)
     Hb_lumped_inv = field_type(vector_space = wu)
-    Mu => get_mass_matrix(2)
+    Mu => get_mass_matrix(w2_id)
 
     call invoke( set_field_scalar(1.0_r_def, ones),     &
                  set_field_scalar(0.0_r_def, M_lumped), & 
@@ -213,19 +206,19 @@ contains
     ! rhs_u = Ru + tau_u * dt * Q * Mb^-1 * Rb
 
     ! Compute rhs_u    
-    call invoke_multiply_field_data(rhs0(3), Mb_lumped_inv, mb_rb)
+    call invoke_multiply_field_data(rhs0(igw_b), Mb_lumped_inv, mb_rb)
     call invoke( set_field_scalar(0.0_r_def, rhs_u) )
     call invoke( matrix_vector_kernel_type(rhs_u, mb_rb, Q) )
-    call invoke_inc_axpy(tau_u*dt, rhs_u ,rhs0(1))
+    call invoke_inc_axpy(tau_u*dt, rhs_u ,rhs0(igw_u))
     call invoke( enforce_bc_kernel_type(rhs_u) )
 
     ! Compute rhs
     div    => get_div()
-    M3_inv => get_mass_matrix(4)
+    M3_inv => get_mass_matrix(w3inv_id)
     call invoke_multiply_field_data(rhs_u, Hb_lumped_inv, hb_ru)
     call invoke( dg_matrix_vector_kernel_type(rhs_p, hb_ru, div), &
                  dg_matrix_vector_kernel_type(gw_pressure_rhs, rhs_p, M3_inv) )
-    call invoke_inc_axpy(-tau_p*dt*cs_square, gw_pressure_rhs, rhs0(2))
+    call invoke_inc_axpy(-tau_p*dt*cs_square, gw_pressure_rhs, rhs0(igw_p))
 
     call gw_pressure_rhs%log_minmax(LOG_LEVEL_DEBUG,  'gw_pressure_rhs ')
 
@@ -249,7 +242,7 @@ contains
 
     ! lhs = (I + tau_p*tau_u*dt^2*cs^2*M3^-1 * D * HB^-1 * D^T)*p
     div    => get_div()
-    M3_inv => get_mass_matrix(4)
+    M3_inv => get_mass_matrix(w3inv_id)
     call invoke( set_field_scalar(0.0_r_def, grad_p) )
     call invoke( transpose_matrix_vector_kernel_type(grad_p, p, div) )
     call invoke( enforce_bc_kernel_type(grad_p) )
@@ -400,16 +393,16 @@ contains
 
     ! b increment
     call invoke( transpose_matrix_vector_kernel_type(b_inc, u_inc, Q) )
-    call invoke_inc_axpy(-tau_b*dt*bvf_square, b_inc, rhs(3))
+    call invoke_inc_axpy(-tau_b*dt*bvf_square, b_inc, rhs(igw_b))
     call invoke_multiply_field_data( b_inc, Mb_lumped_inv, b_inc )
 
     call u_inc%log_minmax(LOG_LEVEL_DEBUG,  'u increment')
     call p_inc%log_minmax(LOG_LEVEL_DEBUG,  'p increment')
     call b_inc%log_minmax(LOG_LEVEL_DEBUG,  'b increment')
 
-    call invoke_increment_field(u_inc, state(1))
-    call invoke_increment_field(p_inc, state(2))
-    call invoke_increment_field(b_inc, state(3))
+    call invoke_increment_field(u_inc, state(igw_u))
+    call invoke_increment_field(p_inc, state(igw_p))
+    call invoke_increment_field(b_inc, state(igw_b))
   
   end subroutine back_substitute
 !=============================================================================!

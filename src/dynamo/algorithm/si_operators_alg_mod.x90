@@ -31,7 +31,6 @@ module si_operators_alg_mod
   type(operator_type), target :: p3theta
   type(operator_type), target :: compound_div
   type(field_type),    target :: rho_at_u
-  type(field_type),    target :: mt_lumped
   type(field_type),    target :: tri_precon(3)
   type(field_type),    target :: Helm_diag
 
@@ -47,7 +46,6 @@ module si_operators_alg_mod
   public :: get_p3theta
   public :: get_compound_div 
   public :: get_rho_at_u 
-  public :: get_mt_lumped
   public :: get_tri_precon
   public :: get_helm_diag
 contains
@@ -66,30 +64,28 @@ subroutine create_si_operators(mesh_id)
 
   type(function_space_type), pointer     :: w2_fs => null()
   type(function_space_type), pointer     :: w3_fs => null()
-  type(function_space_type), pointer     :: wtheta_fs => null()
+  type(function_space_type), pointer     :: wt_fs => null()
 
   call log_event( "Dynamo: creating si_operators", LOG_LEVEL_INFO )
 
   w2_fs     => function_space_collection%get_fs( mesh_id, element_order, W2 )
   w3_fs     => function_space_collection%get_fs( mesh_id, element_order, W3 )
   if (wtheta_on) then
-    wtheta_fs => function_space_collection%get_fs( mesh_id, element_order, Wtheta )
+    wt_fs => function_space_collection%get_fs( mesh_id, element_order, Wtheta )
   else
-    wtheta_fs => function_space_collection%get_fs( mesh_id, element_order, W0 )
+    wt_fs => function_space_collection%get_fs( mesh_id, element_order, W0 )
   end if
-  ! Should change 0 to theta
  
   m3_rho_star       = operator_type( w3_fs, w3_fs )
   m3_exner_star     = operator_type( w3_fs, w3_fs )
   m3_exner_star_inv = operator_type( w3_fs, w3_fs )
   div_star          = operator_type( w3_fs, w2_fs )
-  p2theta           = operator_type( w2_fs, wtheta_fs )
-  ptheta2           = operator_type( wtheta_fs, w2_fs )
-  p3theta           = operator_type( w3_fs, wtheta_fs )
+  p2theta           = operator_type( w2_fs, wt_fs )
+  ptheta2           = operator_type( wt_fs, w2_fs )
+  p3theta           = operator_type( w3_fs, wt_fs )
   compound_div      = operator_type( w3_fs, w2_fs )
 
   rho_at_u  = field_type(vector_space = w2_fs)
-  mt_lumped = field_type(vector_space = wtheta_fs)
 
   if ( si_pressure_preconditioner == solver_si_pressure_preconditioner_tridiagonal ) then
     if ( element_order /= 0 ) then
@@ -125,33 +121,32 @@ subroutine compute_si_operators(ref_state)
   use multiplicity_kernel_mod,         only: multiplicity_kernel_type
   use finite_element_config_mod,       only: element_order, wtheta_on
   use function_space_mod,              only: function_space_type
-  use function_space_collection_mod,   only: function_space_collection
   use matrix_vector_kernel_mod,        only: matrix_vector_kernel_type
-  use runtime_constants_mod,           only: get_coordinates,                  &
-                                             get_div,                          &
-                                             get_mass_matrix
+  use runtime_constants_mod,           only: get_coordinates, &
+                                             get_div, &
+                                             get_mass_matrix, &
+                                             w3inv_id, theta_space_id
   use derived_config_mod,              only: bundle_size
   use invert_local_operator_kernel_mod,only: invert_local_operator_kernel_type
+  use field_indices_mod,               only: igh_u, igh_t, igh_d
+
   implicit none
 
   type(field_type), target, intent(in) :: ref_state(bundle_size) ! (u, theta, rho)
-  type(field_type),            pointer :: theta, rho => null()
+  type(field_type),            pointer :: theta => null(), rho => null()
   type(quadrature_type)                :: qr
   type(field_type),            pointer :: chi(:) => null()
-  type(operator_type),         pointer :: m3_inv, div, mt => null()
-  integer(i_def)                       :: mesh
-  integer(i_def)                       :: fs_handle
+  type(operator_type),         pointer :: m3_inv => null(), div => null()
   type(field_type)                     :: ones, w2_multiplicity
   type(function_space_type),   pointer :: u_fs => null()
-  type(function_space_type),   pointer :: theta_fs=> null()
 
   call log_event( "Dynamo: computing si_operators", LOG_LEVEL_INFO )
 
   qr = quadrature_type(element_order+3, GAUSSIAN)
-  theta  => ref_state(2)
-  rho    => ref_state(3)  
+  theta  => ref_state(igh_t)
+  rho    => ref_state(igh_d)  
   chi    => get_coordinates()
-  m3_inv => get_mass_matrix(4)
+  m3_inv => get_mass_matrix(w3inv_id)
   div    => get_div()
 
   call invoke( weighted_m3_rho_kernel_type(m3_rho_star, rho, chi, qr) )
@@ -183,9 +178,7 @@ subroutine compute_si_operators(ref_state)
   call invoke( compound_operator_kernel_type(compound_div, m3_rho_star, m3_inv, div) )
 
   ! Compute rho^ref at u nodal points
-  mesh = ref_state(1)%get_mesh_id()
-  fs_handle = ref_state(1)%which_function_space()
-  u_fs => function_space_collection%get_fs(mesh, element_order, fs_handle)
+  u_fs => ref_state(igh_u)%get_function_space()
   w2_multiplicity = field_type( vector_space = u_fs )
   ones            = field_type( vector_space = u_fs )
   ! Initialise fields
@@ -196,21 +189,9 @@ subroutine compute_si_operators(ref_state)
   call invoke( multiplicity_kernel_type(w2_multiplicity) )
   call invoke_sample_flux_kernel( rho_at_u, ones, w2_multiplicity, rho)
 
-  if(wtheta_on) then
-    mt => get_mass_matrix(5)
-  else
-    mt => get_mass_matrix(0)
-  end if
-  fs_handle = ref_state(2)%which_function_space()
-  theta_fs => function_space_collection%get_fs(mesh, element_order, fs_handle)
-  ones  = field_type( vector_space = theta_fs )
-  call invoke( set_field_scalar(1.0_r_def, ones), &
-               set_field_scalar(0.0_r_def,  mt_lumped) )
-  call invoke( matrix_vector_kernel_type(mt_lumped, ones, mt) )
 
   ! compute terms for tridiagonal preconditioner
   if ( si_pressure_preconditioner == solver_si_pressure_preconditioner_tridiagonal ) then
-    fs_handle = ref_state(3)%which_function_space()
     call invoke_compute_tri_precon_kernel(tri_precon, theta, rho, chi)
   end if
   if ( normalise ) then
@@ -300,14 +281,6 @@ end subroutine compute_si_operators
     type(field_type), pointer :: field
     field => rho_at_u
   end function get_rho_at_u
-
- !> Function to return a pointer to the mt_lumped
- !> @return The field
-  function get_mt_lumped() result(field)
-    implicit none
-    type(field_type), pointer :: field
-    field => mt_lumped
-  end function get_mt_lumped
 
  !> Function to return a pointer to the tri_precon
  !> @return The field

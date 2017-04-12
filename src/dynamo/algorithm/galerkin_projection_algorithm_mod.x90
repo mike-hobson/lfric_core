@@ -19,9 +19,10 @@ module galerkin_projection_algorithm_mod
   use gp_vector_rhs_kernel_mod,        only: gp_vector_rhs_kernel_type
   use log_mod,                         only: log_event, log_scratch_space, LOG_LEVEL_INFO
   use operator_mod,                    only: operator_type
+  use psykal_lite_mod,                 only: invoke_copy_field_data, invoke_set_field_scalar
   use quadrature_mod,                  only: quadrature_type
-  use solver_config_mod,               only: method
   use solver_mod,                      only: solver_algorithm
+  use runtime_constants_mod,           only: get_coordinates
 
   implicit none
 
@@ -39,18 +40,14 @@ contains
 !>          component is computed.
 !> @param[out] f_out A field to project to
 !> @param[in]  f_in  Field to project
-!> @param[in]  mesh Id of the mesh object the model for fields
-!> @param[in]  chi   3D coordinate field
+!> @param[in]  mesh id of the mesh object the model for fields
 !> @param[in]  space_dimension Dimension of the space f_in (scalar or vector)
 !> @param[in]  qr Quadrature rule to perform integrations
-!> @param[in]  mm Optional mass matrix operator to use for projecting to f_out fields
   subroutine galerkin_projection_algorithm( f_out,          &
                                             f_in,           &
                                             mesh,           &
-                                            chi,            &
-                                            space_dimension,&
-                                            qr,             &
-                                            mm ) 
+                                            space_dimension, &
+                                            qr)
     
     implicit none
 
@@ -61,25 +58,22 @@ contains
 ! Field to intput
     type( field_type ), intent(inout) :: f_in  
     integer( i_def ),   intent(in)    :: mesh
+    type( quadrature_type ), intent(in) :: qr
 ! Coordinate fields
-    type( field_type ),              intent(inout) :: chi(3)  
-    type( quadrature_type ),         intent(in)    :: qr
-    type( operator_type ), optional, intent(inout) :: mm
+    type( field_type ), pointer :: chi(:) => null()
 
     integer                          :: out_fs
     type( field_type )               :: rhs(space_dimension)
     type( field_type )               :: w2_field
-    integer                          :: dir, space 
+    integer                          :: dir
 
+    chi => get_coordinates()  
 
 
 ! Create continuous fields to project data into
     out_fs = f_out(1)%which_function_space()
     do dir = 1,space_dimension
-      rhs(dir) = field_type(                                                   &
-               vector_space = function_space_collection%get_fs(mesh, &
-                                                               element_order, &
-                                                               out_fs) )
+      rhs(dir) = field_type( vector_space = f_out(1)%get_function_space() )
       call invoke( set_field_scalar(0.0_r_def, rhs(dir)) )
     end do
     
@@ -105,23 +99,8 @@ contains
 
           call invoke( gp_vector_rhs_kernel_type(rhs, f_in, chi, w2_field, qr) )
        end if
-       space = f_out(1)%which_function_space()
        do dir = 1,space_dimension
-          if( present(mm) .and. space /= W3 ) then
-             call solver_algorithm( f_out(dir),   &
-                                    rhs(dir),     &
-                                    mesh,         &
-                                    chi,          &
-                                    method,       &
-                                    mm=mm )
-          else
-             call solver_algorithm( f_out(dir),   & 
-                                    rhs(dir),     &
-                                    mesh,         &
-                                    chi,          &
-                                    method,       &
-                                    qr=qr )
-          end if
+         call solver_algorithm( f_out(dir), rhs(dir) )
        end do
     end if
 

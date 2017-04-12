@@ -20,7 +20,8 @@ module si_solver_alg_mod
                                        bundle_minmax, &
                                        bundle_inner_product
   use finite_element_config_mod, only: wtheta_on
-  use runtime_constants_mod,     only: get_mass_matrix_diagonal
+  use runtime_constants_mod,     only: get_mass_matrix_diagonal, &
+                                       w2_id, theta_space_id, eye_id
   use field_mod,                 only: field_type
   use formulation_config_mod,    only: eliminate_p
   use lhs_alg_mod,               only: lhs_alg
@@ -45,6 +46,7 @@ module si_solver_alg_mod
 
   use timestepping_config_mod,   only: dt
   use derived_config_mod,        only: si_bundle_size, bundle_size
+  use field_indices_mod,         only: igh_u, igh_t, igh_d, igh_p
 
   implicit none
   type(field_type), allocatable, private :: mm_diagonal(:)
@@ -110,18 +112,12 @@ contains
 !=============================================================================!
 
   subroutine si_solver_init(x0)
-    use function_space_mod,              only: function_space_type
-    use function_space_collection_mod,   only: function_space_collection
-    use finite_element_config_mod,       only: element_order
     use lhs_alg_mod,                     only: lhs_init
 
     implicit none
 
     type(field_type),             intent(in) :: x0(bundle_size)
     integer                                  :: iter
-    type(function_space_type), pointer       :: exner_fs => null()
-    integer(i_def)                           :: mesh_id
-    integer(kind=i_def)                      :: fs_handle
 
 
     allocate( dx         (si_bundle_size), &
@@ -136,15 +132,11 @@ contains
               Pv         (si_bundle_size,gcrk) )
  
 
-    mm_diagonal(1) = get_mass_matrix_diagonal(2)
-    if (wtheta_on) then
-      mm_diagonal(2) = get_mass_matrix_diagonal(4)
-    else
-      mm_diagonal(2) = get_mass_matrix_diagonal(0)
-    end if
-    mm_diagonal(3) = get_mass_matrix_diagonal(3)
+    mm_diagonal(igh_u) = get_mass_matrix_diagonal(w2_id)
+    mm_diagonal(igh_t) = get_mass_matrix_diagonal(theta_space_id)
+    mm_diagonal(igh_d) = get_mass_matrix_diagonal(eye_id)
     if ( .not. eliminate_p ) &
-      mm_diagonal(4) = get_mass_matrix_diagonal(3)
+      mm_diagonal(igh_p) = get_mass_matrix_diagonal(eye_id)
 
 
    
@@ -152,13 +144,7 @@ contains
       call clone_bundle(x0, x0_ext, si_bundle_size)
     else
       call clone_bundle(x0, x0_ext(1:bundle_size), bundle_size)
-      mesh_id = x0(bundle_size)%get_mesh_id()
-      fs_handle = x0(bundle_size)%which_function_space()
-
-      exner_fs => function_space_collection%get_fs(mesh_id,       &
-                                                   element_order, &
-                                                   fs_handle)
-      x0_ext(si_bundle_size) = field_type( exner_fs )
+      x0_ext(si_bundle_size) = field_type( vector_space = x0(bundle_size)%get_function_space() )
     end if
     call clone_bundle(x0_ext, rhs0_ext, si_bundle_size)
     call clone_bundle(x0_ext, dx,       si_bundle_size)
@@ -204,11 +190,11 @@ contains
 
 
     max_gmres_iter = maximum_iterations
-    call rhs0(1)%log_minmax(LOG_LEVEL_DEBUG,'max/min r_u = ')
-    call rhs0(2)%log_minmax(LOG_LEVEL_DEBUG,'max/min r_t = ')
-    call rhs0(3)%log_minmax(LOG_LEVEL_DEBUG,'max/min r_r = ')
+    call rhs0(igh_u)%log_minmax(LOG_LEVEL_DEBUG,'max/min r_u = ')
+    call rhs0(igh_t)%log_minmax(LOG_LEVEL_DEBUG,'max/min r_t = ')
+    call rhs0(igh_d)%log_minmax(LOG_LEVEL_DEBUG,'max/min r_r = ')
     if (.not. eliminate_p) &
-      call rhs0(4)%log_minmax(LOG_LEVEL_DEBUG,'max/min r_p = ')
+      call rhs0(igh_p)%log_minmax(LOG_LEVEL_DEBUG,'max/min r_p = ')
 
     err = bundle_inner_product(rhs0, rhs0, si_bundle_size)
     sc_err = max( sqrt(err), sc_err_min )

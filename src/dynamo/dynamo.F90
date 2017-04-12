@@ -63,8 +63,6 @@ program dynamo
                                            timestepping_method_semi_implicit, &
                                            timestepping_method_rk
   use derived_config_mod,             only : set_derived_config
-  use runtime_constants_mod,          only : create_runtime_constants, &
-                                             get_geopotential
   use checksum_alg_mod,               only : checksum_alg
   use diagnostic_alg_mod,             only : divergence_diagnostic_alg
   use mr_indices_mod,                 only : imr_v, imr_c, imr_r, imr_nc, &
@@ -84,19 +82,11 @@ program dynamo
 
   integer(i_def)     :: mesh_id
 
-  ! coordinate fields
-  type( field_type ) :: chi(3)
-
   ! prognostic fields
   type( field_type ) :: u, rho, theta, xi, mr(nummr), rho_in_wth
 
   ! Array to hold fields for checkpoint output
   type( field_type ), allocatable   :: checkpoint_output(:)
-
-  ! temps to hold things retrieved from runtime_constants
-  ! that are needed for output
-  type( field_type )               :: geopotential
-
 
   integer                          :: timestep, ts_init
 
@@ -141,15 +131,7 @@ program dynamo
 
   ! Create and initialise prognostic fields
   timestep = 0
-  call init_dynamo(mesh_id, chi, u, rho, theta, rho_in_wth, mr, xi, restart)
-
-  ! Create runtime_constants object. This in turn creates various things
-  ! needed by the timestepping algorithms such as mass matrix operators, mass
-  ! matrix diagonal fields and the geopotential field
-
-  call create_runtime_constants(mesh_id, chi)
-
-  geopotential = get_geopotential()
+  call init_dynamo(mesh_id, u, rho, theta, rho_in_wth, mr, xi, restart)
 
   ! Initial output
   ts_init = max( (restart%ts_start() - 1), 0 ) ! 0 or t previous.
@@ -187,16 +169,16 @@ program dynamo
             call rk_transport_init( mesh_id, u, rho, theta)
             call log_event( "Dynamo: Outputting initial fields", LOG_LEVEL_INFO )
           end if
-          call rk_transport_step( mesh_id, chi, u, rho, theta)
+          call rk_transport_step( u, rho, theta)
         case ( transport_scheme_bip_cosmic)
           if (timestep == restart%ts_start()) then 
             ! Initialise and output initial conditions on first timestep
             call cosmic_transport_init(mesh_id, u)
             call log_event( "Dynamo: Outputting initial fields", LOG_LEVEL_INFO )
           end if
-          call cosmic_transport_step( mesh_id, chi, rho)
+          call cosmic_transport_step(rho)
         case ( transport_scheme_cusph_cosmic)
-          call set_rho_alg(mesh_id, chi, rho, timestep)
+          call set_rho_alg(rho, timestep)
         case default
          call log_event("Dynamo: Incorrect transport option chosen, "// &
                         "stopping program! ",LOG_LEVEL_ERROR)
@@ -210,9 +192,9 @@ program dynamo
              call runge_kutta_init()
              call iter_alg_init(mesh_id, u, rho, theta)
              call log_event( "Dynamo: Outputting initial fields", LOG_LEVEL_INFO )
-             call conservation_algorithm(timestep, mesh_id, rho, u, theta, xi, geopotential, chi)
+             call conservation_algorithm(timestep, rho, u, theta, xi)
            end if
-           call iter_alg_step(chi, u, rho, theta, mr, xi, timestep)
+           call iter_alg_step(u, rho, theta, mr, xi, timestep)
 
          case( timestepping_method_rk )             ! RK
            ! Initialise and output initial conditions on first timestep
@@ -220,16 +202,16 @@ program dynamo
              call runge_kutta_init()
              call rk_alg_init( mesh_id, u, rho, theta)
              call log_event( "Dynamo: Outputting initial fields", LOG_LEVEL_INFO )
-             call conservation_algorithm(timestep, mesh_id, rho, u, theta, xi, geopotential, chi)
+             call conservation_algorithm(timestep, rho, u, theta, xi)
            end if
-           call rk_alg_step( mesh_id, chi, u, rho, theta, xi)
+           call rk_alg_step( u, rho, theta, xi)
          case default
            call log_event("Dynamo: Incorrect time stepping option chosen, "// &
                           "stopping program! ",LOG_LEVEL_ERROR)
            stop
        end select
 
-       call conservation_algorithm(timestep, mesh_id, rho, u, theta, xi, geopotential, chi)
+       call conservation_algorithm(timestep, rho, u, theta, xi)
 
     end if
 
@@ -316,7 +298,7 @@ program dynamo
 
   ! Call timestep finalizers
   if ( transport_only .and. scheme == transport_scheme_method_of_lines) then
-    call rk_transport_final( mesh_id, rho, theta)
+    call rk_transport_final( rho, theta)
   end if
 
   call log_event( 'Dynamo completed', LOG_LEVEL_INFO )

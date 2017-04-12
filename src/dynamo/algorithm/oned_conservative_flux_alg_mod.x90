@@ -18,7 +18,6 @@ module oned_conservative_flux_alg_mod
   use constants_mod,                     only: r_def, i_def
   use field_mod,                         only: field_type
   use function_space_mod,                only: function_space_type
-  use function_space_collection_mod,     only: function_space_collection
   use quadrature_mod,                    only: quadrature_type, GAUSSIAN
   use fs_continuity_mod,                 only: W0, W3
   use log_mod,                           only: log_event,            &
@@ -52,13 +51,11 @@ contains
 !> @param[in] dep_pts     Departure points
 !> @param[in] rho_in   Density values
 !> @param[inout] mass_flux   1D conservative mass flux values in the specified direction
-!> @param[in] mesh_id        Mesh id of the mesh object on which the model runs
   subroutine oned_conservative_flux_alg( direction,    &
                                          u,            &
                                          dep_pts,      &
                                          rho_in,       &
-                                         mass_flux,    &
-                                         mesh_id )
+                                         mass_flux)
 
     implicit none
 
@@ -67,17 +64,12 @@ contains
     type(field_type),    intent(in)     :: dep_pts
     type(field_type),    intent(in)     :: rho_in
     type(field_type),    intent(inout)  :: mass_flux
-    integer(i_def),      intent(in)     :: mesh_id
 
     type( field_type ) :: a0, a1, a2
 
     type(function_space_type), pointer :: rho_fs   => null()
-    type(function_space_type), pointer :: u_fs     => null()
 
-    rho_fs => function_space_collection%get_fs( mesh_id, element_order,      &
-                                              rho_in%which_function_space() )
-    u_fs => function_space_collection%get_fs( mesh_id, element_order,        &
-                                              u%which_function_space() )
+    rho_fs => rho_in%get_function_space()
 
     a0 = field_type( vector_space = rho_fs )
     a1 = field_type( vector_space = rho_fs )

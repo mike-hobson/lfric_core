@@ -2547,7 +2547,7 @@ end subroutine invoke_write_fields
 
 !-------------------------------------------------------------------------------  
 !> invoke_subgrid_coeffs: Invoke the calculation of subgrid rho coefficients
-subroutine invoke_subgrid_coeffs(a0,a1,a2,rho,direction,rho_approximation_stencil_extent)
+subroutine invoke_subgrid_coeffs(a0,a1,a2,rho,cell_orientation,direction,rho_approximation_stencil_extent)
 
     use flux_direction_mod,        only: x_direction, y_direction
     use stencil_dofmap_mod,        only: stencil_dofmap_type, &
@@ -2562,6 +2562,7 @@ subroutine invoke_subgrid_coeffs(a0,a1,a2,rho,direction,rho_approximation_stenci
     type( field_type ), intent( inout ) :: a1
     type( field_type ), intent( inout ) :: a2
     type( field_type ), intent( in )    :: rho
+    type( field_type ), intent( in )    :: cell_orientation
     integer, intent(in)                 :: direction
     integer, intent(in)                 :: rho_approximation_stencil_extent
 
@@ -2569,6 +2570,7 @@ subroutine invoke_subgrid_coeffs(a0,a1,a2,rho,direction,rho_approximation_stenci
     type( field_proxy_type )            :: a0_proxy
     type( field_proxy_type )            :: a1_proxy
     type( field_proxy_type )            :: a2_proxy
+    type( field_proxy_type )            :: cell_orientation_proxy
 
     type(stencil_dofmap_type), pointer  :: map => null()
     integer, pointer                    :: stencil_map(:,:) => null()
@@ -2581,12 +2583,11 @@ subroutine invoke_subgrid_coeffs(a0,a1,a2,rho,direction,rho_approximation_stenci
     integer                  :: d
     logical                  :: swap
 
-    integer                 :: orientation
-
     a0_proxy   = a0%get_proxy()
     a1_proxy   = a1%get_proxy()
     a2_proxy   = a2%get_proxy()
     rho_proxy  = rho%get_proxy()
+    cell_orientation_proxy = cell_orientation%get_proxy()
 
     undf_w3 = rho_proxy%vspace%get_undf()
     ndf_w3  = rho_proxy%vspace%get_ndf()
@@ -2605,8 +2606,6 @@ subroutine invoke_subgrid_coeffs(a0,a1,a2,rho,direction,rho_approximation_stenci
     end if
     rho_stencil_size = map%get_size()
 
-    orientation = 1
-
     swap = .false.
     do d = 1,rho_approximation_stencil_extent
       if (rho_proxy%is_dirty(depth=d)) swap = .true.
@@ -2622,7 +2621,7 @@ subroutine invoke_subgrid_coeffs(a0,a1,a2,rho,direction,rho_approximation_stenci
                                 rho_approximation,                        &
                                 undf_w3,                                  &
                                 rho_proxy%data,                           &
-                                orientation,                              &
+                                cell_orientation_proxy%data,              &
                                 ndf_w3,                                   &
                                 rho_stencil_size,                         &
                                 stencil_map,                              &

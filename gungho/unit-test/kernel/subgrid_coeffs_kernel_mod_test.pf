@@ -23,6 +23,8 @@ module subgrid_coeffs_kernel_mod_test
     integer(i_native) :: rho_approximation
     real(r_def)       :: rho(5)
     real(r_def)       :: answer(1:3)
+    real(r_def)       :: cell_orientation(5)
+    integer(i_native) :: direction
   contains
     procedure toString
   end type rho_parameter_type
@@ -33,6 +35,8 @@ module subgrid_coeffs_kernel_mod_test
     integer(i_native) :: rho_approximation
     real(r_def)       :: rho(5)
     real(r_def)       :: answer(1:3)
+    real(r_def)       :: cell_orientation(5)
+    integer(i_native) :: direction
   contains
     procedure test_approximation
   end type subgrid_coeffs_test_type
@@ -53,6 +57,8 @@ contains
     subgrid_coeffs_test%rho_approximation = testParameter%rho_approximation
     subgrid_coeffs_test%rho               = testParameter%rho
     subgrid_coeffs_test%answer            = testParameter%answer
+    subgrid_coeffs_test%cell_orientation  = testParameter%cell_orientation
+    subgrid_coeffs_test%direction         = testParameter%direction
 
   end function subgrid_coeffs_test_constructor
 
@@ -75,11 +81,10 @@ contains
 
     use subgrid_config_mod, &
                        only : subgrid_rho_approximation_constant_subgrid,     &
-                              subgrid_rho_approximation_linear_centered_diff, &
-                              subgrid_rho_approximation_linear_minmod,        &
                               subgrid_rho_approximation_ppm_no_limiter,       &
                               subgrid_rho_approximation_ppm_positive_only,    &
                               subgrid_rho_approximation_ppm_positive_monotone
+    use flux_direction_mod, only : x_direction, y_direction
 
     implicit none
 
@@ -88,48 +93,77 @@ contains
     parameters &
      = [ rho_parameter_type( subgrid_rho_approximation_constant_subgrid,      &
                  (/ 3.0_r_def, 2.0_r_def, 4.0_r_def, 1.0_r_def, 5.0_r_def /), &
-                             (/ 3.0_r_def, 0.0_r_def, 0.0_r_def /) ),         &
-         rho_parameter_type( subgrid_rho_approximation_linear_centered_diff,  &
+                             (/ 3.0_r_def, 0.0_r_def, 0.0_r_def /),           &
+                 (/ 1.0_r_def, 1.0_r_def, 1.0_r_def, 1.0_r_def, 1.0_r_def /), &
+                                                                x_direction), &
+         rho_parameter_type( subgrid_rho_approximation_constant_subgrid,      &
                  (/ 3.0_r_def, 2.0_r_def, 4.0_r_def, 1.0_r_def, 5.0_r_def /), &
-                             (/ 2.5_r_def, 1.0_r_def, 0.0_r_def /) ),         &
-         rho_parameter_type( subgrid_rho_approximation_linear_minmod,         &
-                 (/ 3.0_r_def, 2.0_r_def, 4.0_r_def, 1.0_r_def, 5.0_r_def /), &
-                             (/ 2.5_r_def, 1.0_r_def, 0.0_r_def /) ),         &
-         rho_parameter_type( subgrid_rho_approximation_linear_centered_diff,  &
-                 (/ 3.0_r_def, 2.0_r_def, 4.0_r_def, 1.0_r_def, 5.0_r_def /), &
-                             (/ 2.5_r_def, 1.0_r_def, 0.0_r_def /) ),         &
-         rho_parameter_type( subgrid_rho_approximation_ppm_no_limiter,        &
-                 (/ 3.0_r_def, 2.0_r_def, 4.0_r_def, 1.0_r_def, 5.0_r_def /), &
-                             (/ 2.5_r_def, 1.0_r_def, 0.0_r_def /) ),         &
-         rho_parameter_type( subgrid_rho_approximation_ppm_no_limiter,        &
-            (/ 5.0_r_def/2.0_r_def, 3.0_r_def/2.0_r_def, 7.0_r_def/2.0_r_def, &
-               1.0_r_def/2.0_r_def, 9.0_r_def/2.0_r_def /),                   &
-                             (/ 2.0_r_def, 1.0_r_def, 0.0_r_def /) ),         &
-         rho_parameter_type( subgrid_rho_approximation_ppm_no_limiter,        &
-           (/ 10.0_r_def+1.0_r_def/3.0_r_def, 10.0_r_def+1.0_r_def/3.0_r_def, &
-              10.0_r_def+7.0_r_def/3.0_r_def, 10.0_r_def+7.0_r_def/3.0_r_def, &
-              10.0_r_def+19.0_r_def/3.0_r_def /),                             &
-                             (/ 10.0_r_def, 0.0_r_def, 1.0_r_def /) ),        &
+                             (/ 3.0_r_def, 0.0_r_def, 0.0_r_def /),           &
+                 (/ 3.0_r_def, 3.0_r_def, 3.0_r_def, 3.0_r_def, 3.0_r_def /), &
+                                                                y_direction), &
          rho_parameter_type( subgrid_rho_approximation_ppm_no_limiter,        &
            (/ 10.0_r_def+5.0_r_def/6.0_r_def, 9.0_r_def+5.0_r_def/6.0_r_def,  &
               13.0_r_def+5.0_r_def/6.0_r_def, 10.0_r_def+5.0_r_def/6.0_r_def, &
               18.0_r_def+5.0_r_def/6.0_r_def /),                              &
-                             (/ 10.0_r_def, 1.0_r_def, 1.0_r_def /) ),        &
+                             (/ 10.0_r_def, 1.0_r_def, 1.0_r_def /),          &
+                 (/ 1.0_r_def, 1.0_r_def, 1.0_r_def, 1.0_r_def, 1.0_r_def /), &
+                                                                x_direction), &
          rho_parameter_type( subgrid_rho_approximation_ppm_no_limiter,        &
-           (/ 1.0_r_def/30.0_r_def, 1.0_r_def/30.0_r_def,                     &
-              2.0_r_def+1.0_r_def/30.0_r_def, 2.0_r_def+1.0_r_def/30.0_r_def, &
-              6.0_r_def+1.0_r_def/30.0_r_def /),                              &
-                             (/ -0.30_r_def, 0.0_r_def, 1.0_r_def /) ),       &
+           (/ 10.0_r_def+5.0_r_def/6.0_r_def, 9.0_r_def+5.0_r_def/6.0_r_def,  &
+              13.0_r_def+5.0_r_def/6.0_r_def, 10.0_r_def+5.0_r_def/6.0_r_def, &
+              18.0_r_def+5.0_r_def/6.0_r_def /),                              &
+                             (/ 10.0_r_def, 1.0_r_def, 1.0_r_def /),          &
+                 (/ 2.0_r_def, 2.0_r_def, 2.0_r_def, 2.0_r_def, 2.0_r_def /), &
+                                                               x_direction ), &
+         rho_parameter_type( subgrid_rho_approximation_ppm_no_limiter,        &
+           (/ 10.0_r_def+5.0_r_def/6.0_r_def, 13.0_r_def+5.0_r_def/6.0_r_def, &
+               9.0_r_def+5.0_r_def/6.0_r_def, 18.0_r_def+5.0_r_def/6.0_r_def, &
+              10.0_r_def+5.0_r_def/6.0_r_def /),                              &
+                             (/ 10.0_r_def, 1.0_r_def, 1.0_r_def /),          &
+                 (/ 3.0_r_def, 3.0_r_def, 3.0_r_def, 3.0_r_def, 3.0_r_def /), &
+                                                               x_direction ), &
+         rho_parameter_type( subgrid_rho_approximation_ppm_no_limiter,        &
+           (/ 10.0_r_def+5.0_r_def/6.0_r_def, 9.0_r_def+5.0_r_def/6.0_r_def,  &
+              13.0_r_def+5.0_r_def/6.0_r_def, 10.0_r_def+5.0_r_def/6.0_r_def, &
+              18.0_r_def+5.0_r_def/6.0_r_def /),                              &
+                             (/ 10.0_r_def, 1.0_r_def, 1.0_r_def /),          &
+                 (/ 4.0_r_def, 4.0_r_def, 4.0_r_def, 4.0_r_def, 4.0_r_def /), &
+                                                               y_direction ), &
+         rho_parameter_type( subgrid_rho_approximation_ppm_no_limiter,        &
+           (/ 10.0_r_def+5.0_r_def/6.0_r_def, 9.0_r_def+5.0_r_def/6.0_r_def,  &
+              13.0_r_def+5.0_r_def/6.0_r_def, 10.0_r_def+5.0_r_def/6.0_r_def, &
+              18.0_r_def+5.0_r_def/6.0_r_def /),                              &
+                             (/ 10.0_r_def, 1.0_r_def, 1.0_r_def /),          &
+                 (/ 4.0_r_def, 4.0_r_def, 4.0_r_def, 4.0_r_def, 4.0_r_def /), &
+                                                               y_direction ), &
+         rho_parameter_type( subgrid_rho_approximation_ppm_no_limiter,        &
+           (/ 10.0_r_def+5.0_r_def/6.0_r_def, 13.0_r_def+5.0_r_def/6.0_r_def, &
+              9.0_r_def+5.0_r_def/6.0_r_def, 18.0_r_def+5.0_r_def/6.0_r_def,  &
+              10.0_r_def+5.0_r_def/6.0_r_def /),                              &
+                             (/ 10.0_r_def, 1.0_r_def, 1.0_r_def /),          &
+                 (/ 2.0_r_def, 2.0_r_def, 2.0_r_def, 2.0_r_def, 2.0_r_def /), &
+                                                               y_direction ), &
+         rho_parameter_type( subgrid_rho_approximation_ppm_no_limiter,        &
+           (/ 10.0_r_def+5.0_r_def/6.0_r_def, 9.0_r_def+5.0_r_def/6.0_r_def,  &
+              13.0_r_def+5.0_r_def/6.0_r_def, 10.0_r_def+5.0_r_def/6.0_r_def, &
+              18.0_r_def+5.0_r_def/6.0_r_def /),                              &
+                             (/ 10.0_r_def, 1.0_r_def, 1.0_r_def /),          &
+                 (/ 1.0_r_def, 1.0_r_def, 1.0_r_def, 1.0_r_def, 1.0_r_def /), &
+                                                               y_direction ), &
          rho_parameter_type( subgrid_rho_approximation_ppm_positive_only,     &
            (/ 1.0_r_def/30.0_r_def, 1.0_r_def/30.0_r_def,                     &
               2.0_r_def+1.0_r_def/30.0_r_def, 2.0_r_def+1.0_r_def/30.0_r_def, &
               6.0_r_def+1.0_r_def/30.0_r_def /),                              &
-                             (/ 0.0_r_def, -1.2_r_def, 1.9_r_def /) ),        &
+                             (/ 0.0_r_def, -1.2_r_def, 1.9_r_def /) ,         &
+                 (/ 1.0_r_def, 1.0_r_def, 1.0_r_def, 1.0_r_def, 1.0_r_def /), &
+                                                               x_direction ), &
          rho_parameter_type( subgrid_rho_approximation_ppm_positive_monotone, &
            (/ 1.0_r_def/30.0_r_def, 1.0_r_def/30.0_r_def,                     &
               2.0_r_def+1.0_r_def/30.0_r_def, 2.0_r_def+1.0_r_def/30.0_r_def, &
               6.0_r_def+1.0_r_def/30.0_r_def /),                              &
-                             (/ 0.0_r_def, 0.0_r_def, 0.1_r_def /) ) ]
+                             (/ 0.0_r_def, 0.0_r_def, 0.1_r_def /),           &
+                 (/ 1.0_r_def, 1.0_r_def, 1.0_r_def, 1.0_r_def, 1.0_r_def /), &
+                                                               x_direction )  ]
 
   end function getParameters
 
@@ -149,46 +183,29 @@ contains
     integer(i_def), parameter :: cell    = 1
     integer(i_def), parameter :: undf_w3 = 5
     integer(i_def), parameter :: ndf_w3  = 1
-    integer(i_def), parameter :: dof_map(1,1:5) = reshape( (/1, 2, 3, 4, 5/), &
-                                                           (/1, 5/) )
-    integer :: orientation
+    integer(i_def), parameter :: stencil_map(1,1:5) = reshape( (/1, 2, 3, 4, 5/), &
+                                                               (/1, 5/) )
+    real(r_def) :: cell_orientation(1:undf_w3)
 
     real(kind=r_def) :: a0(1:5)
     real(kind=r_def) :: a1(1:5)
     real(kind=r_def) :: a2(1:5)
     real(kind=r_def) :: coeffs(1:3)
 
-    orientation = 1
-
     call subgrid_coeffs_code( nlayers,                &
                               this%rho_approximation, &
                               undf_w3,                &
                               this%rho,               &
-                              orientation,            &
+                              this%cell_orientation,  &
                               ndf_w3,                 &
                               rho_stencil_length,     &
-                              dof_map,                &
-                              x_direction,            &
+                              stencil_map,            &
+                              this%direction,         &
                               a0, a1, a2 )
     @assertEqual( this%answer(1), a0(1), tol)
     @assertEqual( this%answer(2), a1(1), tol)
     @assertEqual( this%answer(3), a2(1), tol)
 
-    orientation = 4
-
-    call subgrid_coeffs_code( nlayers,                &
-                              this%rho_approximation, &
-                              undf_w3,                &
-                              this%rho,               &
-                              orientation,            &
-                              ndf_w3,                 &
-                              rho_stencil_length,     &
-                              dof_map,                &
-                              y_direction,            &
-                              a0, a1, a2 )
-    @assertEqual( this%answer(1), a0(1), tol)
-    @assertEqual( this%answer(2), a1(1), tol)
-    @assertEqual( this%answer(3), a2(1), tol)
 
   end subroutine test_approximation
 

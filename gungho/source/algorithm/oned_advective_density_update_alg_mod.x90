@@ -40,15 +40,17 @@ contains
 !>          direction variable. An advective update is performed but using the
 !>          conservative flux operator, a multiplicative correction is made to
 !>          ensure the advective update is performed.
-!> @param[inout] direction Direction in which to perform the 1D advective update
-!> @param[inout] u  Wind values
-!> @param[inout] dep_pts Departure points for W2 points at lowest order
-!> @param[inout] rho_in   Density at time n
-!> @param[inout] rho_out  Density after advective update
-  subroutine oned_advective_density_update_alg(   direction,    &
-                                                  u,            &
-                                                  dep_pts,      &
-                                                  rho_in,       &
+!> @param[in]    direction        Direction in which to perform the 1D advective update
+!> @param[in]    u                Wind values
+!> @param[in]    dep_pts          Departure points for W2 points at lowest order
+!> @param[in]    cell_orientation Orientation of cells, in particular halo cells
+!> @param[in]    rho_in           Density at time n
+!> @param[inout] rho_out          Density after advective update
+  subroutine oned_advective_density_update_alg(   direction,            &
+                                                  u,                    &
+                                                  dep_pts,              &
+                                                  cell_orientation,     &
+                                                  rho_in,               &
                                                   rho_out)
 
     implicit none
@@ -56,6 +58,7 @@ contains
     integer(i_def), intent(in)          :: direction
     type(field_type),    intent(in)     :: u
     type(field_type),    intent(in)     :: dep_pts
+    type(field_type),    intent(in)     :: cell_orientation
     type(field_type),    intent(in)     :: rho_in
     type(field_type),    intent(inout)  :: rho_out
 
@@ -85,8 +88,9 @@ contains
     call invoke( set_field_scalar(0.0_r_def,mass_flux), &
                  set_field_scalar(0.0_r_def,a0),        &
                  set_field_scalar(0.0_r_def,a1),        &
-                 set_field_scalar(0.0_r_def,a2) )
-    call invoke_subgrid_coeffs(a0,a1,a2,rho_in,direction,rho_approximation_stencil_extent)
+                 set_field_scalar(0.0_r_def, a2) )
+
+    call invoke_subgrid_coeffs(a0,a1,a2,rho_in,cell_orientation,direction,rho_approximation_stencil_extent)
 
     call invoke_conservative_fluxes(  rho_in, dep_pts, u, mass_flux,  &
                                       a0, a1, a2, direction, dep_pt_stencil_extent )
@@ -98,7 +102,7 @@ contains
                  set_field_scalar(0.0_r_def,a0), &
                  set_field_scalar(0.0_r_def,a1), &
                  set_field_scalar(0.0_r_def,a2) )
-    call invoke_subgrid_coeffs(a0,a1,a2,rho_constant_1,direction,rho_approximation_stencil_extent)
+    call invoke_subgrid_coeffs(a0,a1,a2,rho_constant_1,cell_orientation,direction,rho_approximation_stencil_extent)
 
     call invoke_conservative_fluxes(  rho_constant_1, dep_pts, u, mass_flux,  &
                                       a0, a1, a2, direction, dep_pt_stencil_extent )

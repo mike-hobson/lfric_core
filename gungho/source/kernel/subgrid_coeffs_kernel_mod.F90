@@ -32,12 +32,9 @@ use argument_mod,       only : arg_type, func_type,        &
                                W3,                         &
                                GH_BASIS,                   &
                                CELLS
-use constants_mod,      only : r_def
+use constants_mod,      only : r_def, i_def
 use subgrid_config_mod, only : subgrid_rho_approximation_constant_subgrid,     &
                                subgrid_rho_approximation_constant_positive,    &
-                               subgrid_rho_approximation_linear_centered_diff, &
-                               subgrid_rho_approximation_linear_superbee,      &
-                               subgrid_rho_approximation_linear_minmod,        &
                                subgrid_rho_approximation_ppm_no_limiter,       &
                                subgrid_rho_approximation_ppm_positive_only,    &
                                subgrid_rho_approximation_ppm_positive_monotone
@@ -96,7 +93,7 @@ subroutine subgrid_coeffs_code(                                               &
                                 subgridrho_option,                            &
                                 undf_w3,                                      &
                                 rho,                                          &
-                                orientation,                                  &
+                                cell_orientation,                             &
                                 ndf_w3,                                       &
                                 stencil_length,                               &
                                 stencil_map,                                  &
@@ -114,7 +111,7 @@ subroutine subgrid_coeffs_code(                                               &
   integer, intent(in)               :: subgridrho_option
   integer, intent(in)               :: undf_w3
   real(kind=r_def), intent(in)      :: rho(undf_w3)
-  integer, intent(in)               :: orientation
+  real(kind=r_def), intent(in)      :: cell_orientation(undf_w3)
   integer, intent(in)               :: ndf_w3
   integer, intent(in)               :: stencil_length
   integer, intent(in)               :: stencil_map(1:ndf_w3,1:stencil_length)
@@ -132,11 +129,17 @@ subroutine subgrid_coeffs_code(                                               &
 
   logical :: positive,monotone
 
-  call stencil_ordering_and_orientation(stencil_length,orientation,direction,stencil_ordering)
+  ! If stencil is of length 5 for example, the stencil_ordering array returned is either
+  ! (/ 4, 2, 1, 3, 5 /) or (/ 5, 3, 1, 2, 4 /) depending on the cell orientation and
+  ! direction (x or y)
+  call stencil_ordering_and_orientation(stencil_length,int(cell_orientation(stencil_map(1,1)),i_def),direction,stencil_ordering)
 
 
   do k=0,nlayers-1
 
+    ! Rearrange the rho values such that array rho_local is an array of rho values
+    ! from left to right with rho_local(1) the rho value for the left most cell,
+    ! rho_local(2) the value one cell to the right and so on.
     do ii=1,stencil_length
       rho_local(ii) = rho( stencil_map(1,stencil_ordering(ii)) )
     end do
@@ -150,31 +153,6 @@ subroutine subgrid_coeffs_code(                                               &
       case (subgrid_rho_approximation_constant_positive)
         a0(stencil_map(1,1)) = max(rho(stencil_map(1,1)),0.0_r_def)
         a1(stencil_map(1,1)) = 0.0_r_def
-        a2(stencil_map(1,1)) = 0.0_r_def
-
-      case (subgrid_rho_approximation_linear_centered_diff)
-        a1(stencil_map(1,1)) = (rho(stencil_map(1,3))-rho(stencil_map(1,2)))/2.0_r_def
-        a0(stencil_map(1,1)) = rho(stencil_map(1,1))-a1(stencil_map(1,1))*0.5_r_def
-        a2(stencil_map(1,1)) = 0.0_r_def
-
-      case (subgrid_rho_approximation_linear_superbee)
-        sigma1 = minmod_function(                                             &
-                      rho(stencil_map(1,3))-rho(stencil_map(1,1)),            &
-                      2.0_r_def*(rho(stencil_map(1,1))-rho(stencil_map(1,2))) &
-                                )
-        sigma2 = minmod_function(                                             &
-                      2.0_r_def*(rho(stencil_map(1,3))-rho(stencil_map(1,1))),&
-                      rho(stencil_map(1,1))-rho(stencil_map(1,2)) )
-
-        a1(stencil_map(1,1)) = maxmod_function( sigma1, sigma2)
-        a0(stencil_map(1,1)) = rho(stencil_map(1,1))-a1(stencil_map(1,1))*0.5_r_def
-        a2(stencil_map(1,1)) = 0.0_r_def
-
-      case (subgrid_rho_approximation_linear_minmod)
-        a1(stencil_map(1,1)) = minmod_function(                               &
-                                rho(stencil_map(1,1))-rho(stencil_map(1,2)) , &
-                                rho(stencil_map(1,3))-rho(stencil_map(1,1)) )
-        a0(stencil_map(1,1)) = rho(stencil_map(1,1))-a1(stencil_map(1,1))*0.5_r_def
         a2(stencil_map(1,1)) = 0.0_r_def
 
       case (subgrid_rho_approximation_ppm_no_limiter)

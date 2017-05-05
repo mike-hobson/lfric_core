@@ -2,9 +2,6 @@ namelist subgrid
 
   rho_approximation : enumeration[constant_subgrid,
                                   constant_positive,
-                                  linear_centered_diff,
-                                  linear_superbee,
-                                  linear_minmod,
                                   ppm_no_limiter,
                                   ppm_positive_only,
                                   ppm_positive_monotone]

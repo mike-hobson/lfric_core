@@ -67,10 +67,10 @@ program gungho
   use derived_config_mod,             only : set_derived_config
   use checksum_alg_mod,               only : checksum_alg
   use diagnostic_alg_mod,             only : divergence_diagnostic_alg, &
-                                             pressure_diagnostic_alg
+                                             pressure_diagnostic_alg,   &
+                                             density_diagnostic_alg
   use mr_indices_mod,                 only : imr_v, imr_c, imr_r, imr_nc, &
                                              imr_nr, nummr
-  use set_rho_alg_mod,                only : set_rho_alg
   use runtime_constants_mod,          only : get_cell_orientation, get_detj_at_w2
   use timer_mod,                      only : timer, output_timer
   implicit none
@@ -209,8 +209,9 @@ program gungho
             call cusph_cosmic_transport_init(mesh_id, u)
             call log_event( "Dynamo: Outputting initial fields", LOG_LEVEL_INFO )
           end if
-          call set_rho_alg(rho, timestep)
           call cusph_cosmic_transport_step(mesh_id, rho, cell_orientation, detj_at_w2)
+          call density_diagnostic_alg(rho, timestep)
+          call conservation_algorithm(timestep, rho, u, theta, xi)
         case default
          call log_event("Dynamo: Incorrect transport option chosen, "// &
                         "stopping program! ",LOG_LEVEL_ERROR)

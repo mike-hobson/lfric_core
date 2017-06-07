@@ -13,6 +13,7 @@ module diagnostic_alg_mod
    private
    public :: divergence_diagnostic_alg
    public :: pressure_diagnostic_alg
+   public :: density_diagnostic_alg
 
 contains
 
@@ -87,5 +88,56 @@ contains
     call output_alg('exner', t, exner, mesh_id)
 
   end subroutine pressure_diagnostic_alg
+
+!=============================================================================!
+  !> @details An algorithm for calculating the l2 error for the density field.
+  !>          It is capable of calculating the error at each timestep by using
+  !>          set_rho_alg algorithm which will return the analytic density value
+  !>          at each timestep.
+  !> @param[in] rho Density
+  !> @param[in] timestep Timestep
+  subroutine density_diagnostic_alg(rho, timestep)
+    use runtime_constants_mod,       only: get_qr, &
+                                           get_coordinates
+    use operator_mod,                only: operator_type
+    use field_mod,                   only: field_type
+    use quadrature_mod,              only: quadrature_type
+    use set_rho_alg_mod,             only: set_rho_alg
+    use psykal_lite_mod,             only: invoke_minus_field_data,     &
+                                           invoke_X_innerproduct_X
+    use log_mod,                     only: log_event,         &
+                                           log_scratch_space, &
+                                           LOG_LEVEL_INFO
+
+    implicit none
+
+    type(field_type), intent(in) :: rho
+    integer(i_def),   intent(in) :: timestep
+
+    type(field_type)             :: rho_analytic
+    type(field_type)             :: rho_diff
+    type(operator_type), pointer :: m3_inv => null()
+    type(quadrature_type)        :: qr
+    type(field_type), pointer    :: chi(:) => null()
+    real(r_def)                  :: l2
+
+    qr = get_qr()
+    chi => get_coordinates()
+
+    rho_analytic = field_type( vector_space = rho%get_function_space() )
+    rho_diff     = field_type( vector_space = rho%get_function_space() )
+    call set_rho_alg( rho_analytic, timestep)
+
+    call invoke_minus_field_data(rho,rho_analytic,rho_diff)
+
+    ! Note that this method of calculating the error gives equal weighting to all
+    ! the cells. It may be better to use a weighted average of the l2 error by
+    ! using the cell volumes and the w3 mass matrix.
+    call invoke_X_innerproduct_X(l2, rho_diff)
+    write( log_scratch_space, '(A,E16.8)' )  &
+       'L2 of rho difference =',sqrt(l2)
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
+
+  end subroutine density_diagnostic_alg
 
 end module diagnostic_alg_mod

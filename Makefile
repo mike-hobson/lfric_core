@@ -286,7 +286,7 @@ integration-test-gungho: export PROJECT      = gungho
 integration-test-gungho: export SOURCE_DIR   = gungho/integration-test
 integration-test-gungho: export WORKING_DIR := $(WORKING_DIR)/gungho
 integration-test-gungho: export BIN_DIR      = $(ROOT)/tests
-integration-test-gungho: export PROGRAMS    := $(basename $(notdir $(shell find $(SOURCE_DIR) -maxdepth 1 -name '*.[Ff]90' -print)))
+integration-test-gungho: export PROGRAMS    := $(basename $(shell find $(SOURCE_DIR) -name '*.[Ff]90' -exec egrep -l "^\s*program" {} \;))
 integration-test-gungho: generate-configuration-gungho \
                          generate-psykal-gungho        \
                          generate-integration-test-gungho

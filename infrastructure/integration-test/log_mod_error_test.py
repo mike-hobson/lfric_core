@@ -23,7 +23,7 @@ class log_mod_error_serial_test( MpiTest ):
   Tests that logging an error terminates execution when run serially.
   '''
   def __init__( self ):
-    super(log_mod_error_serial_test, self).__init__( cores=1 )
+    super(log_mod_error_serial_test, self).__init__( processes=1 )
 
     self._minimumTimestamp = datetime.datetime.utcnow()
 
@@ -74,7 +74,7 @@ class log_mod_error_parallel_test( EsmfTest ):
   Tests that logging an error terminates execution when run in parallel.
   '''
   def __init__( self ):
-    super(log_mod_error_parallel_test, self).__init__( cores=2 )
+    super(log_mod_error_parallel_test, self).__init__( processes=2 )
 
     self._minimumTimestamp = datetime.datetime.utcnow()
     self._linePattern = re.compile( r'(\d\d\d\d)(\d\d)(\d\d) (\d\d)(\d\d)(\d\d)\.(\d\d\d) (\S+)\s+PET(\d+)\s+(.*)' )

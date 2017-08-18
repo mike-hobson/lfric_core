@@ -1,10 +1,8 @@
-!-------------------------------------------------------------------------------
-! (c) The copyright relating to this work is owned jointly by the Crown,
-! Met Office and NERC 2014.
-! However, it has been created with the help of the GungHo Consortium,
-! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
-!-------------------------------------------------------------------------------
-
+!-----------------------------------------------------------------------------
+! (C) Crown copyright 2017 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
 !>@brief Routines for testing the CMA data structures and kernels
 !>
 !>@details This module contains several routines for testing the correctness of 
@@ -31,7 +29,7 @@
 !>         Some of the tests construct a Helmholtz operator of the form
 !>         \f$H=\alpha M_3 + \beta D_v M_{2,v,inv} D_v^T\f$.
 
-module cma_test_mod
+module cma_test_algorithm_mod
 
   ! Standard system kernels
   use log_mod,                        only : log_event,         &
@@ -124,8 +122,8 @@ module cma_test_mod
   type(operator_type) :: grad_v
   ! CMA operators
   type(columnwise_operator_type) :: div_v_cma
-  type(columnwise_operator_type) :: grad_v_cma
   type(columnwise_operator_type) :: mm_vel_v_cma
+  type(columnwise_operator_type) :: grad_v_cma
   type(columnwise_operator_type) :: mm_pressure_cma
   type(columnwise_operator_type) :: mm_vel_v_inv_diag_cma 
   ! Bool to avoid initialising this module multiple times, set to .true. in first 
@@ -142,7 +140,7 @@ module cma_test_mod
   public::test_cma_add
   public::test_cma_apply_inv
   public::test_cma_diag_DhMDhT
-  
+
 contains
 
   !>@brief Initialise module
@@ -154,11 +152,11 @@ contains
   !>@param[in] mesh_id_in Id of mesh to be used
   subroutine cma_test_init(mesh_id_in)
     implicit none
-    
+
     integer(kind=i_def), intent(in) :: mesh_id_in
     ! Local variables
     integer(kind=i_def)               :: i
-    
+
     ! Return if module has already been initialised
     if (is_initialised) return
 
@@ -462,7 +460,7 @@ contains
 
     real(kind=r_def), intent(in) :: tolerance
     character(len=32) :: label = "apply vert velocity mass matrix"
-    
+
     call invoke( assign_field_random_kernel_type (u_v_in) )
     call invoke( enforce_bc_kernel_type ( u_v_in ) )
     call invoke( set_field_scalar( 0.0_r_def, u_v_out     ) )
@@ -489,7 +487,7 @@ contains
 
     real(kind=r_def), intent(in) :: tolerance
     character(len=32) :: label = "apply vert divergence"
-    
+
     call invoke( assign_field_random_kernel_type (u_v_in) )
     call invoke( enforce_bc_kernel_type ( u_v_in ) )
     call invoke( set_field_scalar( 0.0_r_def, p_out     ) )
@@ -515,11 +513,13 @@ contains
     implicit none
 
     real(kind=r_def), intent(in) :: tolerance
-    type(columnwise_operator_type) :: div_v_mm_vel_v_cma
+
     character(len=32) :: label = "multiply D_v.M_{u,v}"
 
+    type(columnwise_operator_type) :: div_v_mm_vel_v_cma
+
     ! Construct combined CMA operator \f$A = D_v.M_{u,v}\f$
-    div_v_mm_vel_v_cma  = div_v_cma%columnwise_operator_product( mm_vel_v_cma)
+    div_v_mm_vel_v_cma  = div_v_cma%columnwise_operator_product( mm_vel_v_cma )
 
     call invoke( columnwise_op_mul_kernel_type( div_v_cma,       &
                                                 mm_vel_v_cma,    &
@@ -545,7 +545,7 @@ contains
                                             div_v ) )
 
     call compare_fields(p_out,p_out_cma,tolerance,label)
-   
+
   end subroutine test_cma_multiply_div_v_mass_v
 
   !>@brief Test multiplication of two CMA operators (gradient and divergence)
@@ -558,8 +558,10 @@ contains
     implicit none
 
     real(kind=r_def), intent(in) :: tolerance
-    type(columnwise_operator_type) :: grad_v_div_v_cma
+
     character(len=32) :: label = "multiply D_v^T.D_v"
+
+    type(columnwise_operator_type) :: grad_v_div_v_cma
 
     ! Construct combined CMA operator A = D_v^T.D_v
     grad_v_div_v_cma  = grad_v_cma%columnwise_operator_product( div_v_cma)
@@ -590,7 +592,7 @@ contains
                                             grad_v ) )
 
     call compare_fields(u_v_out,u_v_out_cma,tolerance,label)
-   
+
   end subroutine test_cma_multiply_grad_v_div_v
 
   !>@brief Test addition of two CMA operators
@@ -662,7 +664,7 @@ contains
                                                    helmholtz_cma ) )
     call compare_fields(p_in,p_out_cma,tolerance,label)
 
-  end subroutine test_cma_apply_inv    
+  end subroutine test_cma_apply_inv
 
   !>@brief Test operator \f$diag(D_h M_{2,h,inv} D_h^T)\f$
   !>@details Construct the CMA operator \f$D=diag(D_h M_{2,h,inv} D_h^T)\f$.
@@ -708,7 +710,7 @@ contains
                                                       p_in,        &
                                                       div_h ) )
     ! Step 2: divide by diagonally lumped horizontal mass matrix
-    call invoke( divide_field( u_h_tmp, mm_vel_h_diag ) )    
+    call invoke( divide_field( u_h_tmp, mm_vel_h_diag ) )
     ! Step 3: weak divergence
     call invoke( matrix_vector_kernel_type( p_out,       &
                                             u_h_tmp,     &
@@ -719,7 +721,7 @@ contains
     call invoke( multiply_fields (p_out_cma, p_in, p_out_masked_cma ) )
 
     call compare_fields(p_out_masked, p_out_masked_cma, tolerance,label)
-        
+
   end subroutine test_cma_diag_DhMDhT 
 
-end module cma_test_mod
+end module cma_test_algorithm_mod

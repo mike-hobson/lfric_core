@@ -1,41 +1,57 @@
 #!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 ##############################################################################
-# (c) The copyright relating to this work is owned jointly by the Crown,
-# Met Office and NERC 2014. However, it has been created with the help of the
-# GungHo Consortium, whose members are identified at
-# https://puma.nerc.ac.uk/trac/GungHo/wiki
+# (c) Crown copyright 2017 Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
 ##############################################################################
 
 from __future__ import print_function
 
-import sys
+from abc import ABCMeta
+import os
 import re
+import sys
 
-from testframework import Test, TestEngine, TestFailed
+from testframework import EsmfTest, TestEngine, TestFailed
 
-class CMATest(Test):
-    def __init__(self,flag):
-        self._flag = flag
-        super(CMATest, self).__init__([sys.argv[1],'--test_'+self._flag])
+class CMATest(EsmfTest):
+  __metaclass__ = ABCMeta
 
-    def test( self, process ):
-        expectedMessage="CMA-test completed"
-        out, err = process.communicate()
-        if (not self.test_passed(out)):
-            message = 'Test {} failed with "{}"'
-            raise TestFailed(message.format(self._flag, out ))
-	                             
-        message = ' CMA test : '+self._flag
-        return message
+  def __init__(self,flag):
+    self._flag = flag
+    if 'MPIEXEC_BROKEN' in os.environ:
+      CMATest.set_mpiexec_broken()
+    super(CMATest, self).__init__( [sys.argv[1],
+                                    'cma_test_configuration.nml',
+                                    'test_' + self._flag],
+                                    processes=1,
+                                    name='cma_test.Log' )
 
-    def test_passed(self,out):
-        success = False
-        for line in out.split("\n"):
-            m = re.match(r"^.* *test.*: *PASS *$",line.strip())
-            if m:
-                success = True                
-        return success
+
+  def test( self, return_code, out, err ):
+    if return_code != 0:
+      message = 'Test program failed with exit code: {code}'
+      raise TestFailed( message.format( code=return_code ),
+                        stdout=out, stderr=err,
+                        log=self.getEsmfLog() )
+
+    if not self.test_passed( out ): # "out" becomes self.getEsmfLog() when PE>1
+      message = 'Test {} failed'
+      raise TestFailed( message.format( self._flag ),
+                        stdout=out, stderr=err,
+                        log=self.getEsmfLog() )
+
+    return 'CMA test : '+self._flag
+
+  def test_passed(self, out):
+    success = False
+    pattern = re.compile( r'\s+test\s+.*?:\s*PASS\s*$' )
+    for line in out.split("\n"):
+      match = pattern.search( line )
+      if match:
+        success = True
+    return success
 
 class cma_test_apply_mass_p(CMATest):
     def __init__(self):

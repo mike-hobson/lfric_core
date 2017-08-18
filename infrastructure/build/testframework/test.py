@@ -57,9 +57,19 @@ class AbstractTest(object):
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE )
     out, err = process.communicate()
+    self.post_execution( process.returncode )
     return self.test( process.returncode,
                       self.filterOut( out ),
                       self.filterErr( err ) )
+
+  def post_execution( self, code ):
+    '''
+    Perform any management tasks after the executable has been run.
+
+    The default implementation does nothing. Only override if you have
+    something to do.
+    '''
+    pass
 
   def filterOut( self, out ):
     '''
@@ -98,8 +108,14 @@ class MpiTest(AbstractTest):
   '''
   __metaclass__ = ABCMeta
 
-  def __init__( self, command=sys.argv[1], cores=4 ):
-    self._cores = cores
+  _mpiexec_broken = None
+
+  @staticmethod
+  def set_mpiexec_broken():
+    MpiTest._mpiexec_broken=True
+
+  def __init__( self, command=sys.argv[1], processes=4 ):
+    self._processes = processes
 
     if type(command) is not list:
       command = [command]
@@ -125,7 +141,12 @@ class MpiTest(AbstractTest):
     handle.close()
     os.chmod( self._scriptname, 0700 )
 
-    mpiCommand = ['mpiexec', '-n', str(self._cores), self._scriptname]
+    if MpiTest._mpiexec_broken:
+      mpi_launcher = 'mpirun'
+    else:
+      mpi_launcher = 'mpiexec'
+
+    mpiCommand = [mpi_launcher, '-n', str(self._processes), self._scriptname]
     super(MpiTest, self).__init__( mpiCommand )
 
   def __del__( self ):
@@ -142,7 +163,7 @@ class MpiTest(AbstractTest):
       if state == 'spinup':
         if line == self._startTag:
           processesRunning += 1
-          if processesRunning == self._cores:
+          if processesRunning == self._processes:
             state = 'spindown'
       elif state == 'spindown':
         if line == self._doneTag:
@@ -160,7 +181,7 @@ class MpiTest(AbstractTest):
     '''
     newErr = err.splitlines()
 
-    return '\n'.join( newErr[:-self._cores] )
+    return '\n'.join( newErr[:-self._processes] )
 
 ##############################################################################
 class EsmfTest(MpiTest):
@@ -169,9 +190,18 @@ class EsmfTest(MpiTest):
   '''
   __metaclass__ = ABCMeta
 
-  def __init__( self, command=sys.argv[1], cores=4 ):
-    super(EsmfTest, self).__init__( command, cores )
-    self._esmfLog = collections.defaultdict( None )
+  def __init__( self, command=sys.argv[1], name='ESMF_LogFile', processes=4 ):
+    '''
+    Constructor.
+
+    Arguments:
+
+      name - String - Name given to ESMF and therefore the one which appears
+                      in log file names.
+    '''
+    super(EsmfTest, self).__init__( command, processes )
+    self._application_name = name
+    self._esmfLog = collections.defaultdict( lambda:None )
 
   def getEsmfLog( self, process=0 ):
     '''
@@ -186,26 +216,29 @@ class EsmfTest(MpiTest):
 
   def performTest( self ):
     '''
-    Runs the executable and handles log files.
+    Removes any old log files and runs the executable.
     '''
     # Remove any existing log files
     for filename in os.listdir( '.' ):
       if filename.startswith( 'PET' ):
         os.remove( filename )
 
-    process = subprocess.Popen( self._executable,
-                                stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE )
-    out, err = process.communicate()
+    return super(EsmfTest, self).performTest()
 
-    for number in range(0, self._cores):
-      width = int( math.floor( math.log10( self._cores ) ) ) + 1
-      filenameFormat = 'PET{{number:0{width}d}}.ESMF_LogFile'
-      filename = filenameFormat.format( width=width ).format( number=number )
-      with open( filename, 'r' ) as handle:
-        self._esmfLog[number] = handle.read()
+  def post_execution( self, return_code ):
+    '''
+    Caches log files for future retrieval.
 
-    return self.test( process.returncode,
-                      self.filterOut( out ),
-                      self.filterErr( err ) )
+    This should only be attempted if the executable completed normally.
+    i.e. It completed of its own volition, not as the result of a signal.
+         An error condition is "normal" in these terms.
+    '''
+    if return_code < 128:
+      for number in range(0, self._processes):
+        width = int( math.floor( math.log10( self._processes ) ) ) + 1
+        filenameFormat = 'PET{{number:0{width}d}}.{{name}}'
+        filename = filenameFormat.format( width=width ).format( number=number,
+                                                    name=self._application_name)
+        with open( filename, 'r' ) as handle:
+          self._esmfLog[number] = handle.read()
+

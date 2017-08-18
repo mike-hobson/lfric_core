@@ -279,6 +279,9 @@
 {%-     set label = compiler | lower + '_' + build | lower%}
             purge_local => purge_target
             purge_target => export_for_{{label}}
+{%-     if compiler in TARGET_PERFORM_INTEGRATION_TESTS %}
+            export_for_{{label}} => integration_test_with_{{label}}
+{%-     endif %}
             export_for_{{label}} => compile_with_{{label}}
             export_for_{{label}} => compile_mesh_tools_with_{{label}}
 {%-     if publish %}
@@ -1102,6 +1105,27 @@ causes override warnings when using csar.
                       """
         [[[environment]]]
             WORKING_DIR = {{TARGET_BUILD_ROOT}}/{{label}}
+        [[[directives]]]
+{%-       for DIRECTIVE in TARGET_BUILD_BATCHER_DIRECTIVES %}
+            {{DIRECTIVE}}
+{%-       endfor %}
+{%-     endif %}
+
+{%-     if 'integration_test_with_' + label in scheduledTasks %}
+    [[integration_test_with_{{label}}]]
+      inherit = {{family}}, TARGET
+        pre-script = """
+                     {{'\n'|commandList(TARGET_BASE_SETUP,
+                                        compiler_setup[compiler],
+                                        TARGET_BUILD_SETUP,
+                                        TARGET_REVEAL_SETUP)}}
+                     """
+        script = make -C $SOURCE_DIRECTORY integration-test-gungho
+        post-script = """
+                      {{deleteDirectory('$WORKING_DIR')}}
+                      """
+        [[[environment]]]
+            WORKING_DIR = {{TARGET_BUILD_ROOT}}/integration_{{label}}
         [[[directives]]]
 {%-       for DIRECTIVE in TARGET_BUILD_BATCHER_DIRECTIVES %}
             {{DIRECTIVE}}

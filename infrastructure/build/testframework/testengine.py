@@ -27,8 +27,7 @@ class TestEngine:
     try:
       success = testcase.performTest()
       message = '[PASS] {test}: {message}'
-      print( message.format( test=type(testcase).__name__,
-                                message=success ) )
+      print( message.format( test=type(testcase).__name__, message=success ) )
     except TestFailed as ex:
       message = '[FAIL] {test}: {message}'
-      exit( message.format( test=type(testcase).__name__, message=ex ) )
+      exit( message.format( test=type(testcase).__name__, message=str(ex) ) )

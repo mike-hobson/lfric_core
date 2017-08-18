@@ -1,10 +1,8 @@
-!-------------------------------------------------------------------------------     
-! (c) The copyright relating to this work is owned jointly by the Crown,
-! Met Office and NERC 2014.
-! However, it has been created with the help of the GungHo Consortium,
-! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
-!-------------------------------------------------------------------------------
-
+!-----------------------------------------------------------------------------
+! (C) Crown copyright 2017 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
 !>@brief Main program for running the CMA operator tests in cma_test_mod.x90.
 !>@details To run a particular test, provide the appropriate command line
 !>         argument of the form --test_XXX where a list of possible values 
@@ -18,38 +16,10 @@
 !>         reliably sequentially.
 
 program cma_test
-  use ESMF,                           only : ESMF_Initialize,    &
-                                             ESMF_Finalize,      &
-                                             ESMF_VMGet,         &
-                                             ESMF_VMAllReduce,   &
-                                             ESMF_LOGKIND_MULTI, &
-                                             ESMF_SUCCESS,       &
-                                             ESMF_REDUCE_SUM,    &
-                                             ESMF_VM
-  use mesh_mod,                       only : mesh_type
-  use mesh_collection_mod,            only : mesh_collection
+
   use base_mesh_config_mod,           only : geometry, &
                                              base_mesh_geometry_spherical
-  use planet_config_mod,              only : radius
-  use derived_config_mod,             only : set_derived_config
-  use constants_mod,                  only : i_def, r_def, str_max_filename, pi
-  use function_space_mod,             only : function_space_type
-  use function_space_collection_mod,  only : function_space_collection
-  use init_gungho_mod,                only : init_gungho
-  use gungho_configuration_mod,       only : read_configuration, &
-                                             ensure_configuration
-  use set_up_mod,                     only : reference_cube
-  use field_mod,                      only : field_type
-  use fs_continuity_mod,              only : W0,W1,W2,W3
-  use log_mod,                        only : log_event,         &
-                                             log_set_level,     &
-                                             log_scratch_space, &
-                                             LOG_LEVEL_ERROR,   &
-                                             LOG_LEVEL_INFO,    &
-                                             LOG_LEVEL_DEBUG,   &
-                                             LOG_LEVEL_TRACE
-  use finite_element_config_mod,      only : element_order
-  use cma_test_mod,                   only : cma_test_init,                  &
+  use cma_test_algorithm_mod,         only : cma_test_init,                  &
                                              test_cma_apply_mass_p,          &
                                              test_cma_apply_mass_v,          &
                                              test_cma_apply_div_v,           &
@@ -58,6 +28,32 @@ program cma_test
                                              test_cma_add,                   &
                                              test_cma_apply_inv,             &
                                              test_cma_diag_DhMDhT
+  use constants_mod,                  only : i_def, r_def, str_max_filename, pi
+  use derived_config_mod,             only : set_derived_config
+  use ESMF,                           only : ESMF_Initialize,    &
+                                             ESMF_Finalize,      &
+                                             ESMF_VMGet,         &
+                                             ESMF_VMAllReduce,   &
+                                             ESMF_LOGKIND_MULTI, &
+                                             ESMF_SUCCESS,       &
+                                             ESMF_REDUCE_SUM,    &
+                                             ESMF_VM
+  use field_mod,                      only : field_type
+  use finite_element_config_mod,      only : element_order
+  use fs_continuity_mod,              only : W0,W1,W2,W3
+  use function_space_mod,             only : function_space_type
+  use function_space_collection_mod,  only : function_space_collection
+  use gungho_configuration_mod,       only : read_configuration, &
+                                             ensure_configuration
+  use init_gungho_mod,                only : init_gungho
+  use log_mod,                        only : log_event,         &
+                                             log_scratch_space, &
+                                             LOG_LEVEL_ERROR,   &
+                                             LOG_LEVEL_INFO
+  use mesh_mod,                       only : mesh_type
+  use mesh_collection_mod,            only : mesh_collection
+  use planet_config_mod,              only : radius
+  use set_up_mod,                     only : reference_cube
 
   implicit none
 
@@ -72,7 +68,7 @@ program cma_test
   ! Number of processes and local rank
   integer(kind=i_def) :: total_ranks, local_rank
   ! Filename to read namelist from
-  character(len=str_max_filename)   :: filename = "gungho/integration-test/data/cma_test_configuration.nml"
+  character(:), allocatable :: filename
 
   ! Variables used for parsing command line arguments
   integer :: length, status, nargs
@@ -117,7 +113,9 @@ program cma_test
   ! Error tolerance for tests
   real(kind=r_def), parameter :: tolerance=1.0E-12
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Initialise ESMF and get the rank information from the virtual machine
+  !
   CALL ESMF_Initialize(vm=vm, defaultlogfilename="cma_test.Log", &
                        logkindflag=ESMF_LOGKIND_MULTI, rc=rc)
   if (rc /= ESMF_SUCCESS) then
@@ -134,9 +132,84 @@ program cma_test
   total_ranks = petCount
   local_rank  = localPET
 
-  call log_event( ' CMA functional testing running ...', LOG_LEVEL_INFO )
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !
+  call log_event( 'CMA functional testing running ...', LOG_LEVEL_INFO )
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Parse command line parameters
+  !
+  call get_command_argument( 0, dummy, length, status )
+  allocate(character(length)::program_name)
+  call get_command_argument( 0, program_name, length, status )
+  nargs = command_argument_count()
+  ! Print out usage message if wrong number of arguments is specified
+  if (nargs /= 2) then
+     write(usage_message,*) "Usage: ",trim(program_name), &
+          " <namelist filename> " // &
+          " test_XXX with XXX in { " // &
+          "apply_mass_p, "             // &
+          "apply_mass_v, "             // &
+          "apply_div_v, "              // &
+          "multiply_div_v_mass_v, "    // &
+          "multiply_grad_v_div_v, "    // &
+          "add, "                      // &
+          "apply_inv, "                // &
+          "diag_dhmdht, "              // &
+          "all"                        // &
+          " } "
+     call log_event( trim(usage_message), LOG_LEVEL_ERROR )
+  end if
+
+  call get_command_argument( 1, dummy, length, status )
+  allocate( character(length) :: filename )
+  call get_command_argument( 1, filename, length, status )
+
+  call get_command_argument( 2, dummy, length, status )
+  allocate(character(length)::test_flag)
+  call get_command_argument( 2, test_flag, length, status )
+
+  ! Choose test case depending on flag provided in the first command
+  ! line argument
+  select case (trim(test_flag))
+  case ("test_apply_mass_p")
+     do_test_apply_mass_p = .true.
+  case ("test_apply_mass_v")
+     do_test_apply_mass_v = .true.
+  case ("test_apply_div_v")
+     do_test_apply_div_v = .true.
+  case ("test_multiply_div_v_mass_v")
+     do_test_multiply_div_v_mass_v = .true.
+  case ("test_multiply_grad_v_div_v")
+     do_test_multiply_grad_v_div_v = .true.
+  case ("test_add")
+     do_test_add = .true.
+  case ("test_apply_inv")
+     do_test_apply_inv = .true.
+  case ("test_diag_dhmdht")
+     do_test_diag_dhmdht = .true.
+  case ("test_all")
+     do_test_apply_mass_p = .true.
+     do_test_apply_mass_v = .true.
+     do_test_apply_div_v = .true.
+     do_test_multiply_div_v_mass_v = .true.
+     do_test_multiply_grad_v_div_v = .true.
+     do_test_add = .true.
+     do_test_apply_inv = .true.
+     do_test_diag_dhmdht = .true.
+  case default
+     call log_event( "Unknown test", LOG_LEVEL_ERROR )
+  end select
+
+  deallocate(program_name)
+  deallocate(test_flag)
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Load configuration from file
+  !
+  write( log_scratch_space, '("Reading namelist file: ", A)' ) trim(filename)
+  call log_event( log_scratch_space, LOG_LEVEL_INFO )
+
   allocate( success_map(size(required_configuration)) )
 
   call read_configuration( filename )
@@ -156,66 +229,10 @@ program cma_test
 
   call set_derived_config()
 
-  ! Parse command line parameters
-  call get_command_argument( 0, dummy, length, status )
-  allocate(character(length)::program_name)
-  call get_command_argument( 0, program_name, length, status )
-  nargs = command_argument_count()
-  ! Print out usage message if wrong number of arguments is specified
-  if (nargs /= 1) then
-     write(usage_message,*) "Usage: ",trim(program_name), &
-          " --test_XXX with XXX in { " // &
-          "apply_mass_p, "             // &
-          "apply_mass_v, "             // &
-          "apply_div_v, "              // &
-          "multiply_div_v_mass_v, "    // &
-          "multiply_grad_v_div_v, "    // &
-          "add, "                      // &
-          "apply_inv"                  // &
-          "diag_dhmdht"                // &
-          "all"                        // &
-          " } "
-     call log_event( trim(usage_message), LOG_LEVEL_ERROR )
-  end if
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Initialise
 
-  call get_command_argument( 1, dummy, length, status )
-  allocate(character(length)::test_flag)
-  call get_command_argument( 1, test_flag, length, status )
-
-  ! Choose test case depending on flag provided in the first command
-  ! line argument
-  select case (trim(test_flag))
-  case ("--test_apply_mass_p")
-     do_test_apply_mass_p = .true.
-  case ("--test_apply_mass_v")
-     do_test_apply_mass_v = .true.
-  case("--test_apply_div_v")
-     do_test_apply_div_v = .true.
-  case ("--test_multiply_div_v_mass_v")
-     do_test_multiply_div_v_mass_v = .true.
-  case ("--test_multiply_grad_v_div_v")
-     do_test_multiply_grad_v_div_v = .true.
-  case ("--test_add")
-     do_test_add = .true.
-  case ("--test_apply_inv")
-     do_test_apply_inv = .true.
-  case ("--test_diag_dhmdht")
-     do_test_diag_dhmdht = .true.
-  case ("--test_all")
-     do_test_apply_mass_p = .true.
-     do_test_apply_mass_v = .true.
-     do_test_apply_div_v = .true.
-     do_test_multiply_div_v_mass_v = .true.
-     do_test_multiply_grad_v_div_v = .true.
-     do_test_add = .true.
-     do_test_apply_inv = .true.
-     do_test_diag_dhmdht = .true.
-  case default
-     call log_event( "Unknown test", LOG_LEVEL_ERROR )
-  end select
-  
-  deallocate(program_name)
-  deallocate(test_flag)
+  call log_event( 'Initialising harness', LOG_LEVEL_INFO )
 
   ! Create the mesh and function space collection
   call init_gungho(mesh_id, local_rank, total_ranks)
@@ -255,6 +272,11 @@ program cma_test
                      LOG_LEVEL_ERROR )
   end if
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Do tests
+  !
+  call log_event( 'Initialising test', LOG_LEVEL_INFO )
+
   ! Initialise CMA test module
   call cma_test_init(mesh_id)
 
@@ -268,7 +290,9 @@ program cma_test
   if (do_test_apply_inv)                call test_cma_apply_inv(tolerance)
   if (do_test_diag_dhmdht)              call test_cma_diag_DhMDhT(tolerance)
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Finalise and close down
+  !
   call log_event( ' CMA functional testing completed ...', LOG_LEVEL_INFO )
   call ESMF_Finalize()
 

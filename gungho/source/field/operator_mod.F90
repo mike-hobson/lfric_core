@@ -287,6 +287,7 @@ contains
     self%ncell_3d = fs_from%get_ncell() * fs_from%get_nlayers()
     ! allocate the array in memory
     allocate(self%local_stencil( fs_to%get_ndf(),fs_from%get_ndf(), self%ncell_3d ) )
+    self%local_stencil(:,:,:) = 0.0_r_def
 
   end function operator_constructor
 
@@ -359,6 +360,7 @@ contains
     self%bandwidth = 1+ceiling((self%gamma_m+self%gamma_p)/(1.0_8*self%beta),i_def)
     ! allocate memory
     call self%allocate_memory()
+    self%columnwise_matrix(:,:,:) = 0.0_r_def
     ! build dof-maps
     call self%build_dofmaps()
   end function columnwise_operator_constructor
@@ -403,6 +405,7 @@ contains
     self%bandwidth = 1+ceiling((self%gamma_m+self%gamma_p)/(1.0_8*self%beta),i_def)
    ! allocate memory
     call self%allocate_memory()
+    self%columnwise_matrix(:,:,:) = 0.0_r_def
    ! build dof-maps
     call self%build_dofmaps()
   end function columnwise_operator_constructor_custom

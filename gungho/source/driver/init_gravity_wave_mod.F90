@@ -14,10 +14,10 @@ module init_gravity_wave_mod
   use constants_mod,                  only : i_def
   use field_mod,                      only : field_type, write_interface
   use finite_element_config_mod,      only : element_order
-  use function_space_collection_mod,  only : function_space_collection
+
   use fs_continuity_mod,              only : W0, W2, W3, Wtheta
   use gw_init_fields_alg_mod,         only : gw_init_fields_alg
-  use log_mod,                        only : log_event,         &
+  use log_mod,                        only : log_event, log_scratch_space, &
                                              LOG_LEVEL_INFO, &
                                              LOG_LEVEL_ERROR
   use restart_control_mod,            only : restart_type
@@ -30,24 +30,65 @@ module init_gravity_wave_mod
   use io_mod,                         only : xios_write_field_face, &
                                              xios_write_field_node
 
+  use function_space_mod,             only : function_space_type
+  use function_space_collection_mod,  only : function_space_collection, &
+                                             function_space_collection_type
+  use function_space_chain_mod,       only : function_space_chain_type
+
+  use init_multigrid_mesh_mod,        only : mesh_ids
+  use multigrid_config_mod,           only : l_multigrid, ugrid, order, &
+                                             continuity, multigrid_chain_nitems
   implicit none
 
 
   contains
 
-  subroutine init_gravity_wave(mesh_id, wind, pressure, buoyancy, restart)
+  subroutine init_gravity_wave( mesh_id, multigrid_function_space_chain, &
+                                wind, pressure, buoyancy, restart )
 
-    integer(i_def), intent(in)               :: mesh_id
+    integer(i_def),                  intent(in)  :: mesh_id
+    type(function_space_chain_type), intent(out) :: multigrid_function_space_chain
+
     ! prognostic fields
     type( field_type ), intent(inout)        :: wind, pressure, buoyancy
     type(restart_type), intent(in)           :: restart
     integer(i_def)                           :: buoyancy_space, output_b_space
 
-    procedure(write_interface), pointer      :: tmp_ptr
+    integer(i_def) :: i
+
+    procedure(write_interface), pointer :: tmp_ptr
+    type(function_space_type),  pointer :: function_space => null()
 
     call log_event( 'gravity wave: initialisation...', LOG_LEVEL_INFO )
 
-    
+
+
+    allocate( function_space_collection,      &
+              source = function_space_collection_type() )
+
+    !===============================================================================
+    ! Now create the function space chain for multigrid
+    !===============================================================================
+    if (l_multigrid) then
+
+      do i=1, multigrid_chain_nitems
+
+        ! Make sure this function_space is in the collection
+        function_space => function_space_collection%get_fs( mesh_ids(i), &
+                                                            order(i),    &
+                                                            continuity(i) )
+
+        write( log_scratch_space,"(A,I0,A)")                       &
+             'Adding function_space id ', function_space%get_id(), &
+             ' to multigrid function_space chain'
+        call log_event( log_scratch_space, LOG_LEVEL_INFO )
+
+        call multigrid_function_space_chain%add( function_space )
+ 
+      end do
+    end if
+
+
     ! Create prognostic fields
     select case(b_space)
       case(gw_miniapp_constants_b_space_w0)

@@ -275,7 +275,6 @@ integer(i_def) :: total_inners
 integer(i_def) :: last
 integer(i_def), pointer :: cell_owner_ptr( : )
 integer(i_def) :: halo_start, halo_finish
-integer(i_def) :: npanels
 
 self%local_rank = local_rank
 self%total_ranks = total_ranks

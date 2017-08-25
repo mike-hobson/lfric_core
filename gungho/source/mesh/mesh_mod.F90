@@ -357,9 +357,9 @@ contains
 
     ! Arrays where the connected entity ids are global ids
     integer(i_def), allocatable :: &
-      vert_on_cell_2d_gid (:,:)    &! Vertices connected to local 2d cell.
-    , edge_on_cell_2d_gid (:,:)    &! Edges connected to local 2d cell.
-    , cell_next_2d_gid    (:,:)     ! Local 2d cell connectivity.
+      vert_on_cell_2d_gid (:,:),   &! Vertices connected to local 2d cell.
+      edge_on_cell_2d_gid (:,:),   &! Edges connected to local 2d cell.
+      cell_next_2d_gid    (:,:)     ! Local 2d cell connectivity.
 
     integer(i_def), allocatable :: &
       vert_lid_gid_map(:)           ! Vertices local-to-global id map
@@ -630,10 +630,10 @@ contains
                         self%nlayers,              &
                         self%dz )
 
-    allocate( self%face_on_cell( self%nfaces_per_cell &
-                               , self%ncells_2d_with_ghost ) )
-    allocate( self%edge_on_cell( self%nedges_per_cell &
-                               , self%ncells_2d_with_ghost ) )
+    allocate( self%face_on_cell( self%nfaces_per_cell, &
+                                 self%ncells_2d_with_ghost ) )
+    allocate( self%edge_on_cell( self%nedges_per_cell, &
+                                 self%ncells_2d_with_ghost ) )
 
     call mesh_connectivity ( self%face_on_cell,         &
                              self%edge_on_cell,         &
@@ -1996,32 +1996,35 @@ contains
   !> @brief  Returns a pointer to the mesh_map object that maps this 
   !>         mesh_type object (source) to another mesh_type_object (target).
   !>
-  !> @param[in] target_mesh_id ID of the target mesh object.
+  !> @param[in] target_mesh   Pointer to target mesh object.
   !> @retval    mesh_map_type<<pointer>>
   !============================================================================
-  function get_mesh_map(self, target_mesh_id) result(mesh_map)
+  function get_mesh_map(self, target_mesh) result(mesh_map)
 
     implicit none
-    class(mesh_type), intent(in) :: self
-    integer(i_def),   intent(in) :: target_mesh_id
+
+    class(mesh_type),         intent(in) :: self
+    type(mesh_type), pointer, intent(in) :: target_mesh
 
     type(mesh_map_type), pointer :: mesh_map
 
     integer(i_def) :: source_mesh_id
+    integer(i_def) :: target_mesh_id
 
+    nullify(mesh_map)
     source_mesh_id = self%get_id()
+    target_mesh_id = target_mesh%get_id()
 
     if (source_mesh_id == target_mesh_id) then
       write(log_scratch_space, '(A)') 'Identical source and target meshes.'
       call log_event(log_scratch_space, LOG_LEVEL_ERROR)
-      mesh_map => null()
     else
       mesh_map => self%mesh_maps%get_mesh_map(source_mesh_id, target_mesh_id)
     end if
 
     return
-
   end function get_mesh_map
+
 
   !============================================================================
   !> @details Compute the local id of each face in the adjacent cells

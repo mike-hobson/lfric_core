@@ -17,7 +17,7 @@
                                 'science( biperiodic_p1_gw,       resolutions=[["BiP30x4-12000x2000",10.0]])',
                                 'science( straka_y,               resolutions=[["BiP4x128-400x400",10.0]],
                                           plotstr="straka_plot_y.py $NODAL_DATA_DIR theta T000090 $PLOT_DIR")',
-                                'science( straka_y_ugrid, 
+                                'science( straka_y_ugrid,
                                           resolutions=[["BiP4x128-400x400",10.0]],
                                           plotstr="straka_plot_y_ugrid.py $NODAL_DATA_DIR/lfric_diag.nc air_potential_temperature faces_levels T90 $PLOT_DIR",
                                           checkkgo=False)',
@@ -49,11 +49,11 @@
                                         plotstr="gw_cart_plot.py $NODAL_DATA_DIR theta T000000:T000100:T000200:T000300 $PLOT_DIR")',
                               'science( robert,       resolutions=[["BiP50x4-20x20",0.5]], env={"crun":3, "nrun":50}, checkkgo=True)',
                               'science( robert-moist, resolutions=[["BiP50x4-20x20",0.5]], env={"crun":3, "nrun":50}, checkkgo=True)',
-                              'science( straka_200m,  
+                              'science( straka_200m,
                                         resolutions=[["BiP256x4-200x200",2.5]],
                                         plotstr="straka_plot_x.py $NODAL_DATA_DIR theta T000360 $PLOT_DIR")',
                               'science( straka_x,
-                                        resolutions=[["BiP128x4-400x400",10.0]], 
+                                        resolutions=[["BiP128x4-400x400",10.0]],
                                         plotstr="straka_plot_x.py $NODAL_DATA_DIR theta T000090 $PLOT_DIR" )',
                               'science( straka_y,
                                         resolutions=[["BiP4x128-400x400",10.0]],
@@ -61,17 +61,18 @@
                               'science( dcmip301,
                                         resolutions=[["C24",10.0]],
                                         plotstr="dcmip301.py $NODAL_DATA_DIR theta T000180:T000252:T000324:T000360 $PLOT_DIR")',
-                              'science( biperiodic-cosmic, 
+                              'science( biperiodic-cosmic,
                                         resolutions=[["BiP200x200-5x5",1.0]],
                                         plotstr="biperiodic-cosmic_plot.py $NODAL_DATA_DIR rho T000000:T000500 $PLOT_DIR")',
                               'science( sbr, resolutions=[["C24",600.0]], env={"nrun":60})',
                               'miniapp( gravity_wave,
                                         resolutions=[["C24",100.0]],
+                                        support_meshes=["C12","C6","C3"],
                                         plotstr="slices.py gravity_wave $NODAL_DATA_DIR buoyancy T000036 150 0 6 $PLOT_DIR")',
-                              'miniapp( io_miniapp, 
+                              'miniapp( io_miniapp,
                                         resolutions=[["C12"]],
                                         checkkgo=False)',
-                              'check_compilers(full-debug, semi-implicit, resolutions=[["C12",10.0]], publish=True)', 
+                              'check_compilers(full-debug, semi-implicit, resolutions=[["C12",10.0]], publish=True)',
                               'godlines(True)',
                               'publish_commit']} %}
 
@@ -106,7 +107,8 @@
 {#- #########################################################################}
 {%- set SCIENCE_LABEL =  TARGET_SCIENCE_COMPILER + '_fast-debug' %}
 
-{%- macro science( configuration, resolutions=[['']], checkkgo=True, plotstr="None", env=None) %}
+{%- macro science( configuration, resolutions=[['']], support_meshes=[''],
+                   checkkgo=True, plotstr="None", env=None) %}
 {%-   set label = SCIENCE_LABEL %}
 
 {%    set crun = 1 %}
@@ -151,11 +153,16 @@
             compile_with_{{label}}:finish => publish_{{label}}_compile
 {%-       endif %}
 
-
-{%-         if TARGET_SCIENCE_COMPILER in TARGET_PERFORM_RUN %}
-              compile_mesh_tools_with_{{label}} => generate_mesh{{res_label}}_{{label}}
-              generate_mesh{{res_label}}_{{label}} => run_{{configuration_res_label}}_{{label}}
+{%-       if TARGET_SCIENCE_COMPILER in TARGET_PERFORM_RUN %}
+            compile_mesh_tools_with_{{label}} => generate_mesh{{res_label}}_{{label}}
+            generate_mesh{{res_label}}_{{label}} => run_{{configuration_res_label}}_{{label}}
+{%-         if support_meshes != [''] %}
+{%-           for mesh_name in support_meshes %}
+            compile_mesh_tools_with_{{label}} => generate_mesh_{{mesh_name|replace('.','p')}}_{{label}}
+            generate_mesh_{{mesh_name|replace('.','p')}}_{{label}} => run_{{configuration_res_label}}_{{label}}
+{%-           endfor %}
 {%-         endif %}
+{%-       endif %}
 
             compile_with_{{label}} => run_{{configuration_res_label}}_{{label}}
 {%-       if checkkgo  %}
@@ -178,7 +185,7 @@
 
 {#- #########################################################################}
 {%- macro canned_test() %}
-      [[[R1]]] 
+      [[[R1]]]
 {%-   set label = TARGET_SCIENCE_COMPILER | lower + '_' + 'fast-debug' %}
 {%-   if TARGET_SCIENCE_COMPILER in TARGET_PERFORM_RUN %}
             purge_local => purge_target
@@ -189,28 +196,33 @@
 {%- endmacro %}
 
 {#- #########################################################################}
-{%- macro miniapp( appname, plotstr="None", resolutions=[['']], env=None, checkkgo=True ) %}
+{%- macro miniapp( appname, plotstr="None", resolutions=[['']], 
+                   support_meshes=[''], env=None, checkkgo=True ) %}
 {%-   set label = TARGET_SCIENCE_COMPILER|lower + '_fast-debug' %}
 {%-   for resolution in resolutions %}
 {%-     set res_value, dt_values, res_label, dt_labels, res_opt = resolution | getResolutionLabels() %}
 {%-     for i in range(0,dt_values|length) %}
 {%-       set appname_res = appname ~ res_label ~ dt_labels[i] %}
 
-      [[[R1]]] 
+      [[[R1]]]
 
             purge_local => purge_target
             purge_target => export_for_{{label}}
             export_for_{{label}} => compile_with_{{label}}
             export_for_{{label}} => compile_mesh_tools_with_{{label}}
 
-
-{%-       if res_label != '' %}
-{%-         if TARGET_SCIENCE_COMPILER in TARGET_PERFORM_RUN %}
+{%-       if TARGET_SCIENCE_COMPILER in TARGET_PERFORM_RUN %}
+{%-         if res_label != '' %}
             compile_mesh_tools_with_{{label}} => generate_mesh{{res_label}}_{{label}}
             generate_mesh{{res_label}}_{{label}} => run_{{appname_res}}_{{label}}
 {%-         endif %}
+{%-         if support_meshes != [''] %}
+{%-           for mesh_name in support_meshes %}
+            compile_mesh_tools_with_{{label}} => generate_mesh_{{mesh_name|replace('.','p')}}_{{label}}
+            generate_mesh_{{mesh_name|replace('.','p')}}_{{label}} => run_{{appname_res}}_{{label}}
+{%-           endfor %}
+{%-         endif %}
 {%-       endif %}
-
 
             compile_with_{{label}} => run_{{appname_res}}_{{label}}
 
@@ -230,7 +242,7 @@
 
 {#- #########################################################################}
 {%- macro cleanlines() %}
-      [[[R1]]] 
+      [[[R1]]]
 {%-   set label =  TARGET_TECHNICAL_COMPILER | lower + '_fast-debug' %}
 {%-   if 'cleanliness' in TECHNICAL_DEVELOPER_TESTS %}
             purge_local => purge_target
@@ -246,7 +258,7 @@
 {#- Documentation, it's next to cleanlines ##################################}
 
 {%- macro godlines(publish=False) %}
-      [[[R1]]] 
+      [[[R1]]]
 {%-   set label =  TARGET_TECHNICAL_COMPILER | lower + '_fast-debug' %}
 {%-   if 'documentation' in TECHNICAL_DEVELOPER_TESTS %}
             purge_local => purge_target
@@ -265,7 +277,7 @@
 
 {#- #########################################################################}
 {%- macro publish_commit() %}
-      [[[R1]]] 
+      [[[R1]]]
             PUBLISH:finish-all => publish_index
             publish_index      => mirror_results_local
 {%-   if MIRROR_UPLOAD_URL %}
@@ -275,7 +287,7 @@
 
 {#- #########################################################################}
 {%- macro check_compilers( build, science, resolutions=[['']], publish=False ) %}
-      [[[R1]]] 
+      [[[R1]]]
 
 {%-   set perform_run = [] %}
 
@@ -337,7 +349,7 @@
 {%-       for mission in groups[group] %}
 {%-         set k,envDict = mission | getEnvMacro() %}
 {%-         if k is not none %}
-{%            set key = k + '_' + SCIENCE_LABEL %} 
+{%            set key = k + '_' + SCIENCE_LABEL %}
 {%-           do scheduledTasksDict.update({key: envDict}) %}
 {%-         endif %}
 {%-       endfor %}
@@ -357,11 +369,11 @@
 {%- endmacro %}
 
 {#- #########################################################################}
-{%- macro setResolutions(resolution_choices) %}
+{%- macro setResolutions(resolution_choices, support_meshes) %}
 {%-   for group in groupsToRun %}
 {%-     if group in groups.keys() %}
 {%-       for mission in groups[group] %}
-{%-         set configuration,resList,resDict = mission | getResolutionMacro() %}
+{%-         set configuration,resList,resDict,resSupportMeshes = mission | getResolutionMacro() %}
 {%          if resList != [] %}
 {%-           if configuration not in resolution_choices.keys() %}
 {%-             do resolution_choices.update({configuration:[]})  -%}
@@ -372,16 +384,26 @@
 {%-             endif %}
 {%-           endfor %}
 {%-         endif %}
+{%          if resSupportMeshes != [''] %}
+{%-           if configuration not in support_meshes.keys() %}
+{%-             do support_meshes.update({configuration:[]})  -%}
+{%-           endif %}
+{%-           for res in resSupportMeshes %}
+{%-             if res not in support_meshes[configuration] %}
+{%-               do support_meshes[configuration].append(res) -%}
+{%-             endif %}
+{%-           endfor %}
+{%-         endif %}
 {%-       endfor %}
 {%-     endif %}
 {%-   endfor %}
 {%- endmacro %}
 
 {#
-# crunInfo is dictionary containing variables needed to dynamically 
+# crunInfo is dictionary containing variables needed to dynamically
 # construct the graph for cruns:
 #     maxcrun specifies the maximum number of cycles
-# scheduledTasksEnv is a dictionary of environment variables to be 
+# scheduledTasksEnv is a dictionary of environment variables to be
 # passed from the mission to the task - these are evalulated as a string
 # of variable = value pairs
 # scheduledTasksDict is as scheduledTasksEnv, but the python dictionary
@@ -397,7 +419,8 @@
 {%- set dummy = setCrunInfo(crunInfo, scheduledTasksDict) -%} {# sets the crunInfo #}
 
 {%- set resolution_choices = {} %}
-{%- set dummy = setResolutions(resolution_choices) %} {# sets the requested resolutions #}
+{%- set support_meshes = {} %}
+{%- set dummy = setResolutions(resolution_choices, support_meshes) %} {# sets the requested resolutions #}
 {# Based on the resolutions and configurations, work out which meshes we need to generate #}
 {%- set mesh_names = [] %}
 {%- for config, resolutions in resolution_choices.items() %}
@@ -407,6 +430,11 @@
 {%-   endfor %}
 {%- endfor %}
 
+{%- for config, extra_meshes in support_meshes.items() %}
+{%-   for mesh_name in extra_meshes %}
+{%-     do mesh_names.append(mesh_name) if mesh_name not in mesh_names%}
+{%-   endfor %}
+{%- endfor %}
 
 {%- macro deleteDirectory( directory ) %}
 test -w "{{directory}}" -o ! -e "{{directory}}" && rm -rf {{directory}} || ( echo ** Unable to delete "{{directory}}", not writable >&2; false )
@@ -912,13 +940,13 @@ causes override warnings when using csar.
             RESTART       = $(if [ $CYLC_TASK_CYCLE_POINT == $CYLC_SUITE_INITIAL_CYCLE_POINT ] && [ $CYLC_TASK_TRY_NUMBER -eq 1 ]; then echo ""; else echo "true"; fi)
             RESTART_START = $(echo $[$RESTART_NO*$RESTART_NTS + 1])
             RESTART_STOP  = $(echo $[$RESTART_NO*$RESTART_NTS + $RESTART_NTS])
-            RESTART_READ  = $(if [[ $RESTART ]]; then echo ".true."; else echo ".false."; fi) 
-            RESTART_WRITE = $(if [ $CRUN_LENGTH -gt $CYLC_TASK_CYCLE_POINT ]; then echo ".true."; else echo ".false."; fi) 
+            RESTART_READ  = $(if [[ $RESTART ]]; then echo ".true."; else echo ".false."; fi)
+            RESTART_WRITE = $(if [ $CRUN_LENGTH -gt $CYLC_TASK_CYCLE_POINT ]; then echo ".true."; else echo ".false."; fi)
 
         [[[directives]]]
-{# 
+{#
 #If the directives are configured by the suite, then we will expand these in the directives.  This may also require a different batcher
-# e.g if setting directives requires a parallel queue, rather than the default shared queue. 
+# e.g if setting directives requires a parallel queue, rather than the default shared queue.
 #}
 {%                set run_batcher = TARGET_RUN_BATCHER_DIRECTIVES %}
 {%                if configuration_label in scheduledTasksDict.keys() %}{# configuration_label in scheduledTasksDict #}
@@ -1198,7 +1226,7 @@ causes override warnings when using csar.
             {{DIRECTIVE}}
 {%-       endfor %}
 
-{%-       for mesh_name in mesh_names %}
+{%-       for mesh_name in mesh_names|sort %}
 
     [[generate_mesh_{{mesh_name}}_{{label}}]]
         inherit = GENERATE_MESHES_{{family}}

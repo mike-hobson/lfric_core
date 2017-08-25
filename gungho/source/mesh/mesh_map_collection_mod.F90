@@ -9,7 +9,7 @@
 !>
 !> @details A container which holds a collection of mesh maps
 !>          It will handle the creation and storing of requested maps
-!>          between two  meshes of differing resolutions.
+!>          between two meshes of differing resolutions.
 !
 module mesh_map_collection_mod
 
@@ -18,8 +18,8 @@ use mesh_map_mod,        only: mesh_map_type
 use partition_mod,       only: partition_type
 use global_mesh_map_mod, only: global_mesh_map_type
 use linked_list_mod,     only: linked_list_type, linked_list_item_type
-use log_mod,             only: log_event, log_scratch_space                    &
-                             , LOG_LEVEL_ERROR, LOG_LEVEL_TRACE
+use log_mod,             only: log_event, log_scratch_space, &
+                               LOG_LEVEL_ERROR, LOG_LEVEL_TRACE
 
 implicit none
 

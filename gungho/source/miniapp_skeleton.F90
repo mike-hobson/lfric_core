@@ -12,13 +12,16 @@ program miniapp_skeleton
   use constants_mod,                  only : i_def
   use cli_mod,                        only : get_initial_filename
   use miniapp_skeleton_mod,           only : load_configuration
-  use init_gungho_mod,                only : init_gungho
+  use init_mesh_mod,                  only : init_mesh
   use init_miniapp_skeleton_mod,      only : init_miniapp_skeleton
   use ESMF
+  use global_mesh_collection_mod,     only : global_mesh_collection, &
+                                             global_mesh_collection_type
   use field_mod,                      only : field_type
   use miniapp_skeleton_alg_mod,       only : miniapp_skeleton_alg
   use log_mod,                        only : log_event,         &
                                              log_set_level,     &
+                                             log_scratch_space, &
                                              LOG_LEVEL_ERROR,   &
                                              LOG_LEVEL_INFO
   use output_config_mod,              only : write_nodal_output, &
@@ -90,8 +93,18 @@ program miniapp_skeleton
   !-----------------------------------------------------------------------------
   ! model init
   !-----------------------------------------------------------------------------
+
   ! Create the mesh and function space collection
-  call init_gungho(mesh_id, local_rank, total_ranks)
+  allocate( global_mesh_collection, &
+            source = global_mesh_collection_type() )
+  call init_mesh(local_rank, total_ranks, mesh_id)
+ ! Full global meshes no longer required, so reclaim
+  ! the memory from global_mesh_collection
+  write(log_scratch_space,'(A)') &
+      "Purging global mesh collection."
+  call log_event( log_scratch_space, LOG_LEVEL_INFO )
+  deallocate(global_mesh_collection)
+
 
   ! Create and initialise prognostic fields
   call init_miniapp_skeleton(mesh_id, field_1)

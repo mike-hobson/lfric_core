@@ -14,11 +14,13 @@ program io_miniapp
   use constants_mod,                  only : i_def
   use cli_mod,                        only : get_initial_filename
   use io_miniapp_mod,                 only : load_configuration
-  use init_gungho_mod,                only : init_gungho
+  use init_mesh_mod,                  only : init_mesh
   use init_io_miniapp_mod,            only : init_io_miniapp
   use ESMF
   use field_mod,                      only : field_type
   use finite_element_config_mod,      only : element_order
+  use global_mesh_collection_mod,    only: global_mesh_collection, &
+                                           global_mesh_collection_type
 
   use log_mod,                        only : log_event,         &
                                              log_set_level,     &
@@ -94,9 +96,18 @@ program io_miniapp
   !-----------------------------------------------------------------------------
   ! model init
   !-----------------------------------------------------------------------------
+  allocate( global_mesh_collection, &
+            source = global_mesh_collection_type() )
 
   ! Create the mesh and function space collection
-  call init_gungho(mesh_id, local_rank, total_ranks)
+  call init_mesh(local_rank, total_ranks, mesh_id)
+
+  ! Full global meshes no longer required, so reclaim
+  ! the memory from global_mesh_collection
+  write(log_scratch_space,'(A)') &
+      "Purging global mesh collection."
+  call log_event( log_scratch_space, LOG_LEVEL_INFO )
+  deallocate(global_mesh_collection)
 
   ! Create and initialise field
   call init_io_miniapp(mesh_id, test_field)

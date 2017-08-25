@@ -29,7 +29,7 @@ program gungho
   use field_mod,                      only : field_type
   use finite_element_config_mod,      only : element_order
   use formulation_config_mod,         only : transport_only, use_moisture, use_physics
-  use init_gungho_mod,                only : init_gungho
+  use init_mesh_mod,                  only : init_mesh
   use init_dynamo_mod,                only : init_dynamo
   use init_physics_mod,               only : init_physics
   use iter_timestep_alg_mod,          only : iter_alg_init, &
@@ -76,6 +76,8 @@ program gungho
   use mr_indices_mod,                 only : imr_v, imr_c, imr_r, imr_nc, &
                                              imr_nr, nummr
   use runtime_constants_mod,          only : get_cell_orientation, get_detj_at_w2
+  use global_mesh_collection_mod,     only : global_mesh_collection, &
+                                             global_mesh_collection_type
   use timer_mod,                      only : timer, output_timer
 
   use xios
@@ -166,8 +168,19 @@ program gungho
   ! model init
   !-----------------------------------------------------------------------------
   if ( subroutine_timers ) call timer('gungho')
+
+  allocate( global_mesh_collection, &
+            source = global_mesh_collection_type() )
+
   ! Create the mesh and function space collection
-  call init_gungho(mesh_id, local_rank, total_ranks)
+  call init_mesh(local_rank, total_ranks, mesh_id)
+
+  ! Full global meshes no longer required, so reclaim
+  ! the memory from global_mesh_collection
+  write(log_scratch_space,'(A)') &
+      "Purging global mesh collection."
+  call log_event( log_scratch_space, LOG_LEVEL_INFO )
+  deallocate(global_mesh_collection)
 
   ! Create and initialise prognostic fields
   timestep = 0

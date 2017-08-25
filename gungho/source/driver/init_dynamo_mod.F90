@@ -15,8 +15,9 @@ module init_dynamo_mod
   use constants_mod,                  only : i_def
   use field_mod,                      only : field_type, write_interface
   use finite_element_config_mod,      only : element_order, wtheta_on
-  use function_space_collection_mod,  only : function_space_collection
   use fs_continuity_mod,              only : W0, W1, W2, W3, Wtheta
+  use function_space_collection_mod , only : function_space_collection_type, &
+                                             function_space_collection
   use init_prognostic_fields_alg_mod, only : init_prognostic_fields_alg
   use log_mod,                        only : log_event,         &
                                              LOG_LEVEL_INFO
@@ -32,12 +33,13 @@ module init_dynamo_mod
   use io_mod,                         only : xios_write_field_node, &
                                              xios_write_field_face
 
+
   implicit none
 
 
   contains
 
-  subroutine init_dynamo(mesh_id, u, rho, theta, rho_in_wth, mr, xi, restart)
+  subroutine init_dynamo( mesh_id, u, rho, theta, rho_in_wth, mr, xi, restart )
 
     integer(i_def), intent(in)               :: mesh_id
     ! prognostic fields
@@ -50,6 +52,9 @@ module init_dynamo_mod
     procedure(write_interface), pointer      :: tmp_ptr
 
     call log_event( 'Dynamo: initialisation...', LOG_LEVEL_INFO )
+
+    allocate( function_space_collection,      &
+              source = function_space_collection_type() )
 
     
     ! Create prognostic fields
@@ -132,7 +137,8 @@ module init_dynamo_mod
     call create_runtime_constants(mesh_id)
 
     ! Initialise prognostic fields
-    call init_prognostic_fields_alg( mesh_id, u, rho, theta, rho_in_wth, mr, xi, restart)
+    call init_prognostic_fields_alg( mesh_id, u, rho, theta, &
+                                     rho_in_wth, mr, xi, restart )
 
     call log_event( 'Dynamo initialised', LOG_LEVEL_INFO )
 

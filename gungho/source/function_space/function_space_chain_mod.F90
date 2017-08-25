@@ -4,8 +4,21 @@
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
 !
-!> Function space collection
+!> Module for function_space_chain_type which defines an ordered list of pointers
+!> to function_space_type objects.
 !>
+!> Typical usage is to instantiate a function_space_chain_type,
+!> then add pointers to function_space_type objects in the chain order
+!> required.
+!>
+!> e.g. MultiGrid, Physics
+!>
+!> Entry function space (Head of Chain)<br>
+!> Primal mesh <-> Coarsen(Primal)x1 <-> Coarsen(Primal)x2 
+!> <-> Coarsen(Primal)x3<br>
+!> Primal mesh <-> Physics mesh.
+!>
+
 module function_space_chain_mod
 
 use constants_mod,              only: i_def
@@ -24,56 +37,46 @@ implicit none
 
 private
 
-!> Ordered collection of function spacetype objects.
-!>
-!> Typical usage is to instantiate a function_space_chain_type,
-!> then add pointers to function_space_type objects in the chain order
-!> required.
-!>
-!> e.g. MultiGrid, Physics
-!>
-!> Entry function space (Head of Chain)<br>
-!> Primal mesh <-> Coarsen(Primal)x1 <-> Coarsen(Primal)x2 
-!> <-> Coarsen(Primal)x3<br>
-!> Primal mesh <-> Physics mesh.
-!>
 !===============================================================================
-type, public :: function_space_chain_type
+! Type which is an ordered collection of function space pointers held in
+! a linked list
 
+type, public :: function_space_chain_type
   private
 
-  ! Linked list with payloads of function_space_type
+  !> Linked list of function_space_pointer_type objects
   type(linked_list_type) :: function_space_chain_list
 
 contains
 
-  !> Adds a given function space to the next location in this chain.
-  !> @param[in] function_space Pointer to function space to add to
-  !>            this chain.
+  !> @brief Adds a given function space to the next location in this chain.
+  !> @param[in] function_space Pointer to function space to add to this chain.
   procedure, public :: add
   !>
-  !> Gets the function space object at the start (head) of this
-  !> chain. This function will also update the "current" function
-  !> space to be that at the head of the chain.
-  !> @return start_function_space Pointer to function space at
-  !>         Entry/Exit point of this chain.
+  !> @brief   Returns a pointer to the function space at the start of this
+  !>          chain.
+  !> @details This function will also update the current function space
+  !>          in this chain to be the function space at the head of the chain.
+  !> @return  start_function_space Pointer to function space at
+  !>                               Entry/Exit point of this chain.
   procedure, public :: get_start
   !>
-  !> Gets the next function space in this chain. This function will
-  !> also increment the current position in this chain tailwards
-  !> (forward) by 1.
-  !> @return next_function_space Pointer to the next function space
-  !>         in this chain.
+  !> @brief   Returns pointer to the next function space in this chain.
+  !> @details This function will increment the current position in this
+  !>          chain tailwards (forward) by 1.
+  !> @return  next_function_space Pointer to the next function space in
+  !>                              this chain.
   procedure, public :: get_next
   !>
-  !> Gets the previous function space in this chain. This function
-  !> will also increment the current position in this chain
-  !> headwards (backward) by 1.
-  !> @return previous_function_space Pointer to the previous
-  !>         function space in this chain
+  !> @brief   Returns pointer to the previous function space before the current
+  !>          function space in this chain.
+  !> @details This function will increment the current position in this chain
+  !>          headwards (backward) by 1.
+  !> @return  previous_function_space Pointer to the previous function
+  !>                                  space in this chain
   procedure, public :: get_previous
 
-  !> Clears the chain of any items.
+  !> @brief   Manually release memory used by this object.
   procedure, public :: clear
 
 end type function_space_chain_type
@@ -86,7 +89,10 @@ end interface
 !===============================================================================
 contains ! Module procedures
 
-!> Instantiates a function space chain object.
+
+!===============================================================================
+!> @brief Constructor for function space chain objects
+!>        (function_space_chain_type).
 !> @return instance A function space chain object
 !===============================================================================
 function function_space_chain_constructor() result(instance)
@@ -285,8 +291,12 @@ return
 end subroutine clear
 
 
-!> @brief Generates required mesh maps for the given function space source
-!>        and target.
+!==============================================================================
+!> @brief   Generates required mesh maps for the given function space source
+!>          and target.
+!> @details This routine is provide to generate mesh maps for partitioned meshes
+!>          as they are added to the chain. In future, these maps will be read in
+!>          from the NetCDF UGRID file.
 !> @param[in] source_function_space Pointer to the source function space.
 !> @param[in] target_function_space Pointer to the target function space.
 !==============================================================================

@@ -1,64 +1,48 @@
 !-----------------------------------------------------------------------------
-! Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
-! For further details please refer to the file LICENCE.original which you
-! should have received as part of this distribution.
+! (c) Crown copyright 2017 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used
 !-----------------------------------------------------------------------------
-
-!> @brief Sets up data required for the the function spaces
-
-!> @details This code generates a mesh and determines the basis functions and
-!> dofmaps. This will be replaced with code that reads this in from a mesh
-!> generation and paritioning pre-processor stage.
-
-! There are no tests for this code as this will be replaced.
-
+!> @brief Sets up prtitioned 3D mesh(es)
+!> @details This code generates reads global ugrid meshes and sets up
+!>          partitioned 3D mesh(es)
 module init_mesh_mod
 
-  use base_mesh_config_mod,       only : filename,        &
-                                         prime_mesh_name, &
-                                         geometry,        &
-                                         base_mesh_geometry_spherical
-  use constants_mod,              only : i_def, r_def, str_def, l_def
-  use extrusion_config_mod,       only : number_of_layers,           &
-                                         domain_top,                 &
-                                         method,                     &
-                                         extrusion_method_uniform,   &
-                                         extrusion_method_quadratic, &
-                                         extrusion_method_geometric, &
-                                         extrusion_method_dcmip
-  use finite_element_config_mod,  only : cellshape,                         &
-                                         finite_element_cellshape_triangle, &
-                                         finite_element_cellshape_quadrilateral
-  use partitioning_config_mod,    only : auto, panel_xproc, panel_yproc
-  use global_mesh_mod,            only : global_mesh_type
-  use global_mesh_collection_mod, only : global_mesh_collection
-  use mesh_collection_mod,        only : mesh_collection
-  use reference_element_mod,      only : reference_cube, reference_element, &
-                                         nfaces, nedges, nverts
-  use reference_element_data_mod, only : reference_cube_data
-  use mesh_mod,                   only : mesh_type
-  use log_mod,                    only : log_event,      &
-                                         log_scratch_space, &
-                                         LOG_LEVEL_INFO, &
-                                         LOG_LEVEL_ERROR
-  use partition_mod,              only : partition_type,                   &
-                                         partitioner_interface,            &
-                                         partitioner_cubedsphere_serial,   &
-                                         partitioner_cubedsphere,          &
-                                         partitioner_biperiodic
-  use transport_config_mod,       only : operators, &
-                                         fv_flux_order, &
-                                         fv_advective_order, &
-                                         transport_operators_fv
-  use finite_element_config_mod,  only : wtheta_on
-  use transport_config_mod,       only : scheme, &
-                                         transport_scheme_bip_cosmic, &
-                                         transport_scheme_cusph_cosmic
-  use subgrid_config_mod,         only : dep_pt_stencil_extent, &
-                                         rho_approximation_stencil_extent
-  use ugrid_file_mod,             only : ugrid_file_type
-  use ncdf_quad_mod,              only : ncdf_quad_type
-  use ugrid_2d_mod,               only : ugrid_2d_type
+  use base_mesh_config_mod,       only: filename, prime_mesh_name, geometry, &
+                                        base_mesh_geometry_spherical
+  use constants_mod,              only: i_def, str_def, l_def
+  use extrusion_config_mod,       only: number_of_layers, domain_top, method
+  use finite_element_config_mod,  only: cellshape, wtheta_on, &
+                                        finite_element_cellshape_quadrilateral
+  use global_mesh_mod,            only: global_mesh_type
+  use global_mesh_collection_mod, only: global_mesh_collection
+  use init_multigrid_mesh_mod,    only: init_multigrid_mesh
+  use log_mod,                    only: log_event,         &
+                                        log_scratch_space, &
+                                        LOG_LEVEL_INFO,    &
+                                        LOG_LEVEL_ERROR
+  use mesh_collection_mod,        only: mesh_collection_type, mesh_collection
+  use mesh_mod,                   only: mesh_type
+  use multigrid_config_mod,       only: l_multigrid
+  use ncdf_quad_mod,              only: ncdf_quad_type
+  use orography_control_mod,      only: set_orography_option
+  use partition_mod,              only: partition_type,                 &
+                                        partitioner_interface,          &
+                                        partitioner_cubedsphere_serial, &
+                                        partitioner_cubedsphere,        &
+                                        partitioner_biperiodic
+  use partitioning_config_mod,    only: auto, panel_xproc, panel_yproc
+  use reference_element_data_mod, only: reference_cube_data
+  use reference_element_mod,      only: reference_cube, reference_element
+  use subgrid_config_mod,         only: dep_pt_stencil_extent, &
+                                        rho_approximation_stencil_extent
+  use transport_config_mod,       only: scheme, operators, fv_flux_order, &
+                                        fv_advective_order,               &
+                                        transport_operators_fv,           &
+                                        transport_scheme_bip_cosmic,      &
+                                        transport_scheme_cusph_cosmic
+  use ugrid_2d_mod,               only: ugrid_2d_type
+  use ugrid_file_mod,             only: ugrid_file_type
 
   implicit none
 
@@ -69,206 +53,242 @@ contains
 !> @param[in] local_rank Number of the MPI rank of this process
 !> @param[in] total_ranks Total number of MPI ranks in this job
 !> @param[out] prime_mesh_id id of paritioned prime mesh
-  subroutine init_mesh(local_rank, total_ranks, prime_mesh_id)
+subroutine init_mesh( local_rank, total_ranks, prime_mesh_id )
 
-    implicit none
+  implicit none
 
-    integer(i_def), intent(in)  :: local_rank
-    integer(i_def), intent(in)  :: total_ranks
-    integer(i_def), intent(out) :: prime_mesh_id
+  integer(i_def), intent(in)  :: local_rank
+  integer(i_def), intent(in)  :: total_ranks
+  integer(i_def), intent(out) :: prime_mesh_id
 
-    integer(i_def), parameter :: max_factor_iters = 10000
+  ! Parameters
+  integer(i_def), parameter :: max_factor_iters = 10000
 
-    type (global_mesh_type), pointer :: global_mesh_ptr => null()
-    type (partition_type)            :: partition
+  ! Local variables
+  procedure (partitioner_interface), pointer :: partitioner_ptr => null()
+  type(global_mesh_type),            pointer :: global_mesh_ptr => null()
 
-    procedure (partitioner_interface), pointer :: partitioner_ptr => null ()
+  type(partition_type) :: partition
 
-!   max_stencil_depth is the maximum depth (of cells outside the cell over
-!   which the stencil is based) of the stencil to be used on fields with this
-!   partition. A single cell stencil will, therefore, have a max_stencil_depth=0
-!   A nine-point square region stencil will have max_stencil_depth=1
-!
-!> @todo max_stencil_depth will eventually become either a configuration item,
-!>       or will be autogenerated from kernel metadata, but for now it is
-!>       just hard-coded
-    integer(i_def) :: max_stencil_depth
 
-    ! Number of ranks the mesh is partitioned over in the x- and y-directions
-    ! (across a single face for a cubed-sphere mesh)
-    integer(i_def) :: xproc, yproc
+  ! max_stencil_depth is the maximum depth (of cells outside the cell over
+  ! which the stencil is based) of the stencil to be used on fields with
+  ! this partition. 
+  !
+  ! A single cell stencil will, therefore, have a  max_stencil_depth=0.
+  ! A nine-point square region stencil will have max_stencil_depth=1
+  !
+  !> @todo max_stencil_depth will eventually become either a configuration
+  !>       item, or will be autogenerated from kernel metadata, but for now
+  !>       it is just hard-coded
+  integer(i_def) :: max_stencil_depth
 
-    integer(i_def) :: ranks_per_panel
-    integer(i_def) :: start_factor
-    integer(i_def) :: fact_count
-    integer(i_def) :: global_mesh_id
-    integer(i_def) :: npanels
-    integer(i_def) :: max_fv_stencil
-    integer(i_def) :: n_meshes
-    integer(i_def) :: i
-    logical(l_def) :: found_factors
+  ! Number of ranks the mesh is partitioned over in the x- and y-directions
+  ! (across a single face for a cubed-sphere mesh)
+  integer(i_def) :: xproc, yproc
 
-    character(str_def)  :: domain_desc
-    character(str_def)  :: partition_desc
-    type(ugrid_2d_type) :: ugrid_2d
+  integer(i_def) :: ranks_per_panel
+  integer(i_def) :: start_factor
+  integer(i_def) :: end_factor
+  integer(i_def) :: fact_count
+  integer(i_def) :: global_mesh_id
+  integer(i_def) :: npanels
+  integer(i_def) :: max_fv_stencil
+  integer(i_def) :: n_meshes
+  integer(i_def) :: i
+  logical(l_def) :: found_factors
 
-    class(ugrid_file_type), allocatable :: file_handler
-    character(str_def),     allocatable :: mesh_names(:)
+  character(str_def)  :: domain_desc
+  character(str_def)  :: partition_desc
+  type(ugrid_2d_type) :: ugrid_2d
 
-    call log_event( "set_up: Generating/reading the mesh", LOG_LEVEL_INFO )
+  class(ugrid_file_type), allocatable :: file_handler
+  character(str_def),     allocatable :: mesh_names(:)
 
-    reference_element = cellshape
 
-    ! Currently only quad elements are fully functional
-    if ( reference_element /= finite_element_cellshape_quadrilateral ) then
-      call log_event( "set_up: Reference_element must be QUAD for now...", &
+  allocate( mesh_collection, &
+            source=mesh_collection_type() )
+
+  call log_event( "Setting up partition mesh(es)", LOG_LEVEL_INFO )
+
+  reference_element = cellshape
+
+  ! Currently only quad elements are fully functional
+  if (reference_element /= finite_element_cellshape_quadrilateral) then
+    call log_event( "Reference_element must be QUAD for now...", &
+                    LOG_LEVEL_ERROR )
+  end if
+
+  ! Setup reference cube
+  call reference_cube()
+  call reference_cube_data()
+
+  ! Setup the partitioning strategy
+  if (geometry == base_mesh_geometry_spherical) then
+
+    npanels = 6
+    if (total_ranks == 1 .or. mod(total_ranks,6) == 0) then
+      ranks_per_panel = total_ranks/6
+      domain_desc = "6x"
+    else
+      call log_event( "Total number of processors must be a "//   &
+                      "multiple of 6 for a cubed-sphere domain.", &
                       LOG_LEVEL_ERROR )
     end if
-    ! Setup reference cube(s)
-    call reference_cube()
-    call reference_cube_data()
 
-
-    ! Setup the partitioning strategy
-    if ( geometry == base_mesh_geometry_spherical ) then
-
-      npanels = 6
-      if(total_ranks == 1 .or. mod(total_ranks,6) == 0)then
-        ranks_per_panel = total_ranks/6
-        domain_desc = "6x"
-      else
-        call log_event( "set_up: Total number of processors must be a"// &
-                        " multiple of 6 for a cubed-sphere domain.", &
-                      LOG_LEVEL_ERROR )
-      end if
-
-      if(total_ranks == 1) then
-        ranks_per_panel = 1
-        partitioner_ptr => partitioner_cubedsphere_serial
-        call log_event( "set_up: Setting up serial cubed sphere partitioner", &
-                       LOG_LEVEL_INFO )
-      else
-        partitioner_ptr => partitioner_cubedsphere
-        call log_event( "set_up: Setting up parallel cubed sphere partitioner",&
-                        LOG_LEVEL_INFO )
-      end if
+    if (total_ranks == 1) then
+      ranks_per_panel = 1
+      partitioner_ptr => partitioner_cubedsphere_serial
+      call log_event( "Using serial cubed sphere partitioner", &
+                      LOG_LEVEL_INFO )
     else
-      npanels = 1
-      ranks_per_panel=total_ranks
-      domain_desc=""
-
-      partitioner_ptr => partitioner_biperiodic
-      call log_event( "set_up: Setting up biperiodic plane partitioner ", &
+      partitioner_ptr => partitioner_cubedsphere
+      call log_event( "Using parallel cubed sphere partitioner", &
                       LOG_LEVEL_INFO )
     end if
+  else
+    npanels = 1
+    ranks_per_panel = total_ranks
+    domain_desc = ""
+
+    partitioner_ptr => partitioner_biperiodic
+    call log_event( "Using biperiodic plane partitioner ", &
+                    LOG_LEVEL_INFO )
+  end if
 
 
-    if(auto)then
-    ! For automatic partitioning, try to partition into the squarest possible
-    ! partitions by finding the two factors of ranks_per_panel that are
-    ! closest to sqrt(ranks_per_panel). If two factors can't be found after
-    ! max_factor_iters attempts, they would provide partitions that are
-    ! too un-square, so an error is produced.
-      start_factor=int(sqrt(float(ranks_per_panel)))
-      found_factors=.false.
-      do fact_count=start_factor, max(1,(start_factor-max_factor_iters)), -1
-        if(mod(ranks_per_panel,fact_count)==0)then
-          found_factors=.true.
-          exit
-        end if
-      end do
-      if(found_factors)then
-        xproc = fact_count
-        yproc = ranks_per_panel/fact_count
-      else
-        call log_event( "set_up: Could not automatically partition domain.", &
-                      LOG_LEVEL_ERROR )
-      end if
-    else
-    ! Not automatic partitioning - use the values provided from the
-    ! partitioning namelist
-      if(panel_xproc*panel_yproc == ranks_per_panel)then
-        xproc = panel_xproc
-        yproc = panel_yproc
-      else
-        call log_event( "set_up: The values of panel_xproc and panel_yproc"// &
-          " are inconsistent with the total number of processors available.", &
-                      LOG_LEVEL_ERROR )
-      end if
-    end if
-
-    if(total_ranks == 1) then
-      call log_event( 'set_up: Using 1 partition', LOG_LEVEL_INFO )
-    else
-      write(partition_desc,"(i0,'x',i0)")xproc,yproc
-      write( log_scratch_space, "('set_up: Using ',a,a,' partitions.')" ) &
-                 trim(domain_desc), trim(partition_desc)
-      call log_event( log_scratch_space, LOG_LEVEL_INFO )
-    end if
-
-    ! Determine max_stencil_depth
-    max_stencil_depth=0
-    if ( operators == transport_operators_fv) then
-      ! Need larger haloes for fv operators
-      max_fv_stencil = int(real(max(fv_flux_order,fv_advective_order)+1)/2.0,&
-                           i_def)
-      max_stencil_depth = max(max_stencil_depth,max_fv_stencil)
-    end if
-    if ( scheme == transport_scheme_bip_cosmic ) then
-      max_stencil_depth = max(max_stencil_depth, &
-                              max(dep_pt_stencil_extent, &
-                                  rho_approximation_stencil_extent))
-    end if
-    if ( scheme == transport_scheme_cusph_cosmic ) then
-      max_stencil_depth = max(max_stencil_depth, &
-                       dep_pt_stencil_extent + rho_approximation_stencil_extent)
-    end if
-    if ( wtheta_on ) max_stencil_depth = max(max_stencil_depth,1)
-
-    ! Interrogate ugrid file to get the names of all the
-    ! contained mesh topologies 
-    allocate( ncdf_quad_type :: file_handler )
-    call ugrid_2d%set_file_handler( file_handler )
-    call ugrid_2d%get_nmeshes( trim(filename), n_meshes )
-    allocate( mesh_names(n_meshes) )
-    call ugrid_2d%get_mesh_names( trim(filename), mesh_names )
-
-    ! Read in prime mesh only
-    ! Other meshes may need to be read in when multiple meshes
-    ! are use i.e. in function space chains. 
-    do i=1, n_meshes
-      if (trim(mesh_names(i)) == trim(prime_mesh_name)) then
-        global_mesh_id = global_mesh_collection %                 &
-                             add_new_global_mesh ( filename,      &
-                                                   mesh_names(i), &
-                                                   npanels )
-
-        global_mesh_ptr => global_mesh_collection % &
-                               get_global_mesh( global_mesh_id )
+  if (auto) then
+    ! For automatic partitioning, try to partition into the squarest
+    ! possible partitions by finding the two factors of ranks_per_panel
+    ! that are closest to sqrt(ranks_per_panel). If two factors can't
+    ! be found after max_factor_iters attempts, they would provide 
+    ! partitions that are too un-square, so an error is produced.
+    start_factor  = int(sqrt(float(ranks_per_panel)))
+    end_factor    = max(1,(start_factor-max_factor_iters))
+    found_factors = .false.
+    do fact_count = start_factor, end_factor, -1
+      if (mod(ranks_per_panel,fact_count) == 0) then
+        found_factors = .true.
         exit
       end if
     end do
 
-    if ( .not. associated(global_mesh_ptr) )                   &
-      call log_event( "set_up: Global mesh not in collection", &
+    if (found_factors) then
+      xproc = fact_count
+      yproc = ranks_per_panel/fact_count
+    else
+      call log_event( "Could not automatically partition domain.", &
                       LOG_LEVEL_ERROR )
+    end if
+  else
+    ! Not automatic partitioning - use the values provided from the
+    ! partitioning namelist
+    if (panel_xproc*panel_yproc == ranks_per_panel) then
+      xproc = panel_xproc
+      yproc = panel_yproc
+    else
+      call log_event( "The values of panel_xproc and panel_yproc "// &
+                      "are inconsistent with the total number of "// &
+                      "processors available.", LOG_LEVEL_ERROR )
+    end if
+  end if
 
-    ! Generate the partition object
-    partition = partition_type( global_mesh_ptr,   &
-                                partitioner_ptr,   &
-                                xproc,             &
-                                yproc,             &
-                                max_stencil_depth, &
-                                local_rank,        &
-                                total_ranks )
+  if (total_ranks == 1) then
+    call log_event( 'Using 1 partition', LOG_LEVEL_INFO )
+  else
+    write(partition_desc,'(I0,A,I0)') xproc,'x', yproc
+    write(log_scratch_space, '(A)' ) &
+        'Using '//trim(domain_desc)//trim(partition_desc)//' partitions.'
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
+  end if
 
-    ! Generate the mesh
-    prime_mesh_id = mesh_collection%add_new_mesh( global_mesh_ptr,  &
-                                                  partition,        &
-                                                  number_of_layers, &
-                                                  domain_top,       &
-                                                  method )
+  ! Determine max_stencil_depth
+  max_stencil_depth = 0
+  if (operators == transport_operators_fv) then
+    ! Need larger haloes for fv operators
+    max_fv_stencil = &
+        int(real(max(fv_flux_order,fv_advective_order)+1)/2.0,i_def)
+    max_stencil_depth = max(max_stencil_depth,max_fv_stencil)
+  end if
 
-    return
-  end subroutine init_mesh
+  if (scheme == transport_scheme_bip_cosmic) then
+    max_stencil_depth = max(max_stencil_depth,         &
+                            max(dep_pt_stencil_extent, &
+                                rho_approximation_stencil_extent))
+  end if
+
+  if (scheme == transport_scheme_cusph_cosmic) then
+    max_stencil_depth = max( max_stencil_depth,      &
+                             dep_pt_stencil_extent + &
+                             rho_approximation_stencil_extent )
+  end if
+
+  if (wtheta_on) max_stencil_depth = max(max_stencil_depth,1)
+
+  ! Interrogate ugrid file to get the names of all the
+  ! contained mesh topologies 
+  allocate( ncdf_quad_type :: file_handler )
+  call ugrid_2d%set_file_handler( file_handler )
+  call ugrid_2d%get_nmeshes( trim(filename), n_meshes )
+
+  allocate( mesh_names(n_meshes) )
+  call ugrid_2d%get_mesh_names( trim(filename), mesh_names )
+
+  ! Read in prime mesh only
+  ! Other meshes may need to be read in when multiple meshes
+  ! are use i.e. in function space chains. 
+  do i=1, n_meshes
+    if (trim(mesh_names(i)) == trim(prime_mesh_name)) then
+      global_mesh_id = global_mesh_collection %                 &
+                           add_new_global_mesh ( filename,      &
+                                                 mesh_names(i), &
+                                                 npanels )
+
+      global_mesh_ptr => global_mesh_collection % &
+                             get_global_mesh( global_mesh_id )
+      exit
+    end if
+  end do
+
+  if (.not. associated(global_mesh_ptr)) &
+      call log_event( "Global mesh not in collection", LOG_LEVEL_ERROR )
+
+  ! Generate the partition object
+  partition = partition_type( global_mesh_ptr,   &
+                              partitioner_ptr,   &
+                              xproc,             &
+                              yproc,             &
+                              max_stencil_depth, &
+                              local_rank,        &
+                              total_ranks )
+
+  ! Generate the mesh
+  call log_event( "Creating prime mesh", LOG_LEVEL_INFO )
+  prime_mesh_id = mesh_collection%add_new_mesh( global_mesh_ptr,  &
+                                                partition,        &
+                                                number_of_layers, &
+                                                domain_top,       &
+                                                method )
+
+  write(log_scratch_space,'(A,I0,A)') &
+      "Prime mesh created (id:", prime_mesh_id, ")"
+  call log_event( log_scratch_space, LOG_LEVEL_INFO )
+
+  if (l_multigrid) then
+    ! Done this way as e do not currently have multiple global
+    ! meshes and their associated maps in a single ugrid file
+    call init_multigrid_mesh( prime_mesh_id,           &
+                              partitioner_ptr,         &
+                              xproc, yproc,            &
+                              max_stencil_depth,       &
+                              local_rank, total_ranks, &
+                              npanels )
+  end if
+
+  ! Set up analytic orography parameters
+  call set_orography_option()
+
+  return
+end subroutine init_mesh
+
 end module init_mesh_mod

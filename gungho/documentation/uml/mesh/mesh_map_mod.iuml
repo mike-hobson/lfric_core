@@ -15,8 +15,8 @@ class mesh_map_mod::mesh_map_type{
   +get_nsource_cells(): integer
   +get_ntarget_cells_per_source_cell(): integer
   +get_map_from_cell(<<in>>source_lid:integer, <<out>>map:integer[:] )
-  +get_map_from_cells(<<in>>source_lids:integer[:], <<out>>map:integer[::])
-  +get_full_map(<<out>>map:integer[::])
+  +get_cell_map(<<in>>source_lid:integer): integer[:],pointer
+  +get_whole_cell_map(): integer[::],pointer
 }
 
 

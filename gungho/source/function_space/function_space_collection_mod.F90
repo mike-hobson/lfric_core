@@ -18,7 +18,7 @@ module function_space_collection_mod
   use function_space_mod, only: function_space_type
   use fs_continuity_mod,  only: W0, W1, W2, W3, Wtheta, W2V, W2H, Wchi, fs_name
   use log_mod,            only: log_event, log_scratch_space, &
-                                LOG_LEVEL_ERROR, LOG_LEVEL_TRACE
+                                LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_TRACE
   use linked_list_mod,    only: linked_list_type, &
                                 linked_list_item_type
   implicit none
@@ -99,12 +99,16 @@ function get_fs(self, mesh_id, element_order, dynamo_fs) &
 
   case (W0,W1,W2,W3,WTHETA,W2V,W2H, WCHI)
   case default
-    write(log_scratch_space, '(2(A,I0),A)')                                    &
-      'Function space type not defined for Dynamo. Available types are '     //&
-      '[W0 | W1 | W2 | W3 | WTHETA | W2V | W2H | WCHI]'
+    write(log_scratch_space, '(A,I0,A)')                    &
+        'Function space type continuity type (', dynamo_fs, &
+        ') not defined for Dynamo.'
+    call log_event(log_scratch_space, LOG_LEVEL_INFO)
+    write(log_scratch_space, '(A)') &
+        'Available integer ids are: 100-107, corresponding to:'
+    call log_event(log_scratch_space, LOG_LEVEL_INFO)
+    write(log_scratch_space, '(A)') &
+        '[ W0, W1, W2, W3, WTHETA, W2V, W2H, WCHI ]'
     call log_event(log_scratch_space, LOG_LEVEL_ERROR)
-    return
-
   end select
 
   if (element_order < 0) then

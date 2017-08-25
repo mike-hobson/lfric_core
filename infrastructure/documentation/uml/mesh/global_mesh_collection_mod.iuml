@@ -4,6 +4,7 @@
 
 class global_mesh_collection_mod::global_mesh_collection_type {
   -global_mesh_list: linked_list_type
+  -source_global_mesh: global_mesh_type <<pointer>>
   -npanels: integer
 
   +<<create>>  global_mesh_collection_constructor() : global_mesh_collection_type

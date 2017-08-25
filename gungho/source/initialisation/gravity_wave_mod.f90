@@ -36,7 +36,7 @@ contains
     character(*), intent(in) :: filename
 
     character(*), parameter :: &
-                            required_configuration(10) = ['base_mesh           ', &
+                            required_configuration(11) = ['base_mesh           ', &
                                                           'planet              ', &
                                                           'restart             ', &
                                                           'extrusion           ', &
@@ -44,6 +44,7 @@ contains
                                                           'initial_wind        ', &
                                                           'output              ', &
                                                           'timestepping        ', &
+                                                          'multigrid           ', &
                                                           'gw_miniapp_constants', &
                                                           'domain_size         ']
 

@@ -212,6 +212,7 @@ subroutine insert_item(self, new_data, insert_point, placement)
     self%current => new_item
 
   else
+
     ! There is at least one item in the list so insert
     ! according to insert_point and placement arguments
     ! if present

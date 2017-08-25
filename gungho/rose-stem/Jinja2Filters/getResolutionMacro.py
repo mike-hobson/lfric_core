@@ -45,6 +45,7 @@ def getResolutionMacro(context, call):
     if len(argumentList) == 0: # We're processing a macro with no arguments so quit here
         configuration=None
         resList=[]
+        resSupportMeshes=['']
         resDict={}
     else:
         configuration=argumentList[0] # First argument is always the configuration
@@ -58,6 +59,10 @@ def getResolutionMacro(context, call):
         resList=[]
         if 'resolutions' in argumentDictionary.keys():
             resList = ast.literal_eval(argumentDictionary['resolutions'])
+
+        resSupportMeshes=['']
+        if 'support_meshes' in argumentDictionary.keys():
+            resSupportMeshes = ast.literal_eval(argumentDictionary['support_meshes'])
 
         # We now consider the possibility that entries for the resolutions
         # can either just be the resolution (i.e. a string) or a 
@@ -74,4 +79,4 @@ def getResolutionMacro(context, call):
                     if type(entry[1]) in [type(()),type([])]:
                         resDict[entry[0]].update(entry[1])
 
-    return configuration, resList, resDict
+    return configuration, resList, resDict, resSupportMeshes

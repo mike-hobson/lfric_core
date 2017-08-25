@@ -38,7 +38,7 @@ contains
     character(*), intent(in) :: filename
 
     character(*), parameter :: &
-                  required_configuration(19) = ['finite_element             ', &
+                  required_configuration(20) = ['finite_element             ', &
                                                 'formulation                ', &
                                                 'base_mesh                  ', &
                                                 'initial_wind               ', &
@@ -52,6 +52,7 @@ contains
                                                 'transport                  ', &
                                                 'domain_size                ', &
                                                 'mixing                     ', &
+                                                'multigrid                  ', &
                                                 'orography                  ', &
                                                 'orography_agnesi_cartesian ', &
                                                 'orography_agnesi_spherical ', &

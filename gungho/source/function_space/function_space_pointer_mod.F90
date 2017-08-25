@@ -4,7 +4,12 @@
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
 !
-!> Function space pointer
+!> Module for function_space_pointer_type which is a container for a pointer to
+!> a function_space_type.
+!>
+!> function_space_pointer_type is required as a work through, as the linked list
+!> class can only hold objects which are children of the linked_list_data_type.
+!> 
 
 module function_space_pointer_mod
 
@@ -12,32 +17,27 @@ use constants_mod,        only: i_def
 use linked_list_data_mod, only: linked_list_data_type
 use function_space_mod,   only: function_space_type
 
+
 implicit none
 
 private
 
-!> Linked list data object that contains a pointer to a function space object.
-!> This function_space_pointer_type is required as a work through, as the
-!> linked list class can only hold objects which are children of the
-!> linked_list_data_type.
-!> 
+!===============================================================================
 type, extends(linked_list_data_type), public :: function_space_pointer_type
 
-  private
+private
+type(function_space_type), pointer :: function_space_target => null()
 
-  type(function_space_type), pointer :: function_space_target => null()
-
-  !> An unused allocatable integer that prevents an intenal compiler error
-  !> with the Gnu Fortran compiler
-  !>
-  ! Adding an allocatable forces the compiler to accept that the object
-  ! has a finaliser. It gets confused without it. This is a workaround for
-  ! GCC bug id 61767 - when this bug is fixed, the integer can be removed.
-  integer(i_def), allocatable :: dummy_for_gnu
+!> An unused allocatable integer that prevents an intenal compiler error
+!> with the Gnu Fortran compiler
+!>
+! Adding an allocatable forces the compiler to accept that the object
+! has a finaliser. It gets confused without it. This is a workaround for
+! GCC bug id 61767 - when this bug is fixed, the integer can be removed.
+integer(i_def), allocatable :: dummy_for_gnu
 
 contains
-
-  !> Gets the function space that this object refers to.
+  !> @brief Returns a pointer to the function space that this object contains.
   !> @return function_space_target Pointer to the function space object.
   procedure, public :: get_target
 
@@ -47,12 +47,13 @@ interface function_space_pointer_type
   module procedure function_space_pointer_constructor
 end interface
 
-!===============================================================================
+
 contains ! Module procedures
 
-!> Instantiates a function space pointer object
-!> @return instance A function space pointer object
 !===============================================================================
+!> Creates a linked list item which refers to a function space.
+!> @return instance function_space_pointer_type
+!>
 function function_space_pointer_constructor(function_space) result(instance)
 
   implicit none
@@ -60,6 +61,7 @@ function function_space_pointer_constructor(function_space) result(instance)
   type(function_space_pointer_type) :: instance
   type(function_space_type), intent(in), pointer :: function_space
 
+  call instance%set_id( function_space%get_id() )
   instance%function_space_target => function_space
 
   return
@@ -75,6 +77,7 @@ function get_target(self) result(function_space_target)
 
   function_space_target => self%function_space_target
 
+  return
 end function get_target
 
 !===============================================================================

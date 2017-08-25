@@ -734,6 +734,9 @@ contains
     integer(i_def), allocatable :: test_2d_array(:,:)
     integer(i_def), allocatable :: data(:,:)
 
+    integer(i_def), pointer :: test_1d_array_ptr(:)
+    integer(i_def), pointer :: test_2d_array_ptr(:,:)
+
     ! Clear out the global mesh collection, as it may have the 
     ! unit test global mesh which is not what we want.
     call global_mesh_collection%clear()
@@ -783,7 +786,7 @@ contains
     call target_mesh % add_mesh_map(source_mesh)
 
     ! Test coarse to fine
-    mesh_map    => source_mesh%get_mesh_map(target_mesh_id)
+    mesh_map    => source_mesh%get_mesh_map(target_mesh)
     mesh_map_id = (10000*source_mesh_id) + target_mesh_id
     @assertEqual (mesh_map%get_id(), mesh_map_id)
 
@@ -809,37 +812,19 @@ contains
 
     !-------------------------------------------------------------------
     ! Test get_map_from_cell
-    allocate(test_1d_array(4))
-    call mesh_map%get_map_from_cell(11,test_1d_array)
-    @assertEqual ( [37,38,45,46], test_1d_array )
-    deallocate(test_1d_array)
-
-    !-------------------------------------------------------------------
-    ! Test get_map_from_cells
-    allocate(test_2d_array(4,2))
-    allocate(data(4,2))
-    data = reshape( [  5,  6, 13, 14,   &
-                      49, 50, 57, 58 ], &
-                    (/4,2/) )
-
-    call mesh_map%get_map_from_cells([3,13], test_2d_array)
-    @assertEqual ( data, test_2d_array )
-    deallocate(test_2d_array)
-    deallocate(data)
-
+    test_1d_array_ptr => mesh_map%get_cell_map(11)
+    @assertEqual ( [37,38,45,46], test_1d_array_ptr )
+    nullify(test_1d_array_ptr)
 
     !-------------------------------------------------------------------
     ! Test get_full_map
-    allocate(test_2d_array(4,96))
-    call mesh_map%get_full_map(test_2d_array)
-    @assertEqual ( CoarseToFineMap, test_2d_array )
-    deallocate(test_2d_array)
-
-
+    test_2d_array_ptr => mesh_map%get_whole_cell_map()
+    @assertEqual ( CoarseToFineMap, test_2d_array_ptr )
+    nullify(test_2d_array_ptr)
 
     ! Test fine to coarse
     !-------------------------------------------------------------------
-    mesh_map    => target_mesh%get_mesh_map(source_mesh_id)
+    mesh_map    => target_mesh%get_mesh_map(source_mesh)
     mesh_map_id = (10000*target_mesh_id) + source_mesh_id
     @assertEqual (mesh_map%get_id(), mesh_map_id)
 
@@ -864,30 +849,15 @@ contains
 
     !-------------------------------------------------------------------
     ! Test get_map_from_cell
-    allocate(test_1d_array(1))
-    call mesh_map%get_map_from_cell(11,test_1d_array)
-    @assertEqual ( [2], test_1d_array )
-    deallocate(test_1d_array)
-
-    !-------------------------------------------------------------------
-    ! Test get_map_from_cells
-    allocate(test_2d_array(1,2))
-    allocate(data(1,2))
-    data = reshape( [ 2, 3 ], (/1,2/) )
-
-    call mesh_map%get_map_from_cells([3,13], test_2d_array)
-    @assertEqual ( data, test_2d_array )
-    deallocate(test_2d_array)
-    deallocate(data)
-
+    test_1d_array_ptr => mesh_map%get_cell_map(11)
+    @assertEqual ( [2], test_1d_array_ptr )
+    nullify(test_1d_array_ptr)
 
     !-------------------------------------------------------------------
     ! Test get_full_map
-    allocate(test_2d_array(1,384))
-    call mesh_map%get_full_map(test_2d_array)
-    @assertEqual ( FineToCoarseMap, test_2d_array )
-    deallocate(test_2d_array)
-
+    test_2d_array_ptr => mesh_map%get_whole_cell_map()
+    @assertEqual ( FineToCoarseMap, test_2d_array_ptr )
+    nullify(test_2d_array_ptr)
 
     call partition%clear()
     call mesh_collection%clear()
@@ -896,10 +866,6 @@ contains
 
   end subroutine test_mesh_map_retrival
 
-
-
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
 end module mesh_mod_test

@@ -15,7 +15,7 @@ program gravity_wave
   use constants_mod,                  only : i_def
   use cli_mod,                        only : get_initial_filename
   use gravity_wave_mod,               only : load_configuration
-  use init_gungho_mod,                only : init_gungho
+  use init_mesh_mod,                  only : init_mesh
   use init_gravity_wave_mod,          only : init_gravity_wave
   use ESMF
   use field_mod,                      only : field_type
@@ -40,6 +40,10 @@ program gravity_wave
                                              write_xios_output
   use checksum_alg_mod,               only : checksum_alg
   use timer_mod,                      only : timer, output_timer
+
+  use global_mesh_collection_mod,    only: global_mesh_collection, &
+                                           global_mesh_collection_type
+  use function_space_chain_mod,      only: function_space_chain_type
 
   use io_mod,                         only : output_nodal, &
                                              output_xios_nodal, &
@@ -70,6 +74,10 @@ program gravity_wave
   type( field_type ) :: wind, buoyancy, pressure
 
   integer(i_def)     :: timestep, ts_init, dtime
+
+  ! Function space chains
+  type(function_space_chain_type) :: multigrid_function_space_chain
+
   !-----------------------------------------------------------------------------
   ! Driver layer init
   !-----------------------------------------------------------------------------
@@ -112,11 +120,25 @@ program gravity_wave
   !-----------------------------------------------------------------------------
   if ( subroutine_timers ) call timer('gravity wave')
 
-  ! Create the mesh and function space collection
-  call init_gungho(mesh_id, local_rank, total_ranks)
+  allocate( global_mesh_collection, &
+            source = global_mesh_collection_type() )
 
-  ! Create and initialise prognostic fields
-  call init_gravity_wave(mesh_id, wind, pressure, buoyancy, restart)
+  ! Create the mesh
+  call init_mesh(local_rank, total_ranks, mesh_id)
+
+  multigrid_function_space_chain = function_space_chain_type()
+
+  ! Create function space collection and initialise prognostic fields
+  call init_gravity_wave( mesh_id, multigrid_function_space_chain, &
+                          wind, pressure, buoyancy, restart )
+
+
+  ! Full global meshes no longer required, so reclaim
+  ! the memory from global_mesh_collection
+  write(log_scratch_space,'(A)') &
+      "Purging global mesh collection."
+  call log_event( log_scratch_space, LOG_LEVEL_INFO )
+  deallocate(global_mesh_collection)
 
   !-----------------------------------------------------------------------------
   ! IO init
@@ -127,7 +149,8 @@ program gravity_wave
 
     dtime = 1
 
-    call xios_domain_init(xios_ctx, comm, dtime, mesh_id, vm, local_rank, total_ranks)
+    call xios_domain_init(xios_ctx, comm, dtime, mesh_id, vm, &
+                          local_rank, total_ranks)
 
   end if
 

@@ -13,7 +13,8 @@ module init_io_miniapp_mod
   use constants_mod,                  only : i_def
   use field_mod,                      only : field_type, write_interface
   use finite_element_config_mod,      only : element_order
-  use function_space_collection_mod,  only : function_space_collection
+  use function_space_collection_mod,  only : function_space_collection, &
+                                             function_space_collection_type
   use fs_continuity_mod,              only : W3
   use log_mod,                        only : log_event,         &
                                              LOG_LEVEL_INFO
@@ -37,7 +38,9 @@ module init_io_miniapp_mod
 
     call log_event( 'IO Mini App: initialisation...', LOG_LEVEL_INFO )
 
-    
+    allocate( function_space_collection,      &
+              source = function_space_collection_type() )
+
     ! Create field
     test_field   = field_type( vector_space = &
                    function_space_collection%get_fs(mesh_id, element_order, W3), &

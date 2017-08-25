@@ -45,7 +45,7 @@ program cma_test
   use function_space_collection_mod,  only : function_space_collection
   use gungho_configuration_mod,       only : read_configuration, &
                                              ensure_configuration
-  use init_gungho_mod,                only : init_gungho
+  use init_mesh_mod,                  only : init_mesh
   use log_mod,                        only : log_event,         &
                                              log_scratch_space, &
                                              LOG_LEVEL_ERROR,   &
@@ -53,7 +53,8 @@ program cma_test
   use mesh_mod,                       only : mesh_type
   use mesh_collection_mod,            only : mesh_collection
   use planet_config_mod,              only : radius
-
+  use global_mesh_collection_mod,     only : global_mesh_collection, &
+                                             global_mesh_collection_type
 
   implicit none
 
@@ -90,8 +91,9 @@ program cma_test
   real   (kind=r_def) :: dx, dz
   ! Variables for reading configuration from namelist file
   character(*), parameter :: &
-       required_configuration(6) = (/'finite_element      ', &
+       required_configuration(7) = (/'finite_element      ', &
        'base_mesh           ', &
+       'multigrid           ', &
        'planet              ', &
        'extrusion           ', &
        'partitioning        ', &
@@ -234,8 +236,18 @@ program cma_test
 
   call log_event( 'Initialising harness', LOG_LEVEL_INFO )
 
+  allocate( global_mesh_collection, &
+            source = global_mesh_collection_type() )
+
   ! Create the mesh and function space collection
-  call init_gungho(mesh_id, local_rank, total_ranks)
+  call init_mesh( local_rank, total_ranks, mesh_id )
+
+  ! Full global meshes no longer required, so reclaim
+  ! the memory from global_mesh_collection
+  write(log_scratch_space,'(A)') &
+      "Purging global mesh collection."
+  call log_event( log_scratch_space, LOG_LEVEL_INFO )
+  deallocate(global_mesh_collection)
 
   ! Work out grid spacing, which should be of order 1
   mesh => mesh_collection%get_mesh( mesh_id )

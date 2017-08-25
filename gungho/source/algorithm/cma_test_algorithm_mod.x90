@@ -41,7 +41,8 @@ module cma_test_algorithm_mod
                                              LOG_LEVEL_TRACE
   use constants_mod,                  only : i_def, r_def
   use function_space_mod,             only : function_space_type
-  use function_space_collection_mod,  only : function_space_collection
+  use function_space_collection_mod,  only : function_space_collection, &
+                                             function_space_collection_type
   use field_mod,                      only : field_type
   use quadrature_mod,                 only : quadrature_type, GAUSSIAN
   use operator_mod,                   only : operator_type, &
@@ -172,6 +173,9 @@ contains
        call log_event( "cma test: Computing Wchi coordinate fields", &
                        LOG_LEVEL_INFO )
     end if
+
+    allocate( function_space_collection, &
+              source = function_space_collection_type() )
 
     fs_coord => function_space_collection%get_fs(mesh_id,          &
                                                  coordinate_order, &

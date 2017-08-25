@@ -46,6 +46,14 @@ module global_mesh_collection_mod
     ! meshes have the same number of panels in the mesh. npanels is set to
     ! be the same as the 1st global mesh loaded into the collection.
     integer(i_def)         :: npanels = IMDI
+
+    !> Pointer to global_mesh_type object in linked list. This global mesh
+    !> object will be use as the source mesh when for global mesh map creation
+    !> when the next global mesh is added to the collection.
+    !> THIS IS TEMPORARY AND SHOULD BE REMOVED WHEN GLOBAL MESH MAPS ARE 
+    !> READ DIRECTLY FROM THE UGRID MESH FILE
+    type(global_mesh_type),  pointer :: source_global_mesh => null()
+
     !>
     !> An unused allocatable integer that prevents an intenal compiler error
     !> with the Gnu Fortran compiler. Adding an allocatable forces the compiler
@@ -104,6 +112,12 @@ module global_mesh_collection_mod
     !> @deprecated When ugrid files with multiple meshes/mappings are
     !>             available
     procedure, private :: map_global_meshes
+    !>
+    !> @brief Specifies the global mesh to be used as the source mesh for
+    !>        mapping when the next global mesh is added to the collection
+    !> @deprecated When ugrid files with multiple meshes/mappings are
+    !>             available
+    procedure, public  :: set_next_source_mesh
     !>
     !> @brief Finalizer routine, should be called automatically by
     !>        code when the object is out of scope
@@ -170,18 +184,14 @@ function add_new_global_mesh( self, filename, global_mesh_name, npanels ) &
     ! meshes should have the same number of panels
     if (self%npanels == npanels) then
 
-      list_item => self%global_mesh_list%get_tail()
-      select type(m => list_item%payload)
-      type is (global_mesh_type)
-        global_mesh_at_tail => m
-      end select
-
-      source_global_mesh_id = global_mesh_at_tail%get_id()
+      source_global_mesh_id = self%source_global_mesh%get_id()
       target_global_mesh_id = global_mesh_id
 
       call self%global_mesh_list%insert_item( global_mesh_to_add )
       call self%map_global_meshes( source_global_mesh_id, &
                                    target_global_mesh_id )
+
+      call self%set_next_source_mesh( target_global_mesh_id )
 
     else
        write(log_scratch_space,'(A,I0)')                                     &
@@ -195,6 +205,8 @@ function add_new_global_mesh( self, filename, global_mesh_name, npanels ) &
 
     self%npanels = npanels
     call self%global_mesh_list%insert_item( global_mesh_to_add )
+
+    call self%set_next_source_mesh( global_mesh_id )
 
   end if
 
@@ -393,6 +405,42 @@ subroutine map_global_meshes( self,                   &
 
   return
 end subroutine map_global_meshes
+
+subroutine set_next_source_mesh(self, global_mesh_id)
+
+  implicit none
+
+  class(global_mesh_collection_type), intent(inout) :: self
+
+  integer(i_def), intent(in) :: global_mesh_id
+
+  ! Pointer to linked list - used for looping through the list
+  class(linked_list_item_type), pointer :: loop => null()
+
+  ! start at the head of the mesh collection linked list
+  loop => self%global_mesh_list%get_head()
+
+  if (self%global_mesh_list%item_exists(global_mesh_id)) then
+    do
+      ! Search list for the id we want
+      if ( global_mesh_id == loop%payload%get_id() ) then
+        ! 'cast' to the global_mesh_type
+        select type(m => loop%payload)
+        type is (global_mesh_type)
+          self%source_global_mesh => m
+        end select
+        exit
+      end if
+      loop => loop%next
+    end do
+  else
+    write(log_scratch_space,'(A)')                                           &
+         "Invalid global mesh id: does not exist in collection" 
+    call log_event(log_scratch_space,LOG_LEVEL_ERROR)
+  end if
+
+  return
+end subroutine set_next_source_mesh
 
 
 !==============================================================================

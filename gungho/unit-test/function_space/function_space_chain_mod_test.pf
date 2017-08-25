@@ -281,16 +281,17 @@ call function_space_chain%add( this%function_space4 )
 
 ! Check mesh1 has a map to mesh2 in it's mesh map collection
 function_space1 => function_space_chain%get_start()
-mesh1_id        =  function_space1%get_mesh_id()
-mesh1           => mesh_collection%get_mesh(mesh1_id)
+mesh1           => function_space1%get_mesh()
+mesh1_id        =  mesh1%get_id()
 
 
 function_space2 => function_space_chain%get_next()
-mesh2_id        =  function_space2%get_mesh_id()
+mesh2           => function_space2%get_mesh()
+mesh2_id        =  mesh2%get_id()
+
 
 mesh_map_id     =  generate_mesh_map_id(mesh1_id, mesh2_id)
-mesh_map1to2    => mesh1%get_mesh_map(mesh2_id)
-
+mesh_map1to2    => mesh1%get_mesh_map(mesh2)
 @assertAssociated ( mesh_map1to2 )
 @assertEqual ( mesh_map_id, mesh_map1to2%get_id() )
 
@@ -298,19 +299,20 @@ mesh_map1to2    => mesh1%get_mesh_map(mesh2_id)
 ! Check mesh3 has a map to mesh2 and mesh4
 ! in it's mesh map collection
 function_space3 => function_space_chain%get_next()
-mesh3_id        =  function_space3%get_mesh_id()
-mesh3           => mesh_collection%get_mesh(mesh3_id)
+mesh3           => function_space3%get_mesh()
+mesh3_id        =  mesh3%get_id()
 
 function_space4 => function_space_chain%get_next()
-mesh4_id        =  function_space4%get_mesh_id()
+mesh4           => function_space4%get_mesh()
+mesh4_id        =  mesh4%get_id()
 
 mesh_map_id     =  generate_mesh_map_id(mesh3_id, mesh2_id)
-mesh_map3to2    => mesh3%get_mesh_map(mesh2_id)
+mesh_map3to2    => mesh3%get_mesh_map(mesh2)
 @assertAssociated ( mesh_map3to2 )
 @assertEqual ( mesh_map_id, mesh_map3to2%get_id() )
 
 mesh_map_id     =  generate_mesh_map_id(mesh3_id, mesh4_id)
-mesh_map3to4    => mesh3%get_mesh_map(mesh4_id)
+mesh_map3to4    => mesh3%get_mesh_map(mesh4)
 @assertAssociated ( mesh_map3to4 )
 @assertEqual ( mesh_map_id, mesh_map3to4%get_id() )
 
@@ -343,7 +345,7 @@ type(mesh_map_type), pointer :: mesh_map1to2 => null(), &
 
 integer(i_def), allocatable :: test_source_cells(:)
 integer(i_def), allocatable :: target_data(:,:)
-integer(i_def), allocatable :: target_test(:,:)
+integer(i_def), pointer :: target_test(:)
 
 integer(i_def) :: i
 
@@ -357,23 +359,22 @@ call function_space_chain%add( this%function_space4 )
 
 ! Get mesh map for mesh1 --> mesh2
 function_space1 => function_space_chain%get_start()
-mesh1_id        =  function_space1%get_mesh_id()
-mesh1           => mesh_collection%get_mesh(mesh1_id)
+mesh1           => function_space1%get_mesh()
+mesh1_id        =  mesh1%get_id()
 
 function_space2 => function_space_chain%get_next()
-mesh2_id        =  function_space2%get_mesh_id()
-mesh2           => mesh_collection%get_mesh(mesh2_id)
+mesh2           => function_space2%get_mesh()
+mesh2_id        =  mesh2%get_id()
 
 mesh_map_id     =  generate_mesh_map_id(mesh1_id, mesh2_id)
-mesh_map1to2    => mesh1%get_mesh_map(mesh2_id)
+mesh_map1to2    => mesh1%get_mesh_map(mesh2)
 
 mesh_map_id     =  generate_mesh_map_id(mesh2_id, mesh1_id)
-mesh_map2to1    => mesh2%get_mesh_map(mesh1_id)
+mesh_map2to1    => mesh2%get_mesh_map(mesh1)
 
 
 ! Now to check it's contents (mesh1-->mesh2)
 allocate(test_source_cells(5))
-allocate(target_test(4,5))
 allocate(target_data(4,5))
 test_source_cells = [1, 30, 45, 78, 90]
 target_data = reshape( [ 1,    2,    9,    10   &
@@ -382,21 +383,26 @@ target_data = reshape( [ 1,    2,    9,    10   &
                        , 307,  308,  315,  316  &
                        , 355,  356,  363,  364  ], (/4,5/))
 
-call mesh_map1to2%get_map_from_cells( test_source_cells, target_test )
-@assertEqual ( target_data, target_test )
-deallocate( test_source_cells, target_test, target_data )
+do i=1, 5
+  target_test => mesh_map1to2%get_cell_map( test_source_cells(i) )
+  @assertEqual ( target_data(:,i), target_test )
+  nullify(target_test)
+end do
+deallocate( test_source_cells, target_data )
 
 
 ! Now to check it's contents (mesh2-->mesh1)
 allocate(test_source_cells(5))
-allocate(target_test(1,5))
 allocate(target_data(1,5))
 test_source_cells = [1, 3, 8, 9, 15]
 target_data = reshape( [1, 2, 4, 1, 4], (/1,5/) )
 
-call mesh_map2to1%get_map_from_cells( test_source_cells, target_test )
-@assertEqual ( target_data, target_test )
-deallocate( test_source_cells, target_test, target_data )
+do i=1, 5
+  target_test => mesh_map2to1%get_cell_map( test_source_cells(i) )
+  @assertEqual ( target_data(:,i), target_test )
+  nullify(target_test)
+end do
+deallocate( test_source_cells, target_data )
 
 return
 end subroutine test_local_mesh_map_contents

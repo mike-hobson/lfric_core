@@ -82,7 +82,7 @@ class mesh_mod::mesh_type {
   +get_nverts_2d() : integer
   +get_nverts_per_cell() : integer
   +add_mesh_map(<<in>>target_mesh: mesh_type<<pointer>>)
-  +get_mesh_map(<<in>>target_mesh_id: integer) : mesh_map_type <<pointer>>
+  +get_mesh_map(<<in>>target_mesh: mesh_type<<pointer>>) : mesh_map_type <<pointer>>
   +get_partition() : partition_type<<pointer>>
   +get_total_ranks() : integer
   +get_vertex_cell_owner( <<in>>vertex_index: integer, <<in>>cell_lid: integer ) : integer

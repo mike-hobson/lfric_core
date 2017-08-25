@@ -1,5 +1,5 @@
 &base_mesh
-  filename        = 'cubedsphere.24x24.nc'
+  filename        = 'mesh_C24.nc'
   prime_mesh_name = 'Mesh2'
   geometry        = 'spherical'
   partitioner     = 'cubedsphere'
@@ -94,4 +94,12 @@
   planar_domain_max_x =  1.0
   planar_domain_min_y = -1.0
   planar_domain_max_y =  1.0
+/
+
+&multigrid
+  l_multigrid = .true.
+  multigrid_chain_nitems = 4
+  ugrid      = 'prime', 'mesh_C12.nc', 'mesh_C6.nc', 'mesh_C3.nc'
+  order      =       0,    0,   0,   0
+  continuity =     103,  103, 103, 103
 /

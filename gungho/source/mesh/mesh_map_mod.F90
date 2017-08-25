@@ -50,28 +50,18 @@ contains
   !>
   !> Gets the target cells ids mapped to the requested source cell
   !> @param [in]  source_lid Local ID of requested source cell
-  !> @param [out] map        Local IDs of cells in target mesh which overlap
-  !>                         with the requested Local ID in source mesh.
-  !>                         Argument should be of dimension,
-  !>                         [ntarget_cells_per_source_cell]
-  procedure, public :: get_map_from_cell
-  !>
-  !> Gets the target cells ids mapped to the requested source cells
-  !> @param [in]  source_lids Local IDs of requested source cells
-  !> @param [out] map         Local IDs of cells in target mesh which overlap
-  !>                          with the requested Local IDs in source mesh.
-  !>                          Argument should be of dimension,
-  !>                          [ntarget_cells_per_source_cell,
-  !>                           nrequested_source_cells]
-  procedure, public :: get_map_from_cells
+  !> @return map  Pointer to array of local IDs of cells in target
+  !>              mesh which overlap with the requested local ID 
+  !>              in source mesh. Argument should be of rank-1 array
+  procedure, public :: get_cell_map
   !>
   !> Gets the target cells ids mapped to all source cells.
-  !> @param [out] map         Local IDs of cells in target mesh which overlap
-  !>                          with the requested Local IDs in source mesh.
-  !>                          Argument should be of dimension,
-  !>                          [ntarget_cells_per_source_cell,
-  !>                           nsource_cells]
-  procedure, public :: get_full_map
+  !> @return  map  Pointer to array of local IDs of cells in
+  !>               target mesh which overlap with the requested
+  !>               local IDs in source mesh. Argument should be
+  !>               a rank-2 array
+  procedure, public :: get_whole_cell_map
+
   !>
   !> Forced clear of this oject from memory.
   !> This routine should not need to be called manually except
@@ -183,93 +173,35 @@ return
 end function get_ntarget_cells_per_source_cell
 
 
-!==============================================================================
-subroutine get_map_from_cell(self, source_lid, map)
+function get_cell_map(self, cell) result(map)
 
-implicit none
-class(mesh_map_type), intent(in)  :: self
-integer(i_def),       intent(in)  :: source_lid
-integer(i_def),       intent(out) :: map(:)
+  implicit none
 
-integer(i_def)         :: ncells_in_map
-character(len=str_def) :: fmt_str
+  class(mesh_map_type), target, intent(in) :: self
+ 
+  integer(i_def), intent(in) :: cell
+  integer(i_def), pointer  :: map(:)
 
-ncells_in_map = size(self%mesh_map,1)
-write(fmt_str, '(A,I0,A)') '(I05,A,',ncells_in_map,'(I06))'
+  nullify(map)
+  map => self%mesh_map(:,cell)
 
-write(log_scratch_space, fmt_str) &
-    source_lid, ' : ', self%mesh_map(:,source_lid)
-call log_event(log_scratch_space, LOG_LEVEL_TRACE)
-
-map(:) = self%mesh_map(:,source_lid)
-
-return
-end subroutine get_map_from_cell
-
-
-!==============================================================================
-subroutine get_map_from_cells(self, source_lids, map)
-
-implicit none
-class(mesh_map_type), intent(in)  :: self
-integer(i_def),       intent(in)  :: source_lids(:)
-integer(i_def),       intent(out) :: map(:,:)
-
-integer(i_def) :: ncells
-integer(i_def) :: i
-
-ncells = size(source_lids)
-
-! Check size of output
-if ((size(map,1) /= size(self%mesh_map,1)) .or. &
-    (size(map,2) /= ncells)) then
-
-  write(log_scratch_space, '(A,I0,A,I0,A)')                        &
-      'The return array for cell map should '                    //&
-      'be of dimension (', size(self%mesh_map,1),',', ncells,')'
-  call log_event(log_scratch_space, LOG_LEVEL_ERROR)
   return
-end if
-
-do i=1, ncells
-  call self%get_map_from_cell(source_lids(i),map(:,i))
-end do
-
-return
-end subroutine get_map_from_cells
+end function get_cell_map
 
 
+function get_whole_cell_map(self) result(map)
 
-!==============================================================================
-subroutine get_full_map(self, map)
+  implicit none
 
-implicit none
-class(mesh_map_type), intent(in)  :: self
-integer(i_def),       intent(out) :: map(:,:)
+  class(mesh_map_type), target, intent(in) :: self
 
-integer(i_def) :: ncells
-integer(i_def) :: i
+  integer(i_def), pointer :: map(:,:)
 
-ncells = size(self%mesh_map,2)
+  nullify(map)
+  map => self%mesh_map(:,:)
 
-! Check size of output
-if ((size(map,1) /= size(self%mesh_map,1)) .or. &
-    (size(map,2) /= ncells)) then
-
-  write(log_scratch_space, '(A,I0,A,I0,A)')         &
-      'The return array for the cell map should ' //&
-      'be of dimension (', size(self%mesh_map,1),   &
-      ',', ncells,')'
-  call log_event(log_scratch_space, LOG_LEVEL_ERROR)
   return
-end if
-
-do i=1, ncells
-  call self%get_map_from_cell( i, map(:,i) )
-end do
-
-return
-end subroutine get_full_map
+end function get_whole_cell_map
 
 
 !==============================================================================

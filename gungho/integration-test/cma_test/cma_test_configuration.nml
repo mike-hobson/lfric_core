@@ -7,6 +7,10 @@
   f_lat_deg       = 45.0
 /
 
+&multigrid
+  l_multigrid = .false.
+/
+
 &extrusion
   method           = 'uniform'
   domain_top       = 10.0

@@ -2579,13 +2579,14 @@ subroutine invoke_subgrid_coeffs(a0,a1,a2,rho,cell_orientation,direction,rho_app
 
     rho_stencil_size = map_x_w3%get_size()
 
+    mesh => a0%get_mesh()
+
     swap = .false.
-    do d = 1,rho_approximation_stencil_extent
+    do d = 1,mesh%get_halo_depth()
       if (rho_proxy%is_dirty(depth=d)) swap = .true.
     end do
-    if ( swap ) call rho_proxy%halo_exchange(depth=rho_approximation_stencil_extent)
+    if ( swap ) call rho_proxy%halo_exchange(depth=mesh%get_halo_depth())
 
-    mesh => a0%get_mesh()
     if (halo_depth_to_compute==0) then
       ncells_to_iterate = mesh%get_last_edge_cell()
     elseif (halo_depth_to_compute > 0) then

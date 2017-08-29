@@ -90,8 +90,8 @@ end function correct_cosmic_wind_kernel_constructor
     integer,                                    intent(in)    :: ndf_w2, undf_w2, direction
     integer,          dimension(ndf_w2),        intent(in)    :: map_w2
     real(kind=r_def), dimension(undf_w3),       intent(in)    :: orientation
-    real(kind=r_def), dimension(undf_w3),       intent(in)    :: wind_in
-    real(kind=r_def), dimension(undf_w3),       intent(inout) :: wind_out
+    real(kind=r_def), dimension(undf_w2),       intent(in)    :: wind_in
+    real(kind=r_def), dimension(undf_w2),       intent(inout) :: wind_out
 
     !Internal variables
     integer          :: df, k, local_dofs_x(1:2), local_dofs_y(1:2)

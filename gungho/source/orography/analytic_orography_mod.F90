@@ -28,7 +28,7 @@ module analytic_orography_mod
 
   contains
 
-    procedure(analytic_orography_function), deferred :: analytic_orography
+    procedure(analytic_orography_function), deferred, pass(self) :: analytic_orography
 
   end type analytic_orography_type
 

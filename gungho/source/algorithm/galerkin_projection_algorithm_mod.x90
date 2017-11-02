@@ -18,7 +18,6 @@ module galerkin_projection_algorithm_mod
   use gp_vector_rhs_kernel_mod,        only: gp_vector_rhs_kernel_type
   use log_mod,                         only: log_event, log_scratch_space, LOG_LEVEL_INFO
   use operator_mod,                    only: operator_type
-  use psykal_lite_mod,                 only: invoke_copy_field_data, invoke_set_field_scalar
   use quadrature_mod,                  only: quadrature_type
   use solver_mod,                      only: solver_algorithm
   use runtime_constants_mod,           only: get_coordinates
@@ -73,7 +72,7 @@ contains
     out_fs = f_out(1)%which_function_space()
     do dir = 1,space_dimension
       rhs(dir) = field_type( vector_space = f_out(1)%get_function_space() )
-      call invoke( set_field_scalar(0.0_r_def, rhs(dir)) )
+      call invoke( setval_c(rhs(dir), 0.0_r_def) )
     end do
     
 ! Project field into continuous space
@@ -82,7 +81,7 @@ contains
     if ( f_in%which_function_space() == out_fs ) then
        write( log_scratch_space, '(A)' ) '   function spaces match, no projection needed'
        call log_event( log_scratch_space, LOG_LEVEL_INFO )
-       call invoke( copy_field(f_in, f_out(1)) )
+       call invoke( setval_X(f_out(1), f_in) )
     else
        if ( space_dimension == 1 ) then
           write( log_scratch_space, '(A)' ) '    scalar field ... '

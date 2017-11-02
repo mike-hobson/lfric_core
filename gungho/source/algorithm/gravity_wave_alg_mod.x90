@@ -25,7 +25,6 @@ module gravity_wave_alg_mod
   use gw_miniapp_constants_config_mod,only: cs_square
 
   ! PsyKAl-lite kernels
-  use psykal_lite_mod,                only: invoke_scale_field_data
   use field_bundle_mod,               only: clone_bundle, & 
                                             copy_bundle  
 
@@ -108,9 +107,10 @@ contains
     rhs_p =  field_type( vector_space = p_fs )
 
     !=== Copy prognostic field data to state arrays ===========================!
-    call invoke( copy_field(wind,     state(igw_u)), &
-                 copy_field(pressure, state(igw_p)), & 
-                 copy_field(buoyancy, state(igw_b)) )
+    call invoke( name = "Copy init fields to state",  & 
+                 setval_X(state(igw_u), wind    ),    &
+                 setval_X(state(igw_p), pressure),    & 
+                 setval_X(state(igw_b), buoyancy) )
 
     ! Create Q operator
     Q = operator_type( u_fs, b_fs)
@@ -129,7 +129,7 @@ contains
 !=============================================================================!
 
   !> @details An algorithm for timestepping the 3D linear  gravity wave equations
-  !>         using a cnetred implicit method
+  !>         using a centred implicit method
   !> @param[inout] wind  The 3D wind field
   !> @param[inout] pressure The pressure field
   !> @param[inout] buoyancy The buoyancy field
@@ -147,39 +147,50 @@ contains
 
     type(operator_type), pointer :: div    => null() 
     type(operator_type), pointer :: m3_inv => null() 
-  
+
+    ! Auxiliary constants to group invokes
+    real(kind=r_def)             :: const1, const2
+
     if ( subroutine_timers ) call timer('gravity_wave_alg')
     !=== Do a single timestep ==============================================!
     div => get_div()
     m3_inv => get_mass_matrix(w3inv_id)
-    call invoke( copy_field(wind,     state(igw_u)), &
-                 copy_field(pressure, state(igw_p)), &
-                 copy_field(buoyancy, state(igw_b)) )
+    call invoke( name = "Copy step fields to state",  &
+                 setval_X(state(igw_u), wind    ),    &
+                 setval_X(state(igw_p), pressure),    & 
+                 setval_X(state(igw_b), buoyancy) )
     call copy_bundle(state, state_n, bundle_size)
 
+    ! Set auxiliary constants
+    const1 = -dt*cs_square
+    const2 = -dt*bvf_square
+
     ! Compute rhs
-    call invoke( set_field_scalar(0.0_r_def, rhs_n(igw_u)), &
-                 set_field_scalar(0.0_r_def, rhs_n(igw_b)) )
-    call invoke( transpose_matrix_vector_kernel_type(rhs_n(igw_u), state_n(igw_p), div), &
-                 matrix_vector_kernel_type          (rhs_n(igw_u), state_n(igw_b), Q), &
-                 dg_matrix_vector_kernel_type       (rhs_p,        state_n(igw_u), div), &
+    call invoke( name = "Compute mixed rhs",                                                & 
+                 setval_c(rhs_n(igw_u), 0.0_r_def),                                         &
+                 setval_c(rhs_n(igw_b), 0.0_r_def),                                         &
+                 transpose_matrix_vector_kernel_type(rhs_n(igw_u), state_n(igw_p), div),    &
+                 matrix_vector_kernel_type          (rhs_n(igw_u), state_n(igw_b), Q),      &
+                 dg_matrix_vector_kernel_type       (rhs_p,        state_n(igw_u), div),    &
                  dg_matrix_vector_kernel_type       (rhs_n(igw_p), rhs_p,          m3_inv), &
-                 transpose_matrix_vector_kernel_type(rhs_n(igw_b), state_n(igw_u), Q) )
+                 transpose_matrix_vector_kernel_type(rhs_n(igw_b), state_n(igw_u), Q),      &
 
     ! Apply timestep scalings
-    call invoke_scale_field_data( dt,            rhs_n(igw_u))
-    call invoke_scale_field_data(-dt*cs_square,  rhs_n(igw_p))
-    call invoke_scale_field_data(-dt*bvf_square, rhs_n(igw_b))
+                 inc_a_times_X(dt,     rhs_n(igw_u)),                                       &
+                 inc_a_times_X(const1, rhs_n(igw_p)),                                       &
+                 inc_a_times_X(const2, rhs_n(igw_b)),                                       &
 
-    call invoke( enforce_bc_kernel_type(rhs_n(igw_u)) )
+    ! Apply BC to wind rhs
+                 enforce_bc_kernel_type(rhs_n(igw_u)) )
 
     ! Solve
     call gw_si_solver_alg(state, rhs_n)
        
     ! Return fields
-    call invoke( copy_field(state(igw_u), wind),     &
-                 copy_field(state(igw_p), pressure), &
-                 copy_field(state(igw_b), buoyancy) )
+    call invoke( name = "Return fields",           &
+                 setval_X(wind,     state(igw_u)), &
+                 setval_X(pressure, state(igw_p)), & 
+                 setval_X(buoyancy, state(igw_b)) )
     if ( subroutine_timers ) call timer('gravity_wave_alg')
 
   end subroutine gravity_wave_alg_step

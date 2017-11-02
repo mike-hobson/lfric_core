@@ -4,7 +4,7 @@
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
 
-!> @mainpage Dynamo
+!> @page gung_ho GungHo Program
 !> Illustration of the PSyKAl (Parallel-system/Kernel/Algorithm) architecture
 !> for Gung Ho. Whilst the computational and optimisation infrastructure is
 !> being developed, the science code is being developed using
@@ -12,7 +12,7 @@
 !> Eventually, PSyKAl-lite will be replaced with the real PSy and Dynamo
 !> will be the implementation of the Gung Ho dynamical core.
 
-!> @brief Main program used to illustrate dynamo functionality.
+!> @brief Main program used to illustrate gungho functionality.
 
 !> @details Calls various init subroutines to create a mesh, function spaces
 !> and then prognostic fields on those function spaces.

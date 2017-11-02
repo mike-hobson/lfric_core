@@ -4,7 +4,9 @@
 # should have received as part of this distribution.
 ##############################################################################
 
-from transformations import Dynamo0p3ColourTrans, Dynamo0p3OMPLoopTrans,OMPParallelTrans
+from psyclone.transformations import Dynamo0p3ColourTrans, \
+                                     Dynamo0p3OMPLoopTrans, \
+                                     OMPParallelTrans
 
 def trans(psy):
     ctrans = Dynamo0p3ColourTrans()

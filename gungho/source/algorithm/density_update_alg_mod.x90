@@ -18,7 +18,6 @@ module density_update_alg_mod
                                                LOG_LEVEL_TRACE
 
   use timestepping_config_mod,           only: dt
-  use psykal_lite_mod,                   only: invoke_axpy, invoke_multiply_field_data
   use rrho_kernel_mod,                   only: rrho_kernel_type
   use runtime_constants_mod,             only: get_mass_matrix, w3inv_id
   use operator_mod,                      only: operator_type
@@ -61,13 +60,15 @@ contains
     div_temp       = field_type( vector_space = rho_n%get_function_space() )
     mass_flux_mult = field_type( vector_space = detj_at_w2%get_function_space() )
 
-    call invoke_multiply_field_data(mass_flux,detj_at_w2,mass_flux_mult)
+    call invoke( name = "Compute density update",                     &
 
-    call invoke( rrho_kernel_type( div_temp, mass_flux_mult, qr ) )
+                 X_times_Y(mass_flux_mult, mass_flux, detj_at_w2),    &
 
-    call invoke( dg_matrix_vector_kernel_type(div, div_temp, m3_inv) )
+                 rrho_kernel_type(div_temp, mass_flux_mult, qr),      &
 
-    call invoke_axpy(dt, div, rho_n, rho)
+                 dg_matrix_vector_kernel_type(div, div_temp, m3_inv), &
+
+                 aX_plus_Y(rho, dt, div, rho_n) )
 
   end subroutine density_update_alg
 

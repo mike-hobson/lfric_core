@@ -4,6 +4,11 @@
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
 !>@brief Routines for solving the semi-implicit equation set
+
+! Note: PSyclone 1.5.0 fails to correctly parse "use, intrinsic :: ieee_arithmetic" 
+!       so this algorithm is not using PSyclone built-ins or other invokes.
+!       However, commented PSyclone invokes are left as placeholders for when 
+!       the support becomes available.
 module si_solver_alg_mod
 
   use, intrinsic :: ieee_arithmetic
@@ -88,26 +93,24 @@ contains
     tau_t_dt = tau_t*dt
     tau_r_dt = tau_r*dt
 
-! PSyclone built-ins support (v.1.3.1) fails for changing index in a loop, so the
-! calls below are placeholders for when it becomes available
     if ( eliminate_p ) then
       call mixed_gmres_alg(x0, rhs0, x_ref, tau_u_dt, tau_t_dt, tau_r_dt)
     else
       do i = 1,bundle_size
         call invoke_copy_field_data(rhs0(i), rhs0_ext(i))
         call invoke_copy_field_data(x0(i), x0_ext(i))
-!         call invoke( copy_field(rhs0(i), rhs0_ext(i)), &
-!                      copy_field(x0(i), x0_ext(i)) )
+        ! call invoke( setval_X(rhs0_ext(i), rhs0(i)), &
+        !              setval_X(x0_ext(i),   x0(i)) )
       end do
       ! Set initial guess to exner' and r_exner = 0
       call invoke_set_field_scalar(0.0_r_def, x0_ext(si_bundle_size))      
       call invoke_set_field_scalar(0.0_r_def, rhs0_ext(si_bundle_size)) 
-!       call invoke( set_field_scalar(0.0_r_def, x0_ext(si_bundle_size)), &     
-!                    set_field_scalar(0.0_r_def, rhs0_ext(si_bundle_size)) )     
+      ! call invoke( setval_c(x0_ext(si_bundle_size),   0.0_r_def), &     
+      !              setval_c(rhs0_ext(si_bundle_size), 0.0_r_def) )     
       call mixed_gmres_alg(x0_ext, rhs0_ext, x_ref, tau_u_dt, tau_t_dt, tau_r_dt)
       do i = 1,bundle_size
         call invoke_copy_field_data(x0_ext(i), x0(i))
-!         call invoke( copy_field(x0_ext(i), x0(i)) )
+        ! call invoke( setval_X(x0(i), x0_ext(i)) )
       end do
     end if
 
@@ -340,18 +343,16 @@ contains
     integer(kind=i_def), intent(in)    :: option
     integer(kind=i_def)                :: i
 
-! PSyclone built-ins support (v.1.3.1) fails for changing index in a loop, so the
-! callS below are placeholders for when it becomes available
     select case ( option)
       case( solver_si_preconditioner_none, solver_si_postconditioner_none )
         do i = 1,si_bundle_size
           call invoke_copy_field_data( x(i), y(i) )
-!           call invoke( copy_field(x(i), y(i)) )
+          ! call invoke( setval_X(y(i), x(i)) )
         end do
       case( solver_si_preconditioner_diagonal, solver_si_postconditioner_diagonal )
         do i = 1,si_bundle_size
           call invoke_copy_field_data( x(i), y(i) )
-!           call invoke( copy_field(x(i), y(i)) )
+          ! call invoke( setval_X(y(i), x(i)) )
         end do
         call bundle_divide(y, mm, si_bundle_size)
       case ( solver_si_preconditioner_pressure, solver_si_postconditioner_pressure )

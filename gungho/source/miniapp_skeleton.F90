@@ -4,8 +4,8 @@
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
 
-!> @mainpage miniapp_skeleton
-!> Barebones miniapp that can be taken and adapted for new science development
+!> @page miniapp_skeleton Miniapp Skeleton
+!> Barebones miniapp that can be taken and adapted for new science development.
 
 program miniapp_skeleton
 

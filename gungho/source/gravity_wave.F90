@@ -4,11 +4,11 @@
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
 
-!> @mainpage gravity_wave
+!> @page gravity_wave_minapp Gravity Wave Miniapp
 !> Test program for the automatic generation of boundary condition enforcement
-!> by psyclone
+!> by PSyclone.
 
-!> @brief Main program used to simulate the linear gravity waves equations
+!> @brief Main program used to simulate the linear gravity waves equations.
 
 program gravity_wave
 

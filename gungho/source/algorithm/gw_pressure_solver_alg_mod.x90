@@ -32,6 +32,8 @@ module gw_pressure_solver_alg_mod
   real(kind=r_def), private, parameter :: tau_p = 0.5_r_def
   real(kind=r_def), private, parameter :: tau_b = 0.5_r_def
   integer(kind=i_def), private :: bundle_size = 3
+  ! Auxiliary constants to group invokes
+  real(kind=r_def), private    :: const1, const2
   
   ! Q matrix
   type(operator_type), private :: Q
@@ -75,9 +77,6 @@ contains
     use log_mod,                       only: log_event,         &
                                              LOG_LEVEL_INFO
 
-    use psykal_lite_mod,               only: invoke_inc_X_times_Y, &   
-                                             invoke_divide_field,  &
-                                             invoke_scale_field_data
     implicit none
 
     type(field_type), intent(in)       :: state(bundle_size)
@@ -85,6 +84,7 @@ contains
     type(field_type)                   :: ones, M_lumped, QT1
     type(operator_type), pointer       :: Mb => null(), Mu => null()
     type(quadrature_type)              :: qr
+
     call log_event( 'Constructing pressure solver...', LOG_LEVEL_INFO )
 
     ! Get needed function spaces
@@ -130,10 +130,11 @@ contains
       case(gw_miniapp_constants_b_space_wtheta)  
         Mb => get_mass_matrix(wt_id)
     end select
-    call invoke( set_field_scalar(1.0_r_def, ones), &
-                 set_field_scalar(0.0_r_def, M_lumped) )
-    call invoke( matrix_vector_kernel_type(M_lumped, ones, Mb) )
-    call invoke_divide_field(ones, M_lumped, Mb_lumped_inv)
+    call invoke( name = "Compute inverse approximate Mt",       &
+                 setval_c( ones,     1.0_r_def ),               &
+                 setval_c( M_lumped, 0.0_r_def ),               &
+                 matrix_vector_kernel_type(M_lumped, ones, Mb), &
+                 X_divideby_Y(Mb_lumped_inv, ones, M_lumped) )
     
     ! Compute Q operator 
     Q = operator_type( wu, wb )
@@ -147,15 +148,17 @@ contains
     Hb_lumped_inv = field_type(vector_space = wu)
     Mu => get_mass_matrix(w2_id)
 
-    call invoke( set_field_scalar(1.0_r_def, ones),     &
-                 set_field_scalar(0.0_r_def, M_lumped), & 
-                 set_field_scalar(0.0_r_def, QT1) )
-    call invoke( transpose_matrix_vector_kernel_type(QT1, ones, Q) )
-    call invoke_inc_X_times_Y(QT1, Mb_lumped_inv)
-    call invoke( matrix_vector_kernel_type(M_lumped, QT1, Q) )
-    call invoke_scale_field_data(tau_u*tau_b*dt**2*bvf_square,M_lumped)    
-    call invoke( matrix_vector_kernel_type(M_lumped, ones, Mu) )
-    call invoke_divide_field(ones, M_lumped, HB_lumped_inv)
+    const1 = tau_u*tau_b*dt**2*bvf_square
+    call invoke( name = "Compute inverse approximate HB",           &
+                 setval_c(ones,     1.0_r_def),                     &
+                 setval_c(M_lumped, 0.0_r_def),                     & 
+                 setval_c(QT1,      0.0_r_def),                     &
+                 transpose_matrix_vector_kernel_type(QT1, ones, Q), &
+                 inc_X_times_Y(QT1, Mb_lumped_inv),                 &
+                 matrix_vector_kernel_type(M_lumped, QT1, Q),       &
+                 inc_a_times_X(const1, M_lumped),                   &
+                 matrix_vector_kernel_type(M_lumped, ones, Mu),     &
+                 X_divideby_Y(HB_lumped_inv, ones, M_lumped) )
 
     call log_event( 'done', LOG_LEVEL_INFO )
 
@@ -190,8 +193,6 @@ contains
 !=============================================================================!
 !>@brief Compute the rhs to the gw_pressure equation for the pressure increment
   subroutine build_gw_pressure_rhs(gw_pressure_rhs, rhs0)
-    use psykal_lite_mod,             only: invoke_multiply_field_data, &
-                                           invoke_inc_axpy
     use matrix_vector_kernel_mod,    only: matrix_vector_kernel_type
     use dg_matrix_vector_kernel_mod, only: dg_matrix_vector_kernel_type
     use log_mod,                     only: LOG_LEVEL_DEBUG
@@ -207,19 +208,23 @@ contains
     ! rhs_u = Ru + tau_u * dt * Q * Mb^-1 * Rb
 
     ! Compute rhs_u    
-    call invoke_multiply_field_data(rhs0(igw_b), Mb_lumped_inv, mb_rb)
-    call invoke( set_field_scalar(0.0_r_def, rhs_u) )
-    call invoke( matrix_vector_kernel_type(rhs_u, mb_rb, Q) )
-    call invoke_inc_axpy(tau_u*dt, rhs_u ,rhs0(igw_u))
-    call invoke( enforce_bc_kernel_type(rhs_u) )
+    const1 = tau_u*dt
+    call invoke( name = "Compute rhs_u",                       &
+                 X_times_Y(mb_rb, rhs0(igw_b), Mb_lumped_inv), &
+                 setval_c( rhs_u, 0.0_r_def ),                 &
+                 matrix_vector_kernel_type(rhs_u, mb_rb, Q),   &
+                 inc_aX_plus_Y(const1, rhs_u, rhs0(igw_u)),    &
+                 enforce_bc_kernel_type(rhs_u) )
 
     ! Compute rhs
     div    => get_div()
     M3_inv => get_mass_matrix(w3inv_id)
-    call invoke_multiply_field_data(rhs_u, Hb_lumped_inv, hb_ru)
-    call invoke( dg_matrix_vector_kernel_type(rhs_p, hb_ru, div), &
-                 dg_matrix_vector_kernel_type(gw_pressure_rhs, rhs_p, M3_inv) )
-    call invoke_inc_axpy(-tau_p*dt*cs_square, gw_pressure_rhs, rhs0(igw_p))
+    const2 = -tau_p*dt*cs_square
+    call invoke( name = "Compute rhs",                                         &
+                 X_times_Y(hb_ru, rhs_u, Hb_lumped_inv),                       &
+                 dg_matrix_vector_kernel_type(rhs_p, hb_ru, div),              &
+                 dg_matrix_vector_kernel_type(gw_pressure_rhs, rhs_p, M3_inv), &
+                 inc_aX_plus_Y(const2, gw_pressure_rhs, rhs0(igw_p)) )
 
     call gw_pressure_rhs%log_minmax(LOG_LEVEL_DEBUG,  'gw_pressure_rhs ')
 
@@ -231,8 +236,6 @@ contains
   subroutine apply_gw_pressure_lhs(Hp, p)
     use dg_matrix_vector_kernel_mod,        only: dg_matrix_vector_kernel_type
     use transpose_matrix_vector_kernel_mod, only: transpose_matrix_vector_kernel_type
-    use psykal_lite_mod,                    only: invoke_inc_X_times_Y, &
-                                                  invoke_inc_axpy
     use enforce_bc_kernel_mod,              only: enforce_bc_kernel_type
 
     implicit none
@@ -244,14 +247,15 @@ contains
     ! lhs = (I + tau_p*tau_u*dt^2*cs^2*M3^-1 * D * HB^-1 * D^T)*p
     div    => get_div()
     M3_inv => get_mass_matrix(w3inv_id)
-    call invoke( set_field_scalar(0.0_r_def, grad_p) )
-    call invoke( transpose_matrix_vector_kernel_type(grad_p, p, div) )
-    call invoke( enforce_bc_kernel_type(grad_p) )
-    
-    call invoke_inc_X_times_Y(grad_p, Hb_lumped_inv)
-    call invoke( dg_matrix_vector_kernel_type(div_grad_p, grad_p, div), &
-                 dg_matrix_vector_kernel_type(Hp, div_grad_p, M3_inv) )
-    call invoke_inc_axpy(tau_p*tau_u*dt**2*cs_square, Hp, p)
+    const1 = tau_p*tau_u*dt**2*cs_square
+    call invoke( name = "Apply GW pressure lhs",                        &
+                 setval_c(grad_p, 0.0_r_def),                           &
+                 transpose_matrix_vector_kernel_type(grad_p, p, div),   &
+                 enforce_bc_kernel_type(grad_p),                        &
+                 inc_X_times_Y(grad_p, Hb_lumped_inv),                  &
+                 dg_matrix_vector_kernel_type(div_grad_p, grad_p, div), &
+                 dg_matrix_vector_kernel_type(Hp, div_grad_p, M3_inv),  &
+                 inc_aX_plus_Y(const1, Hp, p) )
     
   end subroutine apply_gw_pressure_lhs
 
@@ -260,11 +264,6 @@ contains
   subroutine bicgstab(lhs, rhs)
     use solver_config_mod,     only: maximum_iterations, &
                                      si_tolerance
-    use psykal_lite_mod,       only: invoke_inner_prod,       &
-                                     invoke_X_innerproduct_X, &
-                                     invoke_axpy,             &
-                                     invoke_inc_axpy,         &
-                                     invoke_inc_xpby
     use log_mod,               only: log_event,          &
                                      log_scratch_space,  &
                                      LOG_LEVEL_ERROR,    &
@@ -283,7 +282,7 @@ contains
     integer(kind=i_def)                :: iter
     
     ! Compute the residual this is a global sum to the PSy ---
-    call invoke_X_innerproduct_X(sc_err, rhs)
+    call invoke( X_innerproduct_X(sc_err, rhs) )
     sc_err = max(sqrt(sc_err), 0.001_r_def)
     write( log_scratch_space, '(A,E15.8)' ) &
          "solver_algorithm: bicgstab starting ... ||b|| = ", sc_err
@@ -293,10 +292,9 @@ contains
     omega  = 1.0_r_def
     norm   = 1.0_r_def
 
-    call invoke( set_field_scalar(0.0_r_def, lhs), &
-                 copy_field(rhs,res) )
-
-    call invoke_X_innerproduct_X(err, res)
+    call invoke( setval_c(lhs, 0.0_r_def), &
+                 setval_X(res, rhs),       &
+                 X_innerproduct_X(err, res) )
     err = sqrt(err)/sc_err
     init_err=err
     if (err < si_tolerance) then
@@ -308,39 +306,40 @@ contains
       return
     end if
 
-    call invoke( set_field_scalar(0.0_r_def, v), &
-                 set_field_scalar(0.0_r_def, p) )
+    call invoke( setval_c(v, 0.0_r_def), &
+                 setval_c(p, 0.0_r_def) )
 
     do iter = 1, maximum_iterations
 
-      call invoke_inner_prod(res,rhs,rho)
+      call invoke ( X_innerproduct_Y(rho, res, rhs) )
       beta = (rho/norm) * (alpha/omega)
       ! p = r + beta*(p - omega*v)
-      call invoke_inc_axpy(beta, p, res)
-      call invoke_inc_xpby(p, -beta*omega, v)
+      const1 = -beta*omega
+      call invoke( inc_aX_plus_Y(beta, p, res), &
+                   inc_X_plus_bY(p, const1, v) )
       call gw_pressure_precondition( y, p)
       call apply_gw_pressure_lhs( v, y)
       
-      call invoke_inner_prod(rhs,v,norm)
+      call invoke( X_innerproduct_Y(norm, rhs, v) )
       alpha = rho/norm
-      call invoke_axpy(-alpha,v,res,s)
+      call invoke( X_minus_bY(s, res, alpha, v) )
       call gw_pressure_precondition( z, s )
       call apply_gw_pressure_lhs( t, z )
 
-      call invoke_X_innerproduct_X(tt, t)
-      call invoke_inner_prod(t,s,ts)
+      call invoke( X_innerproduct_X(tt, t), &
+                   X_innerproduct_Y(ts, t, s) )
 
       omega = ts/tt
 
       ! lhs = lhs + omega * z + alpha * y
-      call invoke_inc_xpby(lhs, omega, z)
-      call invoke_inc_xpby(lhs, alpha, y)
-      call invoke_axpy(-omega,t,s,res)
+      call invoke( inc_X_plus_bY(lhs, omega, z), &
+                   inc_X_plus_bY(lhs, alpha, y), &
+                   X_minus_bY(res, s, omega, t) )
 
       norm = rho
 
-      ! check for convergence
-      call invoke_X_innerproduct_X(err, res)
+      ! Check for convergence
+      call invoke( X_innerproduct_X(err, res) )
       err = sqrt(err)/sc_err
 
       write( log_scratch_space, '(A,I2,A, E15.8)' ) "solver_algorithm[", iter, &
@@ -370,9 +369,6 @@ contains
 !>       the gw_pressure equation
   subroutine back_substitute( state, rhs)
 
-    use psykal_lite_mod,          only: invoke_inc_axpy,      &
-                                        invoke_inc_X_times_Y, &
-                                        invoke_increment_field
     use transpose_matrix_vector_kernel_mod, &
                                   only: transpose_matrix_vector_kernel_type
     use log_mod,                  only: LOG_LEVEL_DEBUG
@@ -385,27 +381,32 @@ contains
     type(operator_type), pointer :: div => null()
 
     ! Initialise increment fields
-    call invoke( set_field_scalar(0.0_r_def, u_inc), &
-                 set_field_scalar(0.0_r_def, b_inc) )
+    call invoke( setval_c(u_inc, 0.0_r_def), &
+                 setval_c(b_inc, 0.0_r_def) )
     ! U increment
     div => get_div()
-    call invoke( transpose_matrix_vector_kernel_type(u_inc, p_inc, div) )
-    call invoke_inc_axpy(tau_u*dt, u_inc, rhs_u)
-    call invoke_inc_X_times_Y( u_inc, Hb_lumped_inv )
-    call invoke( enforce_bc_kernel_type(u_inc) )
+    const1 = tau_u*dt
+    call invoke( name = "Compute U increment",                           &
+                 transpose_matrix_vector_kernel_type(u_inc, p_inc, div), &
+                 inc_aX_plus_Y(const1, u_inc, rhs_u),                    &
+                 inc_X_times_Y(u_inc, Hb_lumped_inv),                    &
+                 enforce_bc_kernel_type(u_inc) )
 
     ! b increment
-    call invoke( transpose_matrix_vector_kernel_type(b_inc, u_inc, Q) )
-    call invoke_inc_axpy(-tau_b*dt*bvf_square, b_inc, rhs(igw_b))
-    call invoke_inc_X_times_Y( b_inc, Mb_lumped_inv )
+    const2 = -tau_b*dt*bvf_square
+    call invoke( name = "Compute b increment",                         &
+                 transpose_matrix_vector_kernel_type(b_inc, u_inc, Q), &
+                 inc_aX_plus_Y(const2, b_inc, rhs(igw_b)),             &
+                 inc_X_times_Y(b_inc, Mb_lumped_inv) )
 
     call u_inc%log_minmax(LOG_LEVEL_DEBUG,  'u increment')
     call p_inc%log_minmax(LOG_LEVEL_DEBUG,  'p increment')
     call b_inc%log_minmax(LOG_LEVEL_DEBUG,  'b increment')
 
-    call invoke_increment_field(u_inc, state(igw_u))
-    call invoke_increment_field(p_inc, state(igw_p))
-    call invoke_increment_field(b_inc, state(igw_b))
+    call invoke( name = "Increment all states",     &
+                 inc_X_plus_Y(state(igw_u), u_inc), &
+                 inc_X_plus_Y(state(igw_p), p_inc), &
+                 inc_X_plus_Y(state(igw_b), b_inc) )
   
   end subroutine back_substitute
 !=============================================================================!
@@ -422,7 +423,7 @@ contains
 
     if ( present(prec) ) precon = prec
 
-    call invoke( copy_field(x, y) )
+    call invoke( setval_X( y, x ) )
 
   end subroutine gw_pressure_precondition
 !=============================================================================!

@@ -16,12 +16,10 @@ module cusph_split_transport_alg_mod
   use flux_direction_mod,                only: x_direction, y_direction
   use biperiodic_deppt_config_mod,       only: method
   use subgrid_config_mod,                only: dep_pt_stencil_extent
-  use psykal_lite_mod,                   only: invoke_calc_deppts,             &
-                                               invoke_axpby,                   &
-                                               invoke_plus_field_data,         &
-                                               invoke_extract_xy,              &
-                                               invoke_cosmic_departure_wind,   &
-                                               invoke_correct_cosmic_wind,     &
+  use psykal_lite_mod,                   only: invoke_calc_deppts,           &
+                                               invoke_extract_xy,            &
+                                               invoke_cosmic_departure_wind, &
+                                               invoke_correct_cosmic_wind,   &
                                                invoke_set_field_scalar
 
   use oned_density_update_alg_mod,       only: oned_density_update_alg
@@ -121,10 +119,11 @@ contains
     u_y_fem_np1        = field_type( vector_space = w2_fs )
 
     ! Separate finite-element wind field into x and y components
-    call invoke( set_field_scalar(-99.0_r_def,u_x_fem_n),   &
-                 set_field_scalar(-99.0_r_def,u_y_fem_n),   &
-                 set_field_scalar(-99.0_r_def,u_x_fem_np1), &
-                 set_field_scalar(-99.0_r_def,u_y_fem_np1) )
+    call invoke( name = "Initialise wind fields",    & 
+                 setval_c(u_x_fem_n,   -99.0_r_def), &
+                 setval_c(u_y_fem_n,   -99.0_r_def), &
+                 setval_c(u_x_fem_np1, -99.0_r_def), &
+                 setval_c(u_y_fem_np1, -99.0_r_def) )
 
     call invoke_extract_xy(u_x_fem_n,u_y_fem_n,u_n,cell_orientation)
     call invoke_extract_xy(u_x_fem_np1,u_y_fem_np1,u_np1,cell_orientation)
@@ -159,12 +158,13 @@ contains
                                   cell_orientation, detj_at_w2, rho, rho_adv_y)
 
     ! Average the two advective density updates with the density at timestep level n
-    call invoke_axpby(0.5_r_def, rho, 0.5_r_def, rho_adv_x, rho_hat_adv_x)
-    call invoke_axpby(0.5_r_def, rho, 0.5_r_def, rho_adv_y, rho_hat_adv_y)
+    call invoke( name = "Average Rho and init Mass fluxes",                       &
+                 aX_plus_bY(rho_hat_adv_x, 0.5_r_def, rho, 0.5_r_def, rho_adv_x), &
+                 aX_plus_bY(rho_hat_adv_y, 0.5_r_def, rho, 0.5_r_def, rho_adv_y), &
 
     ! Calculate separately the conservative fluxes in the x and y directions (horizontal)
-    call invoke( set_field_scalar(0.0_r_def, mass_flux_x), &
-                 set_field_scalar(0.0_r_def, mass_flux_y) )
+                 setval_c(mass_flux_x, 0.0_r_def),                                &
+                 setval_c(mass_flux_y, 0.0_r_def) )
 
     call conservative_flux_alg(u_n, dep_pts_x, dep_pts_y,             &
                            cell_orientation, rho_hat_adv_x, rho_hat_adv_y, mass_flux_x, mass_flux_y )

@@ -1,3 +1,9 @@
+!-----------------------------------------------------------------------------
+! Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
+! For further details please refer to the file LICENCE.original which you
+! should have received as part of this distribution.
+!-----------------------------------------------------------------------------
+
 module nodal_output_alg_mod
 
 use base_mesh_config_mod,          only: geometry, &
@@ -12,7 +18,6 @@ use log_mod,                       only: log_event,         &
 use psykal_lite_mod,               only: invoke_nodal_coordinates_kernel,   &
                                          invoke_convert_hcurl_field,        &
                                          invoke_convert_hdiv_field,         &
-                                         invoke_inc_X_times_Y,              &
                                          invoke_convert_cart2sphere_vector, &
                                          invoke_pointwise_convert_xyz2llr,  &
                                          invoke_compute_dof_level_kernel
@@ -42,7 +47,7 @@ subroutine nodal_output_alg(field, chi, nodal_output, nodal_coordinates, level)
     do i = 1,3
       nodal_output(i) = field_type( vector_space = output_field_fs )
       nodal_coordinates(i) = field_type( vector_space = output_field_fs )
-      call invoke( set_field_scalar(0.0_r_def, nodal_output(i)) )
+      call invoke( setval_c(nodal_output(i), 0.0_r_def) )
     end do
 
     !(2) Convert field to physical nodal output & sample chi on nodal points
@@ -53,7 +58,7 @@ subroutine nodal_output_alg(field, chi, nodal_output, nodal_coordinates, level)
     select case ( output_fs )
       case ( W0 ) 
       ! For H1 spaces no conversion is required
-        call  invoke( copy_field(field, nodal_output(1)) )
+        call invoke( setval_X(nodal_output(1), field) )
         output_dim = 1
       case ( W1 )
         call invoke_convert_hcurl_field(nodal_output, field, chi)
@@ -64,13 +69,13 @@ subroutine nodal_output_alg(field, chi, nodal_output, nodal_coordinates, level)
       case ( W3 ) 
         ! For L2 spaces no conversion is currently required (due to
         ! rehabilitation)
-        call  invoke( copy_field(field, nodal_output(1)) )
+        call invoke( setval_X(nodal_output(1), field) )
         output_dim = 1
       case default
         write( log_scratch_space, '(A)') &
         'nodal_output: no field conversion has been applied'
         call log_event( log_scratch_space, log_level_info)
-        call  invoke( copy_field(field, nodal_output(1)) )
+        call invoke( setval_X(nodal_output(1), field) )
         output_dim = 1
     end select
     ! (3) If in spherical geometry convert the vector spaces to standard SI units
@@ -80,7 +85,7 @@ subroutine nodal_output_alg(field, chi, nodal_output, nodal_coordinates, level)
       if ( output_fs == W1 .or. output_fs == W2) then
         nodal_rmultiplicity => get_rmultiplicity( output_fs ) 
         do i = 1,output_dim
-          call invoke_inc_X_times_Y( nodal_output(i), nodal_rmultiplicity ) 
+          call invoke( inc_X_times_Y(nodal_output(i), nodal_rmultiplicity) )
         end do
         call invoke_convert_cart2sphere_vector(nodal_output, nodal_coordinates)         
       end if

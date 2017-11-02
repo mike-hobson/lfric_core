@@ -4,7 +4,7 @@
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
 
-!>@brief wrapper algorithm to compute the rhs of the prognostic
+!>@brief Wrapper algorithm to compute the rhs of the prognostic
 !>       equations
 module rhs_alg_mod
 
@@ -23,8 +23,7 @@ module rhs_alg_mod
   use matrix_vector_kernel_mod,            only: matrix_vector_kernel_type
   use operator_mod,                        only: operator_type
   use pressure_gradient_kernel_mod,        only: pressure_gradient_kernel_type
-  use psykal_lite_mod,                     only: invoke_inc_xpby, &
-                                                 invoke_ru_bd_kernel
+  use psykal_lite_mod,                     only: invoke_ru_bd_kernel
   use quadrature_mod,                      only: quadrature_type, GAUSSIAN
   use rotation_kernel_mod,                 only: rotation_kernel_type
   use solver_config_mod,                   only: method
@@ -92,26 +91,32 @@ contains
   qr = quadrature_type(element_order+2, GAUSSIAN)
 
   ! Initialise RHS u and theta fields
-  call invoke( set_field_scalar(0.0_r_def, rhs_tmp),        & 
-               set_field_scalar(0.0_r_def, rhs(igh_u)),     &
-               set_field_scalar(0.0_r_def, rhs(igh_t)) )
+  call invoke( name = "Initialise RHS u and theta fields", &
+               setval_c( rhs_tmp,    0.0_r_def ),          & 
+               setval_c( rhs(igh_u), 0.0_r_def ),          &
+               setval_c( rhs(igh_t), 0.0_r_def ) )
 
   ! Compute rhs_u
-  if(wtheta_on) call invoke_ru_bd_kernel (rhs_tmp, rho, theta, qr)
-  call invoke( pressure_gradient_kernel_type( rhs_tmp, rho, theta, qr ) )
-  call invoke( kinetic_energy_gradient_kernel_type( rhs_tmp, u, chi, qr ) )
-  call invoke( geopotential_gradient_kernel_type( rhs_tmp, geopotential, qr ) )
+  if (wtheta_on) call invoke_ru_bd_kernel (rhs_tmp, rho, theta, qr)
+  call invoke( name = "Compute rhs_u setup",                               &
+               pressure_gradient_kernel_type( rhs_tmp, rho, theta, qr ),   &
+               kinetic_energy_gradient_kernel_type( rhs_tmp, u, chi, qr ), &
+               geopotential_gradient_kernel_type( rhs_tmp, geopotential, qr ) )
+
   if ( rotating ) &
     call invoke( rotation_kernel_type( rhs_tmp, u, chi, qr ) )
-  call invoke( matrix_vector_kernel_type( rhs(igh_u), u, mm_w2) )
-  call invoke_inc_xpby( rhs(igh_u) , alpha_dt, rhs_tmp ) 
-  call invoke( enforce_bc_kernel_type(rhs(igh_u)) )
+  call invoke( name = "Compute rhs_u evaluation",                 &
+               matrix_vector_kernel_type( rhs(igh_u), u, mm_w2 ), &
+               inc_X_plus_bY( rhs(igh_u), alpha_dt, rhs_tmp ),    &
+               enforce_bc_kernel_type(rhs(igh_u)) )
  
+  call invoke( name = "Compute rhs_theta and rhs_rho",                    &
   ! Compute rhs_theta
-  call invoke( matrix_vector_kernel_type( rhs(igh_t), theta, mm_wtheta) )
+               matrix_vector_kernel_type( rhs(igh_t), theta, mm_wtheta ), &
 
   ! Compute rhs_rho
-  call invoke( copy_field(rho, rhs(igh_d)) )
+               setval_X( rhs(igh_d), rho ) )
+
   if ( subroutine_timers ) call timer('rhs_alg')
 
   end subroutine rhs_alg

@@ -37,6 +37,8 @@ module helmholtz_solver_alg_mod
   real(kind=r_def),    private, parameter :: sc_err_min = 1.0e-5_r_def
   type(field_type),    private            :: helmholtz_rhs
   type(field_type),    private            :: exner_increment
+  ! Auxiliary constants to group invokes
+  real(kind=r_def), private               :: const1, const2, const3
 
   ! Temporary fields needed for: 
   ! Fields for bicgstab (all W3)
@@ -144,9 +146,6 @@ contains
 !=============================================================================!
 !>@brief Compute the rhs to the helmholtz equation for the pressure increment
   subroutine build_helmholtz_rhs(helmholtz_rhs, rhs0)
-    use psykal_lite_mod,              only: invoke_inc_X_times_Y, &
-                                            invoke_inc_axpy,      &
-                                            invoke_multiply_field_data
     use matrix_vector_kernel_mod,     only: matrix_vector_kernel_type
     use dg_matrix_vector_kernel_mod,  only: dg_matrix_vector_kernel_type
     use apply_variable_hx_kernel_mod, only: apply_variable_hx_kernel_type
@@ -178,14 +177,16 @@ contains
     m3_inv        => get_mass_matrix(w3inv_id)
     compound_div  => get_compound_div()
    
-    ! r_u = rhs_u + tau*dt*cp*P02*M0^-1*rhs_t       
-    call invoke_multiply_field_data(rhs0(igh_t), mt_lumped_inv, mt_r_t)
-    call invoke( set_field_scalar(0.0_r_def, r_u) )
-    call invoke( matrix_vector_kernel_type(r_u, mt_r_t, p2theta) )
-    call invoke_inc_axpy(tau_u*dt*cp, r_u, rhs0(igh_u)) 
+    ! r_u = rhs_u + tau*dt*cp*P02*M0^-1*rhs_t
+    const1 = tau_u*dt*cp
+    call invoke( name = "Compute r_u",                            &
+                 X_times_Y(mt_r_t, rhs0(igh_t), mt_lumped_inv),   &
+                 setval_c(r_u, 0.0_r_def),                        &
+                 matrix_vector_kernel_type(r_u, mt_r_t, p2theta), &
+                 inc_aX_plus_Y(const1, r_u, rhs0(igh_u)),         &
     ! Compute H_B * u_term = r_u
-    call invoke( enforce_bc_kernel_type( r_u ) )
-    call invoke_multiply_field_data(r_u, hb_inv, u_term)
+                 enforce_bc_kernel_type(r_u),                     &
+                 X_times_Y(u_term, r_u, hb_inv) )
 
     ! Compute H(u_term)
     ! r_pi = rhs_pi + P03*M0^-1*rhs_t + M3rho*M3^-1*rhs_r
@@ -199,7 +200,7 @@ contains
 
     if ( normalise ) then 
       H_diag => get_helm_diag()
-      call invoke_inc_X_times_Y(helmholtz_rhs, H_diag)
+      call invoke( inc_X_times_Y(helmholtz_rhs, H_diag) )
     end if
 
     call helmholtz_rhs%log_minmax(LOG_LEVEL_DEBUG, 'helmholtz_rhs')
@@ -211,9 +212,7 @@ contains
   subroutine compute_inv_hb
     use timestepping_config_mod,  only: dt
     use planet_config_mod,        only: cp
-    use psykal_lite_mod,          only: invoke_inc_X_times_Y, &
-                                        invoke_inc_axpy,      &
-                                        invoke_raise_field
+    use psykal_lite_mod,          only: invoke_raise_field
     use matrix_vector_kernel_mod, only: matrix_vector_kernel_type
     use operator_mod,             only: operator_type
     use enforce_bc_kernel_mod,    only: enforce_bc_kernel_type
@@ -234,16 +233,17 @@ contains
 
     ones = field_type( vector_space = hb_inv%get_function_space() )
 
-    call invoke(set_field_scalar(1.0_r_def, ones), &
-                set_field_scalar(0.0_r_def, hb_inv), &
-                set_field_scalar(0.0_r_def, m2_u), &
-                set_field_scalar(0.0_r_def, theta_adv_term) )
-    call invoke( matrix_vector_kernel_type(m2_u, ones, m2), &
-                 matrix_vector_kernel_type(theta_adv_term, ones, ptheta2) )
-    call invoke_inc_X_times_Y(theta_adv_term, mt_lumped_inv)
-
-    call invoke( matrix_vector_kernel_type(hb_inv, theta_adv_term, p2theta) )  
-    call invoke_inc_axpy( timestep_term, hb_inv, m2_u )
+    call invoke( name = "Compute lumped inverse H_B operator",               &
+                 setval_c(ones, 1.0_r_def),                                  &
+                 setval_c(hb_inv, 0.0_r_def),                                &
+                 setval_c(m2_u, 0.0_r_def),                                  &
+                 setval_c(theta_adv_term, 0.0_r_def),                        &
+                 matrix_vector_kernel_type(m2_u, ones, m2),                  &
+                 matrix_vector_kernel_type(theta_adv_term, ones, ptheta2),   &
+                 inc_X_times_Y(theta_adv_term, mt_lumped_inv),               &
+                 matrix_vector_kernel_type(hb_inv, theta_adv_term, p2theta), & 
+                 inc_aX_plus_Y(timestep_term, hb_inv, m2_u) )
+    ! PSyclone does not currently support raising field to an integer power
     call invoke_raise_field(hb_inv, -1_i_def)
 
   end subroutine compute_inv_hb
@@ -256,7 +256,6 @@ contains
     use planet_config_mod,               only: cp
     use scaled_matrix_vector_kernel_mod, only: scaled_matrix_vector_kernel_type, &
                                                opt_scaled_matrix_vector_kernel_type
-    use psykal_lite_mod,                 only: invoke_inc_X_times_Y
     use operator_mod,                    only: operator_type
     use enforce_bc_kernel_mod,           only: enforce_bc_kernel_type
     use apply_variable_hx_kernel_mod,    only: apply_variable_hx_kernel_type, &
@@ -287,7 +286,7 @@ contains
     timestep_term = cp*tau_u*dt**2
     if ( wtheta_on .and. element_order == 0 ) then
       ! Hard wired optimisation for desired configuration
-      call invoke( set_field_scalar(0.0_r_def, grad_p),                        &
+      call invoke( setval_c( grad_p, 0.0_r_def ),                              &
                    opt_scaled_matrix_vector_kernel_type(grad_p, p, div_star,   &
                                                         hb_inv),               &
                    enforce_bc_kernel_type( grad_p ),                           &
@@ -296,7 +295,7 @@ contains
                        compound_div, p3theta, ptheta2, m3_exner_star,          &
                        tau_t, timestep_term) )
     else
-      call invoke( set_field_scalar(0.0_r_def, grad_p),                        &
+      call invoke( setval_c( grad_p, 0.0_r_def ),                              &
                    scaled_matrix_vector_kernel_type(grad_p, p, div_star,       &
                                                     hb_inv),                   &
                    enforce_bc_kernel_type( grad_p ),                           &
@@ -308,7 +307,7 @@ contains
     end if
     if ( normalise ) then 
       H_diag => get_helm_diag()
-      call invoke_inc_X_times_Y(Hp, H_diag)
+      call invoke( inc_X_times_Y(Hp, H_diag) )
     end if
 
   end subroutine apply_helmholtz_lhs
@@ -318,11 +317,6 @@ contains
   subroutine bicgstab(lhs, rhs)
     use solver_config_mod,     only: maximum_iterations, &
                                      si_pressure_tolerance
-    use psykal_lite_mod,       only: invoke_inner_prod,       &
-                                     invoke_X_innerproduct_X, &
-                                     invoke_axpy,             &
-                                     invoke_inc_axpy,         &
-                                     invoke_inc_xpby
     use log_mod,               only: log_event,         &
                                      log_scratch_space, &
                                      LOG_LEVEL_ERROR,   &
@@ -341,7 +335,7 @@ contains
     integer(kind=i_def)                :: iter
     
     ! compute the residual this is a global sum to the PSy ---
-    call invoke_X_innerproduct_X(sc_err, rhs)
+    call invoke( X_innerproduct_X(sc_err, rhs) )
     sc_err = max(sqrt(sc_err), sc_err_min)
     write( log_scratch_space, '(A,E15.8)' ) &
          "solver_algorithm: bicgstab starting ... ||b|| = ", sc_err
@@ -351,10 +345,9 @@ contains
     omega  = 1.0_r_def
     norm   = 1.0_r_def
 
-    call invoke( set_field_scalar(0.0_r_def, lhs), &
-                 copy_field(rhs,res) )
-
-    call invoke_X_innerproduct_X(err, res)
+    call invoke( setval_c(lhs, 0.0_r_def), &
+                 setval_X(res, rhs),       &
+                 X_innerproduct_X(err, res) )
     err = sqrt(err)/sc_err
     init_err=err
     if (err < si_pressure_tolerance) then
@@ -365,39 +358,40 @@ contains
       return
     end if
 
-    call invoke( set_field_scalar(0.0_r_def, v), &
-                 set_field_scalar(0.0_r_def, p) )
+    call invoke( setval_c(v, 0.0_r_def), &
+                 setval_c(p, 0.0_r_def) )
 
     do iter = 1, maximum_iterations
 
-      call invoke_inner_prod(res,rhs,rho)
+      call invoke( X_innerproduct_Y(rho, res, rhs) )
       beta = (rho/norm) * (alpha/omega)
       ! p = r + beta*(p - omega*v)
-      call invoke_inc_axpy(beta, p, res)
-      call invoke_inc_xpby(p, -beta*omega, v)
+      const1 = -beta*omega
+      call invoke( inc_aX_plus_Y(beta, p, res), &
+                   inc_X_plus_bY(p, const1, v) )
       call helmholtz_precondition( y, p)
       call apply_helmholtz_lhs( v, y)
       
-      call invoke_inner_prod(rhs,v,norm)
+      call invoke( X_innerproduct_Y(norm, rhs, v) )
       alpha = rho/norm
-      call invoke_axpy(-alpha,v,res,s)
+      call invoke( X_minus_bY(s, res, alpha, v) )
       call helmholtz_precondition( z, s )
       call apply_helmholtz_lhs( t, z )
 
-      call invoke_X_innerproduct_X(tt, t)
-      call invoke_inner_prod(t,s,ts)
+      call invoke( X_innerproduct_X(tt, t), &
+                   X_innerproduct_Y(ts, t, s) )
 
       omega = ts/tt
 
       ! lhs = lhs + omega * z + alpha * y
-      call invoke_inc_xpby(lhs, omega, z)
-      call invoke_inc_xpby(lhs, alpha, y)
-      call invoke_axpy(-omega,t,s,res)
+      call invoke( inc_X_plus_bY(lhs, omega, z), &
+                   inc_X_plus_bY(lhs, alpha, y), &
+                   X_minus_bY(res, s, omega, t) )
 
       norm = rho
 
-      ! check for convergence
-      call invoke_X_innerproduct_X(err, res)
+      ! Check for convergence
+      call invoke( X_innerproduct_X(err, res) )
       err = sqrt(err)/sc_err
 
       write( log_scratch_space, '(A,I3,A,E15.8)' ) &
@@ -429,9 +423,6 @@ contains
                                            LOG_LEVEL_INFO
     use timestepping_config_mod,     only: dt
     use planet_config_mod,           only: cp
-    use psykal_lite_mod,             only: invoke_inc_axpy,            &
-                                           invoke_multiply_field_data, &
-                                           invoke_increment_field
     use matrix_vector_kernel_mod,    only: matrix_vector_kernel_type
     use dg_matrix_vector_kernel_mod, only: dg_matrix_vector_kernel_type
     use operator_mod,                only: operator_type  
@@ -458,35 +449,42 @@ contains
     div           => get_div()
     m3_inv        => get_mass_matrix(w3inv_id)
     ! Initialise increment fields
-    call invoke( set_field_scalar(0.0_r_def, rhs_inc(igh_u)), &
-                 set_field_scalar(0.0_r_def, rhs_inc(igh_t)) )
+    call invoke( setval_c(rhs_inc(igh_u), 0.0_r_def), &
+                 setval_c(rhs_inc(igh_t), 0.0_r_def) )
 
     ! u increment
-    call invoke( matrix_vector_kernel_type(rhs_inc(igh_u), exner_inc, div_star) )
-    call invoke_inc_axpy((tau_u*dt*cp), rhs_inc(igh_u), r_u)
-    call invoke( enforce_bc_kernel_type( rhs_inc(igh_u) ) )
-    call invoke_multiply_field_data(rhs_inc(igh_u), hb_inv, u_inc)
+    const1 = tau_u*dt*cp
+    call invoke( name = "Compute U increment",                                   &
+                 matrix_vector_kernel_type(rhs_inc(igh_u), exner_inc, div_star), &
+                 inc_aX_plus_Y(const1, rhs_inc(igh_u), r_u),                     &
+                 enforce_bc_kernel_type( rhs_inc(igh_u) ),                       &
+                 X_times_Y(u_inc, rhs_inc(igh_u), hb_inv) )
 
     ! theta increment
-    call invoke( matrix_vector_kernel_type(rhs_inc(igh_t), u_inc, ptheta2) )
-    call invoke_inc_axpy(-(tau_t*dt), rhs_inc(igh_t), rhs(igh_t) )  
-    call invoke_multiply_field_data(rhs_inc(igh_t), mt_lumped_inv, theta_inc)
+    const2 = -tau_t*dt
+    call invoke( name = "Compute theta increment",                          &
+                 matrix_vector_kernel_type(rhs_inc(igh_t), u_inc, ptheta2), &
+                 inc_aX_plus_Y(const2, rhs_inc(igh_t), rhs(igh_t)),         & 
+                 X_times_Y(theta_inc, rhs_inc(igh_t), mt_lumped_inv) )
 
     ! rho increment
-    call invoke_multiply_field_data(rho_at_u, u_inc, flux)
-    call invoke( dg_matrix_vector_kernel_type( rhs_inc(igh_d), flux, div ) )
-    call invoke( dg_matrix_vector_kernel_type( rho_inc, rhs_inc(igh_d), m3_inv) )
-    call invoke_inc_axpy( -(tau_r*dt), rho_inc, rhs(igh_d))
+    const3 = -tau_r*dt
+    call invoke( name = "Compute rho increment",                                &
+                 X_times_Y(flux, rho_at_u, u_inc),                              &
+                 dg_matrix_vector_kernel_type(rhs_inc(igh_d), flux, div),       &
+                 dg_matrix_vector_kernel_type(rho_inc, rhs_inc(igh_d), m3_inv), &
+                 inc_aX_plus_Y(const3, rho_inc, rhs(igh_d)) )
 
     call exner_inc%log_minmax(LOG_LEVEL_DEBUG, 'exner increment ') 
     call u_inc    %log_minmax(LOG_LEVEL_DEBUG, 'u increment     ') 
     call theta_inc%log_minmax(LOG_LEVEL_DEBUG, 'theta increment ') 
     call rho_inc  %log_minmax(LOG_LEVEL_DEBUG, 'rho increment   ')
  
-    call invoke_increment_field(u_inc,     state(igh_u))
-    call invoke_increment_field(theta_inc, state(igh_t))
-    call invoke_increment_field(rho_inc,   state(igh_d))
-    if ( .not. eliminate_p ) call invoke_increment_field(exner_inc, state(igh_p))
+    call invoke( name = "Increment all states",         &
+                 inc_X_plus_Y(state(igh_u), u_inc),     &
+                 inc_X_plus_Y(state(igh_t), theta_inc), &
+                 inc_X_plus_Y(state(igh_d), rho_inc) )
+    if ( .not. eliminate_p ) call invoke( inc_X_plus_Y(state(igh_p), exner_inc) )
 
   end subroutine back_substitute
 !=============================================================================!
@@ -523,7 +521,7 @@ contains
         tri => get_tri_precon()
         call invoke( tri_solve_kernel_type(y, x, tri) )
       case default
-        call invoke( copy_field(x, y) )
+        call invoke( setval_X(y, x) )
     end select
   end subroutine helmholtz_precondition
 !=============================================================================!

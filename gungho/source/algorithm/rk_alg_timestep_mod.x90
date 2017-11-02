@@ -36,8 +36,7 @@ module rk_alg_timestep_mod
   use mixing_config_mod,         only: viscosity
   
   ! PsyKAl-lite kernels
-  use psykal_lite_mod,                   only: invoke_ru_bd_kernel, &
-                                               invoke_multiply_field_data, &
+  use psykal_lite_mod,                   only: invoke_ru_bd_kernel,     &
                                                invoke_tracer_viscosity, &
                                                invoke_momentum_viscosity
 
@@ -130,9 +129,10 @@ contains
 
 
     !=== Copy prognostic field data to state arrays ===========================!
-    call invoke( copy_field(u,     state(igh_u)), &
-                 copy_field(theta, state(igh_t)), &
-                 copy_field(rho,   state(igh_d)) )
+    call invoke( name = "Copy fields to state",   &
+                 setval_X(state(igh_u), u    ), &
+                 setval_X(state(igh_t), theta), &
+                 setval_X(state(igh_d), rho  ) )
 
     call advection_alg_init(mesh_id)
 
@@ -159,13 +159,13 @@ contains
     ! Prognostic fields    
     type( field_type ), intent( inout ) :: u, rho, theta, xi
 
-    ! the quadrature object
+    ! The quadrature object
     type( quadrature_type )    :: qr
 
     ! Temporary items
     type( field_type )    :: diagnostic_field
 
-    ! temps for retrieving things from runtime_constants
+    ! Temps for retrieving things from runtime_constants
     type(field_type),   pointer :: mm_lumped_inv_wtheta => null()
     type(field_type),   pointer :: geopotential => null()
     type( field_type ), pointer :: chi(:) => null()
@@ -196,14 +196,15 @@ contains
       if ( rotating ) &
         call invoke( rotation_kernel_type( rhs_prediction(1,stage), state(igh_u), chi, qr ) )
         if( wtheta_on ) &
-          call invoke_ru_bd_kernel ( rhs_prediction(1, stage), state(igh_d), state(igh_t), qr )
-        call invoke( pressure_gradient_kernel_type       &
-             ( rhs_prediction(1,stage), state(igh_d), state(igh_t), qr ) )
-        call invoke( kinetic_energy_gradient_kernel_type &
-             ( rhs_prediction(1,stage), state(igh_u), chi, qr ) )
-        call invoke( geopotential_gradient_kernel_type   &
-             ( rhs_prediction(1,stage), geopotential, qr ) )
-        call invoke( enforce_bc_kernel_type( rhs_prediction(1,stage) ) ) 
+          call invoke_ru_bd_kernel ( rhs_prediction(1, stage), state(igh_d), state(igh_t), qr ) 
+        call invoke( name = "Compute new rhs",                            &
+                     pressure_gradient_kernel_type       &
+             ( rhs_prediction(1,stage), state(igh_d), state(igh_t), qr ), &
+                     kinetic_energy_gradient_kernel_type &
+             ( rhs_prediction(1,stage), state(igh_u), chi, qr ),          &
+                     geopotential_gradient_kernel_type   &
+             ( rhs_prediction(1,stage), geopotential, qr ),               &
+                     enforce_bc_kernel_type( rhs_prediction(1,stage) ) ) 
         call set_bundle_scalar(0.0_r_def, rhs, bundle_size)
 
       do st = 1, stage
@@ -213,14 +214,14 @@ contains
       ! Invert mass matrices
       if ( operators == transport_operators_fv) then
         ! Equation is in pointwise form already so dont need to do any mass
-        ! matrix inversions   
-        call invoke( copy_field(rhs(igh_t), inc(igh_t)) )
+        ! matrix inversions
+        call invoke( setval_X(inc(igh_t), rhs(igh_t)) )
       else
         ! Use full mass matrix
         call solver_algorithm( inc(igh_t), rhs(igh_t) )
       end if
       call solver_algorithm( inc(igh_u), rhs(igh_u) )
-      call invoke( copy_field(rhs(igh_d), inc(igh_d)) )
+      call invoke( setval_X(inc(igh_d), rhs(igh_d)) )
 
       ! Add increments
       call bundle_axpy(dt, inc, state_n, state, bundle_size)
@@ -239,15 +240,16 @@ contains
     if ( viscosity ) then
       call log_event( 'Applying Viscosity', LOG_LEVEL_INFO ) 
       call invoke_tracer_viscosity(   inc(igh_t), state(igh_t), 1, chi)
-      call invoke_momentum_viscosity( inc(igh_u), state(igh_u), 1, chi)
-      call invoke( set_field_scalar(0.0_r_def, inc(igh_d)) )     
+      call invoke_momentum_viscosity( inc(igh_u), state(igh_u), 1, chi)  
+      call invoke( setval_c(inc(igh_d), 0.0_r_def) )   
       call bundle_axpy(dt, inc, state, state, bundle_size)
     end if
 
     ! Return fields in u, theta, rho arrays
-    call invoke( copy_field(state(igh_u), u),     &
-                 copy_field(state(igh_t), theta), &
-                 copy_field(state(igh_d), rho) )
+    call invoke( name = "Return fields",        &
+                 setval_X(u,     state(igh_u)), &
+                 setval_X(theta, state(igh_t)), &
+                 setval_X(rho,   state(igh_d)) )
     if ( subroutine_timers ) call timer('rk_alg')
 
   end subroutine rk_alg_step

@@ -33,11 +33,10 @@ module runtime_constants_mod
 
   ! PsyKAl-lite kernels
   use psykal_lite_mod,                   only: invoke_compute_geopotential_kernel_type, &
-                                               invoke_raise_field,                      &
                                                invoke_mpi_calc_cell_orientation,        &
                                                invoke_get_height_kernel,                &
                                                invoke_mpi_detj_at_w2,                   &
-                                               invoke_divide_field
+                                               invoke_raise_field
 
   use multiplicity_kernel_mod,           only: multiplicity_kernel_type
 
@@ -177,14 +176,14 @@ contains
     if ( transport_only .and. scheme == transport_scheme_cusph_cosmic ) then
       temp_w2_field = field_type( vector_space = w2_fs )
       cell_orientation = field_type( vector_space = w3_fs )
-      call invoke( set_field_scalar(9999.0_r_def, temp_w2_field), &
-                   set_field_scalar(9999.0_r_def, cell_orientation) )
+      call invoke( setval_c(temp_w2_field,    9999.0_r_def), &
+                   setval_c(cell_orientation, 9999.0_r_def) )
       call invoke_mpi_calc_cell_orientation( temp_w2_field, cell_orientation )
     end if
 
     !================ Create detj values at W2 dof locations ==================!
     detj_at_w2 = field_type( vector_space = w2_fs )
-    call invoke( set_field_scalar(9999.0_r_def, detj_at_w2) )
+    call invoke( setval_c(detj_at_w2, 9999.0_r_def) )
     call invoke_mpi_detj_at_w2(detj_at_w2, chi)
 
     !=================== Create mass matrix operators =========================!
@@ -196,7 +195,8 @@ contains
     mm_w3_inv = operator_type( w3_fs, w3_fs )
     mm_wtheta = operator_type( wtheta_fs, wtheta_fs )
 
-    call invoke( compute_mass_matrix_kernel_w0_type(mm_w0, chi, qr),         &
+    call invoke( name = "Create mass matrix operators",                      &
+                 compute_mass_matrix_kernel_w0_type(mm_w0, chi, qr),         &
                  compute_mass_matrix_kernel_w1_type(mm_w1, chi, qr),         &
                  compute_mass_matrix_kernel_w2_type(mm_w2, chi, qr),         &
                  compute_mass_matrix_kernel_w3_type(mm_w3, chi, qr),         &
@@ -209,7 +209,7 @@ contains
     curl = operator_type( w2_fs, w1_fs )
     div  = operator_type( w3_fs, w2_fs )
 
-    ! These are seperate invokes as chi is defined as any space and psyclone
+    ! These are separate invokes as chi is defined as any space and PSyclone
     ! does not support multiple any_spaces in the same invoke
     call invoke( compute_grad_operator_kernel_type(grad, chi, qr) )
     call invoke( compute_curl_operator_kernel_type(curl, chi, qr) )
@@ -226,42 +226,48 @@ contains
     eye            = field_type( vector_space = w3_fs )
 
     ! Initialise fields
-    call invoke( set_field_scalar(0.0_r_def, mm0_diag), &
-                 set_field_scalar(0.0_r_def, mm1_diag), &
-                 set_field_scalar(0.0_r_def, mm2_diag), &
-                 set_field_scalar(0.0_r_def, mmtheta_diag) )
-
-    call invoke( mm_diagonal_kernel_type(mm0_diag, mm_w0) )
-    call invoke( mm_diagonal_kernel_type(mm1_diag, mm_w1) )
-    call invoke( mm_diagonal_kernel_type(mm2_diag, mm_w2) )
-    call invoke( mm_diagonal_kernel_type(mm3_diag, mm_w3) )
-    call invoke( mm_diagonal_kernel_type(mmtheta_diag, mm_wtheta) )
-
+    call invoke( name = "Create mass matrix diagonal fields",      &
+                 setval_c(mm0_diag,     0.0_r_def),                &
+                 setval_c(mm1_diag,     0.0_r_def),                &
+                 setval_c(mm2_diag,     0.0_r_def),                &
+                 setval_c(mmtheta_diag, 0.0_r_def),                &
+    ! Compute mass matrices
+                 mm_diagonal_kernel_type(mm0_diag, mm_w0),         &
+                 mm_diagonal_kernel_type(mm1_diag, mm_w1),         &
+                 mm_diagonal_kernel_type(mm2_diag, mm_w2),         &
+                 mm_diagonal_kernel_type(mm3_diag, mm_w3),         &
+                 mm_diagonal_kernel_type(mmtheta_diag, mm_wtheta), &
     ! W3 equations are solved pointwise and so the mass matrix is inverted
     ! exactly, therefore the diagonal, where used should be 1
-    call invoke( set_field_scalar(1.0_r_def, eye) )
+                 setval_c(eye, 1.0_r_def) )
 
 
     !================= Create inverse lumped mass matrices =====================!
     ones           = field_type( vector_space = w1_fs )
     m1_lumped_inv  = field_type( vector_space = w1_fs )
-    call invoke( set_field_scalar(1.0_r_def, ones), &
-                 set_field_scalar(0.0_r_def, m1_lumped_inv) )
-    call invoke( matrix_vector_kernel_type( m1_lumped_inv, ones, mm_w1 ) )
-    call invoke_raise_field( m1_lumped_inv, -1_i_def)
+    call invoke( name = "Create m1_lumped_inv",      &
+                 setval_c(ones,          1.0_r_def), &
+                 setval_c(m1_lumped_inv, 0.0_r_def), &
+                 matrix_vector_kernel_type(m1_lumped_inv, ones, mm_w1) )
+    ! PSyclone does not currently support raising field to an integer power
+    call invoke_raise_field(m1_lumped_inv, -1_i_def)
 
     ones           = field_type( vector_space = w0_fs )
     m0_lumped_inv  = field_type( vector_space = w0_fs )
-    call invoke( set_field_scalar(1.0_r_def, ones), &
-                 set_field_scalar(0.0_r_def, m0_lumped_inv) )
-    call invoke( matrix_vector_kernel_type(m0_lumped_inv, ones, mm_w0) )
+    call invoke( name = "Create m0_lumped_inv",      &
+                 setval_c(ones,          1.0_r_def), &
+                 setval_c(m0_lumped_inv, 0.0_r_def), &
+                 matrix_vector_kernel_type(m0_lumped_inv, ones, mm_w0) )
+    ! PSyclone does not currently support raising field to an integer power
     call invoke_raise_field( m0_lumped_inv, -1_i_def)
 
     ones           = field_type( vector_space = wtheta_fs )
     mt_lumped_inv  = field_type( vector_space = wtheta_fs )
-    call invoke( set_field_scalar(1.0_r_def, ones), &
-                 set_field_scalar(0.0_r_def, mt_lumped_inv) )
-    call invoke( matrix_vector_kernel_type(mt_lumped_inv, ones, mm_wtheta) )
+    call invoke( name = "Create mt_lumped_inv",      &
+                 setval_c(ones,          1.0_r_def), &
+                 setval_c(mt_lumped_inv, 0.0_r_def), &
+                 matrix_vector_kernel_type(mt_lumped_inv, ones, mm_wtheta) )
+    ! PSyclone does not currently support raising field to an integer power
     call invoke_raise_field( mt_lumped_inv, -1_i_def )
  
 
@@ -283,32 +289,37 @@ contains
     nodal_multiplicity_w2  = field_type( vector_space = w2_fs )
     nodal_multiplicity_w2h = field_type( vector_space = w2h_fs )
     nodal_multiplicity_w0  = field_type( vector_space = w0_fs )
-    call invoke( set_field_scalar(0.0_r_def, nodal_multiplicity_w1) )
-    call invoke( multiplicity_kernel_type(nodal_multiplicity_w1) )
-    call invoke( set_field_scalar(0.0_r_def, nodal_multiplicity_w2) )
-    call invoke( multiplicity_kernel_type(nodal_multiplicity_w2) )
-    call invoke( set_field_scalar(0.0_r_def, nodal_multiplicity_w2h) )
-    call invoke( multiplicity_kernel_type(nodal_multiplicity_w2h) )
-    call invoke( set_field_scalar(0.0_r_def, nodal_multiplicity_w0) )
-    call invoke( multiplicity_kernel_type(nodal_multiplicity_w0) )
+    call invoke( name = "Create multiplicity",                     &
+                 setval_c(nodal_multiplicity_w1, 0.0_r_def),       &
+                 multiplicity_kernel_type(nodal_multiplicity_w1),  &
+                 setval_c(nodal_multiplicity_w2, 0.0_r_def),       &
+                 multiplicity_kernel_type(nodal_multiplicity_w2),  &
+                 setval_c(nodal_multiplicity_w2h, 0.0_r_def),      &
+                 multiplicity_kernel_type(nodal_multiplicity_w2h), &
+                 setval_c(nodal_multiplicity_w0, 0.0_r_def),       &
+                 multiplicity_kernel_type(nodal_multiplicity_w0) )
 
     ! Calculate the reciprocals
     nodal_rmultiplicity_w1  = field_type( vector_space = w1_fs )
     nodal_rmultiplicity_w2  = field_type( vector_space = w2_fs )
     nodal_rmultiplicity_w2h = field_type( vector_space = w2h_fs )
     nodal_rmultiplicity_w0  = field_type( vector_space = w0_fs )
+
     ones = field_type( vector_space = w1_fs )
-    call invoke( set_field_scalar(1.0_r_def, ones))
-    call invoke_divide_field(ones, nodal_multiplicity_w1, nodal_rmultiplicity_w1)
+    call invoke( setval_c(ones, 1.0_r_def), &
+                 X_divideby_Y(nodal_rmultiplicity_w1, ones, nodal_multiplicity_w1) )
+
     ones = field_type( vector_space = w2_fs )
-    call invoke( set_field_scalar(1.0_r_def, ones))
-    call invoke_divide_field(ones, nodal_multiplicity_w2, nodal_rmultiplicity_w2)
+    call invoke( setval_c(ones, 1.0_r_def), &
+                 X_divideby_Y(nodal_rmultiplicity_w2, ones, nodal_multiplicity_w2) )
+
     ones = field_type( vector_space = w2h_fs )
-    call invoke( set_field_scalar(1.0_r_def, ones))
-    call invoke_divide_field(ones, nodal_multiplicity_w2h, nodal_rmultiplicity_w2h)
+    call invoke( setval_c( ones, 1.0_r_def ), &
+                 X_divideby_Y(nodal_rmultiplicity_w2h, ones, nodal_multiplicity_w2h) )
+
     ones = field_type( vector_space = w0_fs )
-    call invoke( set_field_scalar(1.0_r_def, ones))
-    call invoke_divide_field(ones, nodal_multiplicity_w0, nodal_rmultiplicity_w0)
+    call invoke( setval_c(ones, 1.0_r_def), &
+                 X_divideby_Y(nodal_rmultiplicity_w0, ones, nodal_multiplicity_w0) )
 
     ! Store pointer to chi field so things downstream can access it via
     ! runtime_constants

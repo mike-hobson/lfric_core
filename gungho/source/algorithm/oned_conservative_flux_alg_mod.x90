@@ -85,10 +85,11 @@ contains
     rho_x_halos_corrected = field_type( vector_space = rho_fs )
     rho_y_halos_corrected = field_type( vector_space = rho_fs )
 
-    call invoke( set_field_scalar(0.0_r_def, mass_flux), &
-                 set_field_scalar(0.0_r_def, a0),        &
-                 set_field_scalar(0.0_r_def, a1),        &
-                 set_field_scalar(0.0_r_def, a2) )
+    call invoke( name = "Mass flux and PPM initialisation", &
+                 setval_c( mass_flux, 0.0_r_def ),          &
+                 setval_c( a0,        0.0_r_def ),          &
+                 setval_c( a1,        0.0_r_def ),          &
+                 setval_c( a2,        0.0_r_def ) )
 
     if (direction == x_direction) then
       call invoke_subgrid_coeffs(a0,a1,a2,rho_y,cell_orientation,direction,  &

@@ -13,10 +13,9 @@ module cusph_fv_density_update_alg_mod
   use constants_mod,                     only: i_def, r_def
   use field_mod,                         only: field_type
   use timestepping_config_mod,           only: dt
-  use psykal_lite_mod,                   only: invoke_set_field_scalar,        &
-                                               invoke_fv_divergence,           &
-                                               invoke_multiply_field_data,     &
-                                               invoke_axpy
+  use psykal_lite_mod,                   only: invoke_set_field_scalar, &
+                                               invoke_fv_divergence,    &
+                                               invoke_multiply_field_data
   use dg_matrix_vector_kernel_mod,       only: dg_matrix_vector_kernel_type
   use quadrature_mod,                    only: quadrature_type, GAUSSIAN
   use operator_mod,                      only: operator_type
@@ -80,7 +79,7 @@ contains
     call invoke_set_field_scalar(-99.0_r_def, mass_flux_mult_x)
     call invoke_set_field_scalar(-99.0_r_def, mass_flux_mult_y)
 
-    ! Multipy mass flux by detJ at W2 dofs
+    ! Multiply mass flux by detJ at W2 dofs
     call invoke_multiply_field_data(mass_flux_x,detj_at_w2,mass_flux_mult_x)
     call invoke_multiply_field_data(mass_flux_y,detj_at_w2,mass_flux_mult_y)
 
@@ -95,7 +94,7 @@ contains
     call invoke( dg_matrix_vector_kernel_type(div, div_temp, m3_inv) )
 
     call invoke_set_field_scalar(-99.0_r_def, rho)
-    call invoke_axpy(-dt,div,rho_n,rho)
+    call invoke( X_minus_bY(rho, rho_n, dt, div) )
 
   end subroutine cusph_fv_density_update_alg
 

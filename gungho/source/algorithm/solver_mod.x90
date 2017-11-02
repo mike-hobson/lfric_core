@@ -26,16 +26,6 @@ module solver_mod
   use matrix_vector_kernel_mod,  only : matrix_vector_kernel_type
   use enforce_bc_kernel_mod,     only : enforce_bc_kernel_type
   use operator_mod,              only : operator_type
-  use psykal_lite_mod,           only : invoke_inner_prod,              &
-                                        invoke_X_innerproduct_X,        &
-                                        invoke_axpy,                    &
-                                        invoke_inc_axpy,                &
-                                        invoke_inc_xpby,                &
-                                        invoke_minus_field_data,        &
-                                        invoke_divide_field,            &
-                                        invoke_divide_field_data,       &
-                                        invoke_copy_scaled_field_data,  &
-                                        invoke_scale_field_data
   use solver_config_mod,         only : method,                         &
                                         solver_method_cg,               &
                                         solver_method_bicgstab,         &
@@ -59,6 +49,8 @@ module solver_mod
   private
   real(r_def), parameter :: sc_err_min = 1.0e-16_r_def
   public :: solver_algorithm
+  ! Auxiliary constants to group invokes
+  real(kind=r_def), private :: const1
 
 contains
 
@@ -156,19 +148,19 @@ contains
     ! The temporary fields
     type(field_type)                   :: res, p, v, s, t, z, y
 
-    ! the scalars
-    ! the greeks - standard BiCGStab
+    ! The scalars
+    ! The greeks - standard BiCGStab
     real(kind=r_def)                   :: rho,alpha,omega,beta, norm
     real(kind=r_def)                   :: ts,tt
-    ! others
+    ! Others
     real(kind=r_def)                   :: err,sc_err, init_err
     integer(i_def)                     :: iter
     integer(i_def)                     :: fs
 
     fs = lhs%which_function_space()
 
-    ! compute the residual this is a global sum to the PSy ---
-    call invoke_X_innerproduct_X(sc_err, rhs)
+    ! Compute the residual this is a global sum to the PSy ---
+    call invoke( X_innerproduct_X(sc_err, rhs) )
     sc_err = max(sqrt(sc_err), sc_err_min)
     write( log_scratch_space, '(A,E15.8)' ) &
          "solver_algorithm: bicgstab starting ... ||b|| = ", sc_err
@@ -188,10 +180,10 @@ contains
     y   = field_type( vector_space = rhs_fs )
     res = field_type( vector_space = rhs_fs )
 
-    call invoke( set_field_scalar(0.0_r_def, lhs), &
-                 copy_field(rhs, res) )
+    call invoke( setval_c(lhs, 0.0_r_def), &
+                 setval_X(res, rhs) )
 
-    call invoke_X_innerproduct_X(err, res)
+    call invoke( X_innerproduct_X(err, res) )
     err = sqrt(err)/sc_err
     init_err=err
     if (err < tolerance) then
@@ -204,43 +196,44 @@ contains
       return
    end if
 
-    call invoke( set_field_scalar(0.0_r_def, v), & 
-                 set_field_scalar(0.0_r_def, p) )
+    call invoke( setval_c(v, 0.0_r_def), & 
+                 setval_c(p, 0.0_r_def) )
 
     do iter = 1, maximum_iterations
 
-      call invoke_inner_prod(res,rhs,rho)
+      call invoke( X_innerproduct_Y(rho, res, rhs) )
       beta = (rho/norm) * (alpha/omega)
       ! p = r + beta*(p - omega*v)
-      call invoke_inc_axpy(beta, p, res)
-      call invoke_inc_xpby(p, (-beta*omega), v)
+      call invoke( inc_aX_plus_Y(beta, p, res) )
+      const1 = -beta*omega
+      call invoke( inc_X_plus_bY(p, const1, v) )
       call precondition( y, p, preconditioner, mmd )
-      call invoke( set_field_scalar(0.0_r_def, v) )
-      call invoke( matrix_vector_kernel_type(v, y, mm) )
+      call invoke( setval_c(v, 0.0_r_def), &
+                   matrix_vector_kernel_type(v, y, mm) )
       if (fs == w1 .or. fs == w2 .or. fs == w2h .or. fs == w2v) &
         call invoke( enforce_bc_kernel_type( v ) )
-      call invoke_inner_prod(rhs,v,norm)
+      call invoke( X_innerproduct_Y(norm, rhs, v) )
       alpha = rho/norm
-      call invoke_axpy(-alpha,v,res,s)
+      call invoke( X_minus_bY(s, res, alpha, v) )
       call precondition( z, s, preconditioner, mmd )
-      call invoke( set_field_scalar(0.0_r_def, t) )
-      call invoke( matrix_vector_kernel_type(t, z, mm) )
+      call invoke( setval_c(t, 0.0_r_def), &
+                   matrix_vector_kernel_type(t, z, mm) )
       if (fs == w1 .or. fs == w2 .or. fs == w2h .or. fs == w2v) &
         call invoke( enforce_bc_kernel_type( t ) )
 
-      call invoke_X_innerproduct_X(tt, t)
-      call invoke_inner_prod(t,s,ts)
+      call invoke( X_innerproduct_X(tt, t), &
+                   X_innerproduct_Y(ts, t, s) )
 
       omega = ts/tt
 
       ! lhs = lhs + omega * z + alpha * y
-      call invoke_inc_xpby(lhs, omega, z)
-      call invoke_inc_xpby(lhs, alpha, y)
-      call invoke_axpy(-omega,t,s,res)
+      call invoke( inc_X_plus_bY(lhs, omega, z), &
+                   inc_X_plus_bY(lhs, alpha, y), &
+                   X_minus_bY(res, s, omega, t) )
       norm = rho
 
       ! Check for convergence
-      call invoke_X_innerproduct_X(err, res)
+      call invoke( X_innerproduct_X(err, res) )
       err = sqrt(err)/sc_err
 
       write( log_scratch_space, '(A,I2,A, E15.8)' ) "solver_algorithm[", iter, &
@@ -298,9 +291,9 @@ contains
 
     fs = lhs%which_function_space()
 
-    call invoke_X_innerproduct_X(rs_old, rhs)
+    call invoke( X_innerproduct_X(rs_old, rhs) )
 
-    ! compute the residual this is a global sum to the PSy ---
+    ! Compute the residual this is a global sum to the PSy ---
 
     rhs_fs => rhs%get_function_space()
 
@@ -309,16 +302,16 @@ contains
     Ap  = field_type(vector_space = rhs_fs )
     z   = field_type(vector_space = rhs_fs )
 
-    call invoke( set_field_scalar(0.0_r_def, lhs) )
-    call invoke( matrix_vector_kernel_type(Ap,lhs,mm) )
+    call invoke( setval_c(lhs, 0.0_r_def), &
+                 matrix_vector_kernel_type(Ap, lhs, mm) )
     if (fs == w1 .or. fs == w2 .or. fs == w2h .or. fs == w2v) &
       call invoke( enforce_bc_kernel_type( Ap ) )
 
-    call invoke_minus_field_data( rhs, Ap, res )
+    call invoke( X_minus_Y(res, rhs, Ap) )
     call precondition( z, res, preconditioner, mmd )
-    call invoke( copy_field(z, p) )
+    call invoke( setval_X(p, z) )
 
-    call invoke_inner_prod( res, z, rs_old )
+    call invoke( X_innerproduct_Y(rs_old, res, z) )
     err = sqrt(rs_old)
     sc_err = max(err, sc_err_min)
     init_err=sc_err
@@ -335,19 +328,19 @@ contains
     end if
 
     do iter = 1, maximum_iterations
-       call invoke( set_field_scalar(0.0_r_def, Ap) )
-       call invoke( matrix_vector_kernel_type(Ap, p, mm) )
+       call invoke( setval_c(Ap, 0.0_r_def), &
+                    matrix_vector_kernel_type(Ap, p, mm) )
        if (fs == w1 .or. fs == w2 .or. fs == w2h .or. fs == w2v) &
           call invoke( enforce_bc_kernel_type( Ap ) )
 
-      call invoke_inner_prod( p, Ap, rs_new )
+      call invoke( X_innerproduct_Y(rs_new, p, Ap) )
       alpha = rs_old/rs_new
 
-      call invoke_inc_xpby(lhs, alpha, p)
-      call invoke_inc_xpby(res, -alpha, Ap)
+      call invoke( inc_X_plus_bY(lhs, alpha, p), &
+                   inc_X_minus_bY(res, alpha, Ap) )
 
       ! Check for convergence
-      call invoke_X_innerproduct_X(rs_new, res)
+      call invoke( X_innerproduct_X(rs_new, res) )
       err = sqrt(rs_new)/sc_err
 
       write( log_scratch_space, '(A, I2, A, E15.8)' ) &
@@ -364,10 +357,10 @@ contains
       end if
 
       call precondition( z, res, preconditioner, mmd )
-      call invoke_inner_prod(z,res,rs_new)
+      call invoke( X_innerproduct_Y(rs_new, z, res) )
       beta = rs_new/rs_old
       rs_old = rs_new
-      call invoke_inc_axpy(beta, p, z)
+      call invoke( inc_aX_plus_Y(beta, p, z) )
 
     end do
 
@@ -414,21 +407,21 @@ contains
   diagonal = field_type( vector_space = rhs_fs )
   res      = field_type( vector_space = rhs_fs )
 
-  call invoke( mm_diagonal_kernel_type(diagonal, mm) )
-  call invoke_divide_field( rhs, diagonal, lhs )
+  call invoke( mm_diagonal_kernel_type(diagonal, mm), &
+               X_divideby_Y(lhs, rhs, diagonal) )
 
 ! Initial guess
-  call invoke( set_field_scalar(0.0_r_def, lhs) )
+  call invoke( setval_c(lhs, 0.0_r_def) )
 
   do iter = 1,maximum_iterations
-    call invoke( set_field_scalar(0.0_r_def, Ax) )
-    call invoke( matrix_vector_kernel_type(Ax, lhs, mm) )
+    call invoke( setval_c(Ax, 0.0_r_def), &
+                 matrix_vector_kernel_type(Ax, lhs, mm) )
     if (fs == w1 .or. fs == w2 .or. fs == w2h .or. fs == w2v) &
       call invoke( enforce_bc_kernel_type( Ax ) )
 
-    call invoke_minus_field_data( rhs, Ax, res )
-    call invoke_divide_field_data( res, diagonal )
-    call invoke_inc_xpby( lhs, MU, res )
+    call invoke( X_minus_Y(res, rhs, Ax),         &
+                 inc_X_divideby_Y(res, diagonal), &
+                 inc_X_plus_bY(lhs, MU, res) )
 
 ! Ready for next iteration
   end do
@@ -485,7 +478,7 @@ contains
       v(iter) = field_type(vector_space = rhs_fs)
     end do
 
-    call invoke_X_innerproduct_X(err, rhs)
+    call invoke( X_innerproduct_X(err, rhs) )
     sc_err = max( sqrt(err), sc_err_min )
     init_err = sc_err
 
@@ -497,19 +490,20 @@ contains
       call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
       return
     end if
-    call invoke( set_field_scalar(0.0_r_def, Ax) )
-    call invoke( matrix_vector_kernel_type(Ax, lhs, mm) )
+    call invoke( setval_c(Ax, 0.0_r_def), &
+                 matrix_vector_kernel_type(Ax, lhs, mm) )
     if (fs == w1 .or. fs == w2 .or. fs == w2h .or. fs == w2v) &
       call invoke( enforce_bc_kernel_type( Ax ) )
 
-    call invoke_minus_field_data( rhs, Ax, r )
+    call invoke( X_minus_Y(r, rhs, Ax) )
 
     call precondition( s, r, precond_option, mmd )
 
-    call invoke_X_innerproduct_X(err, s)
+    call invoke( X_innerproduct_X(err, s) )
     beta = sqrt(err)
 
-    call invoke_copy_scaled_field_data( 1.0_r_def/beta, s, v(1) )
+    const1 = 1.0_r_def/beta
+    call invoke( a_times_X(v(1), const1, s) )
 
 
     h(:,:) = 0.0_r_def
@@ -521,25 +515,26 @@ contains
       do j = 1, GCRk
 
         call precondition( w, v(j), postcond_option, mmd )
-        call invoke( set_field_scalar(0.0_r_def, s) )
-        call invoke( matrix_vector_kernel_type(s, w, mm) )
+        call invoke( setval_c(s, 0.0_r_def), &
+                     matrix_vector_kernel_type(s, w, mm) )
         if (fs == w1 .or. fs == w2 .or. fs == w2h .or. fs == w2v) &
           call invoke( enforce_bc_kernel_type( s ) )
  
         call precondition( w, s, precond_option, mmd )
 
         do k = 1, j
-          call invoke_inner_prod( v(k), w, h(k,j)  )
-          call invoke_inc_xpby( w, -h(k,j), v(k) )
+          call invoke( X_innerproduct_Y(h(k,j), v(k), w), &
+                       inc_X_minus_bY(w, h(k,j), v(k)) )
         end do
-        call invoke_X_innerproduct_X(err, w)
+        call invoke( X_innerproduct_X(err, w) )
         h(j+1,j) = sqrt( err )
         if( j < GCRk ) then
-          call invoke_copy_scaled_field_data(1.0_r_def/h(j+1,j), w, v(j+1))
+          const1 = 1.0_r_def/h(j+1,j)
+          call invoke( a_times_X(v(j+1), const1, w) )
         end if
       end do
 
-! Solve (7.23) of Wesseling (see Saad's book)
+      ! Solve (7.23) of Wesseling (see Saad's book)
       do m = 1, GCRK
         nrm    = sqrt( h(m,m)*h(m,m) + h(m+1,m)*h(m+1,m) )
         si     = h(m+1,m)/nrm
@@ -567,17 +562,18 @@ contains
 
       do i = 1, GCRK
         call precondition( s, v(i), postcond_option, mmd )
-        call invoke_inc_xpby( lhs, u(i), s )
+        call invoke( inc_X_plus_bY(lhs, u(i), s) )
       end do
 
-! Check for convergence
-      call invoke( set_field_scalar(0.0_r_def, Ax) )
-      call invoke( matrix_vector_kernel_type(Ax, lhs, mm) )
+      ! Check for convergence
+      call invoke( setval_c(Ax, 0.0_r_def), &
+                   matrix_vector_kernel_type(Ax, lhs, mm) )
       if (fs == w1 .or. fs == w2 .or. fs == w2h .or. fs == w2v) &
         call invoke( enforce_bc_kernel_type( Ax ) )
-      call invoke_minus_field_data( rhs, Ax, r )
 
-      call invoke_X_innerproduct_X(err, r)
+      call invoke( X_minus_Y(r, rhs, Ax) )
+
+      call invoke( X_innerproduct_X(err, r) )
       beta = sqrt(err)
 
       err = beta/sc_err
@@ -591,7 +587,8 @@ contains
       end if
 
       call precondition( s, r, precond_option, mmd )
-      call invoke_copy_scaled_field_data(1.0_r_def/beta, s, v(1))
+      const1 = 1.0_r_def/beta
+      call invoke( a_times_X(v(1), const1, s) )
 
       g(:) = 0.0_r_def
       g(1) = beta
@@ -651,7 +648,7 @@ contains
       s(iter)  = field_type (vector_space = rhs_fs)
       v(iter)  = field_type (vector_space = rhs_fs)
     end do
-    call invoke_X_innerproduct_X(err, rhs)
+    call invoke( X_innerproduct_X(err, rhs) )
     sc_err = max( sqrt(err), sc_err_min )
     init_err = sc_err
 
@@ -663,39 +660,39 @@ contains
       call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
       return
     end if
-    call invoke( set_field_scalar(0.0_r_def, Ax) )
-    call invoke( matrix_vector_kernel_type(Ax, lhs, mm) )
+    call invoke( setval_c(Ax, 0.0_r_def), &
+                 matrix_vector_kernel_type(Ax, lhs, mm) )
     if (fs == w1 .or. fs == w2 .or. fs == w2h .or. fs == w2v) &
       call invoke( enforce_bc_kernel_type( Ax ) )
 
-    call invoke_minus_field_data( rhs, Ax, r )
+    call invoke( X_minus_Y(r, rhs, Ax) )
 
     do iter = 1, maximum_iterations
       do m = 1, GCRk
-! This is the correct settings -> call Precon(s(:,:,m),r,prit,prec)
+        ! This is the correct settings -> call Precon(s(:,:,m),r,prit,prec)
         call precondition( s(m), r, preconditioner, mmd )
-        call invoke( set_field_scalar(0.0_r_def, v(m)) )
-        call invoke( matrix_vector_kernel_type(v(m), s(m), mm) )
+        call invoke( setval_c(v(m), 0.0_r_def), &
+                     matrix_vector_kernel_type(v(m), s(m), mm) )
         if (fs == w1 .or. fs == w2 .or. fs == w2h .or. fs == w2v) &
           call invoke( enforce_bc_kernel_type( v(m) ) )
 
 
         do n = 1, m-1
-          call invoke_inner_prod( v(m), v(n), alpha )
-          call invoke_inc_xpby( v(m), -alpha, v(n) )
-          call invoke_inc_xpby( s(m), -alpha, s(n) )
+          call invoke( X_innerproduct_Y(alpha, v(m), v(n)), &
+                       inc_X_minus_bY(v(m), alpha, v(n)),   &
+                       inc_X_minus_bY(s(m), alpha, s(n)) )
         end do
-        call invoke_X_innerproduct_X(err, v(m))
+        call invoke( X_innerproduct_X(err, v(m)) )
         alpha = sqrt(err)
-        call invoke_scale_field_data( 1.0_r_def/alpha, v(m) )
-        call invoke_scale_field_data( 1.0_r_def/alpha, s(m) )
-
-        call invoke_inner_prod( r, v(m), alpha )
-        call invoke_inc_xpby( lhs, alpha, s(m) )
-        call invoke_inc_xpby( r, -alpha, v(m) )
+        const1 = 1.0_r_def/alpha
+        call invoke( inc_a_times_X(const1, v(m)),      &
+                     inc_a_times_X(const1, s(m)),      &
+                     X_innerproduct_Y(alpha, r, v(m)), &
+                     inc_X_plus_bY(lhs, alpha, s(m)),  &
+                     inc_X_minus_bY(r, alpha, v(m)) )
       end do
 
-      call invoke_X_innerproduct_X(err, r)
+      call invoke( X_innerproduct_X(err, r) )
       err = sqrt( err )/sc_err
       if ( err <  tolerance ) then
         write( log_scratch_space, '(A,I2,A,E12.4,A,E15.8)' )   &
@@ -728,8 +725,6 @@ end subroutine gcr_solver_algorithm
 !! routine to use
   subroutine precondition(y, x, preconditioner, diagonal)
 
-    use psykal_lite_mod, only: invoke_divide_field
-
     implicit none
 
     type(field_type), intent(inout) :: y
@@ -739,9 +734,9 @@ end subroutine gcr_solver_algorithm
 
     select case ( preconditioner )
       case ( solver_preconditioner_diagonal )
-        call invoke_divide_field(x, diagonal, y)
+        call invoke( X_divideby_Y(y, x, diagonal) )
       case default ! Do nothing
-        call invoke( copy_field(x, y) )
+        call invoke( setval_X(y, x) )
     end select
 
   end subroutine precondition

@@ -46,7 +46,7 @@ contains
     projected_field(1) = field_type( vector_space = theta%get_function_space() )
     call galerkin_projection_algorithm(projected_field, rho, mesh_id, &
        1, qr) 
-    call invoke( copy_field(projected_field(1), rho_in_wth) )
+    call invoke( setval_X(rho_in_wth, projected_field(1)) )
 
   end subroutine map_rho_to_theta
   

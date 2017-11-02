@@ -27,16 +27,14 @@ module iter_timestep_alg_mod
   use fs_continuity_mod,         only: W3, Wtheta
 
   ! PsyKAl-lite kernels
-  use psykal_lite_mod,           only: invoke_axpby, &
-                                       invoke_X_innerproduct_X, &
-                                       invoke_tracer_viscosity, &
+  use psykal_lite_mod,           only: invoke_tracer_viscosity, &
                                        invoke_momentum_viscosity
 
-  use field_bundle_mod,          only: clone_bundle, & 
-                                       bundle_axpy, & 
-                                       bundle_axpby, &
-                                       add_bundle, &
-                                       copy_bundle, &
+  use field_bundle_mod,          only: clone_bundle,      & 
+                                       bundle_axpy,       & 
+                                       bundle_axpby,      &
+                                       add_bundle,        &
+                                       copy_bundle,       &
                                        set_bundle_scalar, &
                                        bundle_ax 
 
@@ -88,7 +86,7 @@ module iter_timestep_alg_mod
 contains
 
   !> @details Initialisation procedure for the timestepping algorithm
-  !>         Initialises various internal fields
+  !>          Initialises various internal fields
   !> @param[in]    mesh_id Mesh id of the mesh object on which the model runs
   !> @param[inout] u  3D wind field
   !> @param[inout] rho Density
@@ -145,9 +143,10 @@ contains
     !--------------------------------------------------------------------
     ! Copy prognostic field data to state arrays
     !--------------------------------------------------------------------
-    call invoke( copy_field(u,     state(igh_u)), &
-                 copy_field(theta, state(igh_t)), &
-                 copy_field(rho,   state(igh_d)) )
+    call invoke( name = "Copy init fields to state", &
+                 setval_X(state(igh_u), u    ),      &
+                 setval_X(state(igh_t), theta),      &
+                 setval_X(state(igh_d), rho  ) )
     call si_solver_init(state)
     call advection_alg_init(mesh_id)
 
@@ -158,16 +157,16 @@ contains
   end subroutine iter_alg_init
 
   !> @details An algorithm for timestepping the 3D nonlinear equations
-  !>         using a iterative process of the same form as endgame.
-  !>         The algorithm splits all processes into one of three parts.
-  !>         Old time level forcings computed once per timestep.
-  !>         Advection terms computed in an outer loop using time-averaged
-  !>         fields.
-  !>         New time level forcings computed in an inner loop.
-  !>         If matching ENDGame, 2 outer and 2 inner loops are used per timestep
-  !>         by default. This means that there is one evaluation of old time
-  !>         level terms, 2 evaluation of advective terms and 4 evaluations 
-  !>         of new time level terms and increment updates per timestep
+  !>          using a iterative process of the same form as endgame.
+  !>          The algorithm splits all processes into one of three parts.
+  !>          Old time level forcings computed once per timestep.
+  !>          Advection terms computed in an outer loop using time-averaged
+  !>          fields.
+  !>          New time level forcings computed in an inner loop.
+  !>          If matching ENDGame, 2 outer and 2 inner loops are used per timestep
+  !>          by default. This means that there is one evaluation of old time
+  !>          level terms, 2 evaluation of advective terms and 4 evaluations 
+  !>          of new time level terms and increment updates per timestep
   !> @param[inout] u  3D wind field
   !> @param[inout] rho Density
   !> @param[inout] theta Potential temperature
@@ -198,7 +197,7 @@ contains
     ! Timestep value
     integer, intent(in) :: timestep  
 
-    ! quadrature object
+    ! Quadrature object
     type(quadrature_type)       :: qr
     ! Coordinate fields
     type( field_type ), pointer :: chi(:) => null()
@@ -220,15 +219,16 @@ contains
     height_w3  => get_height(W3)
     height_wth => get_height(Wtheta)
     !--------------------------------------------------------------------
-    !Pass updated fields into state
+    ! Pass updated fields into state
     !--------------------------------------------------------------------
-    if (spinup_winds .and. timestep <= spinup_period)then
-      call invoke( copy_field(u,     state(igh_u)), &
-                   copy_field(theta, state(igh_t)), &
-                   copy_field(rho,   state(igh_d)) )
+    if (spinup_winds .and. timestep <= spinup_period) then
+      call invoke( name = "Copy step fields to state", &
+                   setval_X(state(igh_u), u    ),      &
+                   setval_X(state(igh_t), theta),      &
+                   setval_X(state(igh_d), rho  ) )
     end if
 
-    if (spinup_alpha .and. timestep <= spinup_period)then
+    if (spinup_alpha .and. timestep <= spinup_period) then
       varalpha = alpha + (spinup_period - timestep + 1) * &
          (1.0 - alpha)/spinup_period
     else
@@ -277,7 +277,7 @@ contains
       end if
 
       ! Set advecting velocity & terms
-      call invoke_axpby(varbeta, state_n(igh_u), varalpha, state(igh_u), u_adv)
+      call invoke( aX_plus_bY(u_adv, varbeta, state_n(igh_u), varalpha, state(igh_u)) )
       call advection_alg(rhs_adv, state_n, xi, u_adv)
       if ( use_moisture ) call advection_mr_alg(mr, u_adv)
       call bundle_ax(dt, rhs_adv, rhs_adv, bundle_size) 
@@ -304,9 +304,10 @@ contains
         call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
         ! Write out si residuals
-        call invoke_X_innerproduct_X(si_err(1), rhs_np1(1))
-        call invoke_X_innerproduct_X(si_err(2), rhs_np1(2))
-        call invoke_X_innerproduct_X(si_err(3), rhs_np1(3))
+        call invoke( name = "Compute SI residuals",           &
+                     X_innerproduct_X(si_err(1), rhs_np1(1)), &
+                     X_innerproduct_X(si_err(2), rhs_np1(2)), &
+                     X_innerproduct_X(si_err(3), rhs_np1(3)) )
         write( log_scratch_space, '(A,E16.8)' ) &
           'Residual in momentum equation:  ',sqrt(si_err(1))
         call log_event( log_scratch_space, LOG_LEVEL_INFO )
@@ -336,7 +337,7 @@ contains
       call log_event( 'Applying Viscosity', LOG_LEVEL_INFO ) 
       call invoke_tracer_viscosity(   inc(igh_t), state(igh_t), 1, chi)
       call invoke_momentum_viscosity( inc(igh_u), state(igh_u), 1, chi)
-      call invoke( set_field_scalar(0.0_r_def, inc(igh_d)) ) 
+      call invoke( setval_c(inc(igh_d), 0.0_r_def) ) 
       call bundle_axpy(dt, inc, state, state, bundle_size)
     end if    
     
@@ -344,12 +345,12 @@ contains
     ! Return fields in u, theta, rho arrays
     ! The if statement prevents this update if spinup_winds is true
     !--------------------------------------------------------------------
-    if (.not. (spinup_winds .and. timestep <= spinup_period))then
-      call invoke( copy_field(state(igh_u), u) )
+    if (.not. (spinup_winds .and. timestep <= spinup_period)) then
+      call invoke( setval_X(u, state(igh_u)) )
     end if
 
-    call invoke( copy_field(state(igh_t), theta), &
-                 copy_field(state(igh_d), rho) )
+    call invoke( setval_X(theta, state(igh_t)), &
+                 setval_X(rho,   state(igh_d)) )
 
     if ( subroutine_timers ) call timer('iter_timestep_alg')
 

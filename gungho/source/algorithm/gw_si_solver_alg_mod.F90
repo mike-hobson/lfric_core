@@ -5,6 +5,11 @@
 !-----------------------------------------------------------------------------
 !>@brief Routines for solving the semi-implicit equation set for the linear
 !>       gravity waves
+
+! Note: PSyclone 1.5.0 fails to correctly parse "use, intrinsic :: ieee_arithmetic" 
+!       so this algorithm is not using PSyclone built-ins or other invokes.
+!       However, commented PSyclone invokes are left as placeholders for when 
+!       the support becomes available.
 module gw_si_solver_alg_mod
 
   use, intrinsic :: ieee_arithmetic
@@ -351,9 +356,7 @@ contains
     else
       do i = 1,bundle_size
         call invoke_copy_field_data( x(i), y(i) )
-        ! PSyclone built-ins support (v.1.3.1) fails for changing index in a loop, so the
-        ! call below is a placeholder for when it becomes available
-        !        call invoke( copy_field(x(i), y(i)) 
+        ! call invoke( setval_X( y(i), x(i) ) )
       end do
       if ( option == solver_si_preconditioner_diagonal .or.          &
            option == solver_si_postconditioner_diagonal) then

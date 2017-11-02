@@ -33,7 +33,7 @@ contains
 
     call log_event( "IO Mini App: Initialising test field", LOG_LEVEL_INFO )
     ! Set the field values to 1.0
-    call invoke( set_field_scalar(1.0_r_def, test_field))
+    call invoke( setval_c( test_field, 1.0_r_def ) )
 
     call log_event( "IO Mini Ap: Initialised test field", LOG_LEVEL_INFO )
 

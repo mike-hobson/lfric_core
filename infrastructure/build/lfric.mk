@@ -169,7 +169,8 @@ api-documentation: ALWAYS
 	$(call MESSAGE,API,$(PROJECT))
 	$(Q)mkdir -p $(DOCUMENT_DIR)
 	$(Q)( cat $(CONFIG_DIR)/Doxyfile; \
-	      echo INPUT=$(SOURCE_DIR); \
+	      echo INPUT=$(SOURCE_DIR) $(CONFIG_DIR)/$$(sed -n -e 's/\s*INPUT\s*=\s*//p' $(CONFIG_DIR)/Doxyfile); \
+	      echo USE_MDFILE_AS_MAINPAGE=$(CONFIG_DIR)/$$(sed -n -e 's/\s*USE_MDFILE_AS_MAINPAGE\s*=\s*//p' $(CONFIG_DIR)/Doxyfile); \
 	      echo OUTPUT_DIRECTORY=$(DOCUMENT_DIR) ) \
 	    | doxygen - $(VERBOSE_REDIRECT)
 

@@ -34,11 +34,8 @@ module rk_transport_mod
                                                transport_operators_fem
 
   ! PsyKAl-lite kernels
-  use psykal_lite_mod,                   only: invoke_axpy,             &
-                                               invoke_inc_xpby,         &
-                                               invoke_sample_poly_flux, &
-                                               invoke_sample_poly_adv,  &
-                                               invoke_divide_field_data
+  use psykal_lite_mod,                   only: invoke_sample_poly_flux, &
+                                               invoke_sample_poly_adv
   ! PsyKAl PSYClone kernels
   use rrho_kernel_mod,                   only: rrho_kernel_type
   use flux_rhs_kernel_mod,               only: flux_rhs_kernel_type
@@ -137,7 +134,7 @@ contains
       rt_prediction(stage) = field_type( vector_space = theta_fs )
     end do
 
-    call invoke( set_field_scalar(0.0_r_def, mass_flux) )
+    call invoke( setval_c(mass_flux, 0.0_r_def) )
 
     if ( operators == transport_operators_fv ) then
       if ( element_order == 0 ) then
@@ -153,12 +150,13 @@ contains
       mm_wt => get_mass_matrix(wt_id)
       ones  = field_type( vector_space = theta_fs )
       mt_lumped  = field_type( vector_space = theta_fs )
-      call invoke( set_field_scalar(1.0_r_def, ones), &
-                   set_field_scalar(0.0_r_def, mt_lumped) )
-      call invoke( matrix_vector_kernel_type(mt_lumped, ones, mm_wt) )
+      call invoke( name = "Compute mt_lumped",     &
+                   setval_c(ones,      1.0_r_def), &
+                   setval_c(mt_lumped, 0.0_r_def), &
+                   matrix_vector_kernel_type(mt_lumped, ones, mm_wt) )
     else
       ones  = field_type( vector_space = rho_fs)
-      call invoke( set_field_scalar(1.0_r_def, ones) )
+      call invoke( setval_c(ones, 1.0_r_def) )
     end if
 
     ! Store initial values for computing errors
@@ -185,7 +183,7 @@ contains
     ! Prognostic fields
     type( field_type ), intent( inout ) :: u, rho, theta
 
-    ! the quadrature object
+    ! The quadrature object
     type( quadrature_type )          :: qr
     ! Coordinate fields
     type( field_type ), pointer :: chi(:) => null()
@@ -193,7 +191,7 @@ contains
     integer(i_def) :: stage, st
 
 
-    ! temps for retrieving objects back from runtime constants
+    ! Temps for retrieving objects back from runtime constants
     type(operator_type), pointer :: mm_w3_inv => null()
     if ( subroutine_timers ) call timer('rk_transport_alg')
 
@@ -202,8 +200,8 @@ contains
 
     ! Create operators needed for timestepping
     mm_w3_inv => get_mass_matrix(w3inv_id)
-    call invoke( copy_field(rho,   rho_n), &
-                 copy_field(theta, theta_n) )
+    call invoke( setval_X(rho_n,   rho), &
+                 setval_X(theta_n, theta) )
 
 
     ! Runge-Kutta algorithm
@@ -220,16 +218,18 @@ contains
         case(transport_operators_fem)      
           ! Use FEM projection
           ! Initialise fields
-          call invoke( set_field_scalar(0.0_r_def, r_u),       &
-                       set_field_scalar(0.0_r_def, mass_flux), &
-                       set_field_scalar(0.0_r_def, rt_prediction(stage)) )
+          call invoke( name = "Initialise fields",                &
+                       setval_c(r_u,                  0.0_r_def), &
+                       setval_c(mass_flux,            0.0_r_def), &
+                       setval_c(rt_prediction(stage), 0.0_r_def) )
 
           ! Rho advection, compute mass flux 
-          call invoke( flux_rhs_kernel_type(r_u, u, rho, chi, qr) )
-          call invoke( enforce_bc_kernel_type(r_u) )
+          call invoke( name = "Compute mass flux",                 & 
+                       flux_rhs_kernel_type(r_u, u, rho, chi, qr), &
+                       enforce_bc_kernel_type(r_u) )
           call solver_algorithm( mass_flux, r_u) 
 
-          ! theta advection
+          ! Theta advection
           call invoke( rtheta_kernel_type( rt_prediction(stage), theta, u, qr) )
           if ( supg ) &
             call invoke( rtheta_supg_kernel_type(rt_prediction(stage),     &
@@ -238,30 +238,30 @@ contains
           call log_event( "Gungho: Invalid advection method", LOG_LEVEL_ERROR )
       end select
       ! Compute rrho = div(F)
-      call invoke( rrho_kernel_type  ( rr_prediction(stage), mass_flux, qr ) )
-
-      call invoke( set_field_scalar(0.0_r_def, r_rho), &
-                   set_field_scalar(0.0_r_def, r_theta) )
+      call invoke( rrho_kernel_type(rr_prediction(stage), mass_flux, qr), &
+                   setval_c(r_rho,   0.0_r_def),                          &
+                   setval_c(r_theta, 0.0_r_def) )
 
       do st = 1, stage
-        call invoke_inc_xpby(r_rho, ak(stage,st), rr_prediction(st))
-        call invoke_inc_xpby(r_theta, ak(stage,st), rt_prediction(st))
+        call invoke( inc_X_plus_bY(r_rho, ak(stage,st), rr_prediction(st)), &
+                     inc_X_plus_bY(r_theta, ak(stage,st), rt_prediction(st)) )
       end do
 
       ! Invert mass matrices and add increments
       ! Rho
-      call invoke( set_field_scalar(0.0_r_def, rho_inc) )
-      call invoke( matrix_vector_kernel_type( rho_inc, r_rho, mm_w3_inv) )
-      call invoke_axpy(dt, rho_inc, rho_n,   rho)
+      call invoke( name = "Invert mass matrices and add increments",     &
+                   setval_c(rho_inc, 0.0_r_def),                         &
+                   matrix_vector_kernel_type(rho_inc, r_rho, mm_w3_inv), &
+                   aX_plus_Y(rho, dt, rho_inc, rho_n) )
 
       ! Theta
       select case(operators)
         case(transport_operators_fv) ! theta in Wtheta
-          call invoke_divide_field_data(r_theta, mt_lumped)
-          call invoke_axpy(-dt,r_theta, theta_n, theta)
+          call invoke( inc_X_divideby_Y(r_theta, mt_lumped), &
+                       X_minus_bY(theta, theta_n, dt, r_theta) )
         case(transport_operators_fem)
           call solver_algorithm( theta_inc, r_theta)
-          call invoke_axpy(-dt, theta_inc, theta_n, theta)
+          call invoke( X_minus_bY(theta, theta_n, dt, theta_inc) )
       end select      
     end do
 
@@ -273,11 +273,10 @@ contains
   !> @param[in] rho Density
   !> @param[in] theta Potential temperature field
   subroutine rk_transport_final( rho, theta)
-    use psykal_lite_mod,          only: invoke_minus_field_data, &
-                                        invoke_inner_prod
+
     use matrix_vector_kernel_mod, only: matrix_vector_kernel_type
 
-   implicit none
+    implicit none
 
     type( field_type ), intent(in) :: rho, theta
  
@@ -285,7 +284,7 @@ contains
     type(function_space_type), pointer :: rho_fs   => null()
     type(function_space_type), pointer :: theta_fs => null()
     type(operator_type),       pointer :: mm_wt => null(), mm_w3 => null()
-    real(kind=r_def)                   :: l2
+    real(kind=r_def)                   :: l2_rho_scalar, l2_theta_scalar
 
     ! Compute L errors
     rho_fs   => rho%get_function_space()
@@ -293,25 +292,30 @@ contains
 
     drho   = field_type( vector_space = rho_fs )
     dtheta = field_type( vector_space = theta_fs )
-    call invoke_minus_field_data(rho,   rho0,   drho)
-    call invoke_minus_field_data(theta, theta0, dtheta)
+    call invoke( X_minus_Y(drho,   rho,   rho0  ), &
+                 X_minus_Y(dtheta, theta, theta0) )
     
     ! L2 error
     mm_w3 => get_mass_matrix(w3_id)
     mm_wt => get_mass_matrix(theta_space_id)
     l2_theta = field_type( vector_space = theta_fs )
     l2_rho   = field_type( vector_space = rho_fs )
-    call invoke( set_field_scalar(0.0_r_def, l2_theta), &
-                 set_field_scalar(0.0_r_def, l2_rho) )
-    call invoke( matrix_vector_kernel_type(l2_theta, dtheta, mm_wt) )
-    call invoke( matrix_vector_kernel_type(l2_rho,   drho,   mm_w3) )
+    call invoke( name = "Compute L2 error for theta and rho",        &
+    ! Initialise fields
+                 setval_c(l2_theta, 0.0_r_def),                      &
+                 setval_c(l2_rho,   0.0_r_def),                      &
+    ! Matrix-vector multiplication
+                 matrix_vector_kernel_type(l2_theta, dtheta, mm_wt), &
+                 matrix_vector_kernel_type(l2_rho,   drho,   mm_w3), &
+    ! Compute L2 error for theta
+                 X_innerproduct_Y(l2_theta_scalar, dtheta, l2_theta), &
+    ! Compute L2 error for rho
+                 X_innerproduct_Y(l2_rho_scalar, drho, l2_rho) )
 
-    call invoke_inner_prod(dtheta, l2_theta, l2)
-    write( log_scratch_space, '(A, E15.8)' ) "L2 theta = ", sqrt(l2)
+    ! Write out L2 errors
+    write( log_scratch_space, '(A, E15.8)' ) "L2 theta = ", sqrt(l2_theta_scalar)
     call log_event( log_scratch_space, LOG_LEVEL_info )
-
-    call invoke_inner_prod(drho, l2_rho, l2)
-    write( log_scratch_space, '(A, E15.8)' ) "L2 rho   = ", sqrt(l2)
+    write( log_scratch_space, '(A, E15.8)' ) "L2 rho   = ", sqrt(l2_rho_scalar)
     call log_event( log_scratch_space, LOG_LEVEL_info )
     if ( subroutine_timers ) call timer('rk_transport_alg')
 

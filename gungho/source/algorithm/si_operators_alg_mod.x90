@@ -4,7 +4,7 @@
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
 
-!>@brief compute the locally assembled SI operators
+!>@brief Compute the locally assembled SI operators
 module si_operators_alg_mod
   use constants_mod,             only: i_def, r_def
   use operator_mod,              only: operator_type
@@ -120,7 +120,6 @@ subroutine compute_si_operators(ref_state)
   use compound_operator_kernel_mod,    only: compound_operator_kernel_type
   use psykal_lite_mod,                 only: invoke_sample_flux_kernel,                  &
                                              invoke_compute_tri_precon_kernel,           &
-                                             invoke_inc_X_times_Y,                       &
                                              invoke_weighted_div_bd_kernel_type,         &
                                              invoke_weighted_proj_2theta_bd_kernel_type, &
                                              invoke_weighted_proj_theta2_bd_kernel_type, &
@@ -158,11 +157,11 @@ subroutine compute_si_operators(ref_state)
   div    => get_div()
   w2_rmultiplicity => get_rmultiplicity( W2 )
 
+  ! Split off due to use of any_space for chi
   call invoke( weighted_m3_rho_kernel_type(m3_rho_star, rho, chi, qr) )
   call invoke( weighted_m3_exner_kernel_type(m3_exner_star, rho, theta, chi, qr), &
                invert_local_operator_kernel_type(m3_exner_star_inv, m3_exner_star) )
 
-  ! Split off due to use of any_space for chi
   ! Weighted operator from W2 to W3
   call invoke( weighted_div_kernel_type(div_star, theta, qr) )
   ! And its boundary part in the case of horizontally discontinuous theta
@@ -189,30 +188,32 @@ subroutine compute_si_operators(ref_state)
   u_fs => ref_state(igh_u)%get_function_space()
   ones             = field_type( vector_space = u_fs )
   ! Initialise fields
-  call invoke( set_field_scalar(1.0_r_def, ones),            &
-               set_field_scalar(0.0_r_def, rho_at_u) )
+  call invoke( setval_c(ones,     1.0_r_def), &
+               setval_c(rho_at_u, 0.0_r_def) )
   ! Calculate rho^ref
   call invoke_sample_flux_kernel( rho_at_u, ones, w2_rmultiplicity, rho)
 
   call invoke( compound_operator_kernel_type(compound_div, m3_rho_star, m3_inv, div, &
                                              rho_at_u, tau_r) )
 
-  ! compute terms for tridiagonal preconditioner
+  ! Compute terms for tridiagonal preconditioner
   if ( si_pressure_preconditioner == solver_si_pressure_preconditioner_tridiagonal ) then
     call invoke_compute_tri_precon_kernel(tri_precon, theta, rho, chi, m3_inv)
   end if
   if ( normalise ) then
     if ( si_pressure_preconditioner == solver_si_pressure_preconditioner_tridiagonal) then
       Helm_diag = tri_precon(1)
+    ! PSyclone does not currently support raising field to an integer power
       call invoke_raise_field(Helm_diag, -1_i_def)
-      call invoke_inc_X_times_Y(tri_precon(1), Helm_diag)
-      call invoke_inc_X_times_Y(tri_precon(2), Helm_diag)
-      call invoke_inc_X_times_Y(tri_precon(3), Helm_diag)
+      call invoke( name = "Compute tridiagonal preconditioner", &
+                   inc_X_times_Y(tri_precon(1), Helm_diag),     &
+                   inc_X_times_Y(tri_precon(2), Helm_diag),     &
+                   inc_X_times_Y(tri_precon(3), Helm_diag) )
     else
-      call invoke( set_field_scalar(1.0_r_def, Helm_diag) )
+      call invoke( setval_c(Helm_diag, 1.0_r_def) )
     end if
   else
-    call invoke( set_field_scalar(1.0_r_def, Helm_diag) )
+    call invoke( setval_c(Helm_diag, 1.0_r_def) )
   end if
   if ( subroutine_timers ) call timer('si_operators_alg:compute')
 

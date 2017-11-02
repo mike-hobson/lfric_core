@@ -82,14 +82,15 @@ contains
 
 
     time = dt*real(timestep,r_def)
-    call invoke( set_field_scalar(0.0_r_def, u), &
-                 set_field_scalar(0.0_r_def, r_u) )
 
-    call invoke( initial_u_kernel_type(r_u, chi, time, qr) )
+    call invoke( name = "Initialise U",    &
+                 setval_c(u,   0.0_r_def), &
+                 setval_c(r_u, 0.0_r_def), &
+                 initial_u_kernel_type(r_u, chi, time, qr) )
     call solver_algorithm(u, r_u)
 
-    call invoke( copy_field(u,u_n), &
-                 copy_field(u,u_np1) )
+    call invoke( setval_X(u_n, u), &
+                 setval_X(u_np1, u) )
 
   end subroutine cusph_cosmic_transport_init
 
@@ -119,20 +120,20 @@ contains
 
     chi => get_coordinates()
 
-    call invoke( copy_field(rho,rho_n) )
+    call invoke( setval_X(rho_n, rho) )
 
     ! Call algorithm to calculate mass fluxes using COSMIC scheme
     call cusph_split_transport_alg( u_n, u_np1, rho_n, chi, cell_orientation,  &
                                  mesh_id, mass_flux_x, mass_flux_y, detj_at_w2 )
 
-    call invoke(set_field_scalar(-99.0_r_def,rho_np1))
+    call invoke( setval_c(rho_np1, -99.0_r_def) )
     call cusph_fv_density_update_alg(rho_n, mass_flux_x, mass_flux_y, rho_temp,     &
                                       cell_orientation, x_direction, detj_at_w2)
 
     call cusph_fv_density_update_alg(rho_temp, mass_flux_x, mass_flux_y, rho_np1,   &
                                       cell_orientation, y_direction, detj_at_w2)
 
-    call invoke( copy_field(rho_np1,rho) )
+    call invoke( setval_X(rho, rho_np1) )
 
   end subroutine cusph_cosmic_transport_step
 

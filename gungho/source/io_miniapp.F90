@@ -4,10 +4,10 @@
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
 
-!> @mainpage io_miniapp
-!> Test program for the XIOS IO implementation 
+!> @page io_miniapp IO Miniapp
+!> Test program for the XIOS IO implementation. 
 
-!> @brief Main program used to test XIOS setup and output of a field
+!> @brief Main program used to test XIOS setup and output of a field.
 
 program io_miniapp
 

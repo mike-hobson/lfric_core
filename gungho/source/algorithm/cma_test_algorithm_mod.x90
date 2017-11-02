@@ -91,11 +91,11 @@ module cma_test_algorithm_mod
   ! Function spaces
   ! coordinates
   type(function_space_type), pointer :: fs_coord => null()
-  ! vertical velocity
+  ! Vertical velocity
   type(function_space_type), pointer :: fs_vel_v => null()
-  ! horizontal velocity
+  ! Horizontal velocity
   type(function_space_type), pointer :: fs_vel_h => null()
-  ! pressure
+  ! Pressure
   type(function_space_type), pointer :: fs_pressure => null()
   ! Fields (temporaries used for testing)
   ! pressure space
@@ -103,7 +103,7 @@ module cma_test_algorithm_mod
                       p_tmp,          &  
                       p_out,          &  
                       p_out_cma
-  ! velocity space
+  ! Velocity space
   type(field_type) :: u_v_in,                &
                       u_v_tmp,               &
                       u_h_tmp,               &
@@ -220,30 +220,32 @@ contains
     grad_v                = operator_type( fs_vel_v, fs_pressure )
     mm_vel_v_diag         = field_type( fs_vel_v )
     mm_vel_h_diag         = field_type( fs_vel_h )
-    call invoke( compute_mass_matrix_kernel_w2_type(mm_vel_v,chi,qr) )
-    call invoke( compute_mass_matrix_kernel_w2_type(mm_vel_h,chi,qr) )
-    call invoke( compute_mass_matrix_kernel_w3_type(mm_pressure,chi,qr) )
-    call invoke( compute_div_operator_kernel_type (div_v,chi,qr) )
-    call invoke( compute_div_operator_kernel_type (div_h,chi,qr) )
-    call invoke( transpose_matrix_kernel_type (div_v,grad_v) )
+    ! NOTE: These are separate invokes as chi is defined as any space and 
+    ! PSyclone does not support multiple any_spaces in the same invoke
+    call invoke( compute_mass_matrix_kernel_w2_type( mm_vel_v, chi, qr ) )
+    call invoke( compute_mass_matrix_kernel_w2_type( mm_vel_h, chi, qr ) )
+    call invoke( compute_mass_matrix_kernel_w3_type( mm_pressure, chi, qr ) )
+    call invoke( compute_div_operator_kernel_type( div_v, chi, qr ) )
+    call invoke( compute_div_operator_kernel_type( div_h, chi, qr ) )
+    call invoke( transpose_matrix_kernel_type( div_v, grad_v ) )
 
     ! Extract diagonal of vertical and horizontal velocity mass matrices
     ! Note that this has to be done BEFORE applying the boundary
     ! conditions to the velocity mass matrix, as it will contain zeros otherwise.
     ! This is an issue since we later divide by the diagonal mass matrix in
     ! the field representation.
-    call invoke( set_field_scalar( 0.0_r_def, mm_vel_v_diag ) )
-    call invoke( mm_diagonal_kernel_type(mm_vel_v_diag, mm_vel_v))
-    call invoke( set_field_scalar( 0.0_r_def, mm_vel_h_diag ) )
-    call invoke( mm_diagonal_kernel_type(mm_vel_h_diag, mm_vel_h))
+    call invoke( setval_c( mm_vel_v_diag, 0.0_r_def ),               &
+                 mm_diagonal_kernel_type( mm_vel_v_diag, mm_vel_v ), &
+                 setval_c( mm_vel_h_diag, 0.0_r_def ),               &
+                 mm_diagonal_kernel_type( mm_vel_h_diag, mm_vel_h ), &
     ! Copy back to LMA representation of diagonal, since this is later used
     ! to assemble to operator \f$diag(D_h M_{2,h,inv} D_h^T\f$.
-    call invoke( mm_diagonal_assembled_kernel_type(mm_vel_h_diag, mm_vel_h))
+                 mm_diagonal_assembled_kernel_type( mm_vel_h_diag, mm_vel_h ) )
 
     ! Enforce (vertical) BCs for velocity space on all relevant operators
-    call invoke_enforce_operator_bc_kernel_type (mm_vel_v) 
-    call invoke_enforce_operator_bc_kernel_type (div_v) 
-    call invoke_enforce_operator_bc_kernel_type (grad_v) 
+    call invoke_enforce_operator_bc_kernel_type( mm_vel_v ) 
+    call invoke_enforce_operator_bc_kernel_type( div_v ) 
+    call invoke_enforce_operator_bc_kernel_type( grad_v ) 
 
     ! Create and assemble CMA representations of operators
     ! Pressure mass matrix
@@ -252,24 +254,25 @@ contains
     ! Vertical divergence
     div_v_cma                = columnwise_operator_type( fs_pressure, &
                                                          fs_vel_v )
-    ! vertical gradient
+    ! Vertical gradient
     grad_v_cma               = columnwise_operator_type( fs_vel_v, &
                                                          fs_pressure )
-    ! vertical velocity mass matrix
+    ! Vertical velocity mass matrix
     mm_vel_v_cma             = columnwise_operator_type( fs_vel_v, &
                                                          fs_vel_v )
-    ! vertical diagonal velocity mass matrix
+    ! Vertical diagonal velocity mass matrix
     mm_vel_v_inv_diag_cma    = columnwise_operator_type( fs_vel_v, &
                                                          fs_vel_v, 1, 1, 0, 0)
+    ! Assemble CMA operators
     call invoke( columnwise_op_asm_kernel_type( mm_pressure, &
-                                                mm_pressure_cma) )
-    call invoke( columnwise_op_asm_kernel_type( div_v,       &
-                                                div_v_cma) )
-    call invoke( columnwise_op_asm_kernel_type( grad_v,      &
-                                                grad_v_cma) )
-    call invoke( columnwise_op_asm_kernel_type( mm_vel_v,    &
-                                                mm_vel_v_cma) )
-    call invoke( columnwise_op_asm_m2v_lumped_inv_kernel_type( mm_vel_v,              &
+                                                mm_pressure_cma ), &
+                 columnwise_op_asm_kernel_type( div_v,       &
+                                                div_v_cma ),       &
+                 columnwise_op_asm_kernel_type( grad_v,      &
+                                                grad_v_cma ),      &
+                 columnwise_op_asm_kernel_type( mm_vel_v,    &
+                                                mm_vel_v_cma ),    &
+                 columnwise_op_asm_m2v_lumped_inv_kernel_type( mm_vel_v,              &
                                                                mm_vel_v_inv_diag_cma ) )
     ! Set flag to true to avoid multiple initialisations
     is_initialised = .true.
@@ -298,13 +301,13 @@ contains
   !>@param[in] label Label for comparison
   subroutine compare_fields(x1,x2,tolerance,label)
     implicit none
-    ! passed parameters
+    ! Passed parameters
     type(field_type), intent(in) :: x1
     type(field_type), intent(in) :: x2
     real(kind=r_def), intent(in) :: tolerance
     character(len=*), intent(in) :: label
    
-    ! internal variables
+    ! Internal variables
     type(field_type) :: dx, x_tmp
     real(kind=r_def) :: dx_nrm_sq, x1_nrm_sq, x2_nrm_sq
     character(len=128) :: output
@@ -320,13 +323,13 @@ contains
     x_tmp = field_type(fs)
 
     ! Calculate differences
-    call invoke( minus_fields ( x1, x2, dx) )
-    call invoke( copy_field (dx, x_tmp) )
-    call invoke( inner_product( dx, x_tmp, dx_nrm_sq ) )
-    call invoke( copy_field (x1, x_tmp) )
-    call invoke( inner_product( x1, x_tmp, x1_nrm_sq ) )
-    call invoke( copy_field (x2, x_tmp) )
-    call invoke( inner_product( x2, x_tmp, x2_nrm_sq ) )
+    call invoke( X_minus_Y( dx, x1, x2 ),                  &
+                 setval_X( x_tmp, dx ),                    &
+                 X_innerproduct_Y( dx_nrm_sq, dx, x_tmp ), &
+                 setval_X( x_tmp, x1 ),                    &
+                 X_innerproduct_Y( x1_nrm_sq, x1, x_tmp ), &
+                 setval_X( x_tmp, x2 ),                    &
+                 X_innerproduct_Y( x2_nrm_sq, x2, x_tmp ) )
 
     if (sqrt(dx_nrm_sq/x1_nrm_sq) < tolerance) then
        pass_str = "PASS"
@@ -359,36 +362,37 @@ contains
   subroutine apply_helmholtz(alpha,beta,p_in, p_out)
     implicit none
 
-    ! passed parameters
+    ! Passed parameters
     real(kind=r_def), intent(in)    :: alpha, beta
     type(field_type), intent(in)    :: p_in
     type(field_type), intent(inout) :: p_out
 
-    ! internal variables
+    ! Internal variables
     real(kind=r_def)                :: beta_divided_by_alpha
 
-    call invoke( set_field_scalar( 0.0_r_def, u_v_tmp ) )
-    call invoke( set_field_scalar( 0.0_r_def, p_tmp   ) )
-    call invoke( set_field_scalar( 0.0_r_def, p_out   ) )
+    ! Initialise fields
+    call invoke( setval_c( u_v_tmp, 0.0_r_def ),                &
+                 setval_c( p_tmp,   0.0_r_def ),                &
+                 setval_c( p_out,   0.0_r_def ) )
     ! Apply gradient \f$D_v^T\f$
     call invoke( matrix_vector_kernel_type( u_v_tmp,         &
                                             p_in,            &
-                                            grad_v ) )
+                                            grad_v ),        &
     ! Divide by diagonally lumped vertical velocity mass matrix and
     ! enforce boundary conditions
-    call invoke( divide_field( u_v_tmp, mm_vel_v_diag ) )
-    call invoke( enforce_bc_kernel_type ( u_v_tmp ) )
+                 inc_X_divideby_Y( u_v_tmp, mm_vel_v_diag ), &
+                 enforce_bc_kernel_type( u_v_tmp ),          &
     ! Apply divergence \f$D_v\f$
-    call invoke( matrix_vector_kernel_type( p_out,           &
+                 matrix_vector_kernel_type( p_out,           &
                                             u_v_tmp,         &
                                             div_v ) )
     beta_divided_by_alpha = beta/alpha
-    call invoke( scale_field ( beta_divided_by_alpha, p_out ) )
+    call invoke( inc_a_times_X( beta_divided_by_alpha, p_out ), &
     ! Apply and add pressure mass matrix \f$M_3\f$
-    call invoke( matrix_vector_kernel_type( p_out,           &
+                 matrix_vector_kernel_type( p_out,           &
                                             p_in,            &
-                                            mm_pressure ) )
-    call invoke( scale_field ( alpha, p_out ) )
+                                            mm_pressure ),      &
+                 inc_a_times_X( alpha, p_out ) )
   end subroutine apply_helmholtz
 
   !> @brief Construct CMA representation of Helmholtz operator
@@ -420,8 +424,8 @@ contains
     div_v_mm_vel_v_inv_grad_v_cma &
          = div_v_cma%columnwise_operator_product( mm_vel_v_inv_grad_v_cma )
     call invoke( columnwise_op_mul_kernel_type( div_v_cma,               &
-         mm_vel_v_inv_grad_v_cma, &
-         div_v_mm_vel_v_inv_grad_v_cma ) )
+                                                mm_vel_v_inv_grad_v_cma, &
+                                                div_v_mm_vel_v_inv_grad_v_cma ) )
     ! Construct \f$M_3 + D_vM_{u,v,inv}D_v^T\f$
     helmholtz_cma &
          = mm_pressure_cma%columnwise_operator_sum( div_v_mm_vel_v_inv_grad_v_cma )
@@ -442,14 +446,14 @@ contains
     real(kind=r_def), intent(in) :: tolerance
     character(len=32) :: label = "apply pressure mass matrix"
 
-    call invoke( assign_field_random_kernel_type (p_in   ) )
-    call invoke( set_field_scalar( 1.0_r_def, p_in       ) )
-    call invoke( set_field_scalar( 0.0_r_def, p_out      ) )
-    call invoke( set_field_scalar( 0.0_r_def, p_out_cma  ) )
-    call invoke( columnwise_op_app_kernel_type( p_out_cma, &
+    call invoke( assign_field_random_kernel_type( p_in ),          &
+                 setval_c( p_in,      1.0_r_def ),                 &
+                 setval_c( p_out,     0.0_r_def ),                 &
+                 setval_c( p_out_cma, 0.0_r_def ),                 &
+                 columnwise_op_app_kernel_type( p_out_cma, &
                                                 p_in,      &
-                                                mm_pressure_cma ) )
-    call invoke( matrix_vector_kernel_type( p_out,         &
+                                                mm_pressure_cma ), &
+                 matrix_vector_kernel_type( p_out,         &
                                             p_in,          &
                                             mm_pressure ) )
     call compare_fields(p_out,p_out_cma,tolerance,label)
@@ -465,18 +469,18 @@ contains
     real(kind=r_def), intent(in) :: tolerance
     character(len=32) :: label = "apply vert velocity mass matrix"
 
-    call invoke( assign_field_random_kernel_type (u_v_in) )
-    call invoke( enforce_bc_kernel_type ( u_v_in ) )
-    call invoke( set_field_scalar( 0.0_r_def, u_v_out     ) )
-    call invoke( set_field_scalar( 0.0_r_def, u_v_out_cma ) )
+    call invoke( assign_field_random_kernel_type( u_v_in ),     &
+                 enforce_bc_kernel_type( u_v_in ),              &
+                 setval_c( u_v_out,     0.0_r_def ),            &
+                 setval_c( u_v_out_cma, 0.0_r_def ),            &
     ! Apply velocity mass matrix in CMA representation
-    call invoke( columnwise_op_app_kernel_type( u_v_out_cma, &
+                 columnwise_op_app_kernel_type( u_v_out_cma, &
                                                 u_v_in,      &
-                                                mm_vel_v_cma ) )
-    ! boundary conditioned need to be enforced manually for CMA operation
-    call invoke( enforce_bc_kernel_type ( u_v_out_cma ) )
+                                                mm_vel_v_cma ), &
+    ! Boundary conditioned need to be enforced manually for CMA operation
+                 enforce_bc_kernel_type ( u_v_out_cma ),        &
     ! Apply velocity mass matrix in LMA representation
-    call invoke( matrix_vector_kernel_type( u_v_out,         &
+                 matrix_vector_kernel_type( u_v_out,         &
                                             u_v_in,          &
                                             mm_vel_v ) )
     call compare_fields(u_v_out,u_v_out_cma,tolerance,label)
@@ -492,16 +496,16 @@ contains
     real(kind=r_def), intent(in) :: tolerance
     character(len=32) :: label = "apply vert divergence"
 
-    call invoke( assign_field_random_kernel_type (u_v_in) )
-    call invoke( enforce_bc_kernel_type ( u_v_in ) )
-    call invoke( set_field_scalar( 0.0_r_def, p_out     ) )
-    call invoke( set_field_scalar( 0.0_r_def, p_out_cma ) )
+    call invoke( assign_field_random_kernel_type( u_v_in ),  &
+                 enforce_bc_kernel_type( u_v_in ),           &
+                 setval_c( p_out,     0.0_r_def ),           &
+                 setval_c( p_out_cma, 0.0_r_def ),           &
     ! Apply divergence operator in CMA representation
-    call invoke( columnwise_op_app_kernel_type( p_out_cma,   &
+                 columnwise_op_app_kernel_type( p_out_cma,   &
                                                 u_v_in,      &
-                                                div_v_cma ) )
+                                                div_v_cma ), &
     ! Apply divergence operator in LMA representation
-    call invoke( matrix_vector_kernel_type( p_out,           &
+                 matrix_vector_kernel_type( p_out,           &
                                             u_v_in,          &
                                             div_v ) )
     call compare_fields(p_out,p_out_cma,tolerance,label)
@@ -529,22 +533,22 @@ contains
                                                 mm_vel_v_cma,    &
                                                 div_v_mm_vel_v_cma ) )
     ! Initialise fields
-    call invoke( assign_field_random_kernel_type (u_v_in) )
-    call invoke( enforce_bc_kernel_type ( u_v_in ) )
-    call invoke( set_field_scalar( 0.0_r_def, p_out      ) )
-    call invoke( set_field_scalar( 0.0_r_def, u_v_tmp    ) )
-    call invoke( set_field_scalar( 0.0_r_def, p_out_cma  ) )
+    call invoke( assign_field_random_kernel_type( u_v_in ),       &
+                 enforce_bc_kernel_type( u_v_in ),                &
+                 setval_c( p_out,     0.0_r_def ),                &
+                 setval_c( u_v_tmp,   0.0_r_def ),                &
+                 setval_c( p_out_cma, 0.0_r_def ) )
 
     ! Apply combined CMA operator A = D_v.M_{u,v}
     call invoke( columnwise_op_app_kernel_type( p_out_cma,   &
                                                 u_v_in,      &
-                                                div_v_mm_vel_v_cma ) )
+                                                div_v_mm_vel_v_cma ), &
     ! Successively apply operators in LMA representation: 
     ! first M_{u,v}, then D_v
-    call invoke( matrix_vector_kernel_type( u_v_tmp,      &
+                 matrix_vector_kernel_type( u_v_tmp,      &
                                             u_v_in,       &
-                                            mm_vel_v ) )
-    call invoke( matrix_vector_kernel_type( p_out,        &
+                                            mm_vel_v ),               &
+                 matrix_vector_kernel_type( p_out,        &
                                             u_v_tmp,      &
                                             div_v ) )
 
@@ -574,24 +578,24 @@ contains
                                                 div_v_cma,        &
                                                 grad_v_div_v_cma ) )
     ! Initialise fields
-    call invoke( assign_field_random_kernel_type (u_v_in) )
-    call invoke( enforce_bc_kernel_type ( u_v_in ) )
-    call invoke( set_field_scalar( 0.0_r_def, p_tmp       ) )
-    call invoke( set_field_scalar( 0.0_r_def, u_v_out     ) )
-    call invoke( set_field_scalar( 0.0_r_def, u_v_out_cma ) )
+    call invoke( assign_field_random_kernel_type( u_v_in ),   &
+                 enforce_bc_kernel_type( u_v_in ),            &
+                 setval_c( p_tmp,       0.0_r_def ),          &
+                 setval_c( u_v_out,     0.0_r_def ),          &
+                 setval_c( u_v_out_cma, 0.0_r_def ) )
 
     ! Apply combined CMA operator A = D_v^T.D_v
     call invoke( columnwise_op_app_kernel_type( u_v_out_cma, &
                                                 u_v_in,      &
-                                                grad_v_div_v_cma ) )
+                                                grad_v_div_v_cma ), &
     ! Manually apply boundary conditions
-    call invoke( enforce_bc_kernel_type ( u_v_out_cma ) )
+                 enforce_bc_kernel_type ( u_v_out_cma ),            &
     ! Successively apply divergence and gradient operators:
     ! first D_v, then D_v^T
-    call invoke( matrix_vector_kernel_type( p_tmp,           &
+                 matrix_vector_kernel_type( p_tmp,           &
                                             u_v_in,          &
-                                            div_v ) )
-    call invoke( matrix_vector_kernel_type( u_v_out,         &
+                                            div_v ),                &
+                 matrix_vector_kernel_type( u_v_out,         &
                                             p_tmp,           &
                                             grad_v ) )
 
@@ -616,13 +620,14 @@ contains
     ! Choose arbitrary scaling parameters
     alpha = 2.5_r_def
     beta = 3.7_r_def
-    call invoke( assign_field_random_kernel_type (p_in) )
-    call invoke( set_field_scalar( 0.0_r_def, p_out     ) )   
-    call invoke( set_field_scalar( 0.0_r_def, p_out_cma ) )
+    call invoke( assign_field_random_kernel_type( p_in ),    &
+                 setval_c( p_out,     0.0_r_def ),           &
+                 setval_c( p_out_cma, 0.0_r_def ) )
+
     ! Assemble CMA representation of Helmholtz operator
     ! (this is where the addition of two CMAs happens)
     call assemble_helmholtz_cma(alpha,beta,helmholtz_cma)
-    ! Apply Helholtz operator using LMAs
+    ! Apply Helmholtz operator using LMAs
     call apply_helmholtz(alpha,beta,p_in, p_out)
     ! Apply combined Helmholtz operator in CMA representation
     call invoke( columnwise_op_app_kernel_type( p_out_cma, &
@@ -652,15 +657,14 @@ contains
     ! Choose arbitrary scaling parameters
     alpha = 2.5_r_def
     beta = 3.7_r_def
-
-    call invoke( assign_field_random_kernel_type (p_in) )
-    call invoke( set_field_scalar( 0.0_r_def, p_tmp      ) )
-    call invoke( set_field_scalar( 0.0_r_def, p_out_cma  ) )
+    call invoke( assign_field_random_kernel_type( p_in ),          &
+                 setval_c( p_tmp,     0.0_r_def ),                 &
+                 setval_c( p_out_cma, 0.0_r_def ) )
 
     ! Assemble CMA representation of Helmholtz operator
     call assemble_helmholtz_cma(alpha,beta,helmholtz_cma)
 
-    ! Apply Helholtz operator using LMAs
+    ! Apply Helmholtz operator using LMAs
     call apply_helmholtz(alpha,beta,p_in, p_tmp)
     ! Solve to recover original field
     call invoke( columnwise_op_appinv_kernel_type( p_out_cma, &
@@ -692,16 +696,20 @@ contains
     p_out_masked     = field_type( fs_pressure )
     p_out_masked_cma = field_type( fs_pressure )
 
-    call invoke( assign_field_single_column_kernel_type (p_in ) )
-    call invoke( set_field_scalar( 0.0_r_def, p_out           ) )
-    call invoke( set_field_scalar( 0.0_r_def, p_out_cma       ) )
-    call invoke( set_field_scalar( 0.0_r_def, u_h_tmp         ) )
+    call invoke( assign_field_single_column_kernel_type( p_in ),     &
+                 setval_c( p_out,     0.0_r_def               ),     &
+                 setval_c( p_out_cma, 0.0_r_def               ),     &
+                 setval_c( u_h_tmp,   0.0_r_def               ) )
 
+    ! NOTE: CMA invokes are separate as joining them returns error in 
+    ! integration test. Example for Gnu:
+    ! Error: Symbol 'diag_dhmdht_cma_ncol' at (1) has no IMPLICIT type
+ 
     ! Build CMA representation of operator \f$diag(D_h M_{2,h,inv} D_h^T)\f$
     diag_DhMDht_cma = columnwise_operator_type ( fs_pressure, fs_pressure )
-    call invoke ( columnwise_op_asm_diag_hmht_kernel_type( div_h,      &
-                                                           mm_vel_h,   &
-                                                           diag_DhMDhT_cma ) )
+    call invoke( columnwise_op_asm_diag_hmht_kernel_type( div_h,      &
+                                                          mm_vel_h,   &
+                                                          diag_DhMDhT_cma ) )
 
     ! Apply in CMA representation
     call invoke( columnwise_op_app_kernel_type( p_out_cma,      &
@@ -710,19 +718,19 @@ contains
 
     ! Apply in LMA representation
     ! Step 1: weak horizontal gradient
-    call invoke( transpose_matrix_vector_kernel_type( u_h_tmp,     &
-                                                      p_in,        &
-                                                      div_h ) )
+    call invoke( transpose_matrix_vector_kernel_type( u_h_tmp, &
+                                                      p_in,    &
+                                                      div_h ),   &
     ! Step 2: divide by diagonally lumped horizontal mass matrix
-    call invoke( divide_field( u_h_tmp, mm_vel_h_diag ) )
+                 inc_X_divideby_Y( u_h_tmp, mm_vel_h_diag ),     &
     ! Step 3: weak divergence
-    call invoke( matrix_vector_kernel_type( p_out,       &
-                                            u_h_tmp,     &
-                                            div_h ) )
+                 matrix_vector_kernel_type( p_out,   &
+                                            u_h_tmp, &
+                                            div_h ),             &
 
     ! Mask with input value to extract diagonal element
-    call invoke( multiply_fields (p_out,     p_in, p_out_masked     ) )
-    call invoke( multiply_fields (p_out_cma, p_in, p_out_masked_cma ) )
+                 X_times_Y( p_out_masked,     p_out,     p_in ), &
+                 X_times_Y( p_out_masked_cma, p_out_cma, p_in ) )
 
     call compare_fields(p_out_masked, p_out_masked_cma, tolerance,label)
 

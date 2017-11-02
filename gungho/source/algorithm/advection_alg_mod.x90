@@ -26,14 +26,9 @@ module advection_alg_mod
   use matrix_vector_kernel_mod,       only: matrix_vector_kernel_type
   use dg_matrix_vector_kernel_mod,    only: dg_matrix_vector_kernel_type
   use operator_mod,                   only: operator_type
-  use psykal_lite_mod,                only: invoke_scale_field_data,    &
-                                            invoke_sample_poly_flux,    &
+  use psykal_lite_mod,                only: invoke_sample_poly_flux,    &
                                             invoke_sample_poly_adv,     &
-                                            invoke_rtheta_bd_kernel,    &
-                                            invoke_axpy,                &
-                                            invoke_inc_xpby,            &
-                                            invoke_multiply_field_data, &
-                                            invoke_divide_field
+                                            invoke_rtheta_bd_kernel
   use quadrature_mod,                 only: quadrature_type, GAUSSIAN
   use rtheta_kernel_mod,              only: rtheta_kernel_type
   use rtheta_wtheta_kernel_mod,       only: rtheta_wtheta_kernel_type
@@ -162,6 +157,9 @@ contains
   type(field_type), pointer          :: m1_lumped_inv => null()
   integer(i_def)                     :: stage, st
 
+  ! Auxiliary constants to group invokes
+  real(kind=r_def), parameter  :: minus_one = -1.0_r_def
+
   if ( subroutine_timers ) call timer('advection_alg')
   chi    => get_coordinates()
 
@@ -204,25 +202,26 @@ contains
   div       => get_div()
 
   ! Runge-Kutta algorithm
-  call invoke( copy_field(rho, rho_adv), &
-               set_field_scalar(0.0_r_def, mass_flux) )
+  call invoke( setval_X(rho_adv, rho), &
+               setval_c(mass_flux, 0.0_r_def) )
   do stage = 1,nstage_adv
     ! Compute the mass flux using desired spatial reconstruction
     call mass_flux_alg(mf, rho_adv, advecting_wind)
     ! Compute m3^-1 * div * mass flux
-    call invoke( dg_matrix_vector_kernel_type(r_rho, mf, div), &
+    call invoke( name = "Compute mm_w3_inv and initialise r_rho", &
+                 dg_matrix_vector_kernel_type(r_rho, mf, div),    &
                  dg_matrix_vector_kernel_type(rrho_prediction(stage), r_rho, &
-                                              mm_w3_inv) )
+                                              mm_w3_inv),         &
     ! Build the rhs of the RK scheme at this stage: sum_s -ak(s)*r_rho(s)
-    call invoke( set_field_scalar(0.0_r_def, r_rho) )
+                 setval_c(r_rho, 0.0_r_def) )
     do st = 1, stage
-      call invoke_inc_xpby(r_rho, -ak_adv(stage,st), rrho_prediction(st))
-
+      call invoke( inc_X_minus_bY(r_rho, ak_adv(stage,st), rrho_prediction(st)) )
     end do
     ! Increment the advected density field to obtain estimate at this stage
-    call invoke_axpy(dt, r_rho, rho, rho_adv)
+    call invoke( name = "Increment density",         &
+                 aX_plus_Y(rho_adv, dt, r_rho, rho), &
     ! Add increment from this stage to the time integrated mass flux 
-    call invoke_inc_xpby(mass_flux, ak_adv(nstage_adv,stage), mf) 
+                 inc_X_plus_bY(mass_flux, ak_adv(nstage_adv,stage), mf) )
   end do
 
   ! 2) theta_advection ( u . grad(theta) )
@@ -235,8 +234,8 @@ contains
   u_grad_theta = field_type( vector_space = theta_fs )
 
   ! Runge-Kutta algorithm  
-  call invoke( set_field_scalar(0.0_r_def, u_grad_theta), &
-               copy_field(theta, theta_adv) )
+  call invoke( setval_c(u_grad_theta, 0.0_r_def), &
+               setval_X(theta_adv, theta) )
   do stage = 1,nstage_adv
     ! Compute u.grad(theta) using desired spatial reconstruction of gtad(theta)
     call advective_inc_alg(r_theta, theta_adv, advecting_wind)
@@ -250,22 +249,21 @@ contains
     mm_wt         => get_mass_matrix(theta_space_id) 
     if ( wtheta_on ) then
       ! If using Wtheta use lumped approximation to inverse mass matrix
-      call invoke_multiply_field_data(r_theta, mt_lumped_inv, &
-                                      rtheta_prediction(stage)) 
+      call invoke( X_times_Y(rtheta_prediction(stage), r_theta, mt_lumped_inv) )
     else
       ! If using W0 use full mass matrix with iterative inverse
       ! (It would be possible to use the lumped inverse to speed things up)
       call solver_algorithm( rtheta_prediction(stage), r_theta)
     end if
     ! Build the rhs of the RK scheme at this stage: sum_s -ak(s)*r_theta(s)
-    call invoke( set_field_scalar(0.0_r_def, r_theta) )
+    call invoke( setval_c(r_theta, 0.0_r_def) )
     do st = 1, stage
-      call invoke_inc_xpby(r_theta, -ak_adv(stage,st), rtheta_prediction(st))
+      call invoke( inc_X_minus_bY(r_theta, ak_adv(stage,st), rtheta_prediction(st)) )
     end do
-    call invoke_axpy(dt, r_theta, theta, theta_adv)
+    call invoke( aX_plus_Y(theta_adv, dt, r_theta, theta), &
     ! Add increment from this stage to the time integrated u.grad(theta)
-    call invoke_inc_xpby(u_grad_theta, -ak_adv(nstage_adv,stage), &
-                         rtheta_prediction(stage)) 
+                 inc_X_minus_bY(u_grad_theta, ak_adv(nstage_adv,stage), &
+                         rtheta_prediction(stage)) )
   end do
 
   ! Return the advective increment in the correct form, this means for 
@@ -278,14 +276,14 @@ contains
   if ( operators == transport_operators_fv ) then   
     if ( time_method == timestepping_method_rk ) then
       ! Solve equation in pointwise form (fully fv equation)
-      call invoke( copy_field(u_grad_theta, advection(igh_t) ) )
+      call invoke( setval_X(advection(igh_t), u_grad_theta) )
     else
       ! Solve equation weak pointwise form (fully fem equation)
-      call invoke( set_field_scalar(0.0_r_def, advection(igh_t)), &
+      call invoke( setval_c(advection(igh_t), 0.0_r_def), &
                    matrix_vector_kernel_type(advection(igh_t), u_grad_theta, mm_wt) )
     end if
   else
-    call invoke_divide_field(u_grad_theta, mt_lumped_inv, advection(igh_t)) 
+    call invoke( X_divideby_Y(advection(igh_t), u_grad_theta, mt_lumped_inv) )
   end if
 
   ! 3) Vorticity advection
@@ -293,31 +291,34 @@ contains
   ! should later be updated to use a RK scheme for the vorticity
   call log_event( "Computing advective vorticity...", LOG_LEVEL_INFO)
   curl   => get_curl()
-  call invoke( set_field_scalar(0.0_r_def, r_xi) )
-  call invoke( transpose_matrix_vector_kernel_type(r_xi, advecting_wind, curl) )
-  call invoke( enforce_bc_kernel_type(r_xi) )
+  call invoke( name = "Compute advective vorticity",                            &
+               setval_c(r_xi, 0.0_r_def),                                       &
+               transpose_matrix_vector_kernel_type(r_xi, advecting_wind, curl), &
+               enforce_bc_kernel_type(r_xi) )
   if ( lumped_m1 ) then
     m1_lumped_inv => get_inverse_lumped_mass_matrix(w1_id)
-    call invoke_multiply_field_data(r_xi, m1_lumped_inv, xi)
-    call invoke( enforce_bc_kernel_type(xi) )
+    call invoke( X_times_Y(xi, r_xi, m1_lumped_inv), &
+                 enforce_bc_kernel_type(xi) )
   else
     call solver_algorithm( xi, r_xi)
   end if
 
   ! 4) Vorticity advection of u ( F/rho \cross curl(u))
   call log_event( "Computing advective wind increment...", LOG_LEVEL_INFO)
-  call invoke( set_field_scalar(0.0_r_def, advection(igh_u)) )
-  call invoke( vorticity_advection_kernel_type(advection(igh_u), mass_flux, rho, &
-                                               xi, chi, qr) )
-  call invoke( enforce_bc_kernel_type(advection(igh_u)) )
+  call invoke( name = "Compute advective wind increment",    &
+               setval_c(advection(igh_u), 0.0_r_def),        &
+               vorticity_advection_kernel_type(advection(igh_u), mass_flux, rho, &
+                                               xi, chi, qr), &
+               enforce_bc_kernel_type(advection(igh_u)) )
 
   ! 5) advection update for the continuity equation divergence of mass flux: 
   !    M3^-1(div(F))
   call log_event( "Computing advective density increment...", LOG_LEVEL_INFO)
-  call invoke( set_field_scalar(0.0_r_def, r_rho) )
-  call invoke( matrix_vector_kernel_type(r_rho, mass_flux, div) )
-  call invoke_scale_field_data(-1.0_r_def, r_rho)
-  call invoke( dg_matrix_vector_kernel_type(advection(igh_d), r_rho, mm_w3_inv) )
+  call invoke( name = "Compute advective density increment",     &
+               setval_c(r_rho, 0.0_r_def),                       &
+               matrix_vector_kernel_type(r_rho, mass_flux, div), &
+               inc_a_times_X(minus_one, r_rho),                  &
+               dg_matrix_vector_kernel_type(advection(igh_d), r_rho, mm_w3_inv) )
 
   if ( subroutine_timers ) call timer('advection_alg')
   end subroutine advection_alg
@@ -356,17 +357,17 @@ contains
 
     ! Runge-Kutta algorithm
     do imr = 1,nummr
-      call invoke( copy_field(mr(imr), mr_n) )
+      call invoke( setval_X(mr_n, mr(imr)) )
       do stage = 1,nstage_adv
         call advective_inc_alg(mr_prediction(stage), mr(imr), wind)
-        call invoke( set_field_scalar(0.0_r_def, mr_adv) )
+        call invoke( setval_c(mr_adv, 0.0_r_def) )
         do st = 1, stage
-          call invoke_inc_xpby(mr_adv, -ak_adv(stage,st), mr_prediction(st))
+          call invoke( inc_X_minus_bY(mr_adv, ak_adv(stage,st), mr_prediction(st)) )
         end do
         ! Use lumped mass matrix     
         mt_lumped_inv => get_inverse_lumped_mass_matrix(theta_space_id)
-        call invoke_multiply_field_data(mr_adv, mt_lumped_inv, mr_inc)          
-        call invoke_axpy(dt, mr_inc, mr_n, mr(imr))
+        call invoke( X_times_Y(mr_inc, mr_adv, mt_lumped_inv), &         
+                     aX_plus_Y(mr(imr), dt, mr_inc, mr_n) )
       end do
     end do
     if ( subroutine_timers ) call timer('advection_mr_alg')
@@ -407,10 +408,11 @@ contains
       mmd_w2 => get_mass_matrix_diagonal(w2_id)
       chi    => get_coordinates()
       rhs_f = field_type( vector_space = u_fs )
-      call invoke( set_field_scalar(0.0_r_def, rhs_f) )
-      call invoke( flux_rhs_kernel_type(rhs_f, wind, density, chi, qr) )
-      call invoke( enforce_bc_kernel_type(rhs_f) )
-      call invoke( set_field_scalar(0.0_r_def, mass_flux) )
+      call invoke( name = "Transport operators fem",                    &
+                   setval_c(rhs_f, 0.0_r_def),                          &
+                   flux_rhs_kernel_type(rhs_f, wind, density, chi, qr), &
+                   enforce_bc_kernel_type(rhs_f),                       &
+                   setval_c(mass_flux, 0.0_r_def) )
       call solver_algorithm( mass_flux, rhs_f)
   end select
 
@@ -438,7 +440,7 @@ contains
     case(transport_operators_fem)
      ! Use project u.grad(theta) into the theta function space
       qr = quadrature_type(element_order+3, GAUSSIAN)
-      call invoke( set_field_scalar(0.0_r_def, rtheta) )
+      call invoke( setval_c(rtheta, 0.0_r_def) )
       if ( wtheta_on ) then
         call invoke ( rtheta_wtheta_kernel_type (rtheta, theta, wind, qr) )
         call invoke_rtheta_bd_kernel ( rtheta, theta, wind, qr )

@@ -30,3 +30,4 @@ FFLAGS_RUNTIME            = -Mbounds -Mchkptr -Mchkstk
 
 LDFLAGS_COMPILER = -g
 
+FPPFLAGS = -P

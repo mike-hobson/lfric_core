@@ -19,6 +19,8 @@ ALGORITHM_ONLY_SOURCE = $(patsubst $(SOURCE_DIR)/%.x90,$(WORKING_DIR)/%.f90,$(AL
 PSY_SOURCE := $(patsubst $(SOURCE_DIR)/%.x90,$(WORKING_DIR)/%_psy.f90,$(filter-out $(ALGORITHM_ONLY_FILES) $(OVERRIDDEN_FILES),$(shell find $(SOURCE_DIR) -name '*.x90')))
 KERNEL_SOURCE := $(patsubst ./%,$(WORKING_DIR)/%,$(shell find $(SOURCE_DIR) -path '*/kernel/*' -a -name '*.[Ff]90' -print))
 
+DIRECTORIES := $patsubst $(SOURCE_DIR)/%,$(WORKING_DIR)/%,($(shell find $(SOURCE_DIR) -type d -print))
+
 .PHONY: jump
 jump: $(PSY_SOURCE) $(ALGORITHM_ONLY_SOURCE)
 
@@ -26,18 +28,16 @@ ifdef OPTIMISATION_PATH
   GLOBAL_OPTIMISATION_FILE = $(OPTIMISATION_PATH)/global.py
   LOCAL_OPTIMISATION_FILE = $(OPTIMISATION_PATH)/$*.py
 
-$(WORKING_DIR)/%_psy.f90: $(SOURCE_DIR)/%.x90 $$(LOCAL_OPTIMISATION_FILE) \
+$(WORKING_DIR)/%_psy.f90: $(WORKING_DIR)/%.x90 $$(LOCAL_OPTIMISATION_FILE) \
                           | $(KERNEL_SOURCE)
-	$(call MESSAGE,Full psyclone - local optimisations,$@)
-	$(Q)mkdir -p $(dir $@)
+	$(call MESSAGE,Full psyclone - local optimisations,$<)
 	$(Q)psyclone -api dynamo0.3 -l -d $(WORKING_DIR) \
 	             -s $(LOCAL_OPTIMISATION_FILE) \
 	             -opsy $@ -oalg $(WORKING_DIR)/$*.f90 $<
 
-$(WORKING_DIR)/%_psy.f90: $(SOURCE_DIR)/%.x90 $(GLOBAL_OPTIMISATION_FILE) \
+$(WORKING_DIR)/%_psy.f90: $(WORKING_DIR)/%.x90 $(GLOBAL_OPTIMISATION_FILE) \
                           | $(KERNEL_SOURCE)
-	$(call MESSAGE,Full psyclone - global optimisations,$@)
-	$(Q)mkdir -p $(dir $@)
+	$(call MESSAGE,Full psyclone - global optimisations,$<)
 	$(Q)psyclone -api dynamo0.3 -l -d $(WORKING_DIR) \
 	             -s $(GLOBAL_OPTIMISATION_FILE) \
 	             -opsy $@ -oalg $(WORKING_DIR)/$*.f90 $<
@@ -46,15 +46,22 @@ $(OPTIMISATION_PATH)/global.py:
 	$(error File not found: $(OPTIMISATION_PATH)/global.py)
 
 else
-$(WORKING_DIR)/%_psy.f90: $(SOURCE_DIR)/%.x90 | $(KERNEL_SOURCE)
-	$(call MESSAGE,Full psyclone,$@)
-	$(Q)mkdir -p $(dir $@)
+$(WORKING_DIR)/%_psy.f90: $(WORKING_DIR)/%.x90 | $(KERNEL_SOURCE)
+	$(call MESSAGE,Full psyclone,$<)
 	$(Q)psyclone -api dynamo0.3 -l -d $(WORKING_DIR) \
 	             -opsy $@ -oalg $(WORKING_DIR)/$*.f90 $<
 endif
 
-$(WORKING_DIR)/%.f90: $(SOURCE_DIR)/%.x90
-	$(call MESSAGE,Algorithm only,$@)
-	$(Q)mkdir -p $(dir $@)
+$(WORKING_DIR)/%.f90: $(WORKING_DIR)/%.x90
+	$(call MESSAGE,Algorithm only,$<)
 	$(Q)psyclone -api dynamo0.3 -l -d $(WORKING_DIR) \
 	             -oalg $@ -opsy /dev/null $<
+
+.PRECIOUS: $(WORKING_DIR)/%.x90
+$(WORKING_DIR)/%.x90: $(SOURCE_DIR)/%.x90 | $$(dir $$@)
+	$(call MESSAGE,Preprocessing,$<)
+	$(Q)$(FPP) $(FPPFLAGS) $< $@
+
+$(DIRECTORIES): ALWAYS
+	$(call MESSAGE,Creating,$@)
+	$(Q)mkdir -p $@

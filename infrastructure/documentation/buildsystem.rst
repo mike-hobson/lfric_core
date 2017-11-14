@@ -137,13 +137,13 @@ Static linking is the default on Cray systems as they do not seem to play well
 with dynamic linking.
 
 Cleaning
-^^^^^^^^
+~~~~~~~~
 
 As with many build systems it is possible to ``make clean`` to delete all build
 artefacts. These include working files and complete executable binaries.
 
 Testing
-^^^^^^^
+~~~~~~~
 
 Unit tests and integration tests will be built and run as part of a normal
 build, so there is no need to worry about that. The test suite, on the other
@@ -166,7 +166,7 @@ for you. e.g. On the desktop do::
 The top level Makefile will launch the test suite for sll sub-projects listed
 in ``OPERATE_ON``. This defaults to Infrastructure, Mesh tools and Gung Ho.
 
-For further information an testing see `Dynamo/Testing`:trac:.
+For further information an testing see `LFRicTechnical/Testing`:trac:.
 
 
 Choosing a Compiler
@@ -368,3 +368,28 @@ source/configuration is required.
 
 The um_physics sub-project offers a special make target ``partial-clean`` or
 ``pclean`` which deletes only the working Gung Ho copy, not the UM copy.
+
+Creating a Sub-project
+----------------------
+
+If you need a new sub-project it should be relatively easy to create. Start
+with a project directory in the working copy root. This should have the name
+of your new effort.
+
+Below this you are free to do whatever you like but in order to be useable by
+the top-level Makefile your project must include a Makefile with a default
+target which will generally be used to build the project. It will also need a
+"clean" target and one for "test-suite".
+
+You may well want to take advantage of the existing LFRic build infrastructure.
+This is held in ``infrastructure/build`` and consists of a number of make files
+and tools.
+
+There is a skeleton project, called ``skeleton_project`` which you can use as
+a guide and potentially a template.
+
+If your project has a ``build`` directory at its top level then the LFRic
+build system will look in it for project specifics. In particular a
+``build/fortran`` directory containing makefiles named after different
+compilers in which you can put compiler specifics. For general project related
+changes use the ``build/project.mk`` file.

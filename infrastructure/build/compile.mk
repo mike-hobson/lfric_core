@@ -71,7 +71,7 @@ $(BIN_DIR)/%: %.x | $(BIN_DIR)
 
 %.o %.mod: %.F90
 	$(call MESSAGE,Pre-process and compile,$<)
-	$(Q)$(FC) $(FPPFLAGS) $(FFLAGS) \
+	$(Q)$(FC) $(FFLAGS) \
 	          $(MODULE_DESTINATION_ARGUMENT) \
 	          $(INCLUDE_ARGS) $(MACRO_ARGS) -c -o $(basename $@).o $<
 
@@ -116,7 +116,3 @@ else ifeq "$(LINK_TYPE)" "dynamic"
 else
   $(error Unrecognised LINK_TYPE. Must be either "static" or "dynamic")
 endif
-
-# Project specific stuff.
--include $(PROJECT_MAKE_DIR)/fortran/$(FORTRAN_COMPILER).mk
--include $(PROJECT_MAKE_DIR)/project.mk

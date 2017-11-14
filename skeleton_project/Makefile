@@ -4,11 +4,22 @@
 # under which the code may be used.
 ##############################################################################
 
-PROFILE ?= fast-debug
+PROJECT_NAME = skeleton
 
-export IGNORE_DEPENDENCIES = netcdf MPI ESMF pfunit_mod planet_constants_mod xios mod_wait
-export EXTERNAL_DYNAMIC_LIBRARIES = esmf netcdff netcdf hdf5
-export EXTERNAL_STATIC_LIBRARIES = xios
+export IGNORE_DEPENDENCIES =
+export EXTERNAL_DYNAMIC_LIBRARIES =
+export EXTERNAL_STATIC_LIBRARIES =
+
+LFRIC_TARGET_PLATFORM ?= generic-x86
+export OPTIMISATION_PATH ?= $(wildcard optimisation/$(LFRIC_TARGET_PLATFORM))
+
+export PROJECT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+ROOT_DIR ?= ../
+
+.PHONY: default
+default: build unit-tests
+	$(Q)echo > /dev/null
+
 
 LFRIC_TARGET_PLATFORM ?= generic-x86
 export OPTIMISATION_PATH ?= $(wildcard optimisation/$(LFRIC_TARGET_PLATFORM))
@@ -26,13 +37,10 @@ documentation doc docs: document-uml document-latex document-api
 
 include $(ROOT_DIR)/infrastructure/build/lfric.mk
 
-export FFLAGS  := $(FFLAGS) $(OPENMP_ARG)
-export LDFLAGS := $(LDFLAGS) $(OPENMP_ARG)
-
 ##############################################################################
 
 .PHONY: test-suite
-test-suite: SUITE_NAME   = $(notdir $(realpath $(shell pwd)/..))-gungho
+test-suite: SUITE_NAME   = $(notdir $(realpath $(shell pwd)/..))-$(PROJECT_NAME)
 test-suite: SUITE_CONFIG = rose-stem
 test-suite: launch-test-suite
 	$(Q)echo > /dev/null
@@ -63,7 +71,7 @@ document-latex: ALWAYS
 	                                   DOCUMENTS="$(DOCUMENTS)"
 
 .PHONY: document-api
-document-api: PROJECT       = gungho
+document-api: PROJECT       = $(PROJECT_NAME)
 document-api: DOCUMENT_DIR ?= $(PROJECT_DIR)/documents/api
 document-api: CONFIG_DIR    = documentation
 document-api: SOURCE_DIR    = source
@@ -72,7 +80,7 @@ document-api: api-documentation
 	$(Q)echo > /dev/null
 
 ##############################################################################
-# Extract GungHo source
+# Extract project source
 #
 .PHONY: extract
 extract: SOURCE_DIR = source
@@ -84,18 +92,9 @@ extract: ALWAYS
 # Build
 #
 .PHONY: build
-ifeq "$(PROFILE)" "full-debug"
-build: export FFLAGS += $(FFLAGS_DEBUG) $(FFLAGS_WARNINGS) $(FFLAGS_INIT) $(FFLAGS_RUNTIME) $(FFLAGS_NO_OPTIMISATION)
-else ifeq "$(PROFILE)" "fast-debug"
-build: export FFLAGS += $(FFLAGS_DEBUG) $(FFLAGS_WARNINGS) $(FFLAGS_SAFE_OPTIMISATION)
-else ifeq "$(PROFILE)" "production"
-build: export FFLAGS += $(FFLAGS_DEBUG) $(FFLAGS_WARNINGS) $(FFLAGS_RISKY_OPTIMISATION)
-else
-  $(error Unrecognised profile "$(PROFILE)". Must be one of full-debug, fast-debug or production)
-endif
-build: PROJECT      = gungho
+build: PROJECT      = $(PROJECT_NAME)
 build: SOURCE_DIR   = source
-build: WORKING_DIR := $(WORKING_DIR)/gungho
+build: WORKING_DIR := $(WORKING_DIR)/$(PROJECT_NAME)
 build: BIN_DIR     ?= $(PROJECT_DIR)/bin
 build: PROGRAMS    := $(basename $(notdir $(shell find $(SOURCE_DIR) -maxdepth 1 -name '*.[Ff]90' -print)))
 build: generate-configuration generate-psykal
@@ -121,11 +120,12 @@ generate-psykal: ALWAYS
 # Unit tests
 #
 .PHONY: unit-tests
-unit-tests: export PROJECT      = gungho
+unit-tests: export PROJECT      = $(PROJECT_NAME)
 unit-tests: export SOURCE_DIR   = unit-test
 unit-tests: export WORKING_DIR := $(WORKING_DIR)/unit-tests
 unit-tests: export BIN_DIR      = $(PROJECT_DIR)/test
-unit-tests: export PROGRAMS     = gungho_unit_tests
+unit-tests: export PROGRAMS     = $(PROJECT_NAME)_unit_tests
+unit-tests: export IGNORE_DEPENDENCIES       += pfunit_mod
 unit-tests: export EXTERNAL_STATIC_LIBRARIES += pfunit
 unit-tests: export FFLAGS      += $(FFLAGS_DEBUG) $(FFLAGS_NO_OPTIMISATION) $(FFLAGS_INIT)
 unit-tests: export PRE_PROCESS_MACROS = \
@@ -152,7 +152,7 @@ extract-unit-tests:
 # Integration tests
 #
 .PHONY: integration-tests
-integration-tests: export PROJECT      = gungho
+integration-tests: export PROJECT      = $(PROJECT_NAME)
 integration-tests: export SOURCE_DIR   = integration-test
 integration-tests: export WORKING_DIR := $(WORKING_DIR)/integration-tests
 integration-tests: export BIN_DIR      = $(PROJECT_DIR)/test
@@ -175,9 +175,9 @@ extract-integration-tests: ALWAYS
 #
 .PHONY: clean
 clean: ALWAYS
-	$(call MESSAGE,Removing,gungho work space)
+	$(call MESSAGE,Removing,$(PROJECT_NAME) work space)
 	$(Q)-rm -r $(WORKING_DIR)
-	$(call MESSAGE,Removing,gungho documents)
+	$(call MESSAGE,Removing,$(PROJECT_NAME) documents)
 	$(Q)if [ -d documents ] ; then rm -r documents; fi
-	$(call MESSAGE,Removing,gungho binaries)
+	$(call MESSAGE,Removing,$(PROJECT_NAME) binaries)
 	$(Q)-rm -r bin test

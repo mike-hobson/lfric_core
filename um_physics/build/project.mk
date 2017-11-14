@@ -6,4 +6,6 @@
 
 $(info UM physics project specials)
 
+export FFLAGS += -DUM_PHYSICS
+
 science/%.o science/%.mod: export FFLAGS := $(FFLAGS) $(FFLAGS_UM_PHYSICS)

@@ -26,6 +26,7 @@ default: build
 
 include $(ROOT_DIR)/infrastructure/build/lfric.mk
 include build/fortran/$(FORTRAN_COMPILER).mk
+include build/project.mk
 
 export FFLAGS  := $(FFLAGS) $(OPENMP_ARG)
 export LDFLAGS := $(LDFLAGS) $(OPENMP_ARG)
@@ -58,7 +59,6 @@ build: SCRATCH_DIR := $(WORKING_DIR)/gungho-scratch
 build: WORKING_DIR := $(WORKING_DIR)/gungho
 build: BIN_DIR     ?= $(PROJECT_DIR)/bin
 build: PROGRAMS    := $(basename $(notdir $(shell find $(SOURCE_DIR) -maxdepth 1 -name '*.[Ff]90' -exec egrep -l "^\s*program" {} \;)))
-build: export PROJECT_MAKE_DIR = $(abspath build)
 build: generate-psykal extract-gungho extract-um-physics
 	$(MAKE) -C $(LFRIC_INFRASTRUCTURE) extract WORKING_DIR=$(abspath $(WORKING_DIR))
 	$(MAKE) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/analyse.mk
@@ -69,13 +69,13 @@ build: generate-psykal extract-gungho extract-um-physics
 generate-psykal: extract-gungho
 	$(MAKE) -f $(LFRIC_BUILD)/extract.mk SOURCE_DIR=source \
 	                                     WORKING_DIR=$(WORKING_DIR)
-	$(MAKE) -f $(LFRIC_BUILD)/lfric.mk psykal SOURCE_DIR=source
+	$(MAKE) -f $(LFRIC_BUILD)/psyclone.mk SOURCE_DIR=source
 
 .PHONY: extract-gungho
 extract-gungho: ALWAYS
 	$(MAKE) -C $(ROOT_DIR)/gungho extract \
 	        WORKING_DIR=$(abspath $(WORKING_DIR))
-	$(MAKE) -C $(ROOT_DIR)/gungho -f $(LFRIC_BUILD)/lfric.mk psykal \
+	$(MAKE) -C $(ROOT_DIR)/gungho -f $(LFRIC_BUILD)/psyclone.mk \
 	        SOURCE_DIR=source WORKING_DIR=$(abspath $(WORKING_DIR))
 	$(MAKE) -C $(ROOT_DIR)/gungho generate-configuration \
 	        PROJECT=$(PROJECT) WORKING_DIR=$(abspath $(WORKING_DIR))

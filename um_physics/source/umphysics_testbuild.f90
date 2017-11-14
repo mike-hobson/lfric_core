@@ -11,10 +11,12 @@
 !>        the UM physics code, which should then build. However, the
 !>        program itself just performs a trivial print statement.
 program umphysics_testbuild
-
   ! The build system requires some dependence so we
   ! Add an arbitrary dependence on constants_mod
   use constants_mod, only: r_def, r_single, r_double
+#ifdef UM_PHYSICS
+  use planet_constants_mod, only : g
+#endif
 
   ! This is a UM module, we arbitrarily chose g see what precision it is
   use planet_constants_mod, only: g

@@ -39,3 +39,5 @@ ifeq ($(shell test $(IFORT_VERSION) -lt 0170000; echo $$?), 0)
 endif
 
 LDFLAGS_COMPILER =
+
+FPPFLAGS = -P

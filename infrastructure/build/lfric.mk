@@ -227,10 +227,3 @@ configuration:
 .PHONY: pfunit
 pfunit:
 	$(MAKE) -f $(LFRIC_BUILD)/pfunit.mk
-
-##############################################################################
-# Generate PSyKAl source.
-#
-.PHONY: psykal
-psykal:
-	$(MAKE) -f $(LFRIC_BUILD)/psyclone.mk

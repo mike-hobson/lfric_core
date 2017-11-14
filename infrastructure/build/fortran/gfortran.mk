@@ -31,3 +31,5 @@ FFLAGS_INIT               = -finit-integer=31173 -finit-real=snan \
 FFLAGS_RUNTIME            = -fcheck=all -ffpe-trap=invalid,zero,overflow,underflow
 
 LDFLAGS_COMPILER =
+
+FPPFLAGS = -P

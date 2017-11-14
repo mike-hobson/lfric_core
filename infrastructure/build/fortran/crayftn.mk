@@ -29,4 +29,6 @@ FFLAGS_WARNINGS           = -m 0
 
 LDFLAGS_COMPILER =
 
+FPPFLAGS = -P
+
 DEPRULE_FLAGS = -moduleobjects

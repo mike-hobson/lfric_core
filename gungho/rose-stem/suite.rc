@@ -432,7 +432,7 @@
 {%- set mesh_names = [] %}
 {%- for config, resolutions in resolution_choices.items() %}
 {%-   for resolution in resolutions %}
-{%-     set mesh_name = resolution if resolution is string else (resolution[0] if resolution|length>1 else '') %}
+{%-     set mesh_name = resolution if resolution is string else (resolution[0] if resolution|length>0 else '') %}
 {%-     do mesh_names.append(mesh_name) if mesh_name not in mesh_names%}
 {%-   endfor %}
 {%- endfor %}

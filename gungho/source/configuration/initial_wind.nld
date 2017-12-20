@@ -10,6 +10,8 @@ namelist initial_wind
                                NL_case_2,
                                NL_case_3,
                                NL_case_4,
+                               xy_NL_case_1,
+                               yz_NL_case_1,
                                vortex]
   u0                : real
   v0                : real

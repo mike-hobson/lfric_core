@@ -19,6 +19,8 @@ use initial_wind_config_mod, only : &
                                initial_wind_profile_deep_baroclinic_steady, &
                                initial_wind_profile_deep_baroclinic_perturbed, &
                                initial_wind_profile_vortex,                 &
+                               initial_wind_profile_xy_NL_case_1,           &
+                               initial_wind_profile_yz_NL_case_1,           &
                                initial_wind_profile_NL_case_1,              &
                                initial_wind_profile_NL_case_2,              &
                                initial_wind_profile_NL_case_3,              &
@@ -37,6 +39,10 @@ private :: NL_wind_case_1
 private :: NL_wind_case_2
 private :: NL_wind_case_3
 private :: NL_wind_case_4
+private :: xy_NL_wind_case_1
+private :: yz_NL_wind_case_1
+private :: xy2longlat
+private :: yz2longlat
 
 public :: analytic_wind
 
@@ -87,6 +93,11 @@ function vortex_wind(lat,long,radius) result(u)
   u(3) = 0.0_r_def
 end function vortex_wind
 
+!> @brief Compute Case 1 of Nair and Lauritzen JCP 229 (2010)
+!> @param[in] long Longitudinal position in spherical coordinates
+!> @param[in] lat Latitudinal position in spherical coordinates
+!> @param[in] time Time (timestep multiplied by dt)
+!> @result u Wind field vector (u,v,w) in spherical coordinates
 function NL_wind_case_1(long,lat,time) result(u)
   use initial_wind_config_mod, only : wind_time_period, NL_constant
 
@@ -104,7 +115,11 @@ function NL_wind_case_1(long,lat,time) result(u)
 
 end function NL_wind_case_1
 
-
+!> @brief Compute Case 2 of Nair and Lauritzen JCP 229 (2010)
+!> @param[in] long Longitudinal position in spherical coordinates
+!> @param[in] lat Latitudinal position in spherical coordinates
+!> @param[in] time Time (timestep multiplied by dt)
+!> @result u Wind field vector (u,v,w) in spherical coordinates
 function NL_wind_case_2(long,lat,time) result(u)
   use initial_wind_config_mod, only : wind_time_period, NL_constant
 
@@ -122,7 +137,11 @@ function NL_wind_case_2(long,lat,time) result(u)
 
 end function NL_wind_case_2
 
-
+!> @brief Compute Case 3 of Nair and Lauritzen JCP 229 (2010)
+!> @param[in] long Longitudinal position in spherical coordinates
+!> @param[in] lat Latitudinal position in spherical coordinates
+!> @param[in] time Time (timestep multiplied by dt)
+!> @result u Wind field vector (u,v,w) in spherical coordinates
 function NL_wind_case_3(long,lat,time) result(u)
   use initial_wind_config_mod, only : wind_time_period, NL_constant
 
@@ -140,7 +159,11 @@ function NL_wind_case_3(long,lat,time) result(u)
 
 end function NL_wind_case_3
 
-
+!> @brief Compute Case 4 of Nair and Lauritzen JCP 229 (2010)
+!> @param[in] long Longitudinal position in spherical coordinates
+!> @param[in] lat Latitudinal position in spherical coordinates
+!> @param[in] time Time (timestep multiplied by dt)
+!> @result u Wind field vector (u,v,w) in spherical coordinates
 function NL_wind_case_4(long,lat,time) result(u)
   use initial_wind_config_mod, only : wind_time_period, NL_constant
 
@@ -163,6 +186,106 @@ function NL_wind_case_4(long,lat,time) result(u)
 
 end function NL_wind_case_4
 
+!> @brief Remap biperiodic (x,y) values to longitude/latitude coordinates
+!> @param[in] x x position in biperiodic mesh
+!> @param[in] y y position in biperiodic mesh
+!> @result xy2longlat Vector of (long,lat) values which have been remapped
+function xy2longlat(x,y)
+  ! Rescales biperiodic x,y coordinates into lat,lon coordinates to enable
+  ! reuse of functions for initialising winds defined in lat, lon coordinates.
+  ! The x coordinate is modified such that it is in the interval [0,2*pi]
+  ! The y coordinate is modified such that it is in the interval [-pi/2,pi/2]
+  use domain_size_config_mod, only : planar_domain_max_x, planar_domain_max_y
+
+  implicit none
+  real(kind=r_def), intent(in)    :: x
+  real(kind=r_def), intent(in)    :: y
+
+  real(kind=r_def) :: xy2longlat(2)
+
+  xy2longlat(1) = pi*(x/planar_domain_max_x+1.0_r_def)     ! x --> longitude
+  xy2longlat(2) = (pi/2.0_r_def)*y/planar_domain_max_y     ! y --> latitude
+
+end function xy2longlat
+
+!> @brief Case 1 of Nair and Lauritzen test cases but on a x-y slice of the 
+!>        biperiodic domain
+!> @param[in] x x position in biperiodic mesh
+!> @param[in] y y position in biperiodic mesh
+!> @param[in] time Time (timestep multiplied by dt)
+!> @result u Wind field vector (u,v,w)
+function xy_NL_wind_case_1(x,y,time) result(u)
+  ! This function is designed to be used on the biperiodic mesh and defines a
+  ! wind in the x-y plane. Inputs are (x,y) which are the coordinates on the 
+  ! biperiodic mesh.
+  use initial_wind_config_mod, only : wind_time_period, NL_constant
+
+  implicit none
+  real(kind=r_def), intent(in)    :: x
+  real(kind=r_def), intent(in)    :: y
+  real(kind=r_def), intent(in)    :: time
+  real(kind=r_def), dimension(3)  :: u
+
+  real(kind=r_def)                :: longlat(2)
+
+  longlat = xy2longlat(x,y)
+  u = NL_wind_case_1(longlat(1),longlat(2),time)
+
+end function xy_NL_wind_case_1
+
+!> @brief Remap biperiodic (y,z) values to longitude/latitude coordinates
+!> @param[in] y y position in biperiodic mesh
+!> @param[in] z z position in biperiodic mesh
+!> @result yz2longlat Vector of (long,lat) values which have been remapped
+function yz2longlat(y,z)
+  ! Rescales biperiodic y,z coordinates into lat,lon coordinates to enable
+  ! reuse of functions for initialising winds defined in lat, lon coordinates.
+  ! The z coordinate is modified such that it is in the interval [-pi/2,pi/2]
+  ! The y coordinate is modified such that it is in the interval [0,2*pi]
+  use domain_size_config_mod, only : planar_domain_max_y
+  use extrusion_config_mod,   only : domain_top
+
+  implicit none
+  real(kind=r_def), intent(in)    :: y
+  real(kind=r_def), intent(in)    :: z
+
+  real(kind=r_def) :: yz2longlat(2)
+
+  yz2longlat(2) = pi*z/domain_top - pi/2.0_r_def    ! z --> latitude
+  yz2longlat(1) = pi*(y/planar_domain_max_y+1.0_r_def) ! y --> longitude
+
+end function yz2longlat
+
+!> @brief Case 1 of Nair and Lauritzen test cases but on a y-z slice of the 
+!>        biperiodic domain
+!> @param[in] x x position in biperiodic mesh
+!> @param[in] y y position in biperiodic mesh
+!> @param[in] time Time (timestep multiplied by dt)
+!> @result u Wind field vector (u,v,w)
+function yz_NL_wind_case_1(y,z,time) result(u)
+  ! This function is designed to be used on the biperiodic mesh and defines a
+  ! wind in the y-z plane. Inputs are (y,z) which are the coordinates on the 
+  ! biperiodic mesh.
+  use initial_wind_config_mod, only : wind_time_period, NL_constant
+
+  implicit none
+  real(kind=r_def), intent(in)    :: y
+  real(kind=r_def), intent(in)    :: z
+  real(kind=r_def), intent(in)    :: time
+
+  real(kind=r_def), dimension(3)  :: u
+  real(kind=r_def), dimension(3)  :: u_temp
+
+  real(kind=r_def)    :: longlat(2)
+
+  longlat = yz2longlat(y,z)
+
+  u_temp = NL_wind_case_1(longlat(1),longlat(2),time)
+  u(1) = 0.0_r_def
+  u(2) = u_temp(1)
+  u(3) = u_temp(2)
+
+end function yz_NL_wind_case_1
 
 !> @brief Compute an analytic wind field
 !> @param[in] chi Position in physical coordinates
@@ -225,6 +348,10 @@ function analytic_wind(chi, time, choice, num_options, option) result(u)
       u = NL_wind_case_3(chi(1),chi(2),time)
     case ( initial_wind_profile_NL_case_4 )
       u = NL_wind_case_4(chi(1),chi(2),time)
+    case ( initial_wind_profile_xy_NL_case_1 )
+      u = xy_NL_wind_case_1(chi(1),chi(2),time)
+    case ( initial_wind_profile_yz_NL_case_1 )
+      u = yz_NL_wind_case_1(chi(2),chi(3),time)
 
     case default
       write( log_scratch_space, '(A)' )  'Invalid velocity profile choice, stopping'

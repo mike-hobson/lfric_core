@@ -23,7 +23,8 @@ use idealised_config_mod,         only : idealised_test_cold_bubble_x, &
                                          idealised_test_gravity_wave, &
                                          idealised_test_warm_bubble, &
                                          idealised_test_solid_body_rotation, &
-                                         idealised_test_deep_baroclinic_wave
+                                         idealised_test_deep_baroclinic_wave, &
+                                         idealised_test_dry_cbl
 use initial_density_config_mod,    only : r1, x1, y1, r2, x2, y2,     &
                                           tracer_max, tracer_background
 use base_mesh_config_mod,          only : geometry, &
@@ -60,7 +61,7 @@ function analytic_temperature(chi, choice) result(temperature)
                                   ZC_cold = 3000.0_r_def, &
                                   ZC_hot = 260.0_r_def, &
                                   ZR = 2000.0_r_def
-  real(kind=r_def)             :: long, lat, radius
+  real(kind=r_def)             :: long, lat, radius, z
   real(kind=r_def)             :: l1, l2
   real(kind=r_def)             :: h1, h2
   real(kind=r_def)             :: pressure, density
@@ -76,6 +77,7 @@ function analytic_temperature(chi, choice) result(temperature)
     lat  = chi(2)
     l1 = sqrt((long-x1)**2 + (lat-y1)**2)
     l2 = sqrt((long-x2)**2 + (lat-y2)**2)
+    z = chi(3)
   end if
 
   temperature = 0.0_r_def
@@ -178,6 +180,16 @@ function analytic_temperature(chi, choice) result(temperature)
     call deep_baroclinic_wave(long, lat, radius-scaled_radius, &
                               pressure, temperature, density, &
                               u, v, w)
+
+  case( idealised_test_dry_cbl )
+    ! For the time being this is a fixed profile for the dry cbl
+    ! but to be read in and made generic later
+    if (z<= 1000.0)then
+      temperature = 293.0
+    else if (z> 1000.0)then
+      temperature = 300.0 + 15.0*(z-1000.0)/(6000.0-1000.0)
+    end if
+
   end select
 
 end function analytic_temperature

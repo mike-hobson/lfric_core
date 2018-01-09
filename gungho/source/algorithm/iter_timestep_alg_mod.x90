@@ -16,7 +16,8 @@ module iter_timestep_alg_mod
 
   ! Configuration options
   use restart_control_mod,          only: restart_type
-  use formulation_config_mod,       only: use_moisture, use_physics
+  use formulation_config_mod,       only: use_moisture, use_physics, &
+                                          use_wavedynamics
   use output_config_mod,            only: diagnostic_frequency, subroutine_timers
   use solver_config_mod,            only: method, helmholtz_solve, use_operators
   use timestepping_config_mod,      only: dt, alpha, &
@@ -65,6 +66,11 @@ module iter_timestep_alg_mod
 
   ! Mixing settings
   use mixing_config_mod,            only: viscosity
+#ifdef UM_PHYSICS
+  ! UM BL scheme
+  use bl_init_mod, only: bl_init
+  use bl_alg_mod, only: bl_alg_step
+#endif
 
   use timer_mod,                    only: timer
 
@@ -91,7 +97,11 @@ contains
   !> @param[inout] u  3D wind field
   !> @param[inout] rho Density
   !> @param[inout] theta Potential temperature
-  subroutine iter_alg_init( mesh_id, u, rho, theta)
+  !> @param[inout] tstar_2d   Surface tempature
+  !> @param[inout] zh_2d      Boundary layer depth
+  !> @param[inout] z0msea_2d  Roughness length
+  subroutine iter_alg_init( mesh_id, u, rho, theta, tstar_2d, zh_2d, &
+                            z0msea_2d )
 
     implicit none
 
@@ -99,7 +109,8 @@ contains
     integer(i_def), intent(in) :: mesh_id 
 
     ! Prognostic fields    
-    type( field_type ), intent( inout ) :: u, rho, theta
+    type( field_type ), intent( inout ) :: u, rho, theta, tstar_2d, zh_2d, &
+                                           z0msea_2d
 
     !--------------------------------------------------------------------
     ! Allocate internal state field arrays
@@ -152,6 +163,13 @@ contains
 
     u_adv = field_type( vector_space = u%get_function_space() ) 
 
+#ifdef UM_PHYSICS
+    if ( use_physics ) then
+      ! Initialization for the UM boundary layer
+      call bl_init(theta, tstar_2d, zh_2d, z0msea_2d)
+    end if
+#endif
+
     call log_event( "iter_timestep: initialised timestepping algorithm", LOG_LEVEL_INFO )
 
   end subroutine iter_alg_init
@@ -179,11 +197,15 @@ contains
   !> @param[inout] theta_in_w3 theta on w3 space
   !> @param[inout] p_in_w3 pressure on w3 space
   !> @param[inout] p_in_wth pressure on wth space
+  !> @param[inout] tstar_2d   Surface tempature
+  !> @param[inout] zh_2d      Boundary layer depth
+  !> @param[inout] z0msea_2d  Roughness length
   !> @param[in]    timestep model timestep number
   subroutine iter_alg_step(u, rho, theta, mr, xi,        &
                            u1_in_w3, u2_in_w3, u3_in_w3, &
                            rho_in_wth, theta_in_w3,      &
-                           p_in_w3, p_in_wth, timestep)
+                           p_in_w3, p_in_wth, tstar_2d,  &
+                           zh_2d, z0msea_2d, timestep)
 
     implicit none
 
@@ -193,7 +215,8 @@ contains
     type( field_type ), intent( inout ) :: rho_in_wth, theta_in_w3
     type( field_type ), intent( inout ) :: p_in_w3, p_in_wth
     type( field_type ), intent( inout ) :: mr(nummr)
-
+    ! UM 2d fields
+    type( field_type ), intent( inout ) :: tstar_2d, zh_2d, z0msea_2d
     ! Timestep value
     integer, intent(in) :: timestep  
 
@@ -241,9 +264,9 @@ contains
     !============================================================================
     if (use_physics)then
       call map_rho_to_theta(rho, theta, rho_in_wth) 
-      call map_physics_fields_alg(u, rho, theta, rho_in_wth,                    &
-                                  u1_in_w3, u2_in_w3, u3_in_w3, theta_in_w3,    &
-                                  p_in_w3, p_in_wth)
+      call map_physics_fields_alg(u, rho, theta, rho_in_wth,                  &
+                                  u1_in_w3, u2_in_w3, u3_in_w3, theta_in_w3,  &
+                                  p_in_w3, p_in_wth, timestep)
       !--------------------------------------------------------------------
       ! Call the slow physics terms
       !--------------------------------------------------------------------
@@ -258,78 +281,79 @@ contains
     if ( helmholtz_solve ) call compute_inv_hb()
     call rhs_alg(rhs_n, varbeta*dt, state_n)
 
+    if ( use_wavedynamics ) then
     !============================================================================
     ! Start the Outer (advection) loop
     !============================================================================
-    do outer = 1,outer_iterations
+      do outer = 1,outer_iterations
 
-      if (use_physics)then
-        call map_rho_to_theta(state_n(igh_d), state_n(igh_t), rho_in_wth) 
-        call map_physics_fields_alg(state_n(igh_u), state_n(igh_d), state_n(igh_t),  &
-                                    rho_in_wth,                                      &
-                                    u1_in_w3, u2_in_w3, u3_in_w3, theta_in_w3,       &
-                                    p_in_w3, p_in_wth)
+        if (use_physics)then
+          call map_rho_to_theta(state_n(igh_d), state_n(igh_t), rho_in_wth) 
+          call map_physics_fields_alg(state_n(igh_u), state_n(igh_d), state_n(igh_t),  &
+               rho_in_wth,                                      &
+               u1_in_w3, u2_in_w3, u3_in_w3, theta_in_w3,       &
+               p_in_w3, p_in_wth, timestep)
+          !--------------------------------------------------------------------
+          ! Call the fast physics terms
+          !--------------------------------------------------------------------
+          call fast_physics(chi, state_n, rhs_phys, qr)
+          call log_event( "iter_timestep: completed fast physics.", LOG_LEVEL_INFO )
+        end if
+
+        ! Set advecting velocity & terms
+        call invoke( aX_plus_bY(u_adv, varbeta, state_n(igh_u), varalpha, state(igh_u)) )
+        call advection_alg(rhs_adv, state_n, xi, u_adv)
+        if ( use_moisture ) call advection_mr_alg(mr, u_adv)
+        call bundle_ax(dt, rhs_adv, rhs_adv, bundle_size) 
+
+        !============================================================================
+        ! Start the Inner (nonlinear, coriolis) loop
+        !============================================================================
+        do inner = 1,inner_iterations
+          call rhs_alg(rhs_np1, -varalpha*dt, state)
+
+          !--------------------------------------------------------------------
+          ! Solve for the increments
+          !
+          ! Add on advective terms: rhs = rhs_n - rhs_np1 + rhs_adv
+          ! (reuse rhs_np1 for rhs)
+          !--------------------------------------------------------------------
+
+          call bundle_axpy(-1.0_r_def, rhs_np1, rhs_n, rhs_np1, bundle_size)
+          call add_bundle(rhs_np1, rhs_adv, rhs_np1, bundle_size)
+          call add_bundle(rhs_np1, rhs_phys, rhs_np1, bundle_size)
+
+          write( log_scratch_space, '(A,2I3)' ) 'loop indices (o, i): ', &
+               , outer, inner
+          call log_event( log_scratch_space, LOG_LEVEL_INFO )
+
+          ! Write out si residuals
+          call invoke( name = "Compute SI residuals",           &
+               X_innerproduct_X(si_err(1), rhs_np1(1)), &
+               X_innerproduct_X(si_err(2), rhs_np1(2)), &
+               X_innerproduct_X(si_err(3), rhs_np1(3)) )
+          write( log_scratch_space, '(A,E16.8)' ) &
+               'Residual in momentum equation:  ',sqrt(si_err(1))
+          call log_event( log_scratch_space, LOG_LEVEL_INFO )
+          write( log_scratch_space, '(A,E16.8)' ) &
+               'Residual in energy equation:    ',sqrt(si_err(2))
+          call log_event( log_scratch_space, LOG_LEVEL_INFO )
+          write( log_scratch_space, '(A,E16.8)' ) &
+               'Residual in continuity equation:',sqrt(si_err(3))
+          call log_event( log_scratch_space, LOG_LEVEL_INFO )
+
+          call si_solver_alg(state, rhs_np1, state_n)
+
+        end do ! INNER
         !--------------------------------------------------------------------
-        ! Call the fast physics terms
-        !--------------------------------------------------------------------
-        call fast_physics(chi, state_n, rhs_phys, qr)
-        call log_event( "iter_timestep: completed fast physics.", LOG_LEVEL_INFO )
-      end if
-
-      ! Set advecting velocity & terms
-      call invoke( aX_plus_bY(u_adv, varbeta, state_n(igh_u), varalpha, state(igh_u)) )
-      call advection_alg(rhs_adv, state_n, xi, u_adv)
-      if ( use_moisture ) call advection_mr_alg(mr, u_adv)
-      call bundle_ax(dt, rhs_adv, rhs_adv, bundle_size) 
-
-      !============================================================================
-      ! Start the Inner (nonlinear, coriolis) loop
-      !============================================================================
-      do inner = 1,inner_iterations
-        call rhs_alg(rhs_np1, -varalpha*dt, state)
-
-        !--------------------------------------------------------------------
-        ! Solve for the increments
-        !
-        ! Add on advective terms: rhs = rhs_n - rhs_np1 + rhs_adv
-        ! (reuse rhs_np1 for rhs)
+        ! End of Inner (nonlinear, coriolis) loop
         !--------------------------------------------------------------------
 
-        call bundle_axpy(-1.0_r_def, rhs_np1, rhs_n, rhs_np1, bundle_size)
-        call add_bundle(rhs_np1, rhs_adv, rhs_np1, bundle_size)
-        call add_bundle(rhs_np1, rhs_phys, rhs_np1, bundle_size)
-             
-        write( log_scratch_space, '(A,2I3)' ) 'loop indices (o, i): ', &
-                                                  , outer, inner
-        call log_event( log_scratch_space, LOG_LEVEL_INFO )
-
-        ! Write out si residuals
-        call invoke( name = "Compute SI residuals",           &
-                     X_innerproduct_X(si_err(1), rhs_np1(1)), &
-                     X_innerproduct_X(si_err(2), rhs_np1(2)), &
-                     X_innerproduct_X(si_err(3), rhs_np1(3)) )
-        write( log_scratch_space, '(A,E16.8)' ) &
-          'Residual in momentum equation:  ',sqrt(si_err(1))
-        call log_event( log_scratch_space, LOG_LEVEL_INFO )
-        write( log_scratch_space, '(A,E16.8)' ) &
-          'Residual in energy equation:    ',sqrt(si_err(2))
-        call log_event( log_scratch_space, LOG_LEVEL_INFO )
-        write( log_scratch_space, '(A,E16.8)' ) &
-          'Residual in continuity equation:',sqrt(si_err(3))
-        call log_event( log_scratch_space, LOG_LEVEL_INFO )
-
-        call si_solver_alg(state, rhs_np1, state_n)
-
-      end do ! INNER
-      !--------------------------------------------------------------------
-      ! End of Inner (nonlinear, coriolis) loop
-      !--------------------------------------------------------------------
-
-    end do ! OUTER
+      end do ! OUTER
     !--------------------------------------------------------------------
     ! End of Outer (advection) loop
     !--------------------------------------------------------------------
-
+    end if ! use_wavedynamics
     !--------------------------------------------------------------------
     ! Apply viscosity
     !--------------------------------------------------------------------
@@ -340,6 +364,18 @@ contains
       call invoke( setval_c(inc(igh_d), 0.0_r_def) ) 
       call bundle_axpy(dt, inc, state, state, bundle_size)
     end if    
+
+#ifdef UM_PHYSICS
+    if ( use_physics ) then
+      ! Algorithm that calls the UM Boundary Layer scheme
+      ! NB. this needs moving into fast and slow physics ultimately, but
+      ! that will be done in a later ticket as changes need to happen
+      ! to the model state first...
+      call bl_alg_step(state(igh_t), rho, rho_in_wth, p_in_w3, p_in_wth, &
+                       u1_in_w3, u2_in_w3, height_w3, height_wth,        &
+                       tstar_2d, zh_2d, z0msea_2d)
+    end if
+#endif
     
     !--------------------------------------------------------------------
     ! Return fields in u, theta, rho arrays

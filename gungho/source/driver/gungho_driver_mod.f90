@@ -97,6 +97,9 @@ module gungho_driver_mod
                         p_in_w3,     &
                         p_in_wth
 
+  ! UM 2d fields
+  type( field_type ) :: tstar_2d, zh_2d, z0msea_2d
+
   ! Coordinate field
   type(field_type), target, dimension(3) :: chi
 
@@ -106,7 +109,7 @@ module gungho_driver_mod
   ! Array to hold detj values at W2 dof locations
   type( field_type ) :: detj_at_w2
 
-  integer(i_def) :: mesh_id
+  integer(i_def) :: mesh_id, twod_mesh_id
 
 contains
 
@@ -175,7 +178,7 @@ contains
               source = global_mesh_collection_type() )
 
     ! Create the mesh
-    call init_mesh(local_rank, total_ranks, mesh_id)
+    call init_mesh(local_rank, total_ranks, mesh_id, twod_mesh_id)
 
     ! Full global meshes no longer required, so reclaim
     ! the memory from global_mesh_collection
@@ -213,9 +216,9 @@ contains
     call init_gungho(mesh_id, chi, u, rho, theta, rho_in_wth, mr, xi, restart)
 
     if (use_physics)then
-      call init_physics(mesh_id, u, rho, theta, rho_in_wth,         &
+      call init_physics(mesh_id, twod_mesh_id, u, rho, theta, rho_in_wth, &
                         u1_in_w3, u2_in_w3, u3_in_w3, theta_in_w3,  &
-                        p_in_w3, p_in_wth)
+                        p_in_w3, p_in_wth, tstar_2d, zh_2d, z0msea_2d)
     end if
 
     if ( transport_only .and. scheme == transport_scheme_cusph_cosmic) then
@@ -335,13 +338,15 @@ contains
             ! Initialise and output initial conditions on first timestep
             if (timestep == restart%ts_start()) then
               call runge_kutta_init()
-              call iter_alg_init(mesh_id, u, rho, theta)
+              call iter_alg_init(mesh_id, u, rho, theta, tstar_2d, zh_2d, &
+                                 z0msea_2d)
               call conservation_algorithm(timestep, rho, u, theta, xi)
             end if
             call iter_alg_step(u, rho, theta, mr, xi,           &
                                 u1_in_w3, u2_in_w3, u3_in_w3, &
                                 rho_in_wth, theta_in_w3,      &
-                                p_in_w3, p_in_wth, timestep)
+                                p_in_w3, p_in_wth, tstar_2d,  &
+                                zh_2d, z0msea_2d, timestep)
 
           case( timestepping_method_rk )             ! RK
             ! Initialise and output initial conditions on first timestep

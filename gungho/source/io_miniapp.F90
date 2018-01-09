@@ -54,7 +54,7 @@ program io_miniapp
   character(len=*), parameter   :: xios_ctx  = "io_mini"
 
 
-  integer(i_def)     :: mesh_id
+  integer(i_def)     :: mesh_id, twod_mesh_id
 
   type( field_type ) :: test_field
 
@@ -105,7 +105,7 @@ program io_miniapp
             source = global_mesh_collection_type() )
 
   ! Create the mesh and function space collection
-  call init_mesh(local_rank, total_ranks, mesh_id)
+  call init_mesh(local_rank, total_ranks, mesh_id, twod_mesh_id)
 
   ! Full global meshes no longer required, so reclaim
   ! the memory from global_mesh_collection

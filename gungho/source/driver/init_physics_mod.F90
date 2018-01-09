@@ -33,15 +33,18 @@ module init_physics_mod
 
   contains
 
-  subroutine init_physics(mesh_id, u, rho, theta, rho_in_wth,         &
+  subroutine init_physics(mesh_id, twod_mesh_id, u, rho, theta, rho_in_wth,  &
                           u1_in_w3, u2_in_w3, u3_in_w3, theta_in_w3,  &
-                          p_in_w3, p_in_wth)
+                          p_in_w3, p_in_wth, tstar_2d, zh_2d, z0msea_2d)
 
     integer(i_def), intent(in)               :: mesh_id
+    integer(i_def), intent(in)               :: twod_mesh_id
     ! prognostic fields
     type( field_type ), intent(inout)        :: u, rho, theta, rho_in_wth
     type( field_type ), intent(inout)        :: u1_in_w3, u2_in_w3, u3_in_w3, theta_in_w3
     type( field_type ), intent(inout)        :: p_in_w3, p_in_wth
+    ! UM 2d fields
+    type( field_type ), intent(inout)        :: tstar_2d, zh_2d, z0msea_2d
 
     integer(i_def) :: theta_space
     call log_event( 'Physics: initialisation...', LOG_LEVEL_INFO )
@@ -53,6 +56,9 @@ module init_physics_mod
       call log_event( 'Physics: requires theta variable to be in Wtheta', LOG_LEVEL_ERROR )
     end if
 
+    if (element_order > 0)then
+      call log_event( 'Physics: requires lowest order elements', LOG_LEVEL_ERROR )
+    end if
 
     ! Note that the fields generated here should realy be finite volume 
     ! or finite difference fields, but we exploit the lowest order W3/Wtheta finite
@@ -78,7 +84,17 @@ module init_physics_mod
 
     call map_physics_fields_alg( u, rho, theta, rho_in_wth,                    &
                                  u1_in_w3, u2_in_w3, u3_in_w3, theta_in_w3,    &
-                                 p_in_w3, p_in_wth)
+                                 p_in_w3, p_in_wth, 0)
+
+    !========================================================================
+    ! Here we create some 2d fields for the UM physics
+    !========================================================================
+    tstar_2d = field_type( vector_space = &
+       function_space_collection%get_fs(twod_mesh_id, element_order, W3))
+    zh_2d = field_type( vector_space = &
+       function_space_collection%get_fs(twod_mesh_id, element_order, W3))
+    z0msea_2d = field_type( vector_space = &
+       function_space_collection%get_fs(twod_mesh_id, element_order, W3))
 
     call log_event( 'Physics initialised', LOG_LEVEL_INFO )
 

@@ -10,8 +10,9 @@ module init_mesh_mod
 
   use base_mesh_config_mod,       only: filename, prime_mesh_name, geometry, &
                                         base_mesh_geometry_spherical
-  use constants_mod,              only: i_def, str_def, l_def
-  use extrusion_mod,              only: extrusion_type
+  use constants_mod,              only: i_def, str_def, l_def, r_def
+  use extrusion_mod,              only: extrusion_type, uniform_extrusion_type
+  use extrusion_config_mod,       only: domain_top
   use finite_element_config_mod,  only: cellshape, wtheta_on, &
                                         finite_element_cellshape_quadrilateral
   use global_mesh_mod,            only: global_mesh_type
@@ -54,23 +55,26 @@ contains
 !> @param[in] local_rank Number of the MPI rank of this process
 !> @param[in] total_ranks Total number of MPI ranks in this job
 !> @param[out] prime_mesh_id id of paritioned prime mesh
-subroutine init_mesh( local_rank, total_ranks, prime_mesh_id )
+subroutine init_mesh( local_rank, total_ranks, prime_mesh_id, twod_mesh_id )
 
   implicit none
 
   integer(i_def), intent(in)  :: local_rank
   integer(i_def), intent(in)  :: total_ranks
   integer(i_def), intent(out) :: prime_mesh_id
+  integer(i_def), intent(out) :: twod_mesh_id
 
   ! Parameters
   integer(i_def), parameter :: max_factor_iters = 10000
+  integer(i_def), parameter :: one_layer = 1
+  real(r_def), parameter    :: atmos_bottom = 0.0_r_def
 
   ! Local variables
   procedure (partitioner_interface), pointer :: partitioner_ptr => null()
   type(global_mesh_type),            pointer :: global_mesh_ptr => null()
   class(extrusion_type),             pointer :: extrusion       => null()
   type(partition_type)                       :: partition
-
+  type(uniform_extrusion_type)               :: extrusion_2d
 
   ! max_stencil_depth is the maximum depth (of cells outside the cell over
   ! which the stencil is based) of the stencil to be used on fields with
@@ -283,6 +287,14 @@ subroutine init_mesh( local_rank, total_ranks, prime_mesh_id )
 
   ! Set up analytic orography parameters
   call set_orography_option()
+
+  ! Generate a '2d' mesh
+  ! probably only works for cartesian domains, as atmos_bottom hard-wired
+  ! to 0 currently...
+  extrusion_2d = uniform_extrusion_type( atmos_bottom, domain_top, one_layer )
+  twod_mesh_id = mesh_collection%add_new_mesh( global_mesh_ptr,         &
+                                               partition,               &
+                                               extrusion_2d )
 
   return
 end subroutine init_mesh

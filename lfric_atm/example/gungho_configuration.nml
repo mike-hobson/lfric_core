@@ -1,22 +1,22 @@
 &base_mesh
-  filename        = 'mesh_C12.nc'
+  filename        = 'mesh_BiP4x4-10000x10000.nc'
   prime_mesh_name = 'dynamics'
-  geometry        = 'spherical'
-  partitioner     = 'cubedsphere'
+  geometry        = 'planar'
+  partitioner     = 'planar'
   fplane          = .false.
   f_lat_deg       = 45.0
 /
 
 &extrusion
   method           = 'uniform'
-  domain_top       = 30000.0
-  number_of_layers = 30
+  domain_top       = 6000.0
+  number_of_layers = 98
 /
 
 &finite_element
   cellshape        = 'quadrilateral'
   element_order    = 0
-  coordinate_order = 2
+  coordinate_order = 1
   rehabilitate     = .true.
   wtheta_on        = .true.
   supg             = .false. 
@@ -29,17 +29,17 @@
   eliminate_p    = .true.
   use_moisture   = .false.
   shallow        = .false.
-  use_physics    = .false.
-  use_wavedynamics = .true.
+  use_physics    = .true.
+  use_wavedynamics = .false.
 /
 
 &idealised
-  test = 'deep_baroclinic_wave'
+  test = 'dry_cbl'
 /
 
 &initial_density
   sample_init_rho = .false.
-  set_hydrostatic_density = .false.
+  set_hydrostatic_density = .true.
   tracer_max = 2.0
   tracer_background = 0.1
   r1 = 0.4
@@ -55,8 +55,8 @@
 /
 
 &initial_wind
-  profile        = 'deep_baroclinic_perturbed'
-  u0             = 0.0
+  profile        = 'constant_uv'
+  u0             = 2.0
   v0             = 0.0
   sbr_angle_lat  = 0.0
   sbr_angle_lon  = 0.0
@@ -64,15 +64,18 @@
 
 &output
   diag_stem_name            = 'diagDynamo'
-  write_xios_output         = .false.
-  write_nodal_output        = .true.
-  diagnostic_frequency      = 10
-  nodal_output_on_w3        = .false.
+  write_xios_output         = .true.
+  write_nodal_output        = .false.
+  diagnostic_frequency      = 1
+  nodal_output_on_w3        = .true.
   subroutine_timers         = .true.
 /
 
 &physics
  heldsuarez_placement = -1
+ l_flux_bc=.true.
+ fixed_flux_e=0.0
+ fixed_flux_h=300.0
 /
 
 &planet

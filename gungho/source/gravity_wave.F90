@@ -70,7 +70,7 @@ program gravity_wave
 
   type(restart_type) :: restart
 
-  integer(i_def)     :: mesh_id
+  integer(i_def)     :: mesh_id, twod_mesh_id
 
   ! Prognostic fields
   type( field_type ) :: wind, buoyancy, pressure
@@ -129,7 +129,7 @@ program gravity_wave
             source = global_mesh_collection_type() )
 
   ! Create the mesh
-  call init_mesh(local_rank, total_ranks, mesh_id)
+  call init_mesh(local_rank, total_ranks, mesh_id, twod_mesh_id)
 
   ! Create FEM specifics (function spaces and chi field)
   call init_fem(mesh_id, chi)

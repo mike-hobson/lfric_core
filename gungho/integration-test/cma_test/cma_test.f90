@@ -65,7 +65,7 @@ program cma_test
   ! Number of processes and local rank
   integer(kind=i_def) :: petCount, localPET
   ! Mesg index
-  integer(kind=i_def) :: mesh_id
+  integer(kind=i_def) :: mesh_id, twod_mesh_id
   ! Number of processes and local rank
   integer(kind=i_def) :: total_ranks, local_rank
   ! Filename to read namelist from
@@ -240,7 +240,7 @@ program cma_test
             source = global_mesh_collection_type() )
 
   ! Create the mesh and function space collection
-  call init_mesh( local_rank, total_ranks, mesh_id )
+  call init_mesh( local_rank, total_ranks, mesh_id, twod_mesh_id )
 
   ! Full global meshes no longer required, so reclaim
   ! the memory from global_mesh_collection

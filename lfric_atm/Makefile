@@ -102,7 +102,7 @@ extract-um-physics:
 	    fcm make -C $(SCRATCH_DIR) -f $(PROJECT_DIR)/fcm-make/extract.cfg
 	# Note that if wanting to modify UM source this should be done via the
 	# UM repository either through a working copy or branch
-	$(Q)rsync -avz $(SCRATCH_DIR)/preprocess-atmos/ $(WORKING_DIR)/science/
+	$(Q)rsync -acvz $(SCRATCH_DIR)/preprocess-atmos/ $(WORKING_DIR)/science/
 
 ##############################################################################
 # Clean

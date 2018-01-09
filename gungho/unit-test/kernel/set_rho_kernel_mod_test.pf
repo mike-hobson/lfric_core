@@ -105,7 +105,8 @@ contains
     call feign_initial_density_config( r1=0.0_r_def, x1=0.0_r_def, &
                                        tracer_background=tracer_background, tracer_max=tracer_max, &
                                        r2=0.0_r_def, x2=0.0_r_def, y1=y1, y2=y2, &
-                                       sample_init_rho=.false. )
+                                       sample_init_rho=.false., &
+				       set_hydrostatic_density=.false. )
     call feign_initial_temperature_config( bvf_square )
 
     call feign_planet_config( gravity=gravity, radius=radius, omega=omega, &

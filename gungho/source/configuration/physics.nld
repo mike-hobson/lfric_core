@@ -5,4 +5,9 @@ namelist physics
   ! if < 0: then placement is in slow physics
   heldsuarez_placement : integer ! heldsuarez forcing
 
+! idealised surface options
+  l_flux_bc    : logical ! Use fixed surface fluxes
+  fixed_flux_e : real    ! Fixed surface latent heat flux (Wm-2)
+  fixed_flux_h : real    ! Fixed surface sensible heat flux (Wm-2)
+
 end namelist physics

@@ -67,7 +67,6 @@
   write_xios_output         = .true.
   write_nodal_output        = .false.
   diagnostic_frequency      = 1
-  nodal_output_on_w3        = .true.
   subroutine_timers         = .true.
 /
 

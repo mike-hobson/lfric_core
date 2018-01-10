@@ -1,6 +1,0 @@
-UM physics build test program successful
-LFRic defined precision reals have kind:            8
-LFRic single precision reals have kind:             4
-LFRic double precision reals have kind:             8
-LFRic default precision reals have kind:            4
-UM default precision reals have kind:               8

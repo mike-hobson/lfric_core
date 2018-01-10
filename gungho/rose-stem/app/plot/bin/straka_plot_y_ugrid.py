@@ -22,40 +22,31 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 
-import iris
-from iris.cube import Cube
+from iris.pandas import as_data_frame
 
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
-from scipy.interpolate import griddata
 
-import math
 
 import sys
 
-iris.FUTURE.netcdf_promote = True
+from read_data import read_ugrid_data
+
+cube = None
+n_levs = None
 
 
-def process_ugrid(filestem, field, levels_name):
-
-  global cube, n_levs
-
-  # Read the file and extract field of interest
-  cube = iris.load_cube(filestem, field)
-
-  # determine the number of levels
-  n_levs = cube.data[0,:].shape[0]
-
-
-       
-def make_figure(plotpath, field, timestep):
+def make_figure(plotpath, nx, ny, field, timestep):
 
   # get coordinates
 
   x = np.around(cube.coord('longitude').points)
   y = np.around(cube.coord('latitude').points)
+
+  # Sort by y and retain indices for reshape
+  sortidx = np.argsort(y)
 
   slice_fig = plt.figure(figsize=(15,10))
   # get min and max of x,y data for plot axes
@@ -67,41 +58,45 @@ def make_figure(plotpath, field, timestep):
   zmax = 6400.0
 
   r2d = 1.0/1000.0;
-  ny = 300
-  nx = 2
+
+  nx = int(nx)
+  ny = int(ny)
   nz = n_levs
 
   #create 2D plot
-  x2d = 0.0
-  z2d = np.linspace(zmin, zmax, nz)
-  y2d = np.linspace(ymin, ymax, ny)
-  xi, yi = np.meshgrid(x2d, y2d)    
-  zi = np.zeros([ny,1,n_levs])
-
+ 
+  vali = np.zeros([ny,nx,n_levs])
+  yi = np.zeros([ny,nx,n_levs])
 
   for p in xrange(n_levs):
 
     # get the data for this level
     data = cube.data[-1,p]
 
+    vali[:,:,p] = data[sortidx].reshape((ny, nx))
+    yi[:,:,p] = y[sortidx].reshape((ny, nx))
 
-    zi[:,:,p] = griddata((x,y), data, (xi, yi), method='linear') 
+  # create meshgrid to get x_i and y_i for plotting
+  y2d = np.linspace(ymin, ymax, ny)
+  z2d = np.linspace(zmin, zmax, nz)
+  y_i, x_i = np.meshgrid(z2d, y2d) 
 
-  yi, xi = np.meshgrid(z2d, y2d) 
+
   dz = np.zeros([ny,nz])
   for i in range(ny):
-    dz[i,:] = zi[i,0,:] - 300.0
+    dz[i,:] = vali[i,0,:] - 300.0
 
 
   matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
+  c_map = cm.summer
   cc = np.linspace(-16,-1,16)
-  cf = plt.contourf(xi *r2d, yi * r2d, np.round(dz,10), cc)
-  cl = plt.contour(xi * r2d, yi*r2d, np.round(dz,10), cc, linewidths=1.0,colors='k', linestyle="", extend='min')
+  cf = plt.contourf(x_i * r2d, y_i * r2d, np.round(dz,10), cc, cmap = c_map)
+  cl = plt.contour(x_i * r2d, y_i * r2d, np.round(dz,10), cc, linewidths=1.0,colors='k', linestyle="", extend='min')
   plt.axis([0, 16, 0, 5])
   plt.xlabel("y (km)")
   plt.ylabel("z (km)")
   plt.title('max: %2.4e, min: %2.4e'%(np.max(dz),np.min(dz)))
-  plt.colorbar(cf,  cmap=cm.spectral)
+  plt.colorbar(cf,  cmap=c_map)
 
   out_file_name = plotpath + "/" + 'straka_y_ugrid' + "_" + timestep +  ".png"
   slice_fig.savefig(out_file_name , bbox_inches='tight')
@@ -110,9 +105,9 @@ if __name__ == "__main__":
 
   
   try:
-    datapath, fields, levels_name, timestep, plotpath = sys.argv[1:6]
+    datapath, nx, ny, fields, timestep, plotpath = sys.argv[1:7]
   except ValueError:
-    print("Usage: {0} <datapath> <field_names> <levels_name> <timestep> <plotpath>".format(sys.argv[0]))
+    print("Usage: {0} <datapath> <nx> <ny> <field_names> <timestep> <plotpath>".format(sys.argv[0]))
     exit(1)
 
   # Split out the list of fields
@@ -120,9 +115,11 @@ if __name__ == "__main__":
 
   for field in field_list:
 
-      process_ugrid(datapath, field, levels_name)
+      cube = read_ugrid_data(datapath, field)
+
+      n_levs = cube.data[0,:].shape[0]
 
       # Only try to plot if we found some data for this field
       if n_levs > 0:
-        make_figure(plotpath,field, timestep)
+        make_figure(plotpath, nx, ny, field, timestep)
 

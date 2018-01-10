@@ -32,68 +32,26 @@ import matplotlib.cm as cm
 
 from scipy.interpolate import griddata
 import math
-import glob
 import sys
 
-# Make an empty list to hold the levels we find in the data
+from read_data import read_nodal_data
 
+levels = None
+data = None
 
-x = []
-y = []
-z = []
-levels = []
-
-def process_file_list(filestem):
-
-  # Get the list of files to stitch together
-  dirlist = glob.glob(filestem)
-
-  # If no files are found then don't try to process them
-  if len(dirlist) < 1:
-    print("No files found to plot")
-  else:
-
-    for f in dirlist:
-      print "processing file ", f
-      fo = open(f, "r")
-
-      # Step through all lines in the file, split the lines
-      # and where the level matches the specifed one, append 
-      # data to appropriate list 
-      for strline in fo:
-         strsplit = strline.split()
-         # Check we got a valid data line
-         if (len(strsplit) == 5 or len(strsplit) == 7):
-            # Get the level
-            level = float(strsplit[3])
-            # Is the level already in the levels list?
-            if (level in levels):
-               # If it is then append the data into the correct list
-               x[levels.index(level)].append(float(strsplit[0]))
-               y[levels.index(level)].append(float(strsplit[1]))
-               z[levels.index(level)].append(float(strsplit[4]))
-            else:
-               # Add the level to the levels list and append
-               # corresponding empty lists to x, y and z lists
-               levels.append(level)
-               x.append([])
-               y.append([])
-               z.append([])
-               # ...and then append the data
-               x[levels.index(level)].append(float(strsplit[0]))
-               y[levels.index(level)].append(float(strsplit[1]))
-               z[levels.index(level)].append(float(strsplit[4]))
-
-      fo.close()
        
-def make_figure(plotpath, field, timestep):
+def make_figure(plotpath, field, component, timestep):
+
+  val_col = 'c' + str(component)
+
   fig = plt.figure(figsize=(10,5))
   nz = len(levels)
   for p in range(len(levels)):
+    p_data = data.loc[data['level'] == levels[p]]
     g = p/(2.0*nz) + 0.5
-    plt.plot(np.asarray(z[p]),color=(g,g,g),linewidth=2)
+    plt.plot(p_data[val_col].values,color=(g,g,g),linewidth=2)
 
-  plt.title('max: %e, min: %e'%(np.amax(z),np.amin(z)))
+  plt.title('max: %e, min: %e'%(np.amax(data[val_col].values),np.amin(data[val_col].values)))
   out_file_name = plotpath + "/" "dofs_" + field + "_" + timestep +  ".png"
   plt.savefig(out_file_name , bbox_inches='tight')
 
@@ -109,20 +67,20 @@ if __name__ == "__main__":
   # Split out the list of fields
   field_list = fields.split(':')
 
+
   # Split out the list of timesteps
   ts_list = timesteps.split(':')
 
-  for field in field_list:
+  for field in field_list: 
 
     for ts in ts_list:
-      # Clear the lists in between plots
-      del levels[:]
-      del x[:]
-      del y[:]
-      del z[:]
-      filestem =  datapath + "/" + config + "_nodal_" + field + "_" + ts + "*"      
-      process_file_list(filestem)
+
+      filestem =  datapath + "/" + config + "_nodal_" + field + "_" + ts + "*"     
+
+      data = read_nodal_data(filestem, 3, 1)
+      levels = data.level.unique()
+
       # Only try to plot if we found some files for this timestep
       if len(levels) > 0:
-        make_figure(plotpath,field, ts)
+        make_figure(plotpath,field, 1, ts)
 

@@ -28,77 +28,17 @@ matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-import math
-import glob
 import sys
-from scipy.interpolate import griddata
 
-levels = [] ; x = [] ; y = [] ; w3field = []
+from read_data import read_nodal_data
 
-def process_file_list(filestem):
-
-  # get the list of files to stitch together
-  dirlist = glob.glob(filestem)
-
-  for f in dirlist:
-
-    fo = open(f, "r")
-
-    # Step through all lines in the file, split the lines
-    # and where the level matches the specifed one, append 
-    # data to appropriate list 
-    for strline in fo:
-      strsplit = strline.split()
-      if (len(strsplit) == 5): # check we got a valid data line
-
-         level = float(strsplit[3]) # get the level
-
-         if (level in levels):
-            # If it is then append the data into the correct list
-            x[levels.index(level)].append(float(strsplit[0]))
-            y[levels.index(level)].append(float(strsplit[1]))
-            w3field[levels.index(level)].append(float(strsplit[4]))
-         else:
-            # add the level to the levels list and append
-            # corresponding empty lists to x, y and field lists
-            levels.append(level)
-            x.append([])
-            y.append([])
-            w3field.append([])
-            # ...and then append the data
-            x[levels.index(level)].append(float(strsplit[0]))
-            y[levels.index(level)].append(float(strsplit[1]))
-            w3field[levels.index(level)].append(float(strsplit[4]))
-
-      if (len(strsplit) == 7):
-         # get the level
-         level = float(strsplit[3])
-
-         dimension_to_plot = 4     # E/W direction ?
-#         dimension_to_plot = 5      # N/S direction? 
-#         dimension_to_plot = 6     # vertical direction ?
-
-         if (level in levels):
-#            # If it is then append the data into the correct list
-            x[levels.index(level)].append(float(strsplit[0]))
-            y[levels.index(level)].append(float(strsplit[1]))
-            w3field[levels.index(level)].append(float(strsplit[dimension_to_plot]))
-         else:
-#            # add the level to the levels list and append
-#            # corresponding empty lists to x, y and z lists
-            levels.append(level)
-            x.append([])
-            y.append([])
-            w3field.append([])
-#            # ...and then append the data
-            x[levels.index(level)].append(float(strsplit[0]))
-            y[levels.index(level)].append(float(strsplit[1]))
-            w3field[levels.index(level)].append(float(strsplit[dimension_to_plot]))
-
-    fo.close()
+levels = None
+data = None
 
 
-def make_figure(field, timestep):
+def make_figure(field, nx, ny, component, timestep):
+
+  val_col = 'c' + str(component)
 
   fig = plt.figure(figsize=(15,10))
   plt.plot()
@@ -106,18 +46,25 @@ def make_figure(field, timestep):
 #  for p in xrange(len(levels)):
   for p in xrange(1):
 
-    xmin, xmax, ymin, ymax =  min(x[p]), max(x[p]), min(y[p]), max(y[p])
+    p_data = data.loc[data['level'] == levels[p]]
 
+    # get min and max of x,y data for plot axes
+    xmin = p_data['x'].min()
+    xmax = p_data['x'].max()
+    ymin = p_data['y'].min()
+    ymax = p_data['y'].max()
+   
     # Size of regular grid
-    ny, nx = 200, 200 # Just set these to match the underlying ugrid mesh size for the biperiodic.
+    nx = int(nx)
+    ny = int(ny)    
 
-    # Generate a regular grid to interpolate the data onto
-    xi, yi = np.meshgrid(np.linspace(xmin, xmax, nx), np.linspace(ymin, ymax, ny))
-    # Interpolate using delaunay triangulation 
-    w3fieldi = griddata((x[p], y[p]), w3field[p], (xi, yi), method='linear')
+    # Using reshape of numpy array
+    w3fieldi = (p_data[val_col].values).reshape((ny, nx))
+    xi = (p_data['x'].values).reshape((ny, nx))
+    yi = (p_data['y'].values).reshape((ny, nx))
 
     cf = plt.pcolormesh(xi, yi, w3fieldi,cmap=cm.hsv,vmin=-1.0,vmax=10.0) # use this for biperiodic grid
-    plt.colorbar(cf,cmap=cm.spectral)
+    plt.colorbar(cf,cmap=cm.hsv)
 
     out_file_name = plotpath + "/" "biperiodic-cosmic_" + field + "_" + timestep +  ".png"
     plt.savefig(out_file_name , bbox_inches='tight')
@@ -128,9 +75,9 @@ def make_figure(field, timestep):
 if __name__ == "__main__":
 
   try:
-    datapath, fields, timesteps, plotpath = sys.argv[1:5]
+    datapath, nx, ny, fields, timesteps, plotpath = sys.argv[1:7]
   except ValueError:
-    print("Usage: {0} <datapath> <field_names> <timestep_list> <plotpath>".format(sys.argv[0]))
+    print("Usage: {0} <datapath> <nx> <ny> <field_names> <timestep_list> <plotpath>".format(sys.argv[0]))
     exit(1)
 
   # Split out the list of fields
@@ -143,13 +90,22 @@ if __name__ == "__main__":
 
     for ts in ts_list:
 
-      # clear the lists in between plots
-      del levels[:] ;  del x[:] ; del y[:] ; del w3field[:]
       filestem =  datapath + "/diagDynamo_nodal_" + field + "_" + ts + "*"
 
-      process_file_list(filestem)
-      # Only try to plot if we found some files for this timestep
-      make_figure(field, ts)
+      if field in ['u','xi']:
+        # Vector field - plot w component by default
+        component = 3
+        data = read_nodal_data(filestem, 3, component)
+      else:
+        # Scalar field - only one component to plot
+        component = 1
+        data = read_nodal_data(filestem, 1, component)
 
-    del levels[:] ; del x[:] ; del y[:] ; del w3field[:]
+      # Sort the data (needed to be able to reshape and not regrid)
+      data = data.sort(['y','x','z'])
+
+      levels = np.sort(data.level.unique())
+
+      make_figure(field, nx, ny, component, ts)
+
 

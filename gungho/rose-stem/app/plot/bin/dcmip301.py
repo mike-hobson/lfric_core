@@ -33,62 +33,30 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
 from scipy.interpolate import griddata
-import math
-import glob
+
 import sys
 
+from read_data import read_nodal_data
 
-x = []
-y = []
-z = []
-levels = []
-
-def process_file_list(filestem):
-
-  # get the list of files to stitch together
-  dirlist = glob.glob(filestem)
- 
-  for f in dirlist:
-    print "processing file ", f
-    fo = open(f, "r")
-
-    # Step through all lines in the file, split the lines
-    # and where the level matches the specifed one, append 
-    # data to appropriate list 
-    for strline in fo:
-       strsplit = strline.split()
-       # check we got a valid data line
-       if (len(strsplit) == 5):
-          # get the level
-          level = float(strsplit[3])
-          # Is the level already in the levels list?
-          if (level in levels):
-             # If it is then append the data into the correct list
-             x[levels.index(level)].append(float(strsplit[0]))
-             y[levels.index(level)].append(float(strsplit[1]))
-             z[levels.index(level)].append(float(strsplit[4]))
-          else:
-             # add the level to the levels list and append
-             # corresponding empty lists to x, y and z lists
-             levels.append(level)
-             x.append([])
-             y.append([])
-             z.append([])
-             # ...and then append the data
-             x[levels.index(level)].append(float(strsplit[0]))
-             y[levels.index(level)].append(float(strsplit[1]))
-             z[levels.index(level)].append(float(strsplit[4]))
-
-    fo.close()
+levels = None
+data = None
        
-def make_xz_figure(plotpath, field, timestep):
+def make_xz_figure(plotpath, field, component, timestep):
+
+  val_col = 'c' + str(component)
 
   plt.figure()
+
    # get min and max of x,y data for plot axes
-  xmin = min(x[0])
-  xmax = max(x[0])
-  ymin = min(y[0])
-  ymax = max(y[0])
+
+  min_lev = min(levels)
+
+  deltaz = data.loc[data['level'] == (min_lev+1)][val_col].min() - data.loc[data['level'] == (min_lev)][val_col].min()
+  xmin = data.loc[data['level'] == min_lev]['x'].min()
+  xmax = data.loc[data['level'] == min_lev]['x'].max()
+  ymin = data.loc[data['level'] == min_lev]['y'].min()
+  ymax = data.loc[data['level'] == min_lev]['y'].max()
+
   zmin = 0.0
   zmax = 10000.0
   
@@ -101,23 +69,28 @@ def make_xz_figure(plotpath, field, timestep):
   y2d = 0.0
   xi, yi = np.meshgrid(x2d, y2d)  
   zi = np.zeros([1,nx,len(levels)])
+
   for p in xrange(len(levels)):
-    zi[:,:,p] = griddata((np.asarray(x[p]), np.asarray(y[p])), np.asarray(z[p]), (xi, yi), method='linear')
+    p_data = data.loc[data['level'] == levels[p]]
+    zi[:,:,p] = griddata((p_data['x'].values, p_data['y'].values), p_data[val_col].values, (xi, yi), method='linear')
 
   yi, xi = np.meshgrid(z2d, x2d) 
   dz = np.zeros([nx,len(levels)])
   for i in range(nx):
     dz[i,:] = zi[0,i,:] - zi[0,0,:]
 
+  c_map = cm.summer
   cc = np.linspace(-0.12,0.12,13)
-  cf = plt.contourf(xi *r2d, yi , dz, cc)
-  plt.colorbar(cf,  cmap=cm.spectral)
+  cf = plt.contourf(xi *r2d, yi , dz, cc, cmap=c_map)
+  plt.colorbar(cf,  cmap=c_map)
   cl = plt.contour(xi * r2d, yi, dz, cc, linewidths=0.5,colors='k')
   plt.title('max: %e, min: %e'%(np.max(dz),np.min(dz)))
   out_file_name = plotpath + "/" "dcmip301_xz_" + field + "_" + timestep +  ".png"
   plt.savefig(out_file_name , bbox_inches='tight')
 
-def make_hovmoller_figure(datapath, plotpath, field):
+def make_hovmoller_figure(datapath, plotpath, field, component):
+
+  val_col = 'c' + str(component)
 
   fig = plt.figure(figsize=(15,10))
 
@@ -132,52 +105,18 @@ def make_hovmoller_figure(datapath, plotpath, field):
     timestep = "T"+str(36*t).zfill(6)
     filestem =  datapath + "/diagDynamo_nodal_" + field + "_" + timestep + "*"
 
-    x = []
-    y = []
-    z = []
-    levels = []
-
-    # get the list of files to stitch together
-    dirlist = glob.glob(filestem)
+    data = read_nodal_data(filestem, 1, 1)
+    levels = data.level.unique()
  
-    for f in dirlist:
-      fo = open(f, "r")
+    # get min and max of x,y data for plot axes
 
-      # Step through all lines in the file, split the lines
-      # and where the level matches the specifed one, append 
-      # data to appropriate list 
-      for strline in fo:
-         strsplit = strline.split()
-         # check we got a valid data line
-         if (len(strsplit) == 5):
-            # get the level
-            level = float(strsplit[3])
-            # Is the level already in the levels list?
-            if (level in levels):
-               # If it is then append the data into the correct list
-               x[levels.index(level)].append(float(strsplit[0]))
-               y[levels.index(level)].append(float(strsplit[1]))
-               z[levels.index(level)].append(float(strsplit[4]))
-            else:
-               # add the level to the levels list and append
-               # corresponding empty lists to x, y and z lists
-               levels.append(level)
-               x.append([])
-               y.append([])
-               z.append([])
-               # ...and then append the data
-               x[levels.index(level)].append(float(strsplit[0]))
-               y[levels.index(level)].append(float(strsplit[1]))
-               z[levels.index(level)].append(float(strsplit[4]))
+    min_lev = min(levels)
 
-      fo.close()
-       
-
-     # get min and max of x,y data for plot axes
-    xmin = min(x[0])
-    xmax = max(x[0])
-    ymin = min(y[0])
-    ymax = max(y[0])
+    deltaz = data.loc[data['level'] == (min_lev+1)][val_col].min() - data.loc[data['level'] == (min_lev)][val_col].min()
+    xmin = data.loc[data['level'] == min_lev]['x'].min()
+    xmax = data.loc[data['level'] == min_lev]['x'].max()
+    ymin = data.loc[data['level'] == min_lev]['y'].min()
+    ymax = data.loc[data['level'] == min_lev]['y'].max()
     zmin = 0.0
     zmax = 10000.0
   
@@ -188,15 +127,18 @@ def make_hovmoller_figure(datapath, plotpath, field):
     xi, yi = np.meshgrid(x2d, y2d)   
     zi = np.zeros([1,nx])
     p = 5
-    zi[:,:] = griddata((np.asarray(x[p]), np.asarray(y[p])), np.asarray(z[p]), (xi, yi), method='linear')
+    p_data = data.loc[data['level'] == levels[p]]
+    zi[:,:] = griddata((p_data['x'].values, p_data['y'].values), p_data[val_col].values, (xi, yi), method='linear')
+
     for i in range(nx):
       t2d[i,t] = zi[0,i] - zi[0,0]
 
   time =  np.linspace(0, 3600, nt)
-  ti, xi = np.meshgrid(time, x2d)   
+  ti, xi = np.meshgrid(time, x2d)  
+  c_map = cm.summer 
   cc = np.linspace(-0.12,0.12,21)
-  cf = plt.contourf(xi *r2d, ti , t2d, cc)
-  plt.colorbar(cf,  cmap=cm.spectral)
+  cf = plt.contourf(xi *r2d, ti , t2d, cc, cmap=c_map)
+  plt.colorbar(cf,  cmap=c_map)
   cl = plt.contour(xi * r2d, ti, t2d, cc, linewidths=0.5,colors='k')
   plt.title('max: %e, min: %e'%(np.max(t2d),np.min(t2d)))
 
@@ -238,23 +180,17 @@ if __name__ == "__main__":
 
     for ts in ts_list:
 
-      # clear the lists in between plots
-      del levels[:]
-      del x[:]
-      del y[:]
-      del z[:]
 
       filestem =  datapath + "/diagDynamo_nodal_" + field + "_" + ts + "*"
 
-      process_file_list(filestem)
+      data = read_nodal_data(filestem, 1, 1)
+      levels = data.level.unique()
+
       # Only try to plot if we found some files for this timestep
       if len(levels) > 0:
-        make_xz_figure(plotpath,field, ts)
+        make_xz_figure(plotpath,field, 1, ts)
 
-    del levels[:]
-    del x[:]
-    del y[:]
-    del z[:]
-    make_hovmoller_figure(datapath, plotpath, field)
+
+    make_hovmoller_figure(datapath, plotpath, field, 1)
 
 

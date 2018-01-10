@@ -19,114 +19,17 @@ from scipy.interpolate import griddata
 
 import math
 
-import glob
 import sys
 
+from read_data import read_nodal_data
 
-# Make an empty list to hold the levels we find in the data
+levels = None
+data = None
+data0 = None
 
+def make_figure(plotpath, nx, ny, field, component, timestep):
 
-# Set up some empty lists for
-# x,y coordinates and value
-
-# Hardcode the filename
-
-
-x = []
-y = []
-z = []
-w = []
-levels = []
-
-x0 = []
-y0 = []
-z0 = []
-w0 = []
-levels0 = []
-
-def process_file_list0(filestem):
-
-  # get the list of files to stitch together
-  dirlist = glob.glob(filestem)
- 
-  for f in dirlist:
-    print "processing file ", f
-    fo = open(f, "r")
-
-    # Step through all lines in the file, split the lines
-    # and where the level matches the specifed one, append 
-    # data to appropriate list 
-    for strline in fo:
-       strsplit = strline.split()
-       # check we got a valid data line
-       if (len(strsplit) == 5):
-          # get the level
-          level = float(strsplit[3])
-          # Is the level already in the levels list?
-          if (level in levels0):
-             # If it is then append the data into the correct list
-             x0[levels0.index(level)].append(float(strsplit[0]))
-             y0[levels0.index(level)].append(float(strsplit[1]))
-             z0[levels0.index(level)].append(float(strsplit[2]))
-             w0[levels0.index(level)].append(float(strsplit[4]))
-          else:
-             # add the level to the levels list and append
-             # corresponding empty lists to x, y and z lists
-             levels0.append(level)
-             x0.append([])
-             y0.append([])
-             z0.append([])
-             w0.append([])
-             # ...and then append the data
-             x0[levels0.index(level)].append(float(strsplit[0]))
-             y0[levels0.index(level)].append(float(strsplit[1]))
-             z0[levels0.index(level)].append(float(strsplit[2]))
-             w0[levels0.index(level)].append(float(strsplit[4]))
-
-    fo.close()
-
-def process_file_list(filestem):
-
-  # get the list of files to stitch together
-  dirlist = glob.glob(filestem)
- 
-  for f in dirlist:
-    print "processing file ", f
-    fo = open(f, "r")
-
-    # Step through all lines in the file, split the lines
-    # and where the level matches the specifed one, append 
-    # data to appropriate list 
-    for strline in fo:
-       strsplit = strline.split()
-       # check we got a valid data line
-       if (len(strsplit) == 5):
-          # get the level
-          level = float(strsplit[3])
-          # Is the level already in the levels list?
-          if (level in levels):
-             # If it is then append the data into the correct list
-             x[levels.index(level)].append(float(strsplit[0]))
-             y[levels.index(level)].append(float(strsplit[1]))
-             z[levels.index(level)].append(float(strsplit[2]))
-             w[levels.index(level)].append(float(strsplit[4]))
-          else:
-             # add the level to the levels list and append
-             # corresponding empty lists to x, y and z lists
-             levels.append(level)
-             x.append([])
-             y.append([])
-             z.append([])
-             w.append([])
-             # ...and then append the data
-             x[levels.index(level)].append(float(strsplit[0]))
-             y[levels.index(level)].append(float(strsplit[1]))
-             z[levels.index(level)].append(float(strsplit[2]))
-             w[levels.index(level)].append(float(strsplit[4]))
-
-    fo.close()
-
-def make_figure(plotpath, field, timestep):
+  val_col = 'c' + str(component)
        
   fig = plt.figure(figsize=(7,7))
 
@@ -139,58 +42,66 @@ def make_figure(plotpath, field, timestep):
         l2h[i] = j
 
    # get min and max of x,y data for plot axes
-  deltaz = min(z[1])-min(z[0])
-  xmin =  min(x[0])
-  xmax = max(x[0])
-  ymin =  min(y[0])
-  ymax = max(y[0])
+
+  min_lev = min(levels)
+
+  xmin = data.loc[data['level'] == min_lev]['x'].min()
+  xmax = data.loc[data['level'] == min_lev]['x'].max()
+  ymin = data.loc[data['level'] == min_lev]['y'].min()
+  ymax = data.loc[data['level'] == min_lev]['y'].max()
+
   zmin = 0.0
   zmax = 10000.0
 
   r2d = 1.0/1000.0;
-  nx,ny,nz = 300,2,len(levels)
 
-  #create 2D plot
-  x2d = np.linspace(xmin, xmax, nx)
-  z2d = np.linspace(zmin, zmax, nz)
-  y2d = 0.0
-  xi, yi = np.meshgrid(x2d, y2d)  
+  nx = int(nx)
+  ny = int(ny)
+  nz = len(levels)
+
   
   mid_z = math.floor(len(levels)/2)
-  wi = np.zeros([1,nx,len(levels)])
-  wi0= np.zeros([1,nx,len(levels)])
+  wi = np.zeros([ny,nx,len(levels)])
+  wi0= np.zeros([ny,nx,len(levels)])
   wi_bg = np.zeros(len(levels))
 
   for p in xrange(len(levels)):
     pp = int(l2h[p])
-    wi[:,:,p] =griddata((np.asarray(x[pp]), np.asarray(y[pp])), np.asarray(w[pp]), (xi, yi), method='linear')
-    wi0[:,:,p] =griddata((np.asarray(x[pp]), np.asarray(y[pp])), np.asarray(w0[pp]), (xi, yi), method='linear')
-    
+    p_data = data.loc[data['level'] == levels[pp]]
+    p_data0 = data0.loc[data0['level'] == levels[pp]]
+    wi[:,:,p] = (p_data[val_col].values).reshape((ny, nx))
+    wi0[:,:,p] = (p_data0[val_col].values).reshape((ny, nx))
 
-# subtracting background profile  
+
+  # subtracting background profile  
   for l in xrange(len(levels)):
     wi_bg[l] = wi0[0,0,l]  
     wi[:,:,l] -= wi_bg[l]
     
-  zi, xi = np.meshgrid(z2d, x2d) 
   dw = np.zeros([nx,len(levels)])
   for i in range(nx):
     dw[i,:] = wi[0,i,:]
 
 
+  # create meshgrid to get z_i and x_i for plotting
+  x2d = np.linspace(xmin, xmax, nx)
+  z2d = np.linspace(zmin, zmax, nz)
+  z_i, x_i = np.meshgrid(z2d, x2d) 
+
   ax = fig.add_subplot(2,1,1) 
 
   matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
+  c_map = cm.summer
   cc = np.linspace(-0.003,0.003,13)
-  cf = ax.contourf(xi *r2d, zi * r2d, dw, cc)
-  plt.colorbar(cf,  cmap=cm.spectral)
-  cl = ax.contour(xi * r2d, zi*r2d, dw, cc, linewidths=0.5,colors='k')
+  cf = ax.contourf(x_i *r2d, z_i * r2d, dw, cc, cmap=c_map)
+  plt.colorbar(cf,  cmap=c_map)
+  cl = ax.contour(x_i * r2d, z_i*r2d, dw, cc, linewidths=0.5,colors='k')
   ax.set_title('max: %2.4e, min: %2.4e'%(np.max(dw),np.min(dw)))
   ax.set_xlabel('x (km)')
   ax.set_ylabel('z (km)')
 
   bx =fig.add_subplot(2,1,2)
-  bx.plot(xi*r2d, dw[:,mid_z], color='k')
+  bx.plot(x_i*r2d, dw[:,mid_z], color='k')
   bx.set_xlabel('x (km)')  
   bx.set_ylabel('theta (K)')
   bx.set_ylim([-0.002, 0.003])  
@@ -201,10 +112,11 @@ def make_figure(plotpath, field, timestep):
 if __name__ == "__main__":
   
   try:
-    datapath, fields, timesteps, plotpath = sys.argv[1:5]
+    datapath, nx, ny, fields, timesteps, plotpath = sys.argv[1:7]
   except ValueError:
-    print("Usage: {0} <datapath> <field_names> <timestep_list> <plotpath>".format(sys.argv[0]))
+    print("Usage: {0} <datapath> <nx> <ny> <field_names> <timestep_list> <plotpath>".format(sys.argv[0]))
     exit(1)
+
 
   # Split out the list of fields
   field_list = fields.split(':')
@@ -214,29 +126,19 @@ if __name__ == "__main__":
 
 
   for field in field_list:
-    # clear the lists in between plots
-    del levels0[:]
-    del x0[:]
-    del y0[:]
-    del z0[:]
-    del w0[:]
     # Create initial data
     filestem =  datapath + "/diagDynamo_nodal_" + field + "_" + "T000000" + "*"
-    process_file_list0(filestem)
+
+    data0 = read_nodal_data(filestem, 1, 1)
 
     for ts in ts_list:
 
-      # clear the lists in between plots
-      del levels[:]
-      del x[:]
-      del y[:]
-      del z[:]
-      del w[:]
-
       filestem =  datapath + "/diagDynamo_nodal_" + field + "_" + ts + "*"
 
-      process_file_list(filestem)
+      data = read_nodal_data(filestem, 1, 1)
+      levels = data.level.unique()
+
       # Only try to plot if we found some files for this timestep
       if len(levels) > 0:
-        make_figure(plotpath,field, ts)
+        make_figure(plotpath, nx, ny, field, 1, ts)
 

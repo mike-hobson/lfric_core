@@ -32,61 +32,15 @@ import matplotlib.cm as cm
 
 from scipy.interpolate import griddata
 import math
-import glob
 import sys
 
-# Make an empty list to hold the levels we find in the data
+from read_data import read_nodal_data
 
+levels = None
+data = None
 
-x = []
-y = []
-z = []
-levels = []
-
-def process_file_list(filestem):
-
-  # Get the list of files to stitch together
-  dirlist = glob.glob(filestem)
-
-  # If no files are found then don't try to process them
-  if len(dirlist) < 1:
-    print("No files found to plot")
-  else:
-
-    for f in dirlist:
-      print "processing file ", f
-      fo = open(f, "r")
-
-      # Step through all lines in the file, split the lines
-      # and where the level matches the specifed one, append 
-      # data to appropriate list 
-      for strline in fo:
-         strsplit = strline.split()
-         # Check we got a valid data line
-         if (len(strsplit) == 5):
-            # Get the level
-            level = float(strsplit[3])
-            # Is the level already in the levels list?
-            if (level in levels):
-               # If it is then append the data into the correct list
-               x[levels.index(level)].append(float(strsplit[0]))
-               y[levels.index(level)].append(float(strsplit[1]))
-               z[levels.index(level)].append(float(strsplit[4]))
-            else:
-               # Add the level to the levels list and append
-               # corresponding empty lists to x, y and z lists
-               levels.append(level)
-               x.append([])
-               y.append([])
-               z.append([])
-               # ...and then append the data
-               x[levels.index(level)].append(float(strsplit[0]))
-               y[levels.index(level)].append(float(strsplit[1]))
-               z[levels.index(level)].append(float(strsplit[4]))
-
-      fo.close()
        
-def make_figure(plotpath, field, timestep, plotlong, plotlat, plotlevel):
+def make_figure(plotpath, field, component, timestep, plotlong, plotlat, plotlevel):
   # Sort levels in asscending order, this is needed for high order spaces
   sorted_levels = sorted(levels)
   l2h = np.zeros(len(levels))
@@ -95,17 +49,24 @@ def make_figure(plotpath, field, timestep, plotlong, plotlat, plotlevel):
       if ( sorted_levels[i] == levels[j] ):
         l2h[i] = j
 
+  # Get min and max of x,y data for plot axes
 
-   # Get min and max of x,y data for plot axes
-  xmin =  min(x[0])
-  xmax = max(x[0])
-  ymin =  min(y[0])
-  ymax = max(y[0])
-  zmin = min(levels)*1000.0
-  zmax = max(levels)*1000.0
+  min_lev = min(levels)
+  max_lev = max(levels)
+
+  xmin = data.loc[data['level'] == min_lev]['x'].min()
+  xmax = data.loc[data['level'] == min_lev]['x'].max()
+  ymin = data.loc[data['level'] == min_lev]['y'].min()
+  ymax = data.loc[data['level'] == min_lev]['y'].max()
+
+  zmin = min_lev*1000.0
+  zmax = max_lev*1000.0
+
 
   r2d = 180.0/np.pi;
   nx,ny,nz = 360,180,len(levels)
+
+  val_col = 'c' + str(component)
 
   # Create 2D plot
   x2d = np.linspace(xmin, xmax, nx)
@@ -115,10 +76,13 @@ def make_figure(plotpath, field, timestep, plotlong, plotlat, plotlevel):
   xi, yi = np.meshgrid(x2d, y2d)  
   for p in xrange(len(levels)):
     pp = int(l2h[p])
-    zi[:,:,p] = griddata((np.asarray(x[p]), np.asarray(y[p])), np.asarray(z[p]), (xi, yi), method='linear')
+    p_data = data.loc[data['level'] == levels[p]]
+    zi[:,:,p] = griddata((p_data['x'].values, p_data['y'].values), p_data[val_col].values, (xi, yi), method='linear')
 
-  cc = np.linspace(np.amin(z),np.amax(z),13)
+  cc = np.linspace(np.amin(data[val_col].values),np.amax(data[val_col].values),13)
 
+  c_map = cm.summer
+  
   # xz plot
   if int(plotlat) >= -90 and int(plotlat) <= 90:
 
@@ -130,8 +94,8 @@ def make_figure(plotpath, field, timestep, plotlong, plotlat, plotlevel):
       dz[i,:] = zi[lat,i,:]
  
     fig = plt.figure(figsize=(10,5))
-    cf = plt.contourf(xi *r2d, yi / 1000.0, dz, cc)
-    plt.colorbar(cf,  cmap=cm.spectral)
+    cf = plt.contourf(xi *r2d, yi / 1000.0, dz, cc, cmap=c_map)
+    plt.colorbar(cf,  cmap=c_map)
     cl = plt.contour(xi * r2d, yi / 1000.0, dz, cc, linewidths=0.5,colors='k')
     plt.title('max: %e, min: %e'%(np.max(dz),np.min(dz)))
     plt.xlabel('Longitude')
@@ -148,8 +112,8 @@ def make_figure(plotpath, field, timestep, plotlong, plotlat, plotlevel):
       dz[i,:] = zi[i,int(plotlong),:]
 
     fig = plt.figure(figsize=(10,5))
-    cf = plt.contourf(xi *r2d, yi / 1000.0, dz, cc)
-    plt.colorbar(cf,  cmap=cm.spectral)
+    cf = plt.contourf(xi *r2d, yi / 1000.0, dz, cc, cmap=c_map)
+    plt.colorbar(cf,  cmap=c_map)
     cl = plt.contour(xi * r2d, yi / 1000.0, dz, cc, linewidths=0.5,colors='k')
     plt.title('max: %e, min: %e'%(np.max(dz),np.min(dz)))
     plt.xlabel('Latitude')
@@ -162,8 +126,8 @@ def make_figure(plotpath, field, timestep, plotlong, plotlat, plotlevel):
     fig = plt.figure(figsize=(10,5))
     xi, yi = np.meshgrid(x2d, y2d) 
     dz = zi[:,:,int(plotlevel)]
-    cf = plt.contourf(xi *r2d, yi * r2d, dz, cc)
-    plt.colorbar(cf,  cmap=cm.spectral)
+    cf = plt.contourf(xi *r2d, yi * r2d, dz, cc, cmap = c_map)
+    plt.colorbar(cf,  cmap=c_map)
     cl = plt.contour(xi * r2d, yi * r2d, dz, cc, linewidths=0.5,colors='k')
     plt.xlabel('Longitude')
     plt.ylabel('Latitude')
@@ -188,16 +152,14 @@ if __name__ == "__main__":
 
     for ts in ts_list:
 
-      # Clear the lists in between plots
-      del levels[:]
-      del x[:]
-      del y[:]
-      del z[:]
 
       filestem =  datapath + "/" + config + "_nodal_" + field + "_" + ts + "*"
       
-      process_file_list(filestem)
+      data = read_nodal_data(filestem, 1, 1)
+
+      levels = data.level.unique()
+
       # Only try to plot if we found some files for this timestep
       if len(levels) > 0:
-        make_figure(plotpath,field, ts, plotlong, plotlat, plotlevel)
+        make_figure(plotpath,field, 1, ts, plotlong, plotlat, plotlevel)
 

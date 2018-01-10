@@ -31,64 +31,29 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
 from scipy.interpolate import griddata
-import math
-import glob
+
 import sys
 
-# Make an empty list to hold the levels we find in the data
+from read_data import read_nodal_data
 
+levels = None
+data = None
 
-
-def process_file_list(filestem, x, y, z, levels):
-
-  # get the list of files to stitch together
-  dirlist = glob.glob(filestem)
-
-  # If no files are found then don't try to process them
-  if len(dirlist) < 1:
-    print("No files found to plot")
-  else:
-
-    for f in dirlist:
-      print "processing file ", f
-      fo = open(f, "r")
-
-      # Step through all lines in the file, split the lines
-      # and where the level matches the specifed one, append 
-      # data to appropriate list 
-      for strline in fo:
-         strsplit = strline.split()
-         # check we got a valid data line
-         if (len(strsplit) == 5):
-            # get the level
-            level = float(strsplit[3])
-            # Is the level already in the levels list?
-            if (level in levels):
-               # If it is then append the data into the correct list
-               x[levels.index(level)].append(float(strsplit[0]))
-               y[levels.index(level)].append(float(strsplit[1]))
-               z[levels.index(level)].append(float(strsplit[4]))
-            else:
-               # add the level to the levels list and append
-               # corresponding empty lists to x, y and z lists
-               levels.append(level)
-               x.append([])
-               y.append([])
-               z.append([])
-               # ...and then append the data
-               x[levels.index(level)].append(float(strsplit[0]))
-               y[levels.index(level)].append(float(strsplit[1]))
-               z[levels.index(level)].append(float(strsplit[4]))
-
-      fo.close()
        
-def make_figure(plotpath, field, timestep, x, y, z, levels):
+def make_figure(plotpath, field, component, timestep, levels):
+
+  val_col = 'c' + str(component)
 
    # get min and max of x,y data for plot axes
-  xmin =  min(x[0])
-  xmax = max(x[0])
-  ymin =  min(y[0])
-  ymax = max(y[0])
+
+  min_lev = min(levels)
+
+  deltaz = data.loc[data['level'] == (min_lev+1)][val_col].min() - data.loc[data['level'] == (min_lev)][val_col].min()
+  xmin = data.loc[data['level'] == min_lev]['x'].min()
+  xmax = data.loc[data['level'] == min_lev]['x'].max()
+  ymin = data.loc[data['level'] == min_lev]['y'].min()
+  ymax = data.loc[data['level'] == min_lev]['y'].max()
+
   zmin = min(levels)*1000.0
   zmax = max(levels)*1000.0
 
@@ -102,9 +67,11 @@ def make_figure(plotpath, field, timestep, x, y, z, levels):
   zi = np.zeros([ny,nx,len(levels)])
   xi, yi = np.meshgrid(x2d, y2d) 
   for p in xrange(len(levels)):
-    zi[:,:,p] = griddata((np.asarray(x[p]), np.asarray(y[p])), np.asarray(z[p]), (xi, yi), method='linear')
+    p_data = data.loc[data['level'] == levels[p]]
+    zi[:,:,p] = griddata((p_data['x'].values, p_data['y'].values), p_data[val_col].values, (xi, yi), method='linear')
 
-  cc = np.linspace(np.amin(z),np.amax(z),13)
+
+  cc = np.linspace(np.amin(p_data[val_col].values),np.amax(p_data[val_col].values),13)
 
   # Pressure plot
   plotlevel = 1
@@ -120,8 +87,9 @@ def make_figure(plotpath, field, timestep, x, y, z, levels):
 
   fig = plt.figure(figsize=(10,5))
   dz = zi[:,:,plotlevel]
-  cf = plt.contourf(xi *r2d, yi * r2d, dz, cc)
-  plt.colorbar(cf,  cmap=cm.spectral)
+  c_map = cm.summer
+  cf = plt.contourf(xi *r2d, yi * r2d, dz, cc, cmap=c_map)
+  plt.colorbar(cf,  cmap=c_map)
   cl = plt.contour(xi * r2d, yi * r2d, dz, cc, linewidths=0.5, colors='k')
   plt.xlabel('Longitude')
   plt.ylabel('Latitude')
@@ -145,15 +113,14 @@ if __name__ == "__main__":
 
   for ts in ts_list:
     for field in field_list:
-      x      = []
-      y      = []
-      z      = []
-      levels = []
+
       filestem =  datapath + "/" + config + "_nodal_" + field + "_" + ts + "*"      
-      process_file_list(filestem, x, y, z, levels)
+
+      data = read_nodal_data(filestem, 1, 1)
+      levels = data.level.unique()
 
       # Only try to plot if we found some files for this timestep
       if len(levels) > 0:
-        make_figure(plotpath, field, ts, x, y, z, levels)
+        make_figure(plotpath, field, 1, ts, levels)
 
 

@@ -20,7 +20,7 @@ documents: $(patsubst $(SOURCE_DIR)/%.latex,$(WORKING_DIR)/%.pdf,$(DOCUMENTS)) \
            | $(DOCUMENT_DIR)
 	$(Q)echo >/dev/null
 
-$(WORKING_DIR)/%.pdf: $(WORKING_DIR)/%.aux
+$(WORKING_DIR)/%.pdf: $(WORKING_DIR)/%.aux $(WORKING_DIR)/%.bbl
 	$(call MESSAGE,Cross-referencing,$@)
 	$(Q)TEXINPUTS=$(WORKING_DIR)/figures/$(dir $*):$(TEXINPUTS); \
 	while ( grep "Rerun to get" $(WORKING_DIR)/$*.log ); \
@@ -30,6 +30,20 @@ $(WORKING_DIR)/%.pdf: $(WORKING_DIR)/%.aux
 	done
 	$(Q)mkdir -p $(DOCUMENT_DIR)
 	$(Q)cp $@ $(DOCUMENT_DIR)
+
+.PRECIOUS: $(WORKING_DIR)/%.bbl
+$(WORKING_DIR)/%.bbl: $(WORKING_DIR)/%.aux \
+                      $(WORKING_DIR)/%.bib $(WORKING_DIR)/%.bst
+	$(call MESSAGE,Bibliography,$@)
+	$(Q)if [ -e $(WORKING_DIR)/$*.bib ]; then cd $(dir $<); bibtex $(notdir $<); else echo "None"; fi
+
+$(WORKING_DIR)/%.bib: $$(shell find $(SOURCE_DIR)/$$(dir $$*) -name *.bib)
+	$(call MESSAGE,Bibliography files,$^)
+	$(Q)for file in $^; do echo "Copying $$file"; cp $$file $(dir $@); touch $@; done
+
+$(WORKING_DIR)/%.bst: $$(shell find $(SOURCE_DIR)/$$(dir $$*) -name *.bst)
+	$(call MESSAGE,Bibliographic styles,$^)
+	$(Q)for file in $^; do echo "Copying $$file"; cp $$file $(dir $@); touch $@; done
 
 .PRECIOUS: $(WORKING_DIR)/%.aux)
 $(WORKING_DIR)/%.aux: $(SOURCE_DIR)/%.latex \

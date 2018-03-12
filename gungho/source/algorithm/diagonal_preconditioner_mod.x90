@@ -1,0 +1,111 @@
+!-------------------------------------------------------------------------------
+! Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
+! For further details please refer to the file LICENCE.original which you
+! should have received as part of this distribution.
+!-------------------------------------------------------------------------------
+
+!>@brief Diagonal precondtioner for a block diagonal upper/lower dense system
+!>@details an extension of the abstract preconditioner type. It has a field vector to hold
+!! the diagonal values of a block diagonal upper/lower dense system. Size of the vector is
+!! two and it over-rides the apply procedure.
+
+module diagonal_preconditioner_mod
+  use constants_mod,      only : r_def, i_def
+  use preconditioner_mod, only : abstract_preconditioner_type
+  use vector_mod,         only : abstract_vector_type
+  use field_vector_mod,   only : field_vector_type
+  use log_mod,            only : log_event, LOG_LEVEL_ERROR, &
+                                 log_scratch_space
+  use field_mod,          only : field_type
+  use psykal_lite_mod,      only : invoke_divide_field
+
+  implicit none
+  private
+
+  ! Type declaration
+  type, public, extends(abstract_preconditioner_type) :: diagonal_preconditioner_type
+     !> field_vector to hold the diagonal values
+     type(field_vector_type) :: mm_diag
+   contains
+     !> overide the (abstract interface) for apply defined for the apply procedure
+     !! of a preconditioner  y = P.x
+     !> @param[in] self, a preconditioner
+     !> @param[inout] x a vector that the preconditioner is applied to.
+     !> @param[inout] y a vector, the result.
+     procedure :: apply => apply_diagonal
+     !> Applies the field vector as a preconditioner
+     procedure :: apply_diagonal
+     !> Assignment (copy)
+     procedure :: pc_assign
+     !> overloads the assignment operator (copy constructor)
+     generic   :: assignment(=) => pc_assign
+     !> Destroys the object
+     final     :: destroy_dpc
+     
+  end type diagonal_preconditioner_type
+
+  ! Overload the default structure constructure
+  interface diagonal_preconditioner_type
+     module procedure diagonal_preconditioner_constructor
+  end interface
+
+contains
+  
+  !> Construct a <code> diagonal_preconditioner</code> object
+  !> @param [in] diag a field vector
+  !> @return seld the constructed diagonal field
+  function diagonal_preconditioner_constructor(diag) result(self)
+    implicit none
+    type(field_vector_type), intent(in) :: diag
+    type(diagonal_preconditioner_type) :: self
+
+    self%mm_diag = diag
+  end function diagonal_preconditioner_constructor
+
+  !> Applies the preconditioner by dividing the field passed in (x) by the
+  !! field to be pass out (y) as vectors
+  subroutine apply_diagonal(self, x, y)
+    implicit none    
+    class(diagonal_preconditioner_type), intent(in)    :: self
+    class(abstract_vector_type),         intent(inout) :: x
+    class(abstract_vector_type),         intent(inout) :: y    
+    integer :: fctr
+    
+    select type(x)
+    type is(field_vector_type)
+       
+       select type(y)
+       type is(field_vector_type)
+          do fctr=1,size(x%vector)! diagonal precon
+! Psyclone cannot parse a double percent, i.e. a type of a type, so we have to psykallite for now             
+             !             call invoke( X_divideby_Y( y%vector(fctr), x%vector(fctr),self%mm_diag%vector(fctr) ) )
+             call invoke_divide_field( x%vector(fctr), self%mm_diag%vector(fctr), y%vector(fctr) )
+         end do
+       class default
+          write(log_scratch_space, '(A)') "diagonal_preconditioner_mod: incorrect vector_type as argument y"
+          call log_event(log_scratch_space, LOG_LEVEL_ERROR)
+       end select
+
+    class default
+       write(log_scratch_space, '(A)') "diagonal_preconditioner_mod: incorrect vector_type as argument x"
+       call log_event(log_scratch_space, LOG_LEVEL_ERROR)
+    end select
+  end subroutine apply_diagonal
+
+  subroutine destroy_dpc(self)
+    implicit none    
+    type(diagonal_preconditioner_type), intent(inout) :: self
+
+  end subroutine destroy_dpc
+
+  subroutine pc_assign(dest, source)
+    implicit none    
+    class(diagonal_preconditioner_type), intent(in)  :: source
+    class(diagonal_preconditioner_type), intent(out) :: dest
+
+    dest%mm_diag = source%mm_diag
+    
+  end subroutine pc_assign
+
+end module diagonal_preconditioner_mod
+

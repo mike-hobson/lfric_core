@@ -10,7 +10,7 @@
 #                default: infrastructure, mesh_tools and gungho
 #   TEST_SUITE_TARGETS - Platforms to target with test suite.
 #
-##############################################################################
+#############################################################################
 
 # Operate only on this list of sub-projects. May be overridden from the
 # terminal.

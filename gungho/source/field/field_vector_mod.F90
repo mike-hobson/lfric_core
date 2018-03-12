@@ -1,8 +1,8 @@
-!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
 ! For further details please refer to the file LICENCE.original which you
 ! should have received as part of this distribution.
-!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 
 !>@brief Abstract vector type for fields to use the new solver API and 
 !! extended vector types for particular solvers.
@@ -12,27 +12,22 @@ module field_vector_mod
   use vector_mod,                    only : abstract_vector_type
   use field_mod,                     only : field_type
   use function_space_collection_mod, only : function_space_collection
+  use fs_continuity_mod
   use finite_element_config_mod,     only : element_order
   use log_mod,                       only : log_event, LOG_LEVEL_ERROR, &
                                             log_scratch_space
-  use psykal_lite_mod,               only : invoke_set_field_scalar, &
-                                            invoke_inc_axpy,         &
-                                            invoke_inc_xpby,         &
-                                            invoke_inner_prod,       &
-                                            invoke_X_innerproduct_X, &
-                                            invoke_scale_field_data
+
+  use psykal_lite_field_vector_mod, only: invoke_0, invoke_1, invoke_2, invoke_3, invoke_4, invoke_5
+
 
   implicit none
   private 
 
   type, public, extends(abstract_vector_type) :: field_vector_type
-     private
      !> The array holding the fields
-     type(field_type), allocatable :: vector(:)
-     !> How many fields
-     integer(kind=i_def)           :: nfields
-     !> Whether a field has been set in this position
-     logical,allocatable           :: field_set(:)     
+     type(field_type), public, allocatable :: vector(:)
+     !> Logical. Has data been set, needed for copy constructor.
+     logical, private :: vector_set = .false.
    contains
 !   public procedures of the type
      !> Import a field into the vector at the given position in the array
@@ -42,7 +37,7 @@ module field_vector_mod
      !> Export a field from the vector at the given position in the array
      !> @param[out] field  field_type, the field to copy to
      !> @param[in] pos  the position in the array
-     procedure          :: export_field
+     procedure, public  :: export_field
 
 !   public procedures of the API overidden in the type
      !> set the vector to a scalar value
@@ -65,24 +60,29 @@ module field_vector_mod
      !> @param[in] alpha  real
      !> @param[inout] x  vector, an array of fields
      procedure, public  :: aypx => aypx_field_vector
+     !> multiply a field vector by a scalar
+     !> @param [in] scalar real     
+     procedure, public  :: duplicate => duplicate_field_vector
+     !> copy a vector of this type
+     !> param[in] source, the vector to be copied
+     ! copies a new field_vector when called on abstract type
+     ! workaround as use of ESMF is causing a memory issue which
+     procedure, public  :: copy => field_vector_type_assign
 
 
 !   private procedure of the type which either implement the vector API
-!   or allow encapsulation not to be broken
      procedure, private :: set_field_vector_scalar
      procedure, private :: axpy_field_vector
-     procedure, private :: axpy_field
      procedure, private :: norm_field_vector
      procedure, private :: dot_field_vector
-     procedure, private :: dot_field
      procedure, private :: aypx_field_vector
-     procedure, private :: aypx_field
      procedure, private :: scale_field_vector
+     procedure, private :: duplicate_field_vector
 !   infractructure procedures 
-     procedure :: field_vector_type_assign
+     procedure, private :: field_vector_type_assign
      generic            :: assignment(=) => field_vector_type_assign
      final              :: field_vector_destroy
-  end type field_vector_type
+  end type field_vector_type 
   
   interface field_vector_type
      module procedure field_vector_constructor
@@ -98,15 +98,11 @@ contains
     real(kind=r_def)    :: field_norm
     normal = 0.0_r_def
         
-    do fctr = 1, self%nfields
-       ! check we have a field set in each position
-       if(.not.self%field_set(fctr)) then 
-          write(log_scratch_space,'(A,I0,A)') & 
-               "field_vector_mod:norm_field_vector: field at position", &
-               fctr," has not been set"
-          call log_event(log_scratch_space,LOG_LEVEL_ERROR)
-       end if
-       call invoke_X_innerproduct_X(field_norm, self%vector(fctr))
+    do fctr = 1, size(self%vector)
+       ! invoke calls commented out. They are correct and Psyclone can generate
+       !  the correct code when pointed at the file. Prefixed with psyclone
+       !psyclone       call invoke(X_innerproduct_X(field_norm, self%vector(fctr)) )
+       call invoke_0(field_norm, self%vector(fctr))
        normal=normal + field_norm
     end do
     normal = sqrt(normal)
@@ -123,15 +119,9 @@ contains
     select type(x)
     type is(field_vector_type)
        dot_prod = 0.0_r_def
-       do fctr = 1, self%nfields
-         ! check we have a field set in each position
-          if(.not.self%field_set(fctr)) then 
-             write(log_scratch_space,'(A,I0,A)') & 
-                  "field_vector_mod:dot_field_vector: field at position", &
-                  fctr," has not been set"
-             call log_event(log_scratch_space,LOG_LEVEL_ERROR)
-          end if
-          inner_prod_field = x%dot_field(self%vector(fctr), fctr)
+       do fctr = 1, size(self%vector)
+          !psyclone          call invoke( X_innerproduct_Y( inner_prod_field, self%vector(fctr), x%vector(fctr) ))
+          call invoke_1(inner_prod_field, self%vector(fctr), x%vector(fctr))          
           dot_prod = dot_prod + inner_prod_field
        end do
     class default
@@ -140,25 +130,6 @@ contains
        call log_event(log_scratch_space,LOG_LEVEL_ERROR)
     end select
   end function dot_field_vector
-
-  ! private function which computes the dot product of a field with a field at position
-  ! pos in a field vector array
-  function dot_field(self, y, pos) result(ip)
-    class(field_vector_type), intent(in) :: self
-    class(field_type),        intent(in) :: y
-    integer(kind=i_def),      intent(in) :: pos
-    real(kind=r_def)                     :: ip
-
-    ! check we have a field set in this position
-    if(.not.self%field_set(pos)) then 
-       write(log_scratch_space,'(A,I0,A)') & 
-            "field_vector_mod:axpy_field: field at position", &
-            pos," has not been set"
-       call log_event(log_scratch_space,LOG_LEVEL_ERROR)
-    end if
-    call invoke_inner_prod(y,self%vector(pos),ip)
-    
-  end function dot_field
 
   ! computes y = alpha * x + y on a field vector
   subroutine axpy_field_vector(self, alpha, x)
@@ -170,16 +141,9 @@ contains
     select type(x)
     type is(field_vector_type)
     
-       do fctr = 1, self%nfields
-          ! check we have a field set in each position
-          if(.not.self%field_set(fctr)) then 
-             write(log_scratch_space,'(A,I0,A)') & 
-                  "field_vector_mod:axpy_field_vector: field at position", &
-                  fctr," has not been set"
-             call log_event(log_scratch_space,LOG_LEVEL_ERROR)
-          end if
-          ! pass the field to
-          call x%axpy_field(alpha, self%vector(fctr), fctr)
+       do fctr = 1, size(self%vector)
+          !psyclone          call invoke(inc_X_plus_bY( self%vector(fctr), alpha, y%vector(fctr) ))
+          call invoke_2(self%vector(fctr), alpha, x%vector(fctr))
        end do
     class default
        write(log_scratch_space,'(A)') &
@@ -187,25 +151,6 @@ contains
        call log_event(log_scratch_space,LOG_LEVEL_ERROR)
     end select
   end subroutine axpy_field_vector
-
-  ! computes y = alpha *x(pos) + y
-  ! where y is a field and x(self) is a field vector
-  subroutine axpy_field(self, alpha, y, pos)
-    class(field_vector_type), intent(inout) :: self
-    real(kind=r_def),         intent(in)    :: alpha
-    class(field_type),        intent(inout) :: y
-    integer(kind=i_def),      intent(in)    :: pos
-
-    ! check we have a field set in this position
-       if(.not.self%field_set(pos)) then 
-          write(log_scratch_space,'(A,I0,A)') & 
-               "field_vector_mod:axpy_field: field at position", &
-               pos," has not been set"
-          call log_event(log_scratch_space,LOG_LEVEL_ERROR)
-       end if
-       call invoke_inc_xpby(y, alpha, self%vector(pos))
-
-  end subroutine axpy_field
 
   ! sets a field to a scalar. If a field has not previously been set in
   ! the vector (array of fields) then there is no function space information
@@ -215,18 +160,10 @@ contains
     real(kind=r_def),         intent(in)    :: scalar
     integer(kind=i_def) :: fctr
 
-    do fctr = 1, self%nfields
+    do fctr = 1, size(self%vector)
        ! check we have a field set in each position
-       if(.not.self%field_set(fctr)) then 
-          write(log_scratch_space,'(A,I0,A)') & 
-               "field_vector_mod:set_field_vector_scalar: field at position", &
-               fctr," has not been set"
-          call log_event(log_scratch_space,LOG_LEVEL_ERROR)
-       end if
-       call invoke_set_field_scalar(scalar, self%vector(fctr))
-! A placeholder for PSyclone built-ins support (to be agreed on implementation)
-!        call invoke( set_field_scalar(scalar, self%vector(fctr)) )
-       self%field_set(fctr) = .true.
+       !psyclone       call invoke( setval_c(self%vector(fctr), scalar) )
+       call invoke_3(self%vector(fctr), scalar)       
     end do
     
   end subroutine set_field_vector_scalar
@@ -242,16 +179,10 @@ contains
     select type(x)
     type is(field_vector_type)
     
-       do fctr = 1, self%nfields
-          ! check we have a field set in each position
-          if(.not.self%field_set(fctr)) then 
-             write(log_scratch_space,'(A,I0,A)') & 
-                  "field_vector_mod:aypx_field_vector: field at position", &
-                  fctr," has not been set"
-             call log_event(log_scratch_space,LOG_LEVEL_ERROR)
-          end if
+       do fctr = 1, size(self%vector)
           ! pass the field to
-          call x%aypx_field(alpha, self%vector(fctr), fctr)
+          !psyclone          call invoke( inc_aX_plus_Y(alpha, self%vector(fctr), x%vector(fctr)) )
+          call invoke_4(alpha, self%vector(fctr), x%vector(fctr))          
        end do
     class default
        write(log_scratch_space,'(A)') &
@@ -260,39 +191,15 @@ contains
     end select
   end subroutine aypx_field_vector
 
-  ! private procedure to compute y = alpha * y + x(pos)
-  ! where y is a field and x is a vector of fields
-  subroutine aypx_field(self, alpha, y, pos)
-    class(field_vector_type), intent(inout) :: self
-    real(kind=r_def),         intent(in)    :: alpha
-    class(field_type),        intent(inout) :: y
-    integer(kind=i_def),      intent(in)    :: pos
-
-    ! check we have a field set in this position
-    if(.not.self%field_set(pos)) then 
-       write(log_scratch_space,'(A,I0,A)') & 
-            "field_vector_mod:aypx_field: field at position", &
-            pos," has not been set"
-       call log_event(log_scratch_space,LOG_LEVEL_ERROR)
-    end if
-    call invoke_inc_axpy(alpha, y, self%vector(pos))
-  end subroutine aypx_field
-
   ! multiply the field vector by a scalar
   subroutine scale_field_vector(self, scalar)
     class(field_vector_type), intent(inout) :: self
     real(kind=r_def),         intent(in)    :: scalar
     integer(kind=i_def) :: fctr
 
-    do fctr = 1, self%nfields
-       ! check we have a field set in each position
-       if(.not.self%field_set(fctr)) then 
-          write(log_scratch_space,'(A,I0,A)') & 
-               "field_vector_mod:set_field_vector_scalar: field at position", &
-               fctr," has not been set"
-          call log_event(log_scratch_space,LOG_LEVEL_ERROR)
-       end if
-       call invoke_scale_field_data(scalar, self%vector(fctr))
+    do fctr = 1, size(self%vector)
+       !psyclone       call invoke( inc_a_times_X(scale, self%vector(fctr) ) )
+       call invoke_5(scalar, self%vector(fctr))       
     end do
     
   end subroutine scale_field_vector
@@ -303,15 +210,15 @@ contains
     type(field_type),             intent(in)    :: field
     integer(kind=i_def),          intent(in)    :: position
 
-    if(position > self%nfields) then 
+    if(position > size(self%vector)) then 
        write(log_scratch_space,'(A,2(":",I2))') & 
             "field_vector_mod:field position bigger than nfields", &
-            self%nfields,position
+            size(self%vector),position
        call log_event(log_scratch_space,LOG_LEVEL_ERROR)
     end if
+    self%vector_set=.true.
     
     self%vector(position) = field
-    self%field_set(position) = .true.
   end subroutine import_field
 
    ! Copies a field from the nominated position. The procedure a field has been
@@ -323,21 +230,13 @@ contains
     class(field_vector_type),  intent(in)    :: self
     type(field_type),             intent(inout) :: field
     integer(kind=i_def),          intent(in)    :: position
-
-    if(position > self%nfields) then 
+    if(position > size(self%vector)) then 
        write(log_scratch_space,'(A,2(":",I2))') & 
             "field_vector_mod:export_field:field position bigger than nfields", &
-            self%nfields,position
+            size(self%vector),position
        call log_event(log_scratch_space,LOG_LEVEL_ERROR)
     end if
 
-    if(.not.self%field_set(position)) then 
-       write(log_scratch_space,'(A,I0,A)') & 
-            "field_vector_mod:export_field:field at position",position, &
-            " has not been set"
-       call log_event(log_scratch_space,LOG_LEVEL_ERROR)
-    end if
-    
     field=self%vector(position)
   end subroutine export_field
 
@@ -345,12 +244,40 @@ contains
   function field_vector_constructor(nfields) result(self)
     integer(kind=i_def), intent(in) :: nfields
     type(field_vector_type) :: self
-
-    self%nfields = nfields
-    allocate(self%vector(self%nfields))
-    allocate(self%field_set(self%nfields))
-    self%field_set = .false.
+    allocate(self%vector(nfields))
   end function field_vector_constructor
+
+  subroutine duplicate_field_vector(self, vec)
+    ! makes a new field_vector when called on abstract type
+    ! workaround as use of ESMF is causing a memory issue which
+    ! stops fortran allocate(this, source=that) from working
+    class(field_vector_type),                 intent(in)    :: self
+    class(abstract_vector_type), allocatable, intent(inout) :: vec
+    integer :: pos, mesh_id, elem, fs_label, astat
+
+    allocate(field_vector_type::vec,stat=astat )
+    select type (vec)
+       type is (field_vector_type)
+          ! for each field in the duplicate vector needs its constructor called
+          if(.not.allocated(vec%vector)) then
+             allocate(vec%vector(size(self%vector)))
+          end if
+
+          ! get the mesh id
+          mesh_id = self%vector(1)%get_mesh_id()
+          do pos = 1, size(vec%vector)
+             elem = self%vector(pos)%get_element_order()
+             fs_label = self%vector(pos)%which_function_space()
+             vec%vector(pos) = field_type(vector_space = &
+                   function_space_collection%get_fs(mesh_id, elem, fs_label) )
+          end do
+       class default
+          write(log_scratch_space,'(A)') & 
+            "field_vector_mod:duplicate: type mismatch"
+       call log_event(log_scratch_space,LOG_LEVEL_ERROR)
+    end select
+    
+  end subroutine duplicate_field_vector
 
   ! The destructor/finalizer
   subroutine field_vector_destroy(self)
@@ -358,31 +285,33 @@ contains
     if(allocated(self%vector)) then
        deallocate(self%vector)
     end if
-    if(allocated(self%field_set)) then
-       deallocate(self%field_set)
-    end if
   end subroutine field_vector_destroy
 
-  subroutine field_vector_type_assign(dest, source)
-    class(field_vector_type), intent(out) :: dest
-    class(field_vector_type), intent(in)  :: source
+  subroutine field_vector_type_assign(self, source)
+    class(field_vector_type), intent(inout) :: self
+    class(abstract_vector_type), intent(in) :: source
+    integer :: stat1
     integer :: pos
     
     ! make field_vector
-    
-    dest%nfields = source%nfields
-    allocate(dest%vector(dest%nfields))
-    allocate(dest%field_set(dest%nfields))
-    ! if fields don't exist set false, otherwise copy and set true
-    do pos = 1, source%nfields
-       if(.not.source%field_set(pos)) then 
-          dest%field_set(pos) = .false.
-       else
-          dest%vector(pos) = source%vector(pos)
-          dest%field_set(pos) = .true.
-       end if
-    end do
-    
-  end subroutine field_vector_type_assign
+    select type (source) 
+       type is (field_vector_type)
+          if(.not.allocated(self%vector)) then
+             allocate(self%vector(size(source%vector)),stat=stat1)
+          end if
+          
+          ! if fields don't exist set false, otherwise copy and set true
+          if(source%vector_set) then
+             do pos = 1, size(source%vector)
+                self%vector(pos) = source%vector(pos)
+             end do
+             self%vector_set=.true.
+          end if
+       class default
+          write(log_scratch_space,'(A)') & 
+               "field_vector_mod:copy: type mismatch"
+          call log_event(log_scratch_space,LOG_LEVEL_ERROR)
+       end select
+     end subroutine field_vector_type_assign
 
 end module field_vector_mod

@@ -38,7 +38,7 @@ module restart_control_mod
      !> Whether to write a checkpoint
      logical :: checkpoint_write
      !> Whether to use XIOS as checkpoint
-     logical :: xios_checkpoint
+     logical :: xios_checkpoint 
      !> A string of characters that will form the beginning of all
      !! checkpoint/restart files
      character(len=str_max_filename) :: restart_stem_name 

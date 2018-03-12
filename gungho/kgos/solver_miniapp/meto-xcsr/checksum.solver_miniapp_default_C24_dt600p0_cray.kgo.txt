@@ -1,0 +1,3 @@
+Inner product checksum solver_field_1 = 40C292C000000000
+Inner product checksum solver_field_2 = 40E0E00000000000
+

@@ -2,7 +2,7 @@
 ! Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
 ! For further details please refer to the file LICENCE.original which you
 ! should have received as part of this distribution.
-!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 !
 !> @brief A module providing field related classes.
 !>
@@ -106,6 +106,8 @@ module field_mod
     !> Routine to return the mesh used by this field
     procedure         :: get_mesh
     procedure         :: get_mesh_id
+    !> Routine to return the order of the FEM elements
+    procedure         :: get_element_order
 
     !> Overloaded assigment operator
     procedure         :: field_type_assign
@@ -316,19 +318,19 @@ contains
     integer(i_def) :: rc
 
     do i=lbound(self,1), ubound(self,1)
-      nullify(self(i)%vspace)
-      if(allocated(self(i)%data)) then
-        call ESMF_ArrayDestroy(self(i)%esmf_array, noGarbage=.TRUE., rc=rc)
-        if (rc /= ESMF_SUCCESS ) &
-          call log_event( "ESMF failed to destroy a 1d array of fields.", &
-                          LOG_LEVEL_ERROR )
-        deallocate(self(i)%data)
-      end if
-      if(allocated(self(i)%halo_dirty)) then
-        deallocate(self(i)%halo_dirty)
-      end if
+       nullify(self(i)%vspace)
+       if(allocated(self(i)%data)) then
+          call ESMF_ArrayDestroy(self(i)%esmf_array, noGarbage=.true., rc=rc)
+          if (rc /= ESMF_SUCCESS ) &
+               call log_event( "ESMF failed to destroy a 1d array of fields.", &
+               LOG_LEVEL_ERROR )
+          deallocate(self(i)%data)
+       end if
+       if(allocated(self(i)%halo_dirty)) then
+          deallocate(self(i)%halo_dirty)
+       end if
     end do
-
+    
   end subroutine field_destructor_array1d
 
   !> Destroy a 2d array of <code>field_type</code> instances.
@@ -522,6 +524,19 @@ contains
     return
   end function get_mesh_id
 
+  !> Function to get element order from the field.
+  !>
+  !> @return Element order of this field
+  function get_element_order(self) result(elem)
+    implicit none
+    
+    class (field_type) :: self
+    integer(i_def) :: elem
+    
+    elem = self%vspace%get_element_order()
+    
+    return
+  end function get_element_order
   !> Sends field contents to the log.
   !!
   !! @param[in] dump_level The level to use when sending the dump to the log.

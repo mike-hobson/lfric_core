@@ -72,6 +72,7 @@ document-uml: WORKING_DIR  := $(WORKING_DIR)/uml
 document-uml: uml-documentation
 	$(Q)echo > /dev/null
 
+
 .PHONY: document-api
 document-api: PROJECT       = infrastructure
 document-api: DOCUMENT_DIR ?= $(PROJECT_DIR)/documents/api

@@ -383,7 +383,7 @@
                      """
         script = make -C $SOURCE_DIRECTORY document-latex {{verboseMake()}}
         [[[job]]]
-            execution retry delays = 5*PT30S
+            execution retry delays = 2*PT5S, 5*PT10S, 9*PT1M, 5*PT10M, 3*PT1H
 {%- endif %}
 
 {%- if 'publish_design_documentation' in scheduledTasks %}
@@ -464,7 +464,7 @@
             CONTEXT  = {{build}}
             DIR_FILE = compile.log.path
         [[[job]]]
-            execution retry delays = PT5S, 10*PT1M
+            execution retry delays = 2*PT5S, 5*PT10S, 9*PT1M, 5*PT10M, 3*PT1H
 {%-     endif %}
 
 {%-     if 'compile_mesh_tools_with_' + label in scheduledTasks %}
@@ -555,7 +555,7 @@
             {{DIRECTIVE}}
 {%-       endfor %}
         [[[job]]]
-            execution retry delays = PT5S, 10*PT30S
+            execution retry delays = 2*PT5S, 5*PT10S, 9*PT1M, 5*PT10M, 3*PT1H
 {%-     endif %}
 
 
@@ -859,7 +859,7 @@
             CONFIGURATION = {{configuration}}
             COMPILER      = {{compiler}}
         [[[job]]]
-            execution retry delays = PT5S, 10*PT1M
+            execution retry delays = 2*PT5S, 5*PT10S, 9*PT1M, 5*PT10M, 3*PT1H
 {%-               endif %}
 
 

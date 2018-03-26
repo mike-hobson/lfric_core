@@ -503,7 +503,7 @@
             DIR_FILE = compile.log.path
             CONTEXT  = {{build}}
         [[[job]]]
-            execution retry delays = PT5S, 10*PT1M
+            execution retry delays = 2*PT5S, 5*PT10S, 9*PT1M, 5*PT10M, 3*PT1H
 {%-     endif %}
 
 
@@ -559,7 +559,7 @@
             {{DIRECTIVE}}
 {%-       endfor %}
         [[[job]]]
-            execution retry delays = PT5S, 10*PT1M
+            execution retry delays = 2*PT5S, 5*PT10S, 9*PT1M, 5*PT10M, 3*PT1H
 {%-     endif %}
 
 {# CANNED CONFIGURATIONS #}
@@ -794,18 +794,6 @@
 
 {%-               endif %} {# 'run_' + configuration_label_res #}
 
-{%-               if 'wait_for_' + configuration_label_res + '_logs' in scheduledTasks%}
-    [[wait_for_{{configuration_label_res}}_logs]]
-        inherit = PUBLISH, {{appLabel|upper}}_{{label|upper}}, TARGET
-        script = rose task-run --app-key=wait_for_target_logs
-        [[[environment]]]
-            LOG_DIR = $(dirname $CYLC_TASK_LOG_ROOT)/../../run_{{configuration_label_res}}/01
-        [[[directives]]]
-{%-       for DIRECTIVE in TARGET_BUILD_BATCHER_DIRECTIVES %}
-            {{DIRECTIVE}}
-{%-       endfor %}
-{%-               endif %}
-
 {# CHECK THE APP OUTPUT #}
 {%-               if 'check_' + configuration_label_res in scheduledTasks %}
     [[check_{{configuration_label_res}}]]
@@ -875,7 +863,7 @@
             LOG_STATUS    = $DESTINATION_DIRECTORY/{{pathFragment}}/job.status
             LOG_ERR       = $DESTINATION_DIRECTORY/{{pathFragment}}/job.err
         [[[job]]]
-            execution retry delays = PT5S, 10*PT1M
+            execution retry delays = 2*PT5S, 5*PT10S, 9*PT1M, 5*PT10M, 3*PT1H
 {%-               endif %}
 
 
@@ -896,7 +884,7 @@
                             $DESTINATION/{{compiler}}/{{build}}/{{pathFragment}}/
                  """
         [[[job]]]
-            execution retry delays = PT5S, 10*PT1M
+            execution retry delays = 2*PT5S, 5*PT10S, 9*PT1M, 5*PT10M, 3*PT1H
 {%-               endif %}
 
 

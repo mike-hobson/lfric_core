@@ -1,7 +1,7 @@
 #!jinja2
 {%- set projectName = 'skeleton' %}
-{%- set projectDir  = 'skeleton_project' %}
-{%- set miniappFlag = False %}
+{%- set projectDir  = 'skeleton' %}
+{%- set miniappFlag = True %}
 
 {%- set application_configurations = { 'skeleton' : ['default'] } %}
 
@@ -18,3 +18,6 @@
     'cleanliness'] } %}
 
 #########################################################################################
+
+{# Include any local miniapp include files here #}
+%include inc/MyMiniappIncludeFile.rc

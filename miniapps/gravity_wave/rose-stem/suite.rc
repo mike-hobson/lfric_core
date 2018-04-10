@@ -375,7 +375,6 @@
 {%- endif %}
 
     # Run locally as they need workstation tools like Inkscape.
-    #
 {%- if 'design_documentation' in scheduledTasks %}
     [[design_documentation]]
         inherit = DOCUMENTATION, LOCAL, TECHNICAL
@@ -446,12 +445,12 @@
             PROFILE               = {{build}}
             LFRIC_TARGET_PLATFORM = {{TARGET_OPT}}
             MAKE_THREADS          = 4
+
         [[[directives]]]
 {%-       for DIRECTIVE in TARGET_BUILD_BATCHER_DIRECTIVES %}
             {{DIRECTIVE}}
 {%-       endfor %}
 {%-     endif %}
-
 
 {%-     if 'compile_mesh_tools_with_' + label in scheduledTasks %}
     [[compile_mesh_tools_with_{{label}}]]
@@ -580,8 +579,8 @@
                                     TARGET_RUN_SETUP,
                                     TARGET_REVEAL_SETUP )}}
                      """
-
         script = rose task-run --app-key=canned_test --command-key={{TARGET_RUN_METHOD}}
+
         [[[environment]]]
             APP_NAME         = {{appName}}
             BIN_DIR          = $DESTINATION_DIRECTORY/bin

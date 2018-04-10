@@ -5,7 +5,7 @@
 ##############################################################################
 
 export PROJECT_NAME = skeleton
-export PROJECT_DIR_NAME = skeleton_project
+export PROJECT_DIR_NAME = skeleton
 
 PROFILE ?= fast-debug
 
@@ -17,7 +17,7 @@ LFRIC_TARGET_PLATFORM ?= generic-x86
 export OPTIMISATION_PATH ?= $(wildcard optimisation/$(LFRIC_TARGET_PLATFORM))
 
 export PROJECT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
-ROOT_DIR ?= ..
+ROOT_DIR ?= ../..
 
 .PHONY: default
 default: build unit-tests integration-tests
@@ -147,8 +147,7 @@ build: PROJECT      = $(PROJECT_NAME)
 build: SOURCE_DIR   = source
 build: WORKING_DIR := $(WORKING_DIR)
 build: BIN_DIR     ?= $(PROJECT_DIR)/bin
-#build: PROGRAMS    := $(basename $(notdir $(shell find $(SOURCE_DIR) -maxdepth 1 -name '*.[Ff]90' -print)))
-build: PROGRAMS    := skeleton
+build: PROGRAMS    := $(basename $(notdir $(shell find $(SOURCE_DIR) -maxdepth 1 -name '*.[Ff]90' -print)))
 build: extract
 	$(Q)$(MAKE) --quiet generate-configuration PROJECT=$(PROJECT_NAME) \
                  SOURCE_DIR=$(WORKING_DIR) \

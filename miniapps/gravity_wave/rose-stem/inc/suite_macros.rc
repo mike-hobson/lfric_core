@@ -279,7 +279,7 @@ test -w "{{directory}}" -o ! -e "{{directory}}" && rm -rf {{directory}} || ( ech
             export_source => compile_{{projectName}}_with_{{label}}
             export_source => compile_mesh_tools_with_{{label}}
 {%-     if compiler in TARGET_PERFORM_UNIT_TESTS %}
-            compile_{{projectName}}_with_{{label}} => unit_test_with_{{label}}
+            export_source => unit_test_with_{{label}}
 {%-     endif %}
 {%-     if publish == True %}
             compile_{{projectName}}_with_{{label}}:finish => publish_{{label}}_compile

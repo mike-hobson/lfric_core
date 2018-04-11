@@ -33,6 +33,8 @@ module analytic_buoyancy_profiles_mod_test
   real(r_def), parameter :: scaling = 1.0_r_def
 
   real(r_def), parameter :: bvf_square = 0.0001_r_def
+  real(r_def), parameter :: theta_surf = 300.0_r_def
+
 contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -53,7 +55,7 @@ contains
 
     class(analytic_buoyancy_profiles_test_type), intent(inout) :: this
 
-    call feign_initial_temperature_config( bvf_square )
+    call feign_initial_temperature_config( bvf_square, theta_surf )
     call feign_idealised_config( idealised_test_gravity_wave )
     call feign_planet_config( gravity=gravity, radius=radius, omega=omega, &
                               rd=rd, cp=cp, p_zero=p_zero,                 &

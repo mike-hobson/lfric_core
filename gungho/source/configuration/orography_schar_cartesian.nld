@@ -6,6 +6,6 @@ namelist orography_schar_cartesian
   wavelength      : real   ! Wavelength of Cos part of mountain function [m]
   x_centre        : real   ! x coordinate of mountain centre [m]
   y_centre        : real   ! y coordinate of mountain centre [m]
-  direction       : enumeration[x, y] ! Direction of mountain (x or y)
+  direction       : enumeration[x, y, xy] ! Direction of mountain (x, y, or xy)
 
 end namelist orography_schar_cartesian

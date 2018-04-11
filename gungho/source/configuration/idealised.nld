@@ -2,6 +2,8 @@ namelist idealised
   test : enumeration[none,
                      gravity_wave,        ! Gravity wave test (planar or spherical)
                      isot_atm,            ! Isothermal atmosphere  
+                     isot_mild_atm,       ! Isothermal atmosphere, mild ground temperature 
+                     isot_cold_atm,       ! Isothermal atmosphere, cold ground temperature   
                      cold_bubble_x,       ! Straka density cold current test in x direction (planar domain only)
                      cold_bubble_y,       ! Straka density cold current test in y direction (planar domain only)
                      const_lapse_rate,    ! Stratified atmosphere, constant lapse rate  

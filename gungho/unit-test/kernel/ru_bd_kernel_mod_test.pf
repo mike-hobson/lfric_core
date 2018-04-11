@@ -68,6 +68,7 @@ module ru_bd_kernel_mod_test
   real(r_def), parameter :: scaling = 1.0_r_def
 
   real(r_def), parameter :: bvf_square = 0.0001_r_def
+  real(r_def), parameter :: theta_surf = 300.0_r_def
 
 contains
 
@@ -112,7 +113,7 @@ contains
                                  partitioner=base_mesh_partitioner_planar,    &
                                  fplane=.false., f_lat_deg=0.0_r_def )
 
-    call feign_initial_temperature_config( bvf_square )
+    call feign_initial_temperature_config( bvf_square, theta_surf )
 
     call feign_planet_config( gravity=gravity, radius=radius, omega=omega, &
                               rd=rd, cp=cp, p_zero=p_zero,                 &

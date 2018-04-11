@@ -28,7 +28,8 @@ module schar_orography_cartesian_mod
   use analytic_orography_mod, only : analytic_orography_type
   use orography_schar_cartesian_config_mod, only :                     &
                                 orography_schar_cartesian_direction_x, &
-                                orography_schar_cartesian_direction_y
+                                orography_schar_cartesian_direction_y, &
+                                orography_schar_cartesian_direction_xy
   use log_mod,                only : log_event,         &
                                      log_scratch_space, &
                                      LOG_LEVEL_ERROR
@@ -173,6 +174,8 @@ contains
                          int(orography_schar_cartesian_direction_x, i_def)
     integer(kind=i_def), parameter :: direction_y = &
                          int(orography_schar_cartesian_direction_y, i_def)
+    integer(kind=i_def), parameter :: direction_xy = &
+                         int(orography_schar_cartesian_direction_xy, i_def)
 
     ! Initialise transformed/scaled function arguments
     chisurf_arg = 0.0_r_def
@@ -199,6 +202,11 @@ contains
         chisurf_arg(1) = chi_2_per/self%half_width_y
         ! Cosine function argument    
         chisurf_arg(2) = PI*chi_2_per/self%wavelength
+      case (direction_xy)
+        ! Exponential function argument
+        chisurf_arg(1) = sqrt((chi_1_per/self%half_width_x)**2 + (chi_2_per/self%half_width_y)**2)
+        ! Cosine function argument
+        chisurf_arg(2) = PI*sqrt((chi_1_per**2+chi_2_per**2))/self%wavelength
       case default
         write(log_scratch_space,'(A)') "schar_coordinate_cartesian: "// &
               "No valid orography directions (x or y) selected. "

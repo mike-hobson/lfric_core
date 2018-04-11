@@ -17,12 +17,13 @@ use idealised_config_mod,           only : idealised_test_gravity_wave,     &
                                            idealised_test_cold_bubble_x,    &
                                            idealised_test_cold_bubble_y,    &
                                            idealised_test_isot_atm,         &
+                                           idealised_test_isot_cold_atm,    &
                                            idealised_test_const_lapse_rate, &
                                            idealised_test_warm_bubble,      &
                                            idealised_test_warm_bubble_3d,   &
                                            idealised_test_held_suarez,      &
                                            idealised_test_isentropic
-use initial_temperature_config_mod, only : bvf_square
+use initial_temperature_config_mod, only : bvf_square, theta_surf
 use planet_config_mod,              only : scaled_radius, gravity, Cp, Rd, &
                                            kappa, p_zero
 use log_mod,                        only : log_event,         &
@@ -48,8 +49,6 @@ real(kind=r_def),    intent(in)           :: x(3)
 integer(kind=i_def), intent(in)           :: itest_option
 real(kind=r_def),    intent(out)          :: exner_s, rho_s, theta_s
 
-real(kind=r_def), parameter :: theta_surf     = 300.0_r_def
-real(kind=r_def), parameter :: theta_surf_hot = 303.05_r_def
 real(kind=r_def), parameter :: exner_surf     = 1.0_r_def
 real(kind=r_def), parameter :: lapse_rate     = 0.0065_r_def
 real(kind=r_def)            :: nsq_over_g, z, u_s(3), lat, lon, r, lon_surf, lat_surf, r_surf
@@ -67,13 +66,18 @@ else                     ! BIPERIODIC PLANE DOMAIN
 
   ! Calculate theta and exner for each biperiodic test
   select case( itest_option )
-    case( idealised_test_gravity_wave,idealised_test_held_suarez,idealised_test_isot_atm )
+    case( idealised_test_gravity_wave, idealised_test_held_suarez, &
+          idealised_test_isot_atm )
       nsq_over_g = bvf_square/gravity
       theta_s = theta_surf * exp ( nsq_over_g * z )
       exner_s = exner_surf - gravity**2/(Cp*theta_surf*bvf_square)   &
                    * (1.0_r_def - exp ( - nsq_over_g * z ))
-    case( idealised_test_cold_bubble_x, &
-          idealised_test_cold_bubble_y, &   ! Density current test
+    case( idealised_test_isot_cold_atm)
+      theta_s = theta_surf * exp ( gravity / (theta_surf * cp) * z )
+      exner_s = exner_surf * exp ( - gravity / (theta_surf * cp) * z )
+    case( idealised_test_warm_bubble,    &
+          idealised_test_cold_bubble_x,  &
+          idealised_test_cold_bubble_y,  &   ! Density current test
           idealised_test_warm_bubble_3d, &
           idealised_test_isentropic )
       theta_s = theta_surf
@@ -83,9 +87,6 @@ else                     ! BIPERIODIC PLANE DOMAIN
                   **(1.0_r_def-gravity/(Cp*lapse_rate)))
       exner_s = exner_surf * ((1.0_r_def - lapse_rate/theta_surf * z) &
                   **(gravity/(Cp*lapse_rate)))
-    case( idealised_test_warm_bubble )   ! Warm bubble test
-      theta_s = theta_surf_hot
-      exner_s = exner_surf - gravity/(Cp*theta_surf_hot)*z
   end select
   ! Calculate rho for all biperiodic tests
   rho_s   = p_zero/(Rd*theta_s) * exner_s ** ((1.0_r_def - kappa)/kappa)

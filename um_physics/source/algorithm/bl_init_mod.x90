@@ -9,7 +9,7 @@
 
 module bl_init_mod
 
-  use constants_mod,         only : r_double, r_def
+  use constants_mod,         only : i_um, r_def
   implicit none
 
 contains
@@ -112,8 +112,9 @@ contains
 
     ! set up array sizes for a single column model
     model_type=5
-    call atm_fields_bounds_init(0,0,0,0,row_length,rows,rows,model_levels,  &
-         bl_levels,model_levels)
+    call atm_fields_bounds_init( 0_i_um, 0_i_um, 0_i_um, &
+                                 0_i_um, row_length, rows,rows,  &
+                                 model_levels, bl_levels, model_levels )
 
     ! allocate jules stuff
     nnpft=5

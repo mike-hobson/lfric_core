@@ -31,6 +31,8 @@ module constants_mod
   ! Define kinds specifically for IO
   integer, parameter :: dp_xios = kind(dp_val) !< XIOS kind for double precision fields
 
+  integer, parameter :: r_um = real64 !< Default real kind used by the UM.
+
   !> @}
 
   !> @name Complex
@@ -43,7 +45,9 @@ module constants_mod
 
   integer, parameter :: i_def        = int32       !< Default integer kind for application.
   integer, parameter :: i_native     = kind(i_val) !< Native kind for integer.
+  integer, parameter :: i_long       = int64       !< Explicit long integer.
   integer, parameter :: i_halo_index = int64       !< Integer kind for the index used in halo swapping
+  integer, parameter :: i_um         = int32       !< Default integer kind used by the UM.
   !> @}
 
   !> @name Set up default kinds for logicals.

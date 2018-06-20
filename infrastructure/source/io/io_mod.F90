@@ -262,12 +262,12 @@ subroutine xios_domain_init(xios_ctx, mpi_comm, dtime, restart, mesh_id, chi)
   implicit none
 
   ! Arguments
-  character(len=*),    intent(in)      :: xios_ctx
-  integer(i_def),      intent(in)      :: mpi_comm
-  integer(i_def),      intent(in)      :: dtime
+  character(len=*),   intent(in)       :: xios_ctx
+  integer(i_def),     intent(in)       :: mpi_comm
+  integer(i_def),     intent(in)       :: dtime
   type(restart_type), intent(in)       :: restart
-  integer(i_def),      intent(in)      :: mesh_id
-  type(field_type),    intent(in)      :: chi(:)
+  integer(i_def),     intent(in)       :: mesh_id
+  type(field_type),   intent(in)       :: chi(:)
 
 
   ! Local variables 
@@ -391,12 +391,12 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi)
 
   ! Arguments
 
-  integer(i_def),            intent(in)      :: mesh_id
-  type(field_type), intent(in)               :: chi(:)
+  integer(i_def),   intent(in) :: mesh_id
+  type(field_type), intent(in) :: chi(:)
 
   ! Local variables 
 
-  integer(i_def)                       :: i
+  integer(i_def) :: i
 
 
   ! Node domain (W0)

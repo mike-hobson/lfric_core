@@ -16,6 +16,7 @@ use log_mod,                    only : log_event,                &
 use coord_transform_mod,        only : xyz2llr, central_angle
 use idealised_config_mod,       only : idealised_test_cold_bubble_x,           &
                                        idealised_test_cold_bubble_y,           &
+                                       idealised_test_dry_cbl,                 &
                                        idealised_test_warm_bubble,             &
                                        idealised_test_warm_bubble_3d,          &
                                        idealised_test_gaussian_hill,           &
@@ -180,13 +181,13 @@ function analytic_density(chi, choice, time) result(density)
     l2 = sqrt((long-x2)**2 + (lat-y2)**2)
   end if 
 
-  select case( choice ) 
-  
-  case ( idealised_test_gravity_wave, idealised_test_isentropic, &
-         idealised_test_isot_atm, idealised_test_isot_cold_atm,  &
-         idealised_test_const_lapse_rate )
+  select case( choice )
+
+  case ( idealised_test_dry_cbl, idealised_test_gravity_wave, &
+         idealised_test_isentropic, idealised_test_isot_atm,  &
+         idealised_test_isot_cold_atm, idealised_test_const_lapse_rate )
     call reference_profile(pressure, density, temperature, chi, choice)
- 
+
   case ( idealised_test_cold_bubble_x, idealised_test_cold_bubble_y ) 
     if ( choice == idealised_test_cold_bubble_x ) then
       id = 1

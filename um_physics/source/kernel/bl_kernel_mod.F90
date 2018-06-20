@@ -7,20 +7,20 @@
 !>
 module bl_kernel_mod
 
-  use argument_mod,       only : arg_type,                    &
-                                 GH_FIELD, GH_READ, GH_WRITE, &
-                                 CELLS
-  use constants_mod,      only : r_def, i_def, r_double
-  use formulation_config_mod, only: use_moisture
-  use fs_continuity_mod,  only : W3, Wtheta
-  use kernel_mod,         only : kernel_type
-  use physics_config_mod, only: l_flux_bc, fixed_flux_e, fixed_flux_h
+  use argument_mod,           only : arg_type,                     &
+                                     GH_FIELD, GH_READ, GH_WRITE,  &
+                                     CELLS
+  use constants_mod,          only : i_def, i_um, r_def, r_double, r_um
+  use formulation_config_mod, only : use_moisture
+  use fs_continuity_mod,      only : W3, Wtheta
+  use kernel_mod,             only : kernel_type
+  use physics_config_mod,     only : l_flux_bc, fixed_flux_e, fixed_flux_h
 
   implicit none
 
-  !---------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   ! Public types
-  !---------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   !> Kernel metadata type.
   !>
   type, public, extends(kernel_type) :: bl_kernel_type
@@ -47,9 +47,9 @@ module bl_kernel_mod
     procedure, nopass ::bl_code
   end type
 
-  !---------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   ! Constructors
-  !---------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
 
   ! overload the default structure constructor for function space
   interface bl_kernel_type
@@ -60,63 +60,63 @@ module bl_kernel_mod
 
 contains
 
-type(bl_kernel_type) function bl_kernel_constructor() result(self)
-  return
-end function bl_kernel_constructor
+  type(bl_kernel_type) function bl_kernel_constructor() result(self)
+    return
+  end function bl_kernel_constructor
 
-!> @brief Interface to the BL scheme
-!! @param[in] nlayers Number of layers
-!! @param[in] nlayers_2d Number of layers for 2d field (i.e. 1)
-!! @param[in] theta_in_wth Potential temperature field
-!! @param[in] rho_in_w3 density field in potential density space
-!! @param[in] rho_in_wth density field in potential temperature space
-!! @param[in] exner_in_w3 Exner pressure field in density space
-!! @param[in] exner_in_wth Exner pressure field in potential temperature space
-!! @param[in] u1_in_w3 'zonal' wind in density space
-!! @param[in] u2_in_w3 'meridional' wind in density space
-!! @param[in] heigh_w3 Height of density space levels above surface
-!! @param[in] heigh_wth Height of temperature space levels above surface
-!! @param[inout] tstar_2d   Surface tempature
-!! @param[inout] zh_2d      Boundary layer depth
-!! @param[inout] z0msea_2d  Roughness length
-!! @param[inout] theta_inc  BL theta increment
-!! @param[inout] m_v        Vapour mixing ratio
-!! @param[inout] m_cl       Cloud liquid mixing ratio
-!! @param[in] ndf_wth Number of degrees of freedom per cell for potential temperature space
-!! @param[in] undf_wth Number unique of degrees of freedom  for potential temperature space
-!! @param[in] map_wth Dofmap for the cell at the base of the column for potential temperature space
-!! @param[in] ndf_w3 Number of degrees of freedom per cell for density space
-!! @param[in] undf_w3 Number unique of degrees of freedom  for density space
-!! @param[in] map_w3 Dofmap for the cell at the base of the column for density space
-!! @param[in] ndf_2d Number of degrees of freedom per cell for 2D fields
-!! @param[in] undf_2d Number unique of degrees of freedom  for 2D fields
-!! @param[in] map_2d Dofmap for the cell at the base of the column for 2D fields
-subroutine bl_code(nlayers, & 
-                   nlayers_2d, & 
-                   theta_in_wth, &
-                   rho_in_w3, &
-                   rho_in_wth, &
-                   exner_in_w3, &
-                   exner_in_wth, &
-                   u1_in_w3, &
-                   u2_in_w3, &
-                   height_w3, &
-                   height_wth, &
-                   tstar_2d, &
-                   zh_2d, &
-                   z0msea_2d, &
-                   theta_inc, &
-                   m_v, &
-                   m_cl, &
-                   ndf_wth, &
-                   undf_wth, &
-                   map_wth, &
-                   ndf_w3, &
-                   undf_w3, &
-                   map_w3, &
-                   ndf_2d, &
-                   undf_2d, &
-                   map_2d)
+  !> @brief Interface to the BL scheme
+  !! @param[in] nlayers Number of layers
+  !! @param[in] nlayers_2d Number of layers for 2d field (i.e. 1)
+  !! @param[in] theta_in_wth Potential temperature field
+  !! @param[in] rho_in_w3 density field in potential density space
+  !! @param[in] rho_in_wth density field in potential temperature space
+  !! @param[in] exner_in_w3 Exner pressure field in density space
+  !! @param[in] exner_in_wth Exner pressure field in potential temperature space
+  !! @param[in] u1_in_w3 'zonal' wind in density space
+  !! @param[in] u2_in_w3 'meridional' wind in density space
+  !! @param[in] heigh_w3 Height of density space levels above surface
+  !! @param[in] heigh_wth Height of temperature space levels above surface
+  !! @param[inout] tstar_2d   Surface tempature
+  !! @param[inout] zh_2d      Boundary layer depth
+  !! @param[inout] z0msea_2d  Roughness length
+  !! @param[inout] theta_inc  BL theta increment
+  !! @param[inout] m_v        Vapour mixing ration
+  !! @param[inout] m_cl       Cloud liquid mixing ratio
+  !! @param[in] ndf_wth Number of degrees of freedom per cell for potential temperature space
+  !! @param[in] undf_wth Number unique of degrees of freedom  for potential temperature space
+  !! @param[in] map_wth Dofmap for the cell at the base of the column for potential temperature space
+  !! @param[in] ndf_w3 Number of degrees of freedom per cell for density space
+  !! @param[in] undf_w3 Number unique of degrees of freedom  for density space
+  !! @param[in] map_w3 Dofmap for the cell at the base of the column for density space
+  !! @param[in] ndf_2d Number of degrees of freedom per cell for 2D fields
+  !! @param[in] undf_2d Number unique of degrees of freedom  for 2D fields
+  !! @param[in] map_2d Dofmap for the cell at the base of the column for 2D fields
+  subroutine bl_code(nlayers,      &
+                     nlayers_2d,   &
+                     theta_in_wth, &
+                     rho_in_w3,    &
+                     rho_in_wth,   &
+                     exner_in_w3,  &
+                     exner_in_wth, &
+                     u1_in_w3,     &
+                     u2_in_w3,     &
+                     height_w3,    &
+                     height_wth,   &
+                     tstar_2d,     &
+                     zh_2d,        &
+                     z0msea_2d,    &
+                     theta_inc,    &
+                     m_v,          &
+                     m_cl,         &
+                     ndf_wth,      &
+                     undf_wth,     &
+                     map_wth,      &
+                     ndf_w3,       &
+                     undf_w3,      &
+                     map_w3,       &
+                     ndf_2d,       &
+                     undf_2d,      &
+                     map_2d)
 
     !---------------------------------------
     ! UM modules
@@ -142,122 +142,135 @@ subroutine bl_code(nlayers, &
 
     implicit none
 
-  ! Arguments
-  integer(kind=i_def), intent(in) :: nlayers, nlayers_2d
-  integer(kind=i_def), intent(in) :: ndf_wth, ndf_w3
-  integer(kind=i_def), intent(in) :: ndf_2d, undf_2d
-  integer(kind=i_def), intent(in) :: undf_wth, undf_w3
+    ! Arguments
+    integer(kind=i_def), intent(in) :: nlayers, nlayers_2d
+    integer(kind=i_def), intent(in) :: ndf_wth, ndf_w3
+    integer(kind=i_def), intent(in) :: ndf_2d, undf_2d
+    integer(kind=i_def), intent(in) :: undf_wth, undf_w3
 
-  integer(kind=i_def), dimension(ndf_wth), intent(in) :: map_wth
-  integer(kind=i_def), dimension(ndf_w3),  intent(in) :: map_w3
-  integer(kind=i_def), dimension(ndf_2d),  intent(in) :: map_2d
+    integer(kind=i_def), dimension(ndf_wth), intent(in) :: map_wth
+    integer(kind=i_def), dimension(ndf_w3),  intent(in) :: map_w3
+    integer(kind=i_def), dimension(ndf_2d),  intent(in) :: map_2d
 
-  real(kind=r_def), dimension(undf_wth), intent(inout):: theta_inc, m_v, m_cl
-  real(kind=r_def), dimension(undf_w3),  intent(in)   :: rho_in_w3,          &
-                                                         exner_in_w3,        &
-                                                         u1_in_w3, u2_in_w3, &
-                                                         height_w3
-  real(kind=r_def), dimension(undf_wth), intent(in)   :: rho_in_wth,         &
-                                                         exner_in_wth,       &
-                                                         height_wth,         &
-                                                         theta_in_wth
-  real(kind=r_def), dimension(undf_2d), intent(inout) :: tstar_2d, zh_2d,    &
-                                                         z0msea_2d
+    real(kind=r_def), dimension(undf_wth), intent(inout):: theta_inc, m_v, m_cl
+    real(kind=r_def), dimension(undf_w3),  intent(in)   :: rho_in_w3,          &
+                                                           exner_in_w3,        &
+                                                           u1_in_w3, u2_in_w3, &
+                                                           height_w3
+    real(kind=r_def), dimension(undf_wth), intent(in)   :: rho_in_wth,         &
+                                                           exner_in_wth,       &
+                                                           height_wth,         &
+                                                           theta_in_wth
+    real(kind=r_def), dimension(undf_2d), intent(inout) :: tstar_2d, zh_2d,    &
+                                                           z0msea_2d
 
-  ! Local variables for the kernel
+    ! Local variables for the kernel
     integer :: k
 
     ! switches and model parameters/dimensions/time etc
-    integer :: cycleno, error_code
-    integer :: val_year, val_day_number, val_hour, val_minute, val_second
-    integer :: co2_dim_len, co2_dim_row, rhc_row_length, rhc_rows,          &
-         cloud_levels, n_cca_levels
-    integer :: asteps_since_triffid
-    integer, parameter :: nscmdpkgs=15
-    logical, parameter :: l_scmdiags(nscmdpkgs)=.false.
-    logical :: l_scrn, l_aero_classic, l_spec_z0, l_plsp,        &
-         l_mixing_ratio, l_extra_call, l_calc_at_p
+    integer(i_um) :: cycleno, error_code
+    integer(i_um) :: val_year, val_day_number, val_hour, val_minute, val_second
+    integer(i_um) :: co2_dim_len, co2_dim_row, rhc_row_length, &
+                     rhc_rows, cloud_levels, n_cca_levels
+    integer(i_um) :: asteps_since_triffid
+    integer(i_um), parameter :: nscmdpkgs=15
+    logical,       parameter :: l_scmdiags(nscmdpkgs)=.false.
+    logical :: l_scrn, l_aero_classic, l_spec_z0, l_plsp, &
+               l_mixing_ratio, l_extra_call, l_calc_at_p
 
     ! profile fields from level 1 upwards
-    real(r_double), dimension(row_length,rows,model_levels) ::              &
-         p, rho_wet_rsq, rho_wet, rho_dry, z_rho, z_theta,                  &
-         bulk_cloud_fraction, bl_w_var, rhcpt, t_latest, q_latest,          &
-         qcl_latest, qcf_latest, cf_latest, cfl_latest, cff_latest, cca,    &
-         cca0, ccw0, area_cloud_fraction, cloud_fraction_liquid,            &
+    real(r_um), dimension(row_length,rows,model_levels) ::               &
+         p, rho_wet_rsq, rho_wet, rho_dry, z_rho, z_theta,               &
+         bulk_cloud_fraction, bl_w_var, rhcpt, t_latest, q_latest,       &
+         qcl_latest, qcf_latest, cf_latest, cfl_latest, cff_latest, cca, &
+         cca0, ccw0, area_cloud_fraction, cloud_fraction_liquid,         &
          cloud_fraction_frozen
-    real(r_double), dimension(row_length,rows,bl_levels) ::                 &
-         e_trb, tsq_trb, qsq_trb, cov_trb, tau_fd_x, tau_fd_y, rhogamu,     &
+    real(r_um), dimension(row_length,rows,bl_levels) ::                 &
+         e_trb, tsq_trb, qsq_trb, cov_trb, tau_fd_x, tau_fd_y, rhogamu, &
          rhogamv, f_ngstress, fqw, ftl, rhokh
-    real(r_double), dimension(row_length,rows,model_levels) :: rho_wet_tq
+    real(r_um), dimension(row_length,rows,model_levels) :: rho_wet_tq
                              !IB removed -1 from model_levels here
-    real(r_double), dimension(row_length,rows,model_levels) :: exner_rho_levels
+    real(r_um), dimension(row_length,rows,model_levels) :: exner_rho_levels
                              !IB removed +1 from model_levels here
     ! profile fields on u/v points
-    real(r_double), dimension(row_length,rows,model_levels) :: u, v, r_u, r_v
-    real(r_double), dimension(row_length,rows,bl_levels) ::                 &
-         taux_fd_u, tauy_fd_v, rhogamu_u, rhogamv_v, f_ngstress_u,          &
+    real(r_um), dimension(row_length,rows,model_levels) :: u, v, r_u, r_v
+    real(r_um), dimension(row_length,rows,bl_levels) ::            &
+         taux_fd_u, tauy_fd_v, rhogamu_u, rhogamv_v, f_ngstress_u, &
          f_ngstress_v, taux, tauy
     ! profile fields from level 0 upwards
-    real(r_double), dimension(row_length,rows,0:model_levels) ::            &
+    real(r_um), dimension(row_length,rows,0:model_levels) :: &
          p_layer_centres, w_copy, etadot_copy, R_w, p_layer_boundaries, w
     ! profile fields with 0 level which isn't used
-    real(r_double), dimension(row_length,rows,0:model_levels) ::            &
-         q, qcl, qcf, theta, exner_theta_levels, aerosol, dust_div1,        &
-         dust_div2, dust_div3, dust_div4, dust_div5, dust_div6, so2, dms,   &
-         so4_aitken, so4_accu, so4_diss, nh3, soot_new, soot_aged, soot_cld,&
-         bmass_new, bmass_aged, bmass_cld, ocff_new, ocff_aged, ocff_cld,   &
+    real(r_um), dimension(row_length,rows,0:model_levels) ::                 &
+         q, qcl, qcf, theta, exner_theta_levels, aerosol, dust_div1,         &
+         dust_div2, dust_div3, dust_div4, dust_div5, dust_div6, so2, dms,    &
+         so4_aitken, so4_accu, so4_diss, nh3, soot_new, soot_aged, soot_cld, &
+         bmass_new, bmass_aged, bmass_cld, ocff_new, ocff_aged, ocff_cld,    &
          nitr_acc, nitr_diss, ozone_tracer, conv_prog_precip
     ! multi tracer variables
-    real(r_double), dimension(row_length,rows,0:model_levels,tr_vars) ::    &
+    real(r_um), dimension(row_length,rows,0:model_levels,tr_vars) :: &
          free_tracers
     ! profile fields with a hard-wired 2
-    real(r_double), dimension(row_length,rows,2,bl_levels) ::               &
-         rad_hr, micro_tends
+    real(r_um), dimension(row_length,rows,2,bl_levels) :: rad_hr, micro_tends
     ! single level fields
-    real(r_double), dimension(row_length,rows) ::                           &
-         p_star, lw_down, cos_zenith_angle, ti_gb, tstar, zh_prev, ddmfx,   &
-         zlcl, zhpar, z0h_scm, z0m_scm, flux_e, flux_h, z0msea,             &
-         photosynth_act_rad, soil_clay, soil_sand, dust_mrel1, dust_mrel2,  &
-         dust_mrel3, dust_mrel4, dust_mrel5, dust_mrel6, tstar_sea, zh, dzh,&
-         zhpar_shcu, flandfac, fseafac, rhokm_land, rhokm_ssi, cdr10m,      &
-         tstar_land, tstar_ssi, dtstar_sea, t1_sd, q1_sd, wstar, wthvs,     &
-         xx_cos_theta_latitude, ice_fract, ls_rain, ls_snow, conv_rain,     &
-         conv_snow, cca0_2d, qcl_inv_top, co2_emits, co2flux, tscrndcl_ssi, &
-         tstbtrans, sum_eng_fluxes, sum_moist_flux, drydep2, olr,           &
-         surf_ht_flux_land, zlcl_mixed, theta_star_surf, qv_star_surf,      &
-         snowmelt, tstar_sice, u_0_p, v_0_p, w_max, deep_flag, past_precip, &
-         past_conv_ht, zlcl_uv, ql_ad, cin_undilute, cape_undilute,         &
+    real(r_um), dimension(row_length,rows) ::                                &
+         p_star, lw_down, cos_zenith_angle, ti_gb, tstar, zh_prev, ddmfx,    &
+         zlcl, zhpar, z0h_scm, z0m_scm, flux_e, flux_h, z0msea,              &
+         photosynth_act_rad, soil_clay, soil_sand, dust_mrel1, dust_mrel2,   &
+         dust_mrel3, dust_mrel4, dust_mrel5, dust_mrel6, tstar_sea, zh, dzh, &
+         zhpar_shcu, flandfac, fseafac, rhokm_land, rhokm_ssi, cdr10m,       &
+         tstar_land, tstar_ssi, dtstar_sea, t1_sd, q1_sd, wstar, wthvs,      &
+         xx_cos_theta_latitude, ice_fract, ls_rain, ls_snow, conv_rain,      &
+         conv_snow, cca0_2d, qcl_inv_top, co2_emits, co2flux, tscrndcl_ssi,  &
+         tstbtrans, sum_eng_fluxes, sum_moist_flux, drydep2, olr,            &
+         surf_ht_flux_land, zlcl_mixed, theta_star_surf, qv_star_surf,       &
+         snowmelt, tstar_sice, u_0_p, v_0_p, w_max, deep_flag, past_precip,  &
+         past_conv_ht, zlcl_uv, ql_ad, cin_undilute, cape_undilute,          &
          entrain_coef, qsat_lcl, delthvu, dtstar_sice
     ! single level fields on u/v points
-    real(r_double), dimension(row_length,rows) :: u_0, v_0, rhokm_u_land,   &
-         rhokm_u_ssi, rhokm_v_land, rhokm_v_ssi, flandfac_u, flandfac_v,    &
+    real(r_um), dimension(row_length,rows) :: u_0, v_0, rhokm_u_land,    &
+         rhokm_u_ssi, rhokm_v_land, rhokm_v_ssi, flandfac_u, flandfac_v, &
          fseafac_u, fseafac_v, taux_land, tauy_land, taux_ssi, tauy_ssi
     ! single level fields
-    integer, dimension(row_length,rows) :: nlcl, ntml, ntpar, lcbase, ccb0, &
-         cct0, conv_type, nbdsc, ntdsc
+    integer(i_um), dimension(row_length,rows) :: nlcl, ntml, ntpar, lcbase, &
+                                                 ccb0, cct0, conv_type,     &
+                                                 nbdsc, ntdsc
     ! single level fields
-    logical, dimension(row_length,rows) :: land_sea_mask, cumulus, l_shallow,&
-         l_pc2_diag_sh_pts, no_cumulus, l_congestus, l_congestus2
+    logical, dimension(row_length,rows) :: land_sea_mask, cumulus,       &
+                                           l_shallow, l_pc2_diag_sh_pts, &
+                                           no_cumulus, l_congestus,      &
+                                           l_congestus2
     ! fields on ice categories
-    real(r_double), dimension(row_length,rows,nice_use) ::                  &
-         ice_fract_cat_use, k_sice, co2, ti, tstar_sice_cat, radnet_sice,   &
+    real(r_um), dimension(row_length,rows,nice_use) ::                    &
+         ice_fract_cat_use, k_sice, co2, ti, tstar_sice_cat, radnet_sice, &
          radnet_sea, fqw_ice, ftl_ice, di_ncat, ice_fract_ncat
     ! field on land points and soil levels
-    real(r_double), dimension(land_field,sm_levels) :: soil_layer_moisture, &
+    real(r_um), dimension(land_field,sm_levels) :: soil_layer_moisture, &
          smvccl_levs, smvcwt_levs, smvcst_levs, sthf, sthu, ext
     ! fields on land points
-    real(r_double), dimension(land_field) :: hcon, sil_orog_land,           &
-         ho2r2_orog, sd_orog, z0m_soil, albsoil, gs
+    real(r_um), dimension(land_field) :: hcon, sil_orog_land, ho2r2_orog, &
+                                         sd_orog, z0m_soil, albsoil, gs
     integer, dimension(land_field) :: land_index
     ! fields on land points and tiles
-    real(r_double), dimension(land_field,ntiles) :: canopy, catch,          &
-         catch_snow, snow_tile, z0_tile, z0h_tile_bare, sw_tile, tstar_tile,&
-         cs, frac, canht_ft, lai_ft, t_soil, g_leaf_acc, npp_ft_acc,        &
-         resp_w_ft_acc, resp_s_acc, ftl_tile, fqw_tile, epot_tile,          &
-         dtstar_tile, tsurf_elev_surft, tscrndcl_tile, ei_tile, ecan_tile,  &
+    real(r_um), dimension(land_field,ntiles) :: canopy, catch,               &
+         catch_snow, snow_tile, z0_tile, z0h_tile_bare, sw_tile, tstar_tile, &
+         cs, frac, canht_ft, lai_ft, t_soil, g_leaf_acc, npp_ft_acc,         &
+         resp_w_ft_acc, resp_s_acc, ftl_tile, fqw_tile, epot_tile,           &
+         dtstar_tile, tsurf_elev_surft, tscrndcl_tile, ei_tile, ecan_tile,   &
          melt_tile, surf_htf_tile
     ! stashwork arrays
-    real(r_double) :: stashwork3(1), stashwork9(1)    
+    real(r_um) :: stashwork3(1), stashwork9(1)
+
+    ! These would be set up by STASH in the UM.
+    ! Size is apparently unimportant.
+    real(r_um) :: cd10m_n_local(1, 1),    &
+                  cd10m_n_u_local(1, 1),  &
+                  cd10m_n_v_local(1, 1),  &
+                  cdr10m_n_local(1, 1),   &
+                  cdr10m_u_local(1,1),    &
+                  cdr10m_v_local(1, 1),   &
+                  cdr10m_n_u_local(1, 1), &
+                  cdr10m_n_v_local(1, 1)
 
     !-----------------------------------------------------------------------
     ! Initialisation of variables and arrays
@@ -275,7 +288,6 @@ subroutine bl_code(nlayers, &
     n_cca_levels=model_levels
     ! surface ancils
     land_sea_mask=.false.
-    flandg=0.0
     ice_fract=0.0
     ice_fract_cat_use=0.0
     ice_fract_ncat=0.0
@@ -295,15 +307,28 @@ subroutine bl_code(nlayers, &
     l_spec_z0=.false.
 
     if ( .not. allocated(uhalo) ) then
-      call atmos_physics2_alloc(land_field,ntiles,1,1,npft,ntype,       &
-                                1,1,sm_levels,bl_levels,nice_use)
+      call atmos_physics2_alloc( land_field, &
+                                 ntiles,     &
+                                 1_i_um,     &
+                                 1_i_um,     &
+                                 npft,ntype, &
+                                 1_i_um,     &
+                                 1_i_um,     &
+                                 sm_levels,  &
+                                 bl_levels,  &
+                                 nice_use )
     end if
+
+    ! This has to be assigned after it has been allocated by
+    ! atmos_physics2_alloc.
+    !
+    flandg=0.0_r_um
 
     !-----------------------------------------------------------------------
     ! Main model prognostics - passed in from Gungho
     ! For the initial implementation we pass each individual column
     ! of data to an array sized (1,1,k) to match the UMs (i,j,k) data 
-    ! layout.  
+    ! layout.
     !-----------------------------------------------------------------------
 
     ! assuming map_wth(1) points to level 0
@@ -503,7 +528,7 @@ subroutine bl_code(nlayers, &
          e_trb, tsq_trb, qsq_trb, cov_trb, zhpar_shcu,                  &
     !     OUT variables for message passing
          flandfac, fseafac,rhokm_land, rhokm_ssi,                       &
-         cdr10m, cdr10m_n, cd10m_n, tau_fd_x, tau_fd_y,                 &
+         cdr10m, cdr10m_n_local, cd10m_n_local, tau_fd_x, tau_fd_y,     &
          rhogamu, rhogamv, f_ngstress,                                  &
     !     OUT variables required in IMP_SOLVER
          alpha1_sea, alpha1_sice, ashtf_sea, ashtf, bq_gb, bt_gb,       &
@@ -611,8 +636,9 @@ subroutine bl_code(nlayers, &
     ! IN variables required from BDY_LAYR
           , alpha1_sea, alpha1_sice, ashtf_sea, ashtf, bq_gb, bt_gb     &
           , dtrdz_charney_grid, rdz_charney_grid, dtrdz_u, dtrdz_v      &
-          , rdz_u, rdz_v, cdr10m_u, cdr10m_v, cdr10m_n_u, cdr10m_n_v    &
-          , cd10m_n_u, cd10m_n_v, z_theta                               &
+          , rdz_u, rdz_v, cdr10m_u_local, cdr10m_v_local                &
+          , cdr10m_n_u_local, cdr10m_n_v_local, cd10m_n_u_local         &
+          , cd10m_n_v_local, z_theta                                    &
           , k_blend_tq, k_blend_uv, uStarGBM, rhokm_u, rhokm_v          &
     ! IN diagnostics (started or from) BDY_LAYR
           , rib_gb,zlcl,zht,zhnl,dzh,qcl_inv_top,zh                     &
@@ -706,6 +732,6 @@ subroutine bl_code(nlayers, &
     zh_2d(map_2d(1))=zh(1,1)
     z0msea_2d(map_2d(1))=z0msea(1,1)
 
-end subroutine bl_code
+  end subroutine bl_code
 
 end module bl_kernel_mod

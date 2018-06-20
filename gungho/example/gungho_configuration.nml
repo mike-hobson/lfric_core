@@ -19,7 +19,7 @@
   coordinate_order = 2
   rehabilitate     = .true.
   supg             = .false.
-  vorticity_in_w1  = .true. 
+  vorticity_in_w1  = .true.
 /
 
 &formulation

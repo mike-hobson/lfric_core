@@ -2,18 +2,33 @@
 {%- set projectDir  = 'lfric_atm' %}
 {%- set miniappFlag = False %}
 
-{%- set application_configurations = { 'lfric_atm' : ['dry_conv_bl_scm' ,'wet_conv_bl_scm'],
+{%- set application_configurations = { 'lfric_atm' : ['dry_conv_bl_scm',
+                                                      'wet_conv_bl_scm'],
                                      } %}
 
-{%- set canned_configurations  = [] %}
+{%- set canned_configurations  = ['lfric_atm'] %}
 
 {%- set groups = {
-'developer': [
-    'run_application( lfric_atm, dry_conv_bl_scm,  resolutions=[("BiP4x4-10000x10000",600.0)],
-                                                   checkkgo=True)',
-    'run_application( lfric_atm, wet_conv_bl_scm,  resolutions=[("BiP4x4-10000x10000",600.0)],
-                                                   checkkgo=True)',
-
-    'cleanliness'],
-'nightly': [
-    'cleanliness'] } %}
+  'developer': [
+    'check_compilers( lfric_atm, dry_conv_bl_scm, fast-debug,
+                      resolutions=[("BiP4x4-10000x10000",600.0)] )',
+    'run_application( lfric_atm, dry_conv_bl_scm,
+                      resolutions=[("BiP4x4-10000x10000",600.0)] )',
+    'run_application( lfric_atm, wet_conv_bl_scm,
+                      resolutions=[("BiP4x4-10000x10000",600.0)] )',
+    'canned_test(lfric_atm)',
+    'cleanliness'
+  ],
+  'nightly': [
+    'check_compilers( lfric_atm, dry_conv_bl_scm, fast-debug,
+                      resolutions=[("BiP4x4-10000x10000",600.0)],
+                      publish=True )',
+    'publish_commit'
+  ],
+  'nightly-full-debug': [
+    'check_compilers( lfric_atm, dry_conv_bl_scm, full-debug,
+                      resolutions=[("BiP4x4-10000x10000",600.0)],
+                      publish=True )',
+    'publish_commit'
+  ]
+} %}

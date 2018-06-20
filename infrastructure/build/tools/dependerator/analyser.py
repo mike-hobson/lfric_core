@@ -99,7 +99,7 @@ class FortranAnalyser(Analyser):
     self._ignoreModules   = map(str.lower, ignoreModules)
     self._database        = database
 
-    self._ignoreModules.append( 'iso_fortran_env' )
+    self._ignoreModules.extend( ['iso_fortran_env', 'ieee_arithmetic'] )
     self._ignoreModules.append( 'omp_lib' )
 
     self._fpp = os.getenv( 'FPP', None )

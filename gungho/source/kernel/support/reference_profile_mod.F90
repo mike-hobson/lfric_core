@@ -13,17 +13,19 @@ use base_mesh_config_mod,           only : geometry, &
 use constants_mod,                  only : r_def, i_def
 use coord_transform_mod,            only : xyz2llr
 use generate_global_gw_fields_mod,  only : generate_global_gw_fields
-use idealised_config_mod,           only : idealised_test_gravity_wave,     &
-                                           idealised_test_cold_bubble_x,    &
+use idealised_config_mod,           only : idealised_test_cold_bubble_x,    &
                                            idealised_test_cold_bubble_y,    &
-                                           idealised_test_isot_atm,         &
-                                           idealised_test_isot_cold_atm,    &
                                            idealised_test_const_lapse_rate, &
-                                           idealised_test_warm_bubble,      &
-                                           idealised_test_warm_bubble_3d,   &
+                                           idealised_test_cosine_hill,      &
+                                           idealised_test_dry_cbl,          &
+                                           idealised_test_gravity_wave,     &
                                            idealised_test_held_suarez,      &
                                            idealised_test_isentropic,       &
-                                           idealised_test_dry_cbl
+                                           idealised_test_isot_atm,         &
+                                           idealised_test_isot_cold_atm,    &
+                                           idealised_test_warm_bubble,      &
+                                           idealised_test_warm_bubble_3d,   &
+                                           idealised_test_yz_cosine_hill
 use initial_temperature_config_mod, only : bvf_square, theta_surf
 use planet_config_mod,              only : scaled_radius, gravity, Cp, Rd, &
                                            kappa, p_zero
@@ -43,6 +45,8 @@ contains
 !! @param[in] x          (x,y,z) coordinate field
 !! @param[in] itest_option Choice of idealised profile
 subroutine reference_profile(exner_s, rho_s, theta_s, x, itest_option)
+
+use idealised_config_mod,           only : key_from_test
 
 implicit none
 
@@ -67,7 +71,8 @@ else                     ! BIPERIODIC PLANE DOMAIN
 
   ! Calculate theta and exner for each biperiodic test
   select case( itest_option )
-    case( idealised_test_gravity_wave, idealised_test_held_suarez, &
+    case( idealised_test_gravity_wave, &
+          idealised_test_held_suarez,  &
           idealised_test_isot_atm )
       nsq_over_g = bvf_square/gravity
       theta_s = theta_surf * exp ( nsq_over_g * z )
@@ -89,17 +94,30 @@ else                     ! BIPERIODIC PLANE DOMAIN
       exner_s = exner_surf * ((1.0_r_def - lapse_rate/theta_surf * z) &
                   **(gravity/(Cp*lapse_rate)))
     case( idealised_test_dry_cbl )   ! Dry convective boundary layer
-      if(z<=1000.0_r_def) then
+      if (z<=1000.0_r_def) then
         ! Isentropic
         theta_s = theta_surf
         exner_s = exner_surf - gravity/(Cp*theta_surf)*z
-      else if(z>1000.0_r_def) then
+      else if (z>1000.0_r_def) then
         ! Isothermal
         nsq_over_g = bvf_square/gravity
         theta_s = theta_surf * exp ( nsq_over_g * z )
-        exner_s = exner_surf - gravity**2/(Cp*theta_surf*bvf_square)   &
-                     * (1.0_r_def - exp ( - nsq_over_g * z ))
+        exner_s = exner_surf - gravity**2 / (Cp * theta_surf * bvf_square) &
+                  * (1.0_r_def - exp ( - nsq_over_g * z ))
       end if
+    !> @todo No values for the following idealised tests were provided and
+    !>       this risked unexpected divide by zero errors. These errors are
+    !>       avoided by setting to one. This keeps the trunk working but
+    !>       these numbers have no scientific value.
+    case (idealised_test_cosine_hill, &
+          idealised_test_yz_cosine_hill)
+      theta_s = 1.0_r_def
+      exner_s = 1.0_r_def
+    case default
+      write( log_scratch_space,                                          &
+             '("reference_profile: Unrecognised idealised test: ", A)' ) &
+           key_from_test( itest_option )
+      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end select
   ! Calculate rho for all biperiodic tests
   rho_s   = p_zero/(Rd*theta_s) * exner_s ** ((1.0_r_def - kappa)/kappa)

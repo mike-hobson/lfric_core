@@ -1,10 +1,12 @@
 #!jinja2
 
-{# Include suite control #}
-%include suite_control.rc
+{%- set projectName = 'lfric_atm' %}
 
 {# Include suite macros #}
 %include inc/suite_macros.rc
+
+{# Include suite control #}
+%include suite_control.rc
 
 
 {# SETUP SOME JINJA2 VARIABLES #}
@@ -54,7 +56,7 @@
 {#                          These are updated from the mission calls.   #}
 
 {%- set crunInfo = {'maxcrun':1} %}  {# 'maxcrun' is used as the number of cycles based on the requested jobs #}
-{%- set MAXRUNAHEAD = 50 %} {# The maximum allowable runahead limit - if we need more thant this then maybe split up the suite, or just be patient! #}
+{%- set MAXRUNAHEAD = 5 %} {# The maximum allowable runahead limit - if we need more thant this then maybe split up the suite, or just be patient! #}
 {%- set scheduledTasksEnv = {} %}
 {%- set scheduledTasksDict = {} %}
 {%- set dummy = setTaskEnv(scheduledTasksDict) -%} {# sets the environment configurations for each job #}
@@ -85,7 +87,7 @@
     [[events]]
         mail events = timeout
         abort on timeout = True
-{%- if 'nightly' in groupsToRun %}
+{%- if 'nightly' in groupsToRun or 'nightly-full-debug' in groupsToRun %}
         abort on stalled = True
 {%- endif %}
         timeout = PT3H
@@ -615,8 +617,9 @@
                                     TARGET_RUN_SETUP,
                                     TARGET_REVEAL_SETUP )}}
                      """
-        script = rose task-run --app-key=canned_test --opt-conf-key={{appName}} --command-key={{TARGET_RUN_METHOD}}
+        script = rose task-run --app-key=canned_test --command-key={{TARGET_RUN_METHOD}}
         [[[environment]]]
+            APP_NAME         = {{appName}}
             BIN_DIR          = $DESTINATION_DIRECTORY/bin
             OMP_NUM_THREADS  = 1
             SOURCE_DIRECTORY = $SOURCE_ROOT/{{projectName}}

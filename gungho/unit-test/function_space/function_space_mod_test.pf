@@ -18,7 +18,16 @@ module function_space_mod_test
   use quadrature_xyoz_mod,   only: quadrature_xyoz_type, &
                                    quadrature_xyoz_proxy_type
   use quadrature_rule_gaussian_mod, only: quadrature_rule_gaussian_type
-  use reference_element_mod, only : N, E, S, W
+  use reference_element_mod, only : VERTEX_OFFSET,          &
+                                    EDGE_OFFSET,            &
+                                    FACE_OFFSET,            &
+                                    V,                      &
+                                    W, S, E, N, B, T,       &
+                                    SWB, SEB, NEB, NWB,     &
+                                    SWT, SET, NET, NWT,     &
+                                    WB, SB, EB, NB,         &
+                                    SW, SE, NE, NW,         &
+                                    WT, ST, ET, NT
   use yaxt,                  only : xt_initialize, xt_finalize
   use mpi_mod,               only : store_comm, clear_comm
 
@@ -28,8 +37,8 @@ module function_space_mod_test
   public :: test_function_space_constructor, getParameters,   &
             test_space, test_stencil_point, test_stencil_1dx, &
             test_stencil_1dy, test_stencil_cross, test_mesh,  &
-            test_get_whole_dofmap, test_get_last_dof,         &
-            test_is_comms_fs
+            test_entities, test_get_whole_dofmap,             &
+            test_get_last_dof, test_is_comms_fs
 
   @testParameter
   type, public, extends(MPITestParameter) :: function_space_parameter_type
@@ -66,6 +75,7 @@ module function_space_mod_test
     procedure test_stencil_1dy
     procedure test_stencil_cross
     procedure test_mesh
+    procedure test_entities
     procedure test_get_last_dof
     procedure test_is_comms_fs
   end type test_function_space_type
@@ -543,6 +553,70 @@ contains
     nullify( mesh_out )
 
   end subroutine test_mesh
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @Test( npes=[1] )
+  subroutine test_entities( this )
+
+    implicit none
+
+    class(test_function_space_type), intent(inout) :: this
+
+    type(function_space_type)              :: test_fs
+    type(mesh_type),               pointer :: mesh           => null()
+    integer(i_def),                pointer :: entity_dofs(:) => null()
+
+    integer(i_def) :: reference(12) 
+    integer(i_def) :: ndf
+
+    reference(:) = 0
+    test_fs = function_space_type( this%mesh_id,  &
+                                   element_order, &
+                                   this%function_space )
+
+    mesh              => mesh_collection%get_mesh( this%mesh_id )
+    entity_dofs       => test_fs%get_entity_dofs()
+
+    ndf = test_fs%get_ndf()
+
+    ! Might be a good idea to eventually make this test work for general order
+    ! elements.
+    select case ( this%function_space )
+      case (W0)
+        ! Lowest order W0 space has dofs only on each vertex.
+        reference(1:ndf) = (/ SWB, SEB, NEB, NWB, SWT, SET, NET, NWT /) &
+                         + VERTEX_OFFSET
+      case (W1)
+        ! Lowest order W1 space has dofs on each edge.
+        reference(1:ndf) = (/ WB, SB, EB, NB, SW, SE, NE, NW, WT, ST, ET, NT /) &
+                         + EDGE_OFFSET
+      case (W2)
+        ! Lowest order W2 space has dofs on all faces.
+        reference(1:ndf) = (/ W, S, E, N, B, T /) &
+                         + FACE_OFFSET
+      case (W3)
+        ! Lowest order W3 has a single cell-volume dof
+        reference(1) = V
+      case (Wtheta)
+        ! Lowest order theta space has dofs only on the top
+        ! and bottom faces.
+        reference(1:ndf) = (/ B, T /) + FACE_OFFSET
+      case (W2V)
+        ! Same as Wtheta
+        reference(1:ndf) = (/ B, T /) + FACE_OFFSET
+      case (W2H)
+        ! Only horizontal faces
+        reference(1:ndf) = (/ W, S, E, N /) + FACE_OFFSET
+      case (Wchi)
+        reference(1) = V
+    end select
+
+    @assertEqual( entity_dofs(1:ndf), reference(1:ndf) )
+
+    call test_fs%clear()
+    nullify( mesh )
+
+  end subroutine test_entities
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   @Test( npes=[1] )

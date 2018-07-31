@@ -116,6 +116,10 @@ type, extends(linked_list_data_type), public :: function_space_type
   !> dofs are on vertex boundarys
   integer(i_def), allocatable :: dof_on_vert_boundary(:,:)
 
+  !> An allocatable array of labels (integers) which maps degree of freedom
+  !> index to the geometric entity (V - Volume, W - West face, T - Top face, etc.)
+  integer(i_def), allocatable :: entity_dofs(:)
+
   !> An array to hold an ordered, unique list of levels for output
   !> of fields on this function space
   real(dp_xios), allocatable  :: fractional_levels(:)
@@ -274,6 +278,11 @@ contains
 
   !> @brief Returns the order of a function space
   procedure, public :: get_fs_order
+
+  !> @brief Gets mapping from degree of freedom to reference element entity.
+  !> @return Integer array mapping degree of freedom index to geometric entity
+  !> on the reference element.
+  procedure, public :: get_entity_dofs
 
   !> @brief Gets a YAXT redistribution map for halo swapping
   !> @param[in] depth The depth of halo swap to perform  
@@ -442,6 +451,7 @@ subroutine init_function_space( self )
   if (allocated( self%nodal_coords ))    deallocate( self%nodal_coords )
   if (allocated( self%dof_on_vert_boundary )) &
                                   deallocate(self%dof_on_vert_boundary )
+  if (allocated( self%entity_dofs ))     deallocate( self%entity_dofs )
 
   allocate( self%basis_index  (                     3, self%ndof_cell) )
   allocate( self%basis_order  (                     3, self%ndof_cell) )
@@ -449,13 +459,16 @@ subroutine init_function_space( self )
   allocate( self%basis_x      (self%element_order+2,3, self%ndof_cell) )
   allocate( self%nodal_coords (                     3, self%ndof_cell) )
   allocate( self%dof_on_vert_boundary (self%ndof_cell,2) )
+  allocate( self%entity_dofs(self%ndof_cell) )
 
   call basis_setup( self%element_order, self%fs,         &
                     self%ndof_vert, self%ndof_cell,      &
                     self%mesh%get_reference_element(),   &
                     self%basis_index,  self%basis_order, &
                     self%basis_vector, self%basis_x,     &
-                    self%nodal_coords, self%dof_on_vert_boundary )
+                    self%nodal_coords,                   &
+                    self%dof_on_vert_boundary,           &
+                    self%entity_dofs )
 
   ncells_2d_with_ghost = self%mesh % get_ncells_2d_with_ghost()
 
@@ -938,6 +951,22 @@ function get_fs_order(self) result (fs_order)
 end function get_fs_order
 
 !-----------------------------------------------------------------------------
+! Gets the mapping from degrees of freedom to reference
+! element entity.
+!-----------------------------------------------------------------------------
+function get_entity_dofs(self) result (entity_dofs)
+
+  implicit none
+
+  class(function_space_type), target, intent(in) :: self
+  integer(i_def), pointer                        :: entity_dofs(:)
+
+  entity_dofs => self%entity_dofs(:)
+
+  return
+end function get_entity_dofs
+
+!-----------------------------------------------------------------------------
 ! Gets mesh object for this space
 !-----------------------------------------------------------------------------
 !> @brief Gets the mesh object for this space
@@ -1188,6 +1217,7 @@ subroutine clear(self)
 
   class (function_space_type), intent(inout) :: self
 
+  if (allocated(self%entity_dofs))       deallocate( self%entity_dofs )
   if (allocated(self%nodal_coords))      deallocate( self%nodal_coords )
   if (allocated(self%basis_order))       deallocate( self%basis_order )
   if (allocated(self%basis_index))       deallocate( self%basis_index )

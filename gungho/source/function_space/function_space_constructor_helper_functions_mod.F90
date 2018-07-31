@@ -427,11 +427,13 @@ contains
   !> @param[out] nodal_coords  3D coordinates of zeros of the basis functions.
   !> @param[out] dof_on_vert_boundary  Array indication if a dof is on the top
   !>                                   or bottom boundary of a cell.
+  !> @param[out] entity_dofs Array of labels which maps degree of freedom
+  !>                         index to geometric entity the dof lies on.
   !>
   subroutine basis_setup( element_order, gungho_fs, ndof_vert,  ndof_cell, &
                           reference_element,                               &
                           basis_index, basis_order, basis_vector, basis_x, &
-                          nodal_coords, dof_on_vert_boundary )
+                          nodal_coords, dof_on_vert_boundary, entity_dofs )
 
     implicit none
 
@@ -452,6 +454,7 @@ contains
     real(r_def),    intent(out) :: basis_x      (:,:,:)
     real(r_def),    intent(out) :: nodal_coords (:,:)
     integer(i_def), intent(out) :: dof_on_vert_boundary (:,:)
+    integer(i_def), intent(out) :: entity_dofs(:)
 
     integer(i_def) :: k
 
@@ -586,8 +589,8 @@ contains
 
 
     select case (gungho_fs)
-    case (W0)
 
+    case (W0)
       !---------------------------------------------------------------------------
       ! Section for test/trial functions of CG spaces
       !---------------------------------------------------------------------------
@@ -605,6 +608,8 @@ contains
             lx(idx) = jx
             ly(idx) = jy
             lz(idx) = jz
+            ! Label volume degrees of freedom
+            entity_dofs(idx) = V
             idx = idx + 1
           end do
         end do
@@ -622,6 +627,8 @@ contains
             lx(idx) = j(j2l_face(i,1))
             ly(idx) = j(j2l_face(i,2))
             lz(idx) = j(j2l_face(i,3))
+            ! Label face degrees of freedom
+            entity_dofs(idx) = reference_element%get_face_entity(i)
             idx = idx + 1
           end do
         end do
@@ -638,6 +645,8 @@ contains
           lx(idx) = j(j2l_edge(i,1))
           ly(idx) = j(j2l_edge(i,2))
           lz(idx) = j(j2l_edge(i,3))
+          ! Label edge degrees of freedom
+          entity_dofs(idx) = reference_element%get_edge_entity(i)
           idx     = idx + 1
         end do
       end do
@@ -651,6 +660,8 @@ contains
           lx(idx) = 1+(k+1)*int(coordinate(1))
           ly(idx) = 1+(k+1)*int(coordinate(2))
           lz(idx) = 1+(k+1)*int(coordinate(3))
+          ! Label vertex degrees of freedom
+          entity_dofs(idx) = reference_element%get_vertex_entity(i)
           idx     = idx + 1
         end do
       end do
@@ -699,6 +710,8 @@ contains
             ly(idx) = jy
             lz(idx) = jz
             call reference_element%get_tangent_to_edge( S, unit_vec(idx,:) )
+            ! Label volume degrees of freedom
+            entity_dofs(idx) = V
             idx = idx + 1
           end do
         end do
@@ -712,6 +725,8 @@ contains
             ly(idx) = jy
             lz(idx) = jz
             call reference_element%get_tangent_to_edge( W, unit_vec(idx,:) )
+            ! Label volume degrees of freedom
+            entity_dofs(idx) = V
             idx = idx + 1
           end do
         end do
@@ -725,6 +740,8 @@ contains
             ly(idx) = jy
             lz(idx) = jz
             call reference_element%get_tangent_to_edge( B, unit_vec(idx,:) )
+            ! Label volume degrees of freedom
+            entity_dofs(idx) = V
             idx = idx + 1
           end do
         end do
@@ -745,6 +762,8 @@ contains
                                                         unit_vec(idx,:) )
             if (i == number_faces - 1) dof_on_vert_boundary(idx,1) = 0
             if (i == number_faces)     dof_on_vert_boundary(idx,2) = 0
+            ! Label face degrees of freedom
+            entity_dofs(idx) = reference_element%get_face_entity(i)
             idx = idx + 1
           end do
         end do
@@ -761,6 +780,8 @@ contains
                                                         unit_vec(idx,:) )
             if (i == number_faces - 1) dof_on_vert_boundary(idx,1) = 0
             if (i == number_faces)     dof_on_vert_boundary(idx,2) = 0
+            ! Label face degrees of freedom
+            entity_dofs(idx) = reference_element%get_face_entity(i)
             idx = idx + 1
           end do
         end do
@@ -779,6 +800,8 @@ contains
           if (i <= number_horizontal_edges) dof_on_vert_boundary(idx,1) = 0
           if (i > number_edges - number_horizontal_edges) &
                                             dof_on_vert_boundary(idx,2) = 0
+          ! Label edge degrees of freedom
+          entity_dofs(idx) = reference_element%get_edge_entity(i)
           idx = idx + 1
         end do
       end do
@@ -841,6 +864,8 @@ contains
             ly(idx) = jy
             lz(idx) = jz
             call reference_element%get_normal_to_face( W, unit_vec(idx,:) )
+            ! Label volume degrees of freedom
+            entity_dofs(idx) = V
             idx = idx + 1
           end do
         end do
@@ -853,6 +878,8 @@ contains
             ly(idx) = jy
             lz(idx) = jz
             call reference_element%get_normal_to_face( S, unit_vec(idx,:) )
+            ! Label volume degrees of freedom
+            entity_dofs(idx) = V
             idx = idx + 1
           end do
         end do
@@ -865,6 +892,8 @@ contains
             ly(idx) = jy
             lz(idx) = jz
             call reference_element%get_normal_to_face( B, unit_vec(idx,:) )
+            ! Label volume degrees of freedom
+            entity_dofs(idx) = V
             idx = idx + 1
           end do
         end do
@@ -883,6 +912,8 @@ contains
             call reference_element%get_normal_to_face( i, unit_vec(idx,:) )
             if (i == number_faces - 1) dof_on_vert_boundary(idx,1) = 0
             if (i == number_faces )    dof_on_vert_boundary(idx,2) = 0
+            ! Label face degrees of freedom
+            entity_dofs(idx) = reference_element%get_face_entity(i)
             idx = idx + 1
           end do
         end do
@@ -938,6 +969,8 @@ contains
             lx(idx) = jx
             ly(idx) = jy
             lz(idx) = jz
+            ! Label volume degrees of freedom
+            entity_dofs(idx) = V
             idx = idx + 1
           end do
         end do
@@ -975,6 +1008,8 @@ contains
             lx(idx) =  jx
             ly(idx) =  jy
             lz(idx) =  jz
+            ! Label volume degrees of freedom
+            entity_dofs(idx) = V
             idx = idx + 1
           end do
         end do
@@ -993,6 +1028,8 @@ contains
             lz(idx) = j(j2l_face(i,3))
             if (i == number_faces - 1) dof_on_vert_boundary(idx,1) = 0
             if (i == number_faces)     dof_on_vert_boundary(idx,2) = 0
+            ! Label top and bottom face degrees of freedom
+            entity_dofs(idx) = reference_element%get_face_entity(i)
             idx = idx + 1
           end do
         end do
@@ -1041,6 +1078,8 @@ contains
             ly(idx) =  jy
             lz(idx) =  jz
             call reference_element%get_normal_to_face( B, unit_vec(idx,:) )
+            ! Label volume degrees of freedom
+            entity_dofs(idx) = V
             idx = idx + 1
           end do
         end do
@@ -1060,6 +1099,8 @@ contains
             call reference_element%get_normal_to_face( i, unit_vec(idx,:) )
             if (i == number_faces - 1) dof_on_vert_boundary(idx,1) = 0
             if (i == number_faces)     dof_on_vert_boundary(idx,2) = 0
+            ! Label top and bottom face degrees of freedom
+            entity_dofs(idx) = reference_element%get_face_entity(i)
             idx = idx + 1
           end do
         end do
@@ -1124,6 +1165,8 @@ contains
             ly(idx) =  jy
             lz(idx) =  jz
             call reference_element%get_normal_to_face( W, unit_vec(idx,:) )
+            ! Label volume degrees of freedom
+            entity_dofs(idx) = V
             idx = idx + 1
           end do
         end do
@@ -1136,6 +1179,8 @@ contains
             ly(idx) =  jy
             lz(idx) =  jz
             call reference_element%get_normal_to_face( S, unit_vec(idx,:) )
+            ! Label volume degrees of freedom
+            entity_dofs(idx) = V
             idx = idx + 1
           end do
         end do
@@ -1154,6 +1199,8 @@ contains
             ly(idx) = j(j2l_face(i,2))
             lz(idx) = j(j2l_face(i,3))
             call reference_element%get_normal_to_face( i, unit_vec(idx,:) )
+            ! Label horizontal face degrees of freedom
+            entity_dofs(idx) = reference_element%get_face_entity(i)
             idx = idx + 1
           end do
         end do
@@ -1205,6 +1252,8 @@ contains
             lx(idx) = jx
             ly(idx) = jy
             lz(idx) = jz
+            ! Label volume degrees of freedom
+            entity_dofs(idx) = V
             idx = idx + 1
           end do
         end do

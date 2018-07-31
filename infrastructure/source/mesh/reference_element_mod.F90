@@ -49,6 +49,11 @@ module reference_element_mod
     real(r_def), allocatable :: normal_to_face(:,:)
     real(r_def), allocatable :: tangent_to_edge(:,:)
     real(r_def), allocatable :: out_face_normal(:,:)
+
+    ! Geometric entities
+    integer(i_def), allocatable :: vertex_entities(:)
+    integer(i_def), allocatable :: edge_entities(:)
+    integer(i_def), allocatable :: face_entities(:)
   contains
     private
     procedure :: reference_element_init
@@ -69,6 +74,10 @@ module reference_element_mod
     procedure, public :: get_normals_to_faces
     procedure, public :: get_tangent_to_edge
     procedure, public :: get_normals_to_out_faces
+    procedure, public :: get_face_entity
+    procedure, public :: get_edge_entity
+    procedure, public :: get_vertex_entity
+    procedure(entities_iface),          deferred :: populate_entity_labels
     procedure(vertices_iface),          deferred :: populate_vertices
     procedure(entity_centre_iface),     deferred :: populate_entity_centres
     procedure(vertices_on_faces_iface), deferred :: populate_vertices_on_faces
@@ -82,6 +91,23 @@ module reference_element_mod
   end type reference_element_type
 
   interface
+    ! Fills arrays with entity labels. These arrays map
+    ! entity index to the geometric entity on the reference
+    ! cell.
+    !
+    ! [out] vertex_entities Maps vertex index to geometric entity.
+    ! [out] edge_entities   Maps edge index to geometric entity.
+    ! [out] face_entities   Maps face index to geometric entity.
+    !
+     subroutine entities_iface( this, vertex_entities, edge_entities, &
+                                face_entities )
+       import reference_element_type, i_def
+       class(reference_element_type), intent(in) :: this
+       integer(i_def), intent(out) :: vertex_entities(:)
+       integer(i_def), intent(out) :: edge_entities(:)
+       integer(i_def), intent(out) :: face_entities(:)
+     end subroutine entities_iface
+    !
     ! Fills an array with vertex coordinates.
     !
     ! [out] vertex Holds n times 3 coordinate values.
@@ -219,6 +245,13 @@ module reference_element_mod
   integer(i_def), parameter, public :: V = 1 !< Enumerates the centre of the cell (volume).
   !> @}
 
+  ! @name Offset parameters used to generate a unique identifier for each geometric entity.
+  !> @{
+  integer(i_def), parameter, public :: VERTEX_OFFSET = 3000
+  integer(i_def), parameter, public :: EDGE_OFFSET   = 2000
+  integer(i_def), parameter, public :: FACE_OFFSET   = 1000
+  !> @}
+
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Describes a unit cube reference element.
   !>
@@ -242,6 +275,7 @@ module reference_element_mod
     private
   contains
     private
+    procedure :: populate_entity_labels     => cube_populate_entity_labels
     procedure :: populate_vertices          => cube_populate_vertices
     procedure :: populate_entity_centres    => cube_populate_entity_centres
     procedure :: populate_vertices_on_faces => cube_populate_vertices_on_faces
@@ -343,6 +377,7 @@ module reference_element_mod
     private
   contains
     private
+    procedure :: populate_entity_labels     => prism_populate_entity_labels
     procedure :: populate_vertices          => prism_populate_vertices
     procedure :: populate_entity_centres    => prism_populate_entity_centres
     procedure :: populate_vertices_on_faces => prism_populate_vertices_on_faces
@@ -459,6 +494,13 @@ contains
     this%number_edges = 3 * this%number_horizontal_edges
 
     ! Allocate and populate arrays
+    allocate( this%vertex_entities(this%number_vertices) )
+    allocate( this%edge_entities(this%number_edges) )
+    allocate( this%face_entities(this%number_faces) )
+    call this%populate_entity_labels( this%vertex_entities, &
+                                      this%edge_entities,   &
+                                      this%face_entities )
+
     allocate( this%vertex_coords(this%number_vertices, 3) )
     call this%populate_vertices( this%vertex_coords )
 
@@ -504,6 +546,9 @@ contains
 
     class(reference_element_type), intent(inout) :: this
 
+    if (allocated( this%vertex_entities )) deallocate( this%vertex_entities )
+    if (allocated( this%edge_entities )) deallocate( this%edge_entities )
+    if (allocated( this%face_entities )) deallocate( this%face_entities )
     if (allocated( this%vertex_coords )) deallocate( this%vertex_coords )
     if (allocated( this%vert_on_face )) deallocate( this%vert_on_face )
     if (allocated( this%vert_on_edge )) deallocate( this%vert_on_edge )
@@ -611,6 +656,60 @@ contains
     get_number_faces = this%number_faces
 
   end function get_number_faces
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> @brief Gets the entity label corresponding to a vertex index.
+  !>
+  !> @param[in]  vertex_index  Vertex enumerator.
+  !> @returns The geometric entity label.
+  !>
+  pure function get_vertex_entity( this, vertex_index )
+
+    implicit none
+
+    class(reference_element_type), intent(in)  :: this
+    integer(i_def),                intent(in)  :: vertex_index
+    integer(i_def)                             :: get_vertex_entity
+
+    get_vertex_entity = this%vertex_entities(vertex_index) + VERTEX_OFFSET
+
+  end function get_vertex_entity
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> @brief Gets the unique entity label corresponding to an edge index.
+  !>
+  !> @param[in]  edge_index  Edge enumerator.
+  !> @returns The geometric entity label.
+  !>
+  pure function get_edge_entity( this, edge_index )
+
+    implicit none
+
+    class(reference_element_type), intent(in)  :: this
+    integer(i_def),                intent(in)  :: edge_index
+    integer(i_def)                             :: get_edge_entity
+
+    get_edge_entity = this%edge_entities(edge_index) + EDGE_OFFSET
+
+  end function get_edge_entity
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> @brief Gets the unique entity label corresponding to a face index.
+  !>
+  !> @param[in]  face_index  Face enumerator.
+  !> @returns The geometric entity label.
+  !>
+  pure function get_face_entity( this, face_index )
+
+    implicit none
+
+    class(reference_element_type), intent(in)  :: this
+    integer(i_def),                intent(in)  :: face_index
+    integer(i_def)                             :: get_face_entity
+
+    get_face_entity = this%face_entities(face_index) + FACE_OFFSET
+
+  end function get_face_entity
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Gets the co-ordinates of a vertex.
@@ -823,6 +922,58 @@ contains
     call this%reference_element_final()
 
   end subroutine reference_cube_destructor
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Fills entitiy arrays with the corresponding geometric labels on
+  ! a unit-cube.
+  !
+  ! [out] vertex_entities Maps vertex index to geometric entity.
+  ! [out] edge_entities   Maps edge index to geometric entity.
+  ! [out] face_entities   Maps face index to geometric entity.
+  !
+  subroutine cube_populate_entity_labels( this, vertex_entities, &
+                                          edge_entities, face_entities )
+
+    implicit none
+
+    class(reference_cube_type), intent(in)  :: this
+    integer(i_def),             intent(out) :: vertex_entities(:)
+    integer(i_def),             intent(out) :: edge_entities(:)
+    integer(i_def),             intent(out) :: face_entities(:)
+
+    ! Vertex entities defining the closure of each edge.
+    vertex_entities(1) = SWB
+    vertex_entities(2) = SEB
+    vertex_entities(3) = NEB
+    vertex_entities(4) = NWB
+    vertex_entities(5) = SWT
+    vertex_entities(6) = SET
+    vertex_entities(7) = NET
+    vertex_entities(8) = NWT
+
+    ! Edge entities defining the closure of each face.
+    edge_entities(1)  = WB
+    edge_entities(2)  = SB
+    edge_entities(3)  = EB
+    edge_entities(4)  = NB
+    edge_entities(5)  = SW
+    edge_entities(6)  = SE
+    edge_entities(7)  = NE
+    edge_entities(8)  = NW
+    edge_entities(9)  = WT
+    edge_entities(10) = ST
+    edge_entities(11) = ET
+    edge_entities(12) = NT
+
+    ! Face entities on the reference cube
+    face_entities(1) = W
+    face_entities(2) = S
+    face_entities(3) = E
+    face_entities(4) = N
+    face_entities(5) = B
+    face_entities(6) = T
+
+  end subroutine cube_populate_entity_labels
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Fills an array with the coordinates of a unit-cube.
@@ -1122,6 +1273,52 @@ contains
     call this%reference_element_final()
 
   end subroutine reference_prism_destructor
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Fills entitiy arrays with the corresponding geometric labels on
+  ! a reference prism.
+  !
+  ! [out] vertex_entities Maps vertex index to geometric entity.
+  ! [out] edge_entities   Maps edge index to geometric entity.
+  ! [out] face_entities   Maps face index to geometric entity.
+  !
+  subroutine prism_populate_entity_labels( this, vertex_entities, &
+                                           edge_entities, face_entities )
+
+    implicit none
+
+    class(reference_prism_type), intent(in)  :: this
+    integer(i_def),              intent(out) :: vertex_entities(:)
+    integer(i_def),              intent(out) :: edge_entities(:)
+    integer(i_def),              intent(out) :: face_entities(:)
+
+    ! Vertex entities defining the closure of each edge.
+    vertex_entities(1) = PRL
+    vertex_entities(2) = PQL
+    vertex_entities(3) = QRL
+    vertex_entities(4) = PRU
+    vertex_entities(5) = PQU
+    vertex_entities(6) = QRU
+
+    ! Edge entities defining the closure of each face.
+    edge_entities(1) = PL
+    edge_entities(2) = QL
+    edge_entities(3) = RL
+    edge_entities(4) = PR
+    edge_entities(5) = PQ
+    edge_entities(6) = QR
+    edge_entities(7) = PU
+    edge_entities(8) = QU
+    edge_entities(9) = RU
+
+    ! Face entities on the reference prism.
+    face_entities(1) = P
+    face_entities(2) = Q
+    face_entities(3) = R
+    face_entities(4) = L
+    face_entities(5) = U
+
+  end subroutine prism_populate_entity_labels
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Fills an array with the coordinates of a unit-prism.

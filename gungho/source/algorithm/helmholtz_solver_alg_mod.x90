@@ -3,23 +3,26 @@
 ! For further details please refer to the file LICENCE.original which you
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
-!>@brief Routines for solving the semi-implicit equation set by
-!!       eliminating all variables in favour of the exner pressure increment
+!> @brief Routines for solving the semi-implicit equation set by
+!!        eliminating all variables in favour of the exner pressure increment.
 module helmholtz_solver_alg_mod
+
+  use, intrinsic :: ieee_arithmetic
+
   use field_mod,                   only: field_type
   use constants_mod,               only: i_def, r_def
-  use si_operators_alg_mod,        only: get_m3_rho_star, &
+  use si_operators_alg_mod,        only: get_m3_rho_star,   &
                                          get_m3_exner_star, &
-                                         get_compound_div, &
-                                         get_div_star, &
-                                         get_ptheta2v, &
-                                         get_p2theta, &
-                                         get_p3theta, &
-                                         get_rho_at_u, &
-                                         get_tri_precon, &
+                                         get_compound_div,  &
+                                         get_div_star,      &
+                                         get_ptheta2v,      &
+                                         get_p2theta,       &
+                                         get_p3theta,       &
+                                         get_rho_at_u,      &
+                                         get_tri_precon,    &
                                          get_helm_diag
-  use runtime_constants_mod,       only: get_mass_matrix, &
-                                         get_div, &
+  use runtime_constants_mod,       only: get_mass_matrix,   &
+                                         get_div,           &
                                          get_normalisation, &
                                          w2_id, w3inv_id, theta_space_id
   use helmholtz_solver_config_mod, only: normalise,                      &
@@ -39,6 +42,7 @@ module helmholtz_solver_alg_mod
   implicit none
 
   private 
+
   real(kind=r_def), private            :: sc_err_min
   type(field_type), private            :: helmholtz_rhs
   type(field_type), private            :: exner_increment
@@ -79,23 +83,27 @@ module helmholtz_solver_alg_mod
 
 contains
 
-!=============================================================================!
-  !>@brief Create all the required fields for the Helmholtz solver
-  !>@param[in] state Field bundle used to create all the fields needed for the 
-  !!                 algortihms in this module
+  !=============================================================================!
+  !> @brief Creates all the required fields for the Helmholtz solver.
+  !> @param[in] state Field bundle used to create all the fields needed for the 
+  !!                  algortihms in this module.
   subroutine helmholtz_solver_init(state)
+
     use function_space_mod,           only: function_space_type
     use field_bundle_mod,             only: clone_bundle
     use helmholtz_solver_config_mod,  only: method,                        &
                                             helmholtz_solver_method_gmres, &
                                             helmholtz_solver_method_gcr
-    use mixed_solver_config_mod,      only: si_tolerance    
+    use mixed_solver_config_mod,      only: si_tolerance  
+  
     implicit none
+
     type(field_type), intent(in)       :: state(bundle_size)
     type(function_space_type), pointer :: w3 => null(), &
                                           w2 => null(), &
                                           wtheta => null()
-    integer :: i
+    integer(kind=i_def)                :: i
+
     ! Get needed function spaces
     w3     => state(igh_d)%get_function_space()
     w2     => state(igh_u)%get_function_space()
@@ -153,8 +161,8 @@ contains
 
   end subroutine helmholtz_solver_init
 
-  !=============================================================================
-  !>@details Finalises allocatable arrays in module scope
+  !=============================================================================!
+  !>@brief Finalises allocatable arrays in module scope.
   subroutine helmholtz_solver_final()
 
     implicit none
@@ -189,28 +197,30 @@ contains
 
   end subroutine helmholtz_solver_final
 
-!=============================================================================!
-  !>@brief Control routine for the helmholtz solver
-  !>@details Control routine for the helmholtz solver:
-  !>         1) Builds the helmholtz rhs 
-  !>         2) Solves for the presssure increment using a Krylov method
-  !>         3) Back substitutes to find remaining field increments
-  ! > Assumes the equations are in Normalised form
-   !> \f[ L\mathbf{x} = \mathbf{x} \f]
-  !> With:
-  !> \f[ 
-  !>    N_u^2 u' - \left(D^* \Pi' + P_{2\theta}\theta' \right) = R_u
-  !>    \theta' + N_{\theta}P_{\theta2}u' = R_\theta
-  !>    \rho' + M_3^{-1}D\left(\rho^{*}u'\right) = R_\rho
-  !>    M_3^{-1}\left(M_3^\Pi \Pi' - P_{3\theta}\theta' - M_3^\rho \rho' = R_\Pi
-  !> \f]
-  !>@param[inout] x0 Field bundle to compute increments for
-  !>@param[in]    rhs0 Field bundle containing residuals
+  !=============================================================================!
+  !> @brief Control routine for the Helmholtz solver.
+  !> @details Control routine for the Helmholtz solver:
+  !!          1) Builds the Helmholtz rhs 
+  !!          2) Solves for the presssure increment using a Krylov method
+  !!          3) Back substitutes to find remaining field increments
+  !!          Assumes the equations are in Normalised form
+  !!          \f[ L\mathbf{x} = \mathbf{x} \f]
+  !!          With:
+  !!          \f[ 
+  !!             N_u^2 u' - \left(D^* \Pi' + P_{2\theta}\theta' \right) = R_u
+  !!             \theta' + N_{\theta}P_{\theta2}u' = R_\theta
+  !!             \rho' + M_3^{-1}D\left(\rho^{*}u'\right) = R_\rho
+  !!             M_3^{-1}\left(M_3^\Pi \Pi' - P_{3\theta}\theta' - M_3^\rho \rho' = R_\Pi
+  !!          \f]
+  !> @param[in,out] x0 Field bundle to compute increments for
+  !> @param[in] rhs0 Field bundle containing residuals
   subroutine helmholtz_solver_alg(x0, rhs0)
+
     use helmholtz_solver_config_mod, only: method,                           &
                                            helmholtz_solver_method_bicgstab, &
                                            helmholtz_solver_method_gmres,    &
                                            helmholtz_solver_method_gcr
+
     implicit none
 
     type(field_type), intent(inout) :: x0(bundle_size)
@@ -236,11 +246,12 @@ contains
 
   end subroutine helmholtz_solver_alg
 
-!=============================================================================!
-  !>@brief Compute the rhs to the helmholtz equation for the pressure increment
-  !>@param[inout] helmholtz_rhs The rhs of the Helmholtz equation
-  !>@param[in]    rhs0 Field bundle containing residuals
+  !=============================================================================!
+  !> @brief Compute the rhs to the Helmholtz equation for the pressure increment.
+  !> @param[in,out] helmholtz_rhs The rhs of the Helmholtz equation
+  !> @param[in] rhs0 Field bundle containing residuals
   subroutine build_helmholtz_rhs(helmholtz_rhs, rhs0)
+
     use matrix_vector_kernel_mod,     only: matrix_vector_kernel_type
     use dg_matrix_vector_kernel_mod,  only: dg_matrix_vector_kernel_type
     use apply_variable_hx_kernel_mod, only: apply_variable_hx_kernel_type, &
@@ -250,19 +261,20 @@ contains
     use finite_element_config_mod,    only: element_order
 
     implicit none
-    type(field_type),                intent(inout) :: helmholtz_rhs
-    type(field_type),                intent(in)    :: rhs0(bundle_size)
 
-    type(operator_type), pointer :: m3_rho_star => null(), &
-                                    m3_inv => null(), &
-                                    p2theta => null(), &
-                                    ptheta2 => null(), &
-                                    p3theta => null(), &
-                                    compound_div => null()
-    type(field_type),    pointer :: mt_lumped_inv => null()
-    type(field_type),    pointer :: u_normalisation => null()
-    type(field_type),    pointer :: h_diag => null()
-    real(kind=r_def), parameter  :: mone = -1.0_r_def
+    type(field_type), intent(inout) :: helmholtz_rhs
+    type(field_type), intent(in)    :: rhs0(bundle_size)
+
+    type(operator_type), pointer    :: m3_rho_star => null(), &
+                                       m3_inv => null(),      &
+                                       p2theta => null(),     &
+                                       ptheta2 => null(),     &
+                                       p3theta => null(),     &
+                                       compound_div => null()
+    type(field_type), pointer       :: mt_lumped_inv => null()
+    type(field_type), pointer       :: u_normalisation => null()
+    type(field_type), pointer       :: h_diag => null()
+    real(kind=r_def), parameter     :: mone = -1.0_r_def
 
     if ( subroutine_timers ) call timer('helmholtz rhs')
     p2theta       => get_p2theta()
@@ -287,18 +299,18 @@ contains
     ! r_rho already contains M3^-1 factor
     mt_lumped_inv => get_normalisation(theta_space_id)
     if ( element_order == 0 ) then
-      call invoke( opt_apply_variable_hx_kernel_type( r_p, u_term, mt_lumped_inv, rhs0(igh_d), &
-                                                      compound_div, p3theta, ptheta2, m3_rho_star,&
-                                                      mone), &
-                   matrix_vector_kernel_type(r_p, rhs0(igh_t), p3theta), &
-                   dg_matrix_vector_kernel_type(helmholtz_rhs, r_p, m3_inv), &
+      call invoke( opt_apply_variable_hx_kernel_type( r_p, u_term, mt_lumped_inv, rhs0(igh_d),     &
+                                                      compound_div, p3theta, ptheta2, m3_rho_star, &
+                                                      mone),                                       &
+                   matrix_vector_kernel_type(r_p, rhs0(igh_t), p3theta),                           &
+                   dg_matrix_vector_kernel_type(helmholtz_rhs, r_p, m3_inv),                       &
                    inc_X_plus_Y(helmholtz_rhs, rhs0(igh_p)) )
     else
-      call invoke( apply_variable_hx_kernel_type( r_p, u_term, mt_lumped_inv, rhs0(igh_d),  &
-                                                  compound_div, p3theta, ptheta2, m3_rho_star,&
-                                                  mone), &
-                   matrix_vector_kernel_type(r_p, rhs0(igh_t), p3theta), &
-                   dg_matrix_vector_kernel_type(helmholtz_rhs, r_p, m3_inv), &
+      call invoke( apply_variable_hx_kernel_type( r_p, u_term, mt_lumped_inv, rhs0(igh_d),     &
+                                                  compound_div, p3theta, ptheta2, m3_rho_star, &
+                                                  mone),                                       &
+                   matrix_vector_kernel_type(r_p, rhs0(igh_t), p3theta),                       &
+                   dg_matrix_vector_kernel_type(helmholtz_rhs, r_p, m3_inv),                   &
                    inc_X_plus_Y(helmholtz_rhs, rhs0(igh_p)) )
     end if
 
@@ -316,24 +328,25 @@ contains
 
   end subroutine build_helmholtz_rhs
 
-!=============================================================================!
-  !>@brief Compute the lumped inverse H_B operator
+  !=============================================================================!
+  !> @brief Compute the lumped inverse H_B operator.
   subroutine compute_inv_hb()
+
     use matrix_vector_kernel_mod, only: matrix_vector_kernel_type
     use operator_mod,             only: operator_type
 
     implicit none
-    type(operator_type), pointer :: m2      => null(),         & 
-                                    p2theta => null(),         &
-                                    ptheta2 => null()
-    type(field_type),    pointer :: u_normalisation => null(), &
-                                    t_normalisation => null() 
-    real(kind=r_def)             :: timestep_term
-    type(field_type)             :: ones   
-    integer(kind=i_def), parameter  :: imone = -1_i_def
+
+    type(operator_type), pointer   :: m2      => null(),         & 
+                                      p2theta => null(),         &
+                                      ptheta2 => null()
+    type(field_type), pointer      :: u_normalisation => null(), &
+                                      t_normalisation => null() 
+    real(kind=r_def)               :: timestep_term
+    type(field_type)               :: ones   
+    integer(kind=i_def), parameter :: imone = -1_i_def
  
     if ( subroutine_timers ) call timer('helmholtz HB')
-
 
     m2            => get_mass_matrix(w2_id)
     p2theta       => get_p2theta()
@@ -364,13 +377,14 @@ contains
 
   end subroutine compute_inv_hb
 
-!=============================================================================!
-  !>@brief Apply the full Helmholtz lhs to a pressure field p, this is the Ax
-  !>       routine called from the Krylov solver 
-  !>@param[inout] Hp Field containg the result of multiplying the Helmhopltz
-  !!                 matrix H by the field p
-  !>@param[in] p Field to apply the helmholtz matrix to
+  !=============================================================================!
+  !> @brief Apply the full Helmholtz lhs to a pressure field p, this is the Ax
+  !!        routine called from the Krylov solver.
+  !> @param[in,out] Hp Field containg the result of multiplying the Helmholtz
+  !!                   matrix H by the field p
+  !> @param[in] p Field to apply the Helmholtz matrix to
   subroutine apply_helmholtz_lhs(Hp, p)
+
     use scaled_matrix_vector_kernel_mod, only: scaled_matrix_vector_kernel_type, &
                                                opt_scaled_matrix_vector_kernel_type
     use operator_mod,                    only: operator_type
@@ -380,16 +394,17 @@ contains
     use finite_element_config_mod,       only: element_order
 
     implicit none
-    type(field_type),  intent(inout) :: Hp
-    type(field_type),  intent(in)    :: p
-    type(operator_type), pointer :: m3_exner_star => null(), &
-                                    div_star => null(), &
-                                    compound_div => null(), &
-                                    ptheta2 => null(), &
-                                    p3theta => null(), &
-                                    m3_inv => null()
+
+    type(field_type), intent(inout) :: Hp
+    type(field_type), intent(in)    :: p
+    type(operator_type), pointer    :: m3_exner_star => null(), &
+                                       div_star => null(),      &
+                                       compound_div => null(),  &
+                                       ptheta2 => null(),       &
+                                       p3theta => null(),       &
+                                       m3_inv => null()
     real(kind=r_def), parameter  :: one = 1.0_r_def
-    type(field_type),    pointer :: mt_lumped_inv => null(), &
+    type(field_type), pointer    :: mt_lumped_inv => null(),   &
                                     u_normalisation => null(), &
                                     h_diag => null()
 
@@ -406,23 +421,22 @@ contains
     ! Compute M3*p + H[ D{\theta*}*p ]
     if ( element_order == 0 ) then
       ! Hard wired optimisation for desired configuration
-      call invoke( setval_c( grad_p, 0.0_r_def ),                              &
-                   opt_scaled_matrix_vector_kernel_type(grad_p, p, div_star,   &
+      call invoke( setval_c( grad_p, 0.0_r_def ),                                &
+                   opt_scaled_matrix_vector_kernel_type(grad_p, p, div_star,     &
                                                         hb_inv, u_normalisation),&
-                   opt_apply_variable_hx_kernel_type(                          &
-                       l_p, grad_p, mt_lumped_inv, p,                          &
-                       compound_div, p3theta, ptheta2, m3_exner_star,          &
+                   opt_apply_variable_hx_kernel_type(                            &
+                       l_p, grad_p, mt_lumped_inv, p,                            &
+                       compound_div, p3theta, ptheta2, m3_exner_star,            &
                        one) )
     else
-      call invoke( setval_c( grad_p, 0.0_r_def ),                              &
-                   scaled_matrix_vector_kernel_type(grad_p, p, div_star,       &
-                                                    hb_inv, u_normalisation),  &
-                   enforce_bc_kernel_type( grad_p ),                           &
-                   apply_variable_hx_kernel_type(                              &
-                         l_p, grad_p, mt_lumped_inv, p,                        &
-                         compound_div, p3theta, ptheta2, m3_exner_star,        &
+      call invoke( setval_c( grad_p, 0.0_r_def ),                             &
+                   scaled_matrix_vector_kernel_type(grad_p, p, div_star,      &
+                                                    hb_inv, u_normalisation), &
+                   enforce_bc_kernel_type( grad_p ),                          &
+                   apply_variable_hx_kernel_type(                             &
+                         l_p, grad_p, mt_lumped_inv, p,                       &
+                         compound_div, p3theta, ptheta2, m3_exner_star,       &
                          one) )
-
     end if
 
     m3_inv => get_mass_matrix(w3inv_id)
@@ -441,24 +455,27 @@ contains
 
   end subroutine apply_helmholtz_lhs
 
-!=============================================================================!
-  !>@brief Krylov solver specifically for solving the Helmholtz equation 
-  !>@param[inout] lhs Field to solve H*lhs = rhs for
-  !>@param[in] rhs Residual field
+  !=============================================================================!
+  !> @brief Krylov solver specifically for solving the Helmholtz equation.
+  !> @param[in,out] lhs Field to solve H*lhs = rhs for
+  !> @param[in] rhs Residual field
   subroutine bicgstab(lhs, rhs)
+
     implicit none
-    type(field_type),             intent(inout) :: lhs
-    type(field_type),             intent(in)    :: rhs
+
+    type(field_type), intent(inout) :: lhs
+    type(field_type), intent(in)    :: rhs
 
     ! The scalars
-    real(kind=r_def)                   :: rho, alpha, omega, beta, norm
-    real(kind=r_def)                   :: ts, tt
+    real(kind=r_def)                :: rho, alpha, omega, beta, norm
+    real(kind=r_def)                :: ts, tt
     ! Others
-    real(kind=r_def)                   :: err, sc_err, init_err
-    integer(kind=i_def)                :: iter
+    real(kind=r_def)                :: err, sc_err, init_err
+    integer(kind=i_def)             :: iter
+
     if ( subroutine_timers ) call timer('helmholtz bicg')
  
-    ! Compute the residual this is a global sum to the PSy ---
+    ! Compute the residual this is a global sum to the PSy
     call invoke( X_innerproduct_X(sc_err, rhs) )
     sc_err = max(sqrt(sc_err), sc_err_min)
     write( log_scratch_space, '(A,E15.8)' ) &
@@ -469,8 +486,8 @@ contains
     omega  = 1.0_r_def
     norm   = 1.0_r_def
 
-    call invoke( setval_c(y, 0.0_r_def), &
-                 X_minus_Y(res, rhs, y), &
+    call invoke( setval_c(y, 0.0_r_def),   &
+                 X_minus_Y(res, rhs, y),   &
                  setval_c(lhs, 0.0_r_def), &
                  X_innerproduct_X(err, res) )
 
@@ -535,23 +552,27 @@ contains
       call log_event( log_scratch_space, LOG_LEVEL_ERROR )
     end if
   end subroutine bicgstab
-!=============================================================================!
-  !> @brief GCR solver for the system H.lhs = rhs
-  !> @details Solves H.lhs = rhs where the operation A.lhs is encoded in a kernel using
-  !! the Preconditioned GCR(k) algorithm from Wesseling. The choice of matrix is
-  !! encoded in the matrix vector kernel that is called. 
-  !>@param[inout] lhs Field to solve H*lhs = rhs for
-  !>@param[in] rhs Residual field
+
+  !=============================================================================!
+  !> @brief GCR solver for the system H.lhs = rhs.
+  !> @details Solves H.lhs = rhs where the operation A.lhs is encoded in a 
+  !!          kernel using the Preconditioned GCR(k) algorithm from Wesseling. 
+  !!          The choice of matrix is encoded in the matrix vector kernel that 
+  !!          is called. 
+  !> @param[in,out] lhs Field to solve H*lhs = rhs for
+  !> @param[in] rhs Residual field
   subroutine gcr(lhs, rhs)
+
     implicit none
-    type(field_type),             intent(inout) :: lhs
-    type(field_type),             intent(in)    :: rhs
+
+    type(field_type), intent(inout) :: lhs
+    type(field_type), intent(in)    :: rhs
 
     ! The scalars
-    real(kind=r_def)                   :: alpha
+    real(kind=r_def)                :: alpha
     ! Others
-    real(kind=r_def)                   :: err, sc_err, init_err
-    integer(i_def)                     :: iter, m, n
+    real(kind=r_def)                :: err, sc_err, init_err
+    integer(kind=i_def)             :: iter, m, n
 
     if ( subroutine_timers ) call timer('helmholtz gcr')
 
@@ -589,10 +610,10 @@ contains
         call invoke( X_innerproduct_X(err, v_gcr(m)) )
         alpha = sqrt(err)
         const1 = 1.0_r_def/alpha
-        call invoke( inc_a_times_X(const1, v_gcr(m)),      &
-                     inc_a_times_X(const1, s_gcr(m)),      &
+        call invoke( inc_a_times_X(const1, v_gcr(m)),        &
+                     inc_a_times_X(const1, s_gcr(m)),        &
                      X_innerproduct_Y(alpha, res, v_gcr(m)), &
-                     inc_X_plus_bY(lhs, alpha, s_gcr(m)),  &
+                     inc_X_plus_bY(lhs, alpha, s_gcr(m)),    &
                      inc_X_minus_bY(res, alpha, v_gcr(m)) )
       end do
 
@@ -623,24 +644,26 @@ contains
 
   end subroutine gcr
 
-!=============================================================================!
-  !> @brief GMRes solver for the system H.lhs = rhs
-  !> @details Solves H.lhs = rhs where the operation A.lhs is encoded in a kernel using
-  !! the flexible GMRes algorithm. The choice of matrix is
-  !! encoded in the matrix vector kernel that is called. 
-  !>@param[inout] lhs Field to solve H*lhs = rhs for
-  !>@param[in] rhs Residual field
+  !=============================================================================!
+  !> @brief GMRes solver for the system H.lhs = rhs.
+  !> @details Solves H.lhs = rhs where the operation A.lhs is encoded in a
+  !!          kernel using the flexible GMRes algorithm. The choice of matrix
+  !!          is encoded in the matrix vector kernel that is called.
+  !> @param[in,out] lhs Field to solve H*lhs = rhs for
+  !> @param[in] rhs Residual field
   subroutine gmres(lhs, rhs)
+
     implicit none
-    type(field_type),    intent(inout) :: lhs
-    type(field_type),    intent(in)    :: rhs
+
+    type(field_type), intent(inout) :: lhs
+    type(field_type), intent(in)    :: rhs
   
     ! The scalars
-    real(kind=r_def)                   :: h(GCRK+1, GCRK), u(GCRK), g(GCRK+1)
-    real(kind=r_def)                   :: beta, si, ci, nrm, h1, h2, pp, q
+    real(kind=r_def)                :: h(GCRK+1, GCRK), u(GCRK), g(GCRK+1)
+    real(kind=r_def)                :: beta, si, ci, nrm, h1, h2, pp, q
     ! Others
-    real(kind=r_def)                   :: err, sc_err, init_err
-    integer(kind=i_def)                :: iter, i, j, k, m
+    real(kind=r_def)                :: err, sc_err, init_err
+    integer(kind=i_def)             :: iter, i, j, k, m
 
     if ( subroutine_timers ) call timer('helmholtz gmres')
 
@@ -760,13 +783,14 @@ contains
 
   end subroutine gmres
 
-!=============================================================================!
-  !>@brief Obtain the increments to each field from the pressure field given by
-  !>       the helmholtz equation
-  !>@param[inout] state Field bundle to increment
-  !>@param[in]    exner_inc Pressure increment obtained from the Helmholtz solver
-  !>@param[in]    rhs Initial residuals uise to compute increments
+  !=============================================================================!
+  !> @brief Obtain the increments to each field from the pressure field given
+  !!        by the Helmholtz equation.
+  !> @param[in,out] state Field bundle to increment
+  !> @param[in] exner_inc Pressure increment obtained from the Helmholtz solver
+  !> @param[in] rhs Initial residuals used to compute increments
   subroutine back_substitute(state, exner_inc, rhs)
+
     use matrix_vector_kernel_mod,    only: matrix_vector_kernel_type
     use dg_matrix_vector_kernel_mod, only: dg_matrix_vector_kernel_type
     use operator_mod,                only: operator_type  
@@ -774,19 +798,21 @@ contains
     use timestepping_config_mod,     only: tau_r, dt
 
     implicit none
-    type(field_type),                intent(inout) :: state(bundle_size)
-    type(field_type),                intent(in)    :: exner_inc
-    type(field_type),                intent(in)    :: rhs(bundle_size)
 
-    type(field_type),    pointer :: rho_at_u => null(), &
-                                    t_normalisation => null(), &
-                                    u_normalisation => null()
-    type(operator_type), pointer :: div_star => null(), &
-                                    ptheta2 => null(),  &
-                                    div => null(),      &
-                                    m3_inv => null()
-    real(r_def), parameter :: minus_one = -1.0_r_def
-    real(r_def)            :: tau_dt
+    type(field_type), intent(inout) :: state(bundle_size)
+    type(field_type), intent(in)    :: exner_inc
+    type(field_type), intent(in)    :: rhs(bundle_size)
+
+    type(field_type), pointer       :: rho_at_u => null(),        &
+                                       t_normalisation => null(), &
+                                       u_normalisation => null()
+    type(operator_type), pointer    :: div_star => null(), &
+                                       ptheta2 => null(),  &
+                                       div => null(),      &
+                                       m3_inv => null()
+    real(kind=r_def), parameter     :: minus_one = -1.0_r_def
+    real(kind=r_def)                :: tau_dt
+
     if ( subroutine_timers ) call timer('helmholtz back sub')
 
     ! Need to pass in mathfrak{R}_u
@@ -804,26 +830,26 @@ contains
 
     ! u increment
     tau_dt = -tau_r*dt
-    call invoke( name = "Compute increments",                                   &
+    call invoke( name = "Compute increments",                                    &
     ! u increment
-                 matrix_vector_kernel_type(rhs_inc(igh_u), exner_inc, div_star),&
-                 inc_X_times_Y(rhs_inc(igh_u), u_normalisation),                &
-                 inc_X_plus_Y(rhs_inc(igh_u), r_u),                             &
-                 enforce_bc_kernel_type( rhs_inc(igh_u) ),                      &
-                 X_times_Y(u_inc, rhs_inc(igh_u), hb_inv),                      &
+                 matrix_vector_kernel_type(rhs_inc(igh_u), exner_inc, div_star), &
+                 inc_X_times_Y(rhs_inc(igh_u), u_normalisation),                 &
+                 inc_X_plus_Y(rhs_inc(igh_u), r_u),                              &
+                 enforce_bc_kernel_type( rhs_inc(igh_u) ),                       &
+                 X_times_Y(u_inc, rhs_inc(igh_u), hb_inv),                       &
     ! theta increment
-                 matrix_vector_kernel_type(theta_inc, u_inc, ptheta2),          &
-                 inc_X_times_Y(theta_inc, t_normalisation),                     &
-                 inc_aX_plus_Y(minus_one, theta_inc, rhs(igh_t)),               &
+                 matrix_vector_kernel_type(theta_inc, u_inc, ptheta2),           &
+                 inc_X_times_Y(theta_inc, t_normalisation),                      &
+                 inc_aX_plus_Y(minus_one, theta_inc, rhs(igh_t)),                &
     ! rho increment
-                 X_times_Y(flux, rho_at_u, u_inc),                              &
-                 dg_matrix_vector_kernel_type(rhs_inc(igh_d), flux, div),       &
-                 dg_matrix_vector_kernel_type(rho_inc, rhs_inc(igh_d), m3_inv), &
-                 inc_aX_plus_Y(tau_dt, rho_inc, rhs(igh_d)),                    &
+                 X_times_Y(flux, rho_at_u, u_inc),                               &
+                 dg_matrix_vector_kernel_type(rhs_inc(igh_d), flux, div),        &
+                 dg_matrix_vector_kernel_type(rho_inc, rhs_inc(igh_d), m3_inv),  &
+                 inc_aX_plus_Y(tau_dt, rho_inc, rhs(igh_d)),                     &
     ! Increment state array
-                 inc_X_plus_Y(state(igh_u), u_inc),                             &
-                 inc_X_plus_Y(state(igh_t), theta_inc),                         &
-                 inc_X_plus_Y(state(igh_d), rho_inc),                           &
+                 inc_X_plus_Y(state(igh_u), u_inc),                              &
+                 inc_X_plus_Y(state(igh_t), theta_inc),                          &
+                 inc_X_plus_Y(state(igh_d), rho_inc),                            &
                  inc_X_plus_Y(state(igh_p), exner_inc) )
 
     call exner_inc%log_minmax(LOG_LEVEL_DEBUG, 'exner increment ') 
@@ -838,14 +864,16 @@ contains
 
   end subroutine back_substitute
 
-!=============================================================================!
-  !>@brief Preconditioner for the helmholtz equation 
-  !>@details Options to precondition the helmholtz equation, currently allows only
-  !>         preconditioning with the inverse mass matrix or no preconditioner
-  !>@param[inout] y Preconditioned field to compute
-  !>@param[in] x Initial field to precondition
-  !>@param[in] prec Optional flag to specify whic preconditioner to use
+  !=============================================================================!
+  !> @brief Preconditioner for the Helmholtz equation. 
+  !> @details Options to precondition the Helmholtz equation, currently 
+  !!          allows only preconditioning with the inverse mass matrix or no 
+  !!          preconditioner.
+  !> @param[in,out] y Preconditioned field to compute
+  !> @param[in] x Initial field to precondition
+  !> @param[in] prec Optional flag to specify which preconditioner to use
   subroutine helmholtz_precondition(y, x, prec)
+
     use dg_matrix_vector_kernel_mod, only: dg_matrix_vector_kernel_type
     use operator_mod,                only: operator_type 
     use tri_solve_kernel_mod,        only: tri_solve_kernel_type
@@ -854,13 +882,15 @@ contains
                                            helmholtz_solver_preconditioner_diagonal 
 
     implicit none
-    type(field_type),  intent(inout) :: y
-    type(field_type),  intent(in)    :: x
-    integer, optional, intent(in)    :: prec
 
-    integer                      :: precon
-    type(operator_type), pointer :: m3_inv => null()
-    type(field_type),    pointer :: tri(:) => null()
+    type(field_type), intent(inout)           :: y
+    type(field_type), intent(in)              :: x
+    integer(kind=i_def), optional, intent(in) :: prec
+
+    integer(kind=i_def)                       :: precon
+    type(operator_type), pointer              :: m3_inv => null()
+    type(field_type), pointer                 :: tri(:) => null()
+
     if ( subroutine_timers ) call timer('helmholtz precon')
 
     if ( .not. present(prec) ) then
@@ -885,6 +915,4 @@ contains
 
   end subroutine helmholtz_precondition
 
-!=============================================================================!
 end module helmholtz_solver_alg_mod
-

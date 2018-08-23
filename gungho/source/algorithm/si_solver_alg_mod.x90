@@ -3,25 +3,21 @@
 ! For further details please refer to the file LICENCE.original which you
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
-!>@brief Routines for solving the semi-implicit equation set
+!> @brief Routines for solving the semi-implicit equation set.
 
-! Note: PSyclone 1.5.0 fails to correctly parse "use, intrinsic :: ieee_arithmetic" 
-!       so this algorithm is not using PSyclone built-ins or other invokes.
-!       However, commented PSyclone invokes are left as placeholders for when 
-!       the support becomes available.
 module si_solver_alg_mod
 
   use, intrinsic :: ieee_arithmetic
 
   use constants_mod,             only: r_def, str_def, i_def
-  use field_bundle_mod,          only: clone_bundle, &
+  use field_bundle_mod,          only: clone_bundle,      &
                                        set_bundle_scalar, &
-                                       bundle_axpy, &
-                                       copy_bundle, &
-                                       minus_bundle, &
-                                       bundle_ax, &
-                                       bundle_divide, &
-                                       bundle_minmax, &
+                                       bundle_axpy,       &
+                                       copy_bundle,       &
+                                       minus_bundle,      &
+                                       bundle_ax,         &
+                                       bundle_divide,     &
+                                       bundle_minmax,     &
                                        bundle_inner_product
   use runtime_constants_mod,     only: get_mass_matrix_diagonal, &
                                        w2_id, theta_space_id, eye_id
@@ -33,20 +29,20 @@ module si_solver_alg_mod
                                        LOG_LEVEL_DEBUG,   &
                                        LOG_LEVEL_TRACE,   &
                                        LOG_LEVEL_INFO
-  use mixed_solver_config_mod,   only: si_maximum_iterations, &
-                                       si_tolerance, &
-                                       si_preconditioner, &
-                                       si_postconditioner, &
-                                       mixed_solver_si_preconditioner_none, &
-                                       mixed_solver_si_preconditioner_diagonal, &
-                                       mixed_solver_si_preconditioner_pressure, &
-                                       mixed_solver_si_postconditioner_none, &
+  use mixed_solver_config_mod,   only: si_maximum_iterations,                    &
+                                       si_tolerance,                             &
+                                       si_preconditioner,                        &
+                                       si_postconditioner,                       &
+                                       mixed_solver_si_preconditioner_none,      &
+                                       mixed_solver_si_preconditioner_diagonal,  &
+                                       mixed_solver_si_preconditioner_pressure,  &
+                                       mixed_solver_si_postconditioner_none,     &
                                        mixed_solver_si_postconditioner_diagonal, &
                                        mixed_solver_si_postconditioner_pressure, &
-                                       mixed_solver_si_method_gmres, &
-                                       mixed_solver_si_method_gcr, &
-                                       mixed_solver_si_method_jacobi, &
-                                       si_method, &
+                                       mixed_solver_si_method_gmres,             &
+                                       mixed_solver_si_method_gcr,               &
+                                       mixed_solver_si_method_jacobi,            &
+                                       si_method,                                &
                                        gcrk
 
   use timestepping_config_mod,   only: dt, tau_u, tau_t, tau_r
@@ -56,11 +52,12 @@ module si_solver_alg_mod
   use timer_mod,                 only: timer
 
   implicit none
+
   type(field_type), allocatable, private :: mm_diagonal(:)
   type(field_type), allocatable, private :: dx(:), Ax(:), residual(:), s(:), &
                                             w(:)
   type(field_type), allocatable, private :: v(:,:), Pv(:,:)
-  real(r_def),      parameter,   private :: sc_err_min = 1.0e-8_r_def
+  real(kind=r_def), parameter,   private :: sc_err_min = 1.0e-8_r_def
 
   private
 
@@ -73,24 +70,23 @@ module si_solver_alg_mod
  
 contains
 
-  !>@brief Setup for the semi-implicit solver, extracts mass matrix diagonals and 
-  !!         sets up terms for the Newton-Krylov method if needed
-  !>@details Control routine to solve the system L*dx = rhs using a Krlyov method
-  !!         sets up terms needed either for a prescribed L
-  !>@param[inout] x0 The state array to solve for the increment of 
-  !>@param[in]    rhs0 Fixed rhs forcing for the solver
-  !>@param[in]    x_ref A reference state used for computing a proscribed L
+  !=============================================================================!
+  !> @brief Setup for the semi-implicit solver, extracts mass matrix diagonals and 
+  !!        sets up terms for the Newton-Krylov method if needed.
+  !> @details Control routine to solve the system L*dx = rhs using a Krlyov method
+  !!          sets up terms needed either for a prescribed L.
+  !> @param[in,out] x0 The state array to solve for the increment of 
+  !> @param[in] rhs0 Fixed rhs forcing for the solver
+  !> @param[in] x_ref A reference state used for computing a prescribed L
   subroutine si_solver_alg(x0, rhs0, x_ref)
-    use psykal_lite_mod,           only: invoke_set_field_scalar
-    use psykal_lite_mod,           only: invoke_copy_field_data
 
     implicit none
 
-    type(field_type), intent(inout)          :: x0(bundle_size)
-    type(field_type), intent(in)             :: rhs0(bundle_size), &
-                                                x_ref(bundle_size)
+    type(field_type), intent(inout) :: x0(bundle_size)
+    type(field_type), intent(in)    :: rhs0(bundle_size), &
+                                       x_ref(bundle_size)
  
-    real(kind=r_def)                         :: tau_u_dt, tau_t_dt, tau_r_dt
+    real(kind=r_def)                :: tau_u_dt, tau_t_dt, tau_r_dt
 
     if ( subroutine_timers ) call timer('si_solver_alg')
     ! Set up tau_{u,t,r}_dt: to be used here and in subsequent algorithms
@@ -116,24 +112,25 @@ contains
 
   end subroutine si_solver_alg
 
-!=============================================================================!
-  !>@brief Initialisation routine for the semi-implicit solver, creates all the 
-  !>       field objects needed for the solver
-  !>@param[in] x0 field bundle used as template for the solver fields
+  !=============================================================================!
+  !> @brief Initialisation routine for the semi-implicit solver, creates all the 
+  !!        field objects needed for the solver.
+  !> @param[in] x0 Field bundle used as template for the solver fields
   subroutine si_solver_init(x0)
+
     use lhs_alg_mod, only: lhs_init
 
     implicit none
 
     type(field_type), intent(in) :: x0(bundle_size)
-    integer(i_def)               :: iter
+    integer(kind=i_def)          :: iter
 
-    allocate( dx         (bundle_size), &
-              Ax         (bundle_size), &
-              residual   (bundle_size), &
-              s          (bundle_size), &
-              w          (bundle_size), &
-              mm_diagonal(bundle_size), &
+    allocate( dx         (bundle_size),      &
+              Ax         (bundle_size),      &
+              residual   (bundle_size),      &
+              s          (bundle_size),      &
+              w          (bundle_size),      &
+              mm_diagonal(bundle_size),      &
               v          (bundle_size,gcrk), &
               Pv         (bundle_size,gcrk) )
 
@@ -157,9 +154,9 @@ contains
   end subroutine si_solver_init
 
   !=============================================================================
-  !>@details Finalises allocatable arrays in module scope
-  !>         and calls finalising routines for algorithms that
-  !>         this algorithm initialised.
+  !> @details Finalises allocatable arrays in module scope
+  !!          and calls finalising routines for algorithms that
+  !!          this algorithm initialised.
   subroutine si_solver_final()
 
     use lhs_alg_mod, only: lhs_final
@@ -179,31 +176,30 @@ contains
 
   end subroutine si_solver_final
 
-!=============================================================================!
-  !>@brief GMRES solver adapted for solving the semi-implicit equations
-  !>@details Standard GMRES algorithm from "Iterative methods for sparse linear
-  !! systems" by Y Saad, SIAM 2003
-  !>@param[inout] x0 State to increment 
-  !>@param[in]    rhs0 Fixed rhs so solve for
-  !>@param[in]    x_ref Reference state
-  !>@param[in]    tau_{u,t,r}_dt The offcentering parameter times the timestep
+  !=============================================================================!
+  !> @brief GMRES solver adapted for solving the semi-implicit equations.
+  !> @details Standard GMRES algorithm from "Iterative methods for sparse linear
+  !!          systems" by Y Saad, SIAM 2003.
+  !> @param[in,out] x0 State to increment 
+  !> @param[in] rhs0 Fixed rhs to solve for
+  !> @param[in] x_ref Reference state
+  !> @param[in] tau_{u,t,r}_dt The offcentering parameter times the timestep
   subroutine mixed_gmres_alg(x0, rhs0, x_ref, tau_u_dt, tau_t_dt, tau_r_dt)
 
     implicit none
 
-    type(field_type),             intent(inout) :: x0(bundle_size)
-    type(field_type),             intent(in)    :: rhs0(bundle_size), &
-                                                   x_ref(bundle_size)
-    real(kind=r_def),             intent(in)    :: tau_u_dt, tau_t_dt, tau_r_dt
+    type(field_type), intent(inout) :: x0(bundle_size)
+    type(field_type), intent(in)    :: rhs0(bundle_size), &
+                                       x_ref(bundle_size)
+    real(kind=r_def), intent(in)    :: tau_u_dt, tau_t_dt, tau_r_dt
 
     ! The scalars
-    real(kind=r_def)         :: h(gcrk+1, gcrk), u(gcrk), g(gcrk+1)
-    real(kind=r_def)         :: beta,si, ci, nrm, h1, h2, p, q
+    real(kind=r_def)                :: h(gcrk+1, gcrk), u(gcrk), g(gcrk+1)
+    real(kind=r_def)                :: beta,si, ci, nrm, h1, h2, p, q
     ! Others
-    real(kind=r_def)               :: err, sc_err, init_err
-    integer(kind=i_def)            :: iter, i, j, k, m
-    integer(kind=i_def)            :: max_gmres_iter
-
+    real(kind=r_def)                :: err, sc_err, init_err
+    integer(kind=i_def)             :: iter, i, j, k, m
+    integer(kind=i_def)             :: max_gmres_iter
 
     max_gmres_iter = si_maximum_iterations
 
@@ -329,30 +325,30 @@ contains
 
   end subroutine mixed_gmres_alg
 
-!=============================================================================!
-  !>@brief GCR(k) solver adapted for solving the semi-implicit equations
+  !=============================================================================!
+  !> @brief GCR(k) solver adapted for solving the semi-implicit equations.
   !> @details Solves A.lhs = rhs where the operation A.lhs is encoded in 
-  !> the lhs algorithm. Uses the Preconditioned GCR(k) algorithm from Wesseling.
-  !>@param[inout] x0 State to increment 
-  !>@param[in]    rhs0 Fixed rhs so solve for
-  !>@param[in]    x_ref Reference state
-  !>@param[in]    tau_{u,t,r}_dt The offcentering parameter times the timestep
+  !!          the lhs algorithm. Uses the Preconditioned GCR(k) algorithm 
+  !!          from Wesseling.
+  !> @param[in,out] x0 State to increment 
+  !> @param[in] rhs0 Fixed rhs to solve for
+  !> @param[in] x_ref Reference state
+  !> @param[in] tau_{u,t,r}_dt The offcentering parameter times the timestep
   subroutine mixed_gcr_alg(x0, rhs0, x_ref, tau_u_dt, tau_t_dt, tau_r_dt)
 
     implicit none
 
-    type(field_type),             intent(inout) :: x0(bundle_size)
-    type(field_type),             intent(in)    :: rhs0(bundle_size), &
-                                                   x_ref(bundle_size)
-    real(kind=r_def),             intent(in)    :: tau_u_dt, tau_t_dt, tau_r_dt
+    type(field_type), intent(inout) :: x0(bundle_size)
+    type(field_type), intent(in)    :: rhs0(bundle_size), &
+                                       x_ref(bundle_size)
+    real(kind=r_def), intent(in)    :: tau_u_dt, tau_t_dt, tau_r_dt
 
     ! The scalars
-    real(kind=r_def)               :: alpha, const1
+    real(kind=r_def)                :: alpha, const1
     ! Others
-    real(kind=r_def)               :: err, sc_err, init_err
-    integer(kind=i_def)            :: iter, n, m, m_final
-    integer(kind=i_def)            :: max_gmres_iter
-
+    real(kind=r_def)                :: err, sc_err, init_err
+    integer(kind=i_def)             :: iter, n, m, m_final
+    integer(kind=i_def)             :: max_gmres_iter
 
     max_gmres_iter = si_maximum_iterations
 
@@ -370,12 +366,11 @@ contains
       call copy_bundle( rhs0, residual, bundle_size )
     end if
 
-
     if (err < si_tolerance) then
       write( log_scratch_space, '(A,I3,A,E12.4,A,E15.8)' ) &
-           "gcr solver_algorithm:converged in ", 0,      &
-           " iters, init=", init_err,                      &
-           " final=", err
+             "gcr solver_algorithm:converged in ", 0,      &
+             " iters, init=", init_err,                    &
+             " final=", err
       call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
       ! Add increments to field
       call bundle_axpy(1.0_r_def, dx, x0, x0, bundle_size)
@@ -385,7 +380,6 @@ contains
              "solver_algorithm[", 0, "]: residual = ", init_err
       call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
     end if
-
 
     do iter = 1, max_gmres_iter
       do m = 1, gcrk        
@@ -430,23 +424,25 @@ contains
 
   end subroutine mixed_gcr_alg
 
-!=============================================================================!
-  !>@brief Jacobi iterative solver adapted for solving the semi-implicit equations
-  !>@param[inout] x0 State to increment 
-  !>@param[in]    rhs0 Fixed rhs so solve for
-  !>@param[in]    x_ref Reference state
-  !>@param[in]    tau_{u,t,r}_dt The offcentering parameter times the timestep
+  !=============================================================================!
+  !> @brief Jacobi iterative solver adapted for solving the semi-implicit 
+  !!        equations.
+  !> @param[in,out] x0 State to increment 
+  !> @param[in] rhs0 Fixed rhs to solve for
+  !> @param[in] x_ref Reference state
+  !> @param[in] tau_{u,t,r}_dt The offcentering parameter times the timestep
   subroutine mixed_jacobi_alg(x0, rhs0, x_ref, tau_u_dt, tau_t_dt, tau_r_dt) 
+
     implicit none
 
-    type(field_type),             intent(inout) :: x0(bundle_size)
-    type(field_type),             intent(in)    :: rhs0(bundle_size), &
-                                                   x_ref(bundle_size)
-    real(kind=r_def),             intent(in)    :: tau_u_dt, tau_t_dt, tau_r_dt
+    type(field_type), intent(inout) :: x0(bundle_size)
+    type(field_type), intent(in)    :: rhs0(bundle_size), &
+                                       x_ref(bundle_size)
+    real(kind=r_def), intent(in)    :: tau_u_dt, tau_t_dt, tau_r_dt
 
-    real(r_def),    parameter :: omega = 3.0/3.0
-    real(r_def)               :: err, err0
-    integer(i_def)            :: iter
+    real(kind=r_def), parameter     :: omega = 3.0/3.0
+    real(kind=r_def)                :: err, err0
+    integer(kind=i_def)             :: iter
 
     err0 = sqrt(bundle_inner_product(rhs0, rhs0, bundle_size))
 
@@ -458,7 +454,7 @@ contains
       ! Compute error
       err = bundle_inner_product(residual, residual, bundle_size)
       write( log_scratch_space, '(A,I2,2E12.4)' ) &
-        'Jacobi residual = ',iter,sqrt(err), sqrt(err)/err0
+        'Jacobi residual = ',iter, sqrt(err), sqrt(err)/err0
       call log_event( log_scratch_space, LOG_LEVEL_INFO )
       if ( sqrt(err)/err0 < si_tolerance ) exit
 
@@ -469,18 +465,19 @@ contains
 
   end subroutine mixed_jacobi_alg
 
-!=============================================================================!
-  !>@brief Applies a choosen preconditioner to a state x to produce state y
-  !>@param[inout] y Preconditioned state
-  !>@param[in]    x Original state
-  !>@param[in]    option Choice of which preconditioner to use
-  !>@param[in]    mm Arrays containing diagonal approximation to mass matrices
-  !>@param[in]    bundle_size Number of fields the state arrays
+  !=============================================================================!
+  !> @brief Applies a choosen preconditioner to a state x to produce state y.
+  !> @param[in,out] y Preconditioned state
+  !> @param[in] x Original state
+  !> @param[in] option Choice of which preconditioner to use
+  !> @param[in] mm Arrays containing diagonal approximation to mass matrices
+  !> @param[in] bundle_size Number of fields the state arrays
   subroutine bundle_preconditioner(y, x, option, mm, bundle_size)
-    use psykal_lite_mod,          only: invoke_copy_field_data
+
     use helmholtz_solver_alg_mod, only: helmholtz_solver_alg
 
     implicit none
+
     integer(kind=i_def), intent(in)    :: bundle_size
     type(field_type),    intent(inout) :: y(bundle_size)
     type(field_type),    intent(in)    :: x(bundle_size)
@@ -492,14 +489,12 @@ contains
       case (mixed_solver_si_preconditioner_none, &
             mixed_solver_si_postconditioner_none)
         do i = 1,bundle_size
-          call invoke_copy_field_data( x(i), y(i) )
-          ! call invoke( setval_X(y(i), x(i)) )
+          call invoke( setval_X(y(i), x(i)) )
         end do
       case (mixed_solver_si_preconditioner_diagonal, &
             mixed_solver_si_postconditioner_diagonal)
         do i = 1,bundle_size
-          call invoke_copy_field_data( x(i), y(i) )
-          ! call invoke( setval_X(y(i), x(i)) )
+          call invoke( setval_X(y(i), x(i)) )
         end do
         call bundle_divide(y, mm, bundle_size)
       case (mixed_solver_si_preconditioner_pressure, &
@@ -507,10 +502,9 @@ contains
         call set_bundle_scalar(0.0_r_def, y, bundle_size)
         call helmholtz_solver_alg(y, x)
       case default
-        call log_event( 'Invalid si pre/postconditioner', LOG_LEVEL_ERROR )
+        call log_event( 'Invalid SI pre/postconditioner', LOG_LEVEL_ERROR )
     end select
 
   end subroutine bundle_preconditioner
 
-!=============================================================================!
 end module si_solver_alg_mod

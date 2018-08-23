@@ -69,7 +69,7 @@ module iter_timestep_alg_mod
   use io_mod,                    only : output_xios_nodal
 
   ! Algorithms
-  use solver_mod,                  only: solver_algorithm
+  use solver_alg_mod,              only: solver_algorithm
   use rhs_alg_mod,                 only: rhs_alg
   use advection_alg_mod,           only: advection_alg,       &
                                          advection_alg_init,  &

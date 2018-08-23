@@ -19,7 +19,7 @@ module galerkin_projection_algorithm_mod
   use log_mod,                         only: log_event, log_scratch_space, LOG_LEVEL_INFO
   use operator_mod,                    only: operator_type
   use quadrature_xyoz_mod,             only: quadrature_xyoz_type
-  use solver_mod,                      only: solver_algorithm
+  use solver_alg_mod,                  only: solver_algorithm
   use runtime_constants_mod,           only: get_coordinates
 
   implicit none

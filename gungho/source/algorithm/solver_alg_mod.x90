@@ -5,15 +5,17 @@
 !-----------------------------------------------------------------------------
 !
 !> @brief Contains methods and algorithms for solving a system A.x = b for known
-!! input field b and matrix A and returns field x
+!!        input field b and matrix A and returns field x.
 !!
-!! @details Contains a selction of solvers for inverting the matrix vector
-!! system A.x = b to return x = A^{-1}.b Depending upom the type of system to
-!! solve a number of iterative solver algorithms are possible or for
-!! discontinuous systems an exact solver can be used
-module solver_mod
+!> @details Contains a selection of solvers for inverting the matrix vector
+!!          system A.x = b to return x = A^{-1}.b. Depending upon the type of
+!!          system to solve a number of iterative solver algorithms are 
+!!          possible or for discontinuous systems an exact solver can be used.
+module solver_alg_mod
 
-  use constants_mod,             only : r_def, str_def, i_def
+  use, intrinsic :: ieee_arithmetic
+
+  use constants_mod,             only : r_def, str_def, i_def, l_def
   use field_mod,                 only : field_type
   use fs_continuity_mod,         only : W0, W1, W2, W3, Wtheta, W2v, W2h, &
                                         name_from_functionspace
@@ -39,49 +41,56 @@ module solver_mod
                                         solver_preconditioner_none,     &
                                         solver_preconditioner_diagonal, &
                                         gcrk
-  use runtime_constants_mod,     only : get_coordinates, &
-                                        get_mass_matrix, &
+  use runtime_constants_mod,     only : get_coordinates,          &
+                                        get_mass_matrix,          &
                                         get_mass_matrix_diagonal, &
                                         w3inv_id, w0_id, w1_id, w2_id, wt_id
   use output_config_mod,         only : subroutine_timers 
   use timer_mod,                 only : timer
+
   implicit none
 
   private
-  real(r_def), parameter :: sc_err_min = 1.0e-16_r_def
+
   public :: solver_algorithm
+
+  real(r_def), parameter    :: sc_err_min = 1.0e-16_r_def
   ! Auxiliary constants to group invokes
   real(kind=r_def), private :: const1
 
 contains
 
-!> @brief Wrapper for specific solver routines for solving system A.x = b
-!! @details solves A.x = b for using a choice of solver where A is a mass
-!! matrix for a given space and x and b are fields belonging to that space.
-!! For a discontinous space the element mass matrix is exactly inverted, for
-!! continuous spaces an iterative solver is used.
-!! The current choices of iteratives solver are:
-!! cg: Conjugate gradient method without preconditioning
-!! bicgstab: bi-conjugate gradient, stabilised without preconditioning
-!! jacobi: a fixed number of jacobi iterations
-!> @param[inout] lhs Field to be solved for (x)
-!> @param[in]    rhs Right hand side field (b)
-!> @param[in] bc_flag Flag to overide default boundary condition application
-  subroutine solver_algorithm( lhs, rhs, bc_flag )
+  !=============================================================================!
+  !> @brief Wrapper for specific solver routines for solving system A.x = b.
+  !> @details Solves A.x = b for using a choice of solver where A is a mass
+  !!          matrix for a given space and x and b are fields belonging to 
+  !!          that space.
+  !!          For a discontinous space the element mass matrix is exactly
+  !!          inverted, for continuous spaces an iterative solver is used.
+  !!          The current choices of iteratives solver are:
+  !!              cg: Conjugate gradient method without preconditioning,
+  !!              bicgstab: bi-conjugate gradient, stabilised without 
+  !!                        preconditioning,
+  !!              jacobi: a fixed number of jacobi iterations.
+  !> @param[in,out] lhs Field to be solved for (x)
+  !> @param[in] rhs Right hand side field (b)
+  !> @param[in] bc_flag Flag to overide default boundary condition application
+  subroutine solver_algorithm(lhs, rhs, bc_flag)
+
     use dg_matrix_vector_kernel_mod,  only : dg_matrix_vector_kernel_type
 
     implicit none
 
-    type(field_type), intent(inout) :: lhs
-    type(field_type), intent(in)    :: rhs
-    logical, intent(in), optional :: bc_flag
+    type(field_type), intent(inout)           :: lhs
+    type(field_type), intent(in)              :: rhs
+    logical(kind=l_def), intent(in), optional :: bc_flag
 
-    type(operator_type), pointer :: mm => null()
-    type(field_type),    pointer :: mmd => null()
+    type(operator_type), pointer              :: mm => null()
+    type(field_type),    pointer              :: mmd => null()
 
-    integer(i_def) :: fs_l, fs_r
+    integer(kind=i_def)                       :: fs_l, fs_r
 
-    logical :: apply_bc
+    logical(kind=l_def)                       :: apply_bc
 
     if ( subroutine_timers ) call timer('solver_alg')
 
@@ -147,22 +156,25 @@ contains
 
   end subroutine solver_algorithm
 
-!> @brief BiCGStab solver.
-!! @details solves A.x = b where the operation A.x is encoded in a kernel using
-!! the stabilised bi-conjugate gradient method. The choice of matrix is
-!! encoded in the matrix vector kernel that is called
-!! @param[in]  rhs_field Input b
-!! @param[inout] lhs_field The answer, x
-!! @param[in] mm operator type, Mass matrix
-!! @param[in] mmd Mass matrix diagonal
-!! @param[in] apply_bc Flag to determine if boundary conditions are applied
+  !=============================================================================!
+  !> @brief BiCGStab solver.
+  !> @details Solves A.x = b where the operation A.x is encoded in a kernel
+  !!          using the stabilised bi-conjugate gradient method. The choice of 
+  !!          matrix is encoded in the matrix vector kernel that is called.
+  !> @param[in,out] lhs The answer, x
+  !> @param[in] rhs Input b
+  !> @param[in] mm Mass matrix
+  !> @param[in] mmd Mass matrix diagonal
+  !> @param[in] apply_bc Flag to determine if boundary conditions are applied
   subroutine bicg_solver_algorithm(lhs, rhs, mm, mmd, apply_bc)
+
     implicit none
+
     type(field_type),    intent(inout) :: lhs
     type(field_type),    intent(in)    :: rhs
     type(operator_type), intent(in)    :: mm
     type(field_type),    intent(in)    :: mmd
-    logical ,intent(in) :: apply_bc
+    logical(kind=l_def) ,intent(in)    :: apply_bc
 
     type(function_space_type), pointer :: rhs_fs => null()
 
@@ -175,12 +187,12 @@ contains
     real(kind=r_def)                   :: ts,tt
     ! Others
     real(kind=r_def)                   :: err,sc_err, init_err
-    integer(i_def)                     :: iter
-    integer(i_def)                     :: fs
+    integer(kind=i_def)                :: iter
+    integer(kind=i_def)                :: fs
 
     fs = lhs%which_function_space()
 
-    ! Compute the residual this is a global sum to the PSy ---
+    ! Compute the residual this is a global sum to the PSy
     call invoke( X_innerproduct_X(sc_err, rhs) )
     sc_err = max(sqrt(sc_err), sc_err_min)
     write( log_scratch_space, '(A,E15.8)' ) &
@@ -280,24 +292,26 @@ contains
     end if
 
   end subroutine bicg_solver_algorithm
-!--------------------------------------------------
 
-!> @brief CG solver for the system A.x = b.
-!! @details solves A.x = b where the operation A.x is encoded in a kernel using
-!! the conjugate gradient method. The choice of matrix is
-!! encoded in the matrix vector kernel that is called.
-!! @param[in] rhs_field Input b
-!! @param[inout] lhs_field The answer, x
-!! @param[in] mm Mass matrix
-!! @param[in] mmd Mass matrix diagonal
-!! @param[in] apply_bc Flag to determine if boundary conditions are applied
+  !=============================================================================!
+  !> @brief CG solver for the system A.x = b.
+  !> @details Solves A.x = b where the operation A.x is encoded in a kernel
+  !!          using the conjugate gradient method. The choice of matrix is
+  !!          encoded in the matrix vector kernel that is called.
+  !> @param[in,out] lhs The answer, x
+  !> @param[in] rhs Input b
+  !> @param[in] mm Mass matrix
+  !> @param[in] mmd Mass matrix diagonal
+  !> @param[in] apply_bc Flag to determine if boundary conditions are applied
   subroutine cg_solver_algorithm(lhs, rhs, mm, mmd, apply_bc)
+
     implicit none
+
     type(field_type),    intent(inout) :: lhs
     type(field_type),    intent(in)    :: rhs
     type(operator_type), intent(in)    :: mm
     type(field_type),    intent(in)    :: mmd
-    logical,             intent(in)    :: apply_bc
+    logical(kind=l_def), intent(in)    :: apply_bc
 
     type(function_space_type), pointer :: rhs_fs => null()
 
@@ -309,8 +323,8 @@ contains
     real(kind=r_def)                   :: rs_new, rs_old
     ! Others
     real(kind=r_def)                   :: err,sc_err, init_err
-    integer(i_def)                     :: iter
-    integer(i_def)                     :: fs
+    integer(kind=i_def)                :: iter
+    integer(kind=i_def)                :: fs
 
     fs = lhs%which_function_space()
 
@@ -396,86 +410,86 @@ contains
 
   end subroutine cg_solver_algorithm
 
-!--------------------------------------------------
-
-!> @brief Jacobi solver for the system A.x = b.
-!! @details solves A.x = b where the operation A.x is encoded in a kernel using
-!! a fixed (n_iter) number of iterations. The choice of matrix is
-!! encoded in the matrix vector kernel that is called. No measure of convergence
-!! is used instead the algorithm is assumed to have converged sufficiently
-!! after (n_iter) iterations
-!! @param[in] rhs_field Input b
-!! @param[inout] lhs_field The answer, x
-!! @param[in] mm Mass matrix
-!! @param[in] apply_bc Flag to determine if boundary conditions are applied
+  !=============================================================================!
+  !> @brief Jacobi solver for the system A.x = b.
+  !> @details Solves A.x = b where the operation A.x is encoded in a kernel
+  !!          using a fixed (n_iter) number of iterations. The choice of matrix
+  !!          is encoded in the matrix vector kernel that is called. No measure 
+  !!          of convergence is used instead the algorithm is assumed to have 
+  !!          converged sufficiently after (n_iter) iterations.
+  !> @param[in,out] lhs The answer, x
+  !> @param[in] rhs Input b
+  !> @param[in] mm Mass matrix
+  !> @param[in] apply_bc Flag to determine if boundary conditions are applied
   subroutine jacobi_solver_algorithm(lhs, rhs, mm, apply_bc)
 
-  use mm_diagonal_kernel_mod, only: mm_diagonal_kernel_type
-  implicit none
+    use mm_diagonal_kernel_mod, only: mm_diagonal_kernel_type
 
-  type(field_type),    intent(inout) :: lhs
-  type(field_type),    intent(in)    :: rhs
-  type(operator_type), intent(in)    :: mm
-  logical,             intent(in)    :: apply_bc
-  type(field_type)                   :: Ax, diagonal, res
+    implicit none
 
-  real(kind=r_def), parameter :: MU = 0.9_r_def
+    type(field_type),    intent(inout) :: lhs
+    type(field_type),    intent(in)    :: rhs
+    type(operator_type), intent(in)    :: mm
+    logical(kind=l_def), intent(in)    :: apply_bc
+    type(field_type)                   :: Ax, diagonal, res
 
-  integer(i_def) :: iter
+    real(kind=r_def), parameter        :: MU = 0.9_r_def
 
-  type(function_space_type), pointer :: rhs_fs => null()
-  integer(i_def)                     :: fs
+    integer(kind=i_def)                :: iter
 
-  fs = lhs%which_function_space()
+    type(function_space_type), pointer :: rhs_fs => null()
+    integer(kind=i_def)                :: fs
 
-  rhs_fs => rhs%get_function_space()
+    fs = lhs%which_function_space()
 
-  diagonal = field_type( vector_space = rhs_fs )
-  res      = field_type( vector_space = rhs_fs )
+    rhs_fs => rhs%get_function_space()
 
-  call invoke( mm_diagonal_kernel_type(diagonal, mm), &
-               X_divideby_Y(lhs, rhs, diagonal) )
+    diagonal = field_type( vector_space = rhs_fs )
+    res      = field_type( vector_space = rhs_fs )
 
-! Initial guess
-  call invoke( setval_c(lhs, 0.0_r_def) )
+    call invoke( mm_diagonal_kernel_type(diagonal, mm), &
+                 X_divideby_Y(lhs, rhs, diagonal) )
 
-  do iter = 1,maximum_iterations
-    call invoke( setval_c(Ax, 0.0_r_def), &
-                 matrix_vector_kernel_type(Ax, lhs, mm) )
-    if (apply_bc) call invoke( enforce_bc_kernel_type( Ax ) )
+    ! Initial guess
+    call invoke( setval_c(lhs, 0.0_r_def) )
 
-    call invoke( X_minus_Y(res, rhs, Ax),         &
-                 inc_X_divideby_Y(res, diagonal), &
-                 inc_X_plus_bY(lhs, MU, res) )
+    do iter = 1,maximum_iterations
+      call invoke( setval_c(Ax, 0.0_r_def), &
+                   matrix_vector_kernel_type(Ax, lhs, mm) )
+      if (apply_bc) call invoke( enforce_bc_kernel_type( Ax ) )
 
-! Ready for next iteration
-  end do
+      call invoke( X_minus_Y(res, rhs, Ax),         &
+                   inc_X_divideby_Y(res, diagonal), &
+                   inc_X_plus_bY(lhs, MU, res) )
 
-  nullify(rhs_fs)
+    ! Ready for next iteration
+    end do
+
+    nullify(rhs_fs)
 
   end subroutine jacobi_solver_algorithm
 
-!--------------------------------------------------
-
-!> @brief GMRes solver for the system A.x = b.
-!! @details solves A.x = b where the operation A.x is encoded in a kernel using
-!! GMRes algorithm. The choice of matrix is
-!! encoded in the matrix vector kernel that is called. No measure of convergence
-!! is used instead the algorithm is assumed to have converged sufficiently
-!! after (n_iter) iterations
-!! @param[in] rhs Input b
-!! @param[inout] lhs Answer, x
-!! @param[in] mm Mass matrix
-!! @param[in] mmd Diagonal mass matrix used for conditioning
-!! @param[in] apply_bc Flag to determine if boundary conditions are applied
+  !=============================================================================!
+  !> @brief GMRes solver for the system A.x = b.
+  !> @details Solves A.x = b where the operation A.x is encoded in a kernel
+  !!          using GMRes algorithm. The choice of matrix is encoded in the 
+  !!          matrix vector kernel that is called. No measure of convergence
+  !!          is used instead the algorithm is assumed to have converged
+  !!          sufficiently after (n_iter) iterations.
+  !> @param[in,out] lhs The answer, x
+  !> @param[in] rhs Input b
+  !> @param[in] mm Mass matrix
+  !> @param[in] mmd Diagonal mass matrix used for conditioning
+  !> @param[in] apply_bc Flag to determine if boundary conditions are applied
   subroutine gmres_solver_algorithm(lhs, rhs, mm, mmd, apply_bc)
 
     implicit none
+
     type(field_type),    intent(inout) :: lhs
     type(field_type),    intent(in)    :: rhs
     type(operator_type), intent(in)    :: mm
     type(field_type),    intent(in)    :: mmd
-    logical,             intent(in)    :: apply_bc
+    logical(kind=l_def), intent(in)    :: apply_bc
  
     ! The temporary fields
     type(field_type)                   :: Ax, r, s, w, v(GCRK)
@@ -485,11 +499,11 @@ contains
     real(kind=r_def)                   :: beta, si, ci, nrm, h1, h2, p, q
     ! Others
     real(kind=r_def)                   :: err, sc_err, init_err
-    integer(i_def)                     :: iter, i, j, k, m
+    integer(kind=i_def)                :: iter, i, j, k, m
 
     type(function_space_type), pointer :: rhs_fs => null()
-    integer(i_def) :: precond_option, postcond_option
-    integer(i_def) :: fs
+    integer(kind=i_def)                :: precond_option, postcond_option
+    integer(kind=i_def)                :: fs
 
     fs = lhs%which_function_space()
 
@@ -532,7 +546,6 @@ contains
 
     const1 = 1.0_r_def/beta
     call invoke( a_times_X(v(1), const1, s) )
-
 
     h(:,:) = 0.0_r_def
     g(:)   = 0.0_r_def
@@ -632,20 +645,19 @@ contains
 
   end subroutine gmres_solver_algorithm
 
-!--------------------------------------------------
-
-!> @brief GCR solver for the system A.x = b.
-!! @details solves A.x = b where the operation A.x is encoded in a kernel using
-!! the Preconditioned GCR(k) algorithm from Wesseling. The choice of matrix is
-!! encoded in the matrix vector kernel that is called. No measure of convergence
-!! is used instead the algorithm is assumed to have converged sufficiently
-!! after (n_iter) iterations
-!! @param[in] rhs_field Input b
-!! @param[inout] lhs_field Answer, x
-!! @param[in] mm Mass matrix
-!! @param[in] mmd Mass matrix diagonal
-!! @param[in] apply_bc Flag to determine if boundary conditions are applied
-  subroutine gcr_solver_algorithm( lhs, rhs, mm, mmd, apply_bc )
+  !=============================================================================!
+  !> @brief GCR solver for the system A.x = b.
+  !> @details Solves A.x = b where the operation A.x is encoded in a kernel
+  !!          using the Preconditioned GCR(k) algorithm from Wesseling. The
+  !!          choice of matrix is encoded in the matrix vector kernel that is
+  !!          called. No measure of convergence is used instead the algorithm is
+  !!          assumed to have converged sufficiently after (n_iter) iterations.
+  !> @param[in,out] lhs The answer, x
+  !> @param[in] rhs Input b
+  !> @param[in] mm Mass matrix
+  !> @param[in] mmd Mass matrix diagonal
+  !> @param[in] apply_bc Flag to determine if boundary conditions are applied
+  subroutine gcr_solver_algorithm(lhs, rhs, mm, mmd, apply_bc)
 
     implicit none
 
@@ -653,7 +665,7 @@ contains
     type(field_type),    intent(in)    :: rhs
     type(operator_type), intent(in)    :: mm
     type(field_type),    intent(in)    :: mmd
-    logical,             intent(in)    :: apply_bc
+    logical(kind=l_def), intent(in)    :: apply_bc
     ! The temporary fields
     type(field_type)                   :: Ax, r, s(GCRK), v(GCRK)
 
@@ -661,10 +673,10 @@ contains
     real(kind=r_def)                   :: alpha
     ! Others
     real(kind=r_def)                   :: err, sc_err, init_err
-    integer(i_def)                     :: iter, m, n
+    integer(kind=i_def)                :: iter, m, n
 
     type(function_space_type), pointer :: rhs_fs => null()
-    integer(i_def)                     :: fs
+    integer(kind=i_def)                :: fs
 
     fs = lhs%which_function_space()
 
@@ -741,24 +753,24 @@ contains
 
     nullify(rhs_fs)
 
-end subroutine gcr_solver_algorithm
+  end subroutine gcr_solver_algorithm
 
-
-!> @brief Applies a selected prconditioner to a vector x
-!! @details Applies one of s number of preconditioners to a field x
-!! and returns the preconditioned field y. Currently no preconditioner
-!! is applied and y = x.
-!! @param[in]    x Input field
-!! @param[inout] y Output field
-!! @param[in] preconditioner Type of preconditioner to be used
-!! routine to use
+  !=============================================================================!
+  !> @brief Applies a selected prconditioner to a vector x.
+  !> @details Applies one of s number of preconditioners to a field x and
+  !!          returns the preconditioned field y. Currently no preconditioner
+  !!          is applied and y = x.
+  !> @param[in,out] y Output field
+  !> @param[in] x Input field
+  !> @param[in] preconditioner Type of preconditioner to be used
+  !> @param[in] diagonal Diagonal mass matrix used for conditioning
   subroutine precondition(y, x, preconditioner, diagonal)
 
     implicit none
 
     type(field_type), intent(inout) :: y
     type(field_type), intent(in)    :: x
-    integer(i_def),   intent(in)    :: preconditioner
+    integer(kind=i_def), intent(in) :: preconditioner
     type(field_type), intent(in)    :: diagonal
 
     select case ( preconditioner )
@@ -770,4 +782,4 @@ end subroutine gcr_solver_algorithm
 
   end subroutine precondition
 
-end module solver_mod
+end module solver_alg_mod

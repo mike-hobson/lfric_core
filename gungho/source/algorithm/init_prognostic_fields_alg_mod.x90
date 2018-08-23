@@ -13,7 +13,7 @@ module init_prognostic_fields_alg_mod
                                              LOG_LEVEL_TRACE
   use constants_mod,                   only: r_def, i_def
 
-  use solver_mod,                      only: solver_algorithm
+  use solver_alg_mod,                  only: solver_algorithm
   use runtime_constants_mod,           only: get_coordinates, &
                                              get_mass_matrix, &
                                              w3inv_id,        &

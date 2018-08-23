@@ -59,7 +59,8 @@ $(WORKING_DIR)/%.f90: $(WORKING_DIR)/%.x90
 	             -oalg $@ -opsy /dev/null $<
 
 .PRECIOUS: $(WORKING_DIR)/%.x90
-$(WORKING_DIR)/%.x90: $(SOURCE_DIR)/%.x90 | $$(dir $$@)
+$(WORKING_DIR)/%.x90: $(SOURCE_DIR)/%.x90 \
+		      | $$(patsubst $$(PERCENT)/,$$(PERCENT),$$(dir $$@))
 	$(call MESSAGE,Preprocessing,$<)
 	$(Q)$(FPP) $(FPPFLAGS) $(MACRO_ARGS) $< $@
 

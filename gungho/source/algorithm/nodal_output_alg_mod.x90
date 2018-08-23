@@ -14,7 +14,8 @@ use finite_element_config_mod,      only: element_order
 use fs_continuity_mod,              only: W0, W1, W2, W3
 use log_mod,                        only: log_event,         &
                                           log_scratch_space, &
-                                          LOG_LEVEL_INFO
+                                          LOG_LEVEL_INFO,    &
+                                          LOG_LEVEL_ERROR
 use multiplicity_kernel_mod,        only: multiplicity_kernel_type
 use psykal_lite_mod,                only: invoke_convert_cart2sphere_vector, &
                                           invoke_pointwise_convert_xyz2llr,  &
@@ -32,7 +33,7 @@ contains
 subroutine nodal_output_alg(field, chi, nodal_output, nodal_coordinates, level)
 
     type(field_type), intent(in)            :: field, chi(3)
-    type(field_type), intent(inout)         :: nodal_output(3)
+    type(field_type), intent(inout)         :: nodal_output(:)
     type(field_type), intent(inout)         :: nodal_coordinates(3)
     type(field_type), intent(inout)         :: level
 
@@ -46,10 +47,18 @@ subroutine nodal_output_alg(field, chi, nodal_output, nodal_coordinates, level)
     !(1) Create output fields
     output_fs = field%which_function_space()
     output_field_fs => field%get_function_space()
-    do i = 1,3
+    if ( (output_fs == W1 .or. output_fs == W2) .and. &
+         size(nodal_output) /= 3 ) then
+      write( log_scratch_space, '(A)') &
+        'nodal_output: 3 fields needed in actual argument for W1/W2 nodal_output'
+      call log_event( log_scratch_space, log_level_error)
+    end if
+    do i = 1, size(nodal_output)
       nodal_output(i) = field_type( vector_space = output_field_fs )
-      nodal_coordinates(i) = field_type( vector_space = output_field_fs )
       call invoke( setval_c(nodal_output(i), 0.0_r_def) )
+    end do
+    do i = 1, 3
+      nodal_coordinates(i) = field_type( vector_space = output_field_fs )
     end do
 
     !(2) Convert field to physical nodal output & sample chi on nodal points

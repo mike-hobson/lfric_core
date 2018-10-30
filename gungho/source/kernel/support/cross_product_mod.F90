@@ -11,7 +11,12 @@ use constants_mod, only: r_def
 
 implicit none
 
+private
+
+public :: cross_product
+
 contains
+
 !>@brief Function to compute the cross product of two 3D vectors x and y
 !! @param[in] x The first 3d vector
 !! @param[in] y The second 3d vector

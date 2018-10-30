@@ -14,6 +14,10 @@ use constants_mod, only: r_def, EPS
 
 implicit none
 
+private
+
+public :: second_order_coeffs
+
 contains
 
   !--------------------------------------------------------------------------------

@@ -10,6 +10,12 @@ use constants_mod, only : r_def
 
 implicit none
 
+private
+
+! Public subroutines
+public :: matrix_invert
+public :: matrix_invert_3x3
+
 contains
 !-------------------------------------------------------------------------------
 ! Contained functions/subroutines

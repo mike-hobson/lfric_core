@@ -18,6 +18,11 @@ use planet_config_mod, only: scaled_omega
 
 implicit none
 
+private
+
+public :: rotation_vector_fplane
+public :: rotation_vector_sphere
+
 contains
 !-------------------------------------------------------------------------------
 ! Contained functions/subroutines

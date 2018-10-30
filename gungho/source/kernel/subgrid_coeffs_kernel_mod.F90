@@ -65,6 +65,7 @@ module subgrid_coeffs_kernel_mod
   !-------------------------------------------------------------------------------
   ! Contained functions/subroutines
   !-------------------------------------------------------------------------------
+  public :: subgrid_coeffs_code
 contains
 
 type(subgrid_coeffs_kernel_type) &
@@ -101,7 +102,7 @@ subroutine subgrid_coeffs_code(                                               &
                                 a2                                            &
                                 )
 
-  use subgrid_rho_mod, only: minmod_function, maxmod_function, second_order_coeffs
+  use subgrid_rho_mod, only: second_order_coeffs
   use cosmic_flux_mod,    only : stencil_ordering_and_orientation
   use log_mod,          only : log_event, LOG_LEVEL_ERROR, LOG_LEVEL_INFO, log_scratch_space
 

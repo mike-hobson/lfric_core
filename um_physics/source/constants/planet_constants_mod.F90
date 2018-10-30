@@ -8,8 +8,9 @@
 
 module planet_constants_mod
 
+  use, intrinsic :: iso_fortran_env, only: real32
   ! Universal constants
-  use constants_mod, only: l_def, i_um, r_um, real32, pi, rmdi, imdi
+  use constants_mod, only: l_def, i_um, r_um, pi, rmdi, imdi
   use lfric_atm_water_constants_mod, only: gas_constant_h2o
 
   implicit none
@@ -221,7 +222,6 @@ contains
 
 subroutine set_planet_constants()
 
-  use constants_mod,     only: r_um, real32
   use planet_config_mod, only: gravity, radius, rd,      &
                                lfric_omega => omega,     &
                                lfric_cp => cp,           &

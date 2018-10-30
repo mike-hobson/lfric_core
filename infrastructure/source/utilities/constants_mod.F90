@@ -14,12 +14,20 @@ module constants_mod
 
   implicit none
 
+  private
+
+  public :: r_def, r_single, r_double, r_native, dp_native, dp_xios, r_um,   &
+            i_def, i_native, i_long, i_halo_index, i_um, l_def, l_native,    &
+            c_def, c_native, str_short, str_def, str_long, str_max_filename, &
+            LARGE_REAL_POSITIVE, LARGE_REAL_NEGATIVE, cache_block, EPS, PI,  &
+            degrees_to_radians, radians_to_degrees, RMDI, IMDI, CMDI, EMDI
+
   ! Define default application-defined kinds for all intrinsic data types
 
   !> @name Set up default kinds for real and double-precision variables.
   !> @{
-  real,             private :: r_val  !< A native real used to compute kind of native real.
-  double precision, private :: dp_val !< A native double-precision used to compute kind of native dp.
+  real               :: r_val              !< A native real used to compute kind of native real.
+  double precision   :: dp_val             !< A native double-precision used to compute kind of native dp.
 
   integer, parameter :: r_def     = real64 !< Default real kind for application.
   integer, parameter :: r_single  = real32 !< Default single precision real kind for application.
@@ -41,7 +49,7 @@ module constants_mod
 
   !> @name Set up default kinds for integers.
   !> @{
-  integer, private   :: i_val     !< A native integer used to compute kind of native integer.
+  integer            :: i_val                      !< A native integer used to compute kind of native integer.
 
   integer, parameter :: i_def        = int32       !< Default integer kind for application.
   integer, parameter :: i_native     = kind(i_val) !< Native kind for integer.
@@ -52,7 +60,7 @@ module constants_mod
 
   !> @name Set up default kinds for logicals.
   !> @{
-  logical, private   :: l_val     !< A native logical used to compute kind of native logical.
+  logical            :: l_val                   !< A native logical used to compute kind of native logical.
 
   integer, parameter :: l_def     = kind(l_val) !< Default logical kind for application.
   integer, parameter :: l_native  = kind(l_val) !< Native kind for logical.
@@ -60,7 +68,7 @@ module constants_mod
 
   !> @name Set up default kinds for character variables.
   !> @{
-  character, private :: c_val     !< A native character used to compute kind of native character.
+  character          :: c_val                   !< A native character used to compute kind of native character.
 
   integer, parameter :: c_def     = kind(c_val) !< Default character kind for application.
   integer, parameter :: c_native  = kind(c_val) !< Native kind for character.

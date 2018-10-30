@@ -34,6 +34,10 @@ use log_mod,                        only : log_event,         &
                                            LOG_LEVEL_ERROR
 implicit none
 
+private
+
+public :: reference_profile
+
 contains
 !-------------------------------------------------------------------------------
 ! Contained functions/subroutines

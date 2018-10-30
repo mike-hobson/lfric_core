@@ -14,7 +14,7 @@ module gw_init_fields_alg_mod
                                                LOG_LEVEL_ERROR
   use constants_mod,                     only: r_def, i_def
 
-  use solver_mod,                        only: solver_algorithm
+  use solver_alg_mod,                    only: solver_algorithm
   use runtime_constants_mod,             only: get_coordinates
 
   ! Configuration and restart/checkpoint options

@@ -23,6 +23,11 @@ use initial_wind_config_mod,        only : u0
 use formulation_config_mod,         only : rotating
 implicit none
 
+private
+
+public :: generate_global_gw_fields
+public :: generate_global_gw_pert
+
 contains
 
 !> @brief Function to generate the background fields for

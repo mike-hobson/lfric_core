@@ -17,6 +17,16 @@ use biperiodic_deppt_config_mod, only : biperiodic_deppt_method_euler,       &
 
 implicit none
 
+private
+
+public :: calc_dep_point
+public :: calc_vertical_trapezoidal
+! the following subroutines are public in order to facilitate unit testing.
+public :: find_local_x_value
+public :: find_local_vertical_value
+public :: calc_u_at_x
+public :: calc_u_in_vertical
+
 contains
 
 !--------------------------------------------------------------------------------

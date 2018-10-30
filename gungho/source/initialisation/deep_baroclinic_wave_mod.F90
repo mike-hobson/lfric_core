@@ -16,6 +16,14 @@ module deep_baroclinic_wave_mod
                                            initial_wind_profile_deep_baroclinic_perturbed
   implicit none
 
+  private
+
+  public :: deep_baroclinic_wave, T0E, T0P, B, KK, lapse, pertu0,         &
+            pertr, pertlon, pertlat, pertz, dxepsilon
+  ! evaluate_streamfunction() is a public subroutine in order to facilitate
+  ! unit testing.
+  public :: evaluate_streamfunction
+
 !=======================================================================
 ! Deep baroclinic wave parameters
 !=======================================================================

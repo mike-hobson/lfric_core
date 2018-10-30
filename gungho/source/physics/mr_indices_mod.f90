@@ -11,6 +11,10 @@ module mr_indices_mod
 
   implicit none
 
+  private
+
+  public :: imr_v, imr_c, imr_r, imr_nc, imr_nr, nummr
+
   integer, parameter :: imr_v  = 1  ! vapour
   integer, parameter :: imr_c  = 2  ! cloud mass
   integer, parameter :: imr_r  = 3  ! rain mass

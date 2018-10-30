@@ -58,6 +58,8 @@ module w2_normalisation_kernel_mod
   !---------------------------------------------------------------------------
   ! Contained functions/subroutines
   !---------------------------------------------------------------------------
+  public :: w2_normalisation_code
+
 contains
 
 type(w2_normalisation_kernel_type) &

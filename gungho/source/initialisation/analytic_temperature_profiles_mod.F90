@@ -40,6 +40,10 @@ use formulation_config_mod,        only : shallow
 
 implicit none
 
+private
+
+public :: analytic_temperature
+
 contains
 
 !> @brief Compute an analytic temperature field

@@ -11,6 +11,10 @@ module calc_global_cell_map_mod
 
   implicit none
 
+  private
+
+  public :: calc_global_cell_map
+
 contains
 
 !-------------------------------------------------------------------------------

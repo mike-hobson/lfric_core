@@ -12,6 +12,12 @@ use planet_config_mod, only : kappa, Rd, p_zero
 
 implicit none
 
+private
+
+public :: calc_exner_pointwise
+public :: linear_calc_exner_pointwise
+public :: calc_pressure_pointwise
+
 contains
 !-------------------------------------------------------------------------------
 ! Contained functions/subroutines

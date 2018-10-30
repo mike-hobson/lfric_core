@@ -21,6 +21,10 @@ module mesh_colouring_mod
 
   implicit none
 
+  private
+
+  public :: set_colours
+
   integer, parameter               :: MAXCOLS = 50 ! Temporary hardcode until
                                                    ! dynamic palette
   integer(kind=i_def), target      :: cells_per_colour(MAXCOLS)

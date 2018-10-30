@@ -14,6 +14,13 @@ use formulation_config_mod, only: hard_wired_j, hard_wired_detj
 
 implicit none
 
+private
+
+public :: coordinate_jacobian
+public :: coordinate_jacobian_inverse
+public :: pointwise_coordinate_jacobian
+public :: pointwise_coordinate_jacobian_inverse
+
 contains
 
   !-------------------------------------------------------------------------------

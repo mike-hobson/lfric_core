@@ -8,7 +8,8 @@
 
 module conversions_mod
 
-  use constants_mod, only: r_um, i_um, real32, &
+  use, intrinsic :: iso_fortran_env, only: real32
+  use constants_mod, only: r_um, i_um,         &
                            degrees_to_radians, &
                            radians_to_degrees, &
                            lfric_pi => pi

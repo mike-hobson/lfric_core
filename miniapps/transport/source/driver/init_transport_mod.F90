@@ -18,11 +18,11 @@ module init_transport_mod
                                             restart_interface
   use finite_element_config_mod,      only: element_order
   use fs_continuity_mod,              only: W2, W3
-  use restart_control_mod,            only: restart_type
   use runtime_constants_mod,          only: create_runtime_constants
   use function_space_mod,             only: function_space_type
   use function_space_collection_mod,  only: function_space_collection
-  use output_config_mod,              only: write_xios_output
+  use io_config_mod,                  only: write_diag, &
+                                            use_xios_io
   use io_mod,                         only: xios_write_field_face,    &
                                             checkpoint_xios,          &
                                             checkpoint_netcdf,        &
@@ -89,7 +89,7 @@ module init_transport_mod
 
     ! Set I/O behaviours for diagnostic output
 
-    if ( write_xios_output ) then
+    if ( write_diag .and. use_xios_io ) then
        ! Fields that are output on the XIOS face domain
        tmp_write_diag_ptr => xios_write_field_face
        call wind%set_write_diag_behaviour( tmp_write_diag_ptr )

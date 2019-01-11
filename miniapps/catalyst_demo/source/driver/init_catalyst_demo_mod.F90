@@ -23,13 +23,15 @@ module init_catalyst_demo_mod
   use log_mod,                        only : log_event, log_scratch_space, &
                                              LOG_LEVEL_INFO, &
                                              LOG_LEVEL_ERROR
-  use restart_control_mod,            only : restart_type
   use gravity_wave_constants_config_mod,only : b_space,                           &
                                                gravity_wave_constants_b_space_w0, &
                                                gravity_wave_constants_b_space_w3, &
                                                gravity_wave_constants_b_space_wtheta
   use runtime_constants_mod,          only : create_runtime_constants
-  use output_config_mod,              only : write_xios_output
+  use io_config_mod,                  only : write_diag,       &
+                                             use_xios_io,      &
+                                             checkpoint_write, &
+                                             checkpoint_read
   use io_mod,                         only : xios_write_field_face, &
                                              xios_write_field_node, &
                                              checkpoint_xios, &
@@ -51,7 +53,7 @@ module init_catalyst_demo_mod
   contains
 
   subroutine init_catalyst_demo( mesh_id, chi, multigrid_function_space_chain, &
-                                 wind, pressure, buoyancy, restart )
+                                 wind, pressure, buoyancy )
 
     integer(i_def),                  intent(in)  :: mesh_id
     type(function_space_chain_type), intent(out) :: multigrid_function_space_chain
@@ -60,7 +62,6 @@ module init_catalyst_demo_mod
     type( field_type ), intent(inout)        :: wind, pressure, buoyancy
     ! Coordinate field
     type( field_type ), intent(inout)        :: chi(:)
-    type(restart_type), intent(in)           :: restart
     integer(i_def)                           :: buoyancy_space
 
     integer(i_def) :: i
@@ -120,7 +121,7 @@ module init_catalyst_demo_mod
 
     ! Set I/O behaviours for diagnostic output
 
-    if (write_xios_output) then
+    if (write_diag .and. use_xios_io) then
 
        ! Fields that are output on the XIOS face domain
 
@@ -141,33 +142,37 @@ module init_catalyst_demo_mod
 
     ! Set I/O behaviours for checkpoint / restart
 
-    if (restart%use_xios()) then
+    if ( checkpoint_write .or. checkpoint_read) then
 
-      ! Use XIOS for checkpoint / restart
+      if (use_xios_io) then
 
-      tmp_checkpoint_ptr => checkpoint_xios
-      tmp_restart_ptr => restart_xios
+        ! Use XIOS for checkpoint / restart
 
-      call log_event( 'catalyst_demo: Using XIOS for checkpointing...', LOG_LEVEL_INFO )
+        tmp_checkpoint_ptr => checkpoint_xios
+        tmp_restart_ptr => restart_xios
 
-    else
+        call log_event( 'catalyst_demo: Using XIOS for checkpointing...', LOG_LEVEL_INFO )
 
-      ! Use old checkpoint and restart methods
+      else
 
-      tmp_checkpoint_ptr => checkpoint_netcdf
-      tmp_restart_ptr => restart_netcdf
+        ! Use old checkpoint and restart methods
 
-      call log_event( 'catalyst_demo: Using NetCDF for checkpointing...', LOG_LEVEL_INFO )
+        tmp_checkpoint_ptr => checkpoint_netcdf
+        tmp_restart_ptr => restart_netcdf
+
+        call log_event( 'catalyst_demo: Using NetCDF for checkpointing...', LOG_LEVEL_INFO )
+
+      end if
+
+      call wind%set_checkpoint_behaviour(tmp_checkpoint_ptr)
+      call pressure%set_checkpoint_behaviour(tmp_checkpoint_ptr)
+      call buoyancy%set_checkpoint_behaviour(tmp_checkpoint_ptr)
+
+      call wind%set_restart_behaviour(tmp_restart_ptr)
+      call pressure%set_restart_behaviour(tmp_restart_ptr)
+      call buoyancy%set_restart_behaviour(tmp_restart_ptr)
 
     end if
-
-    call wind%set_checkpoint_behaviour(tmp_checkpoint_ptr)
-    call pressure%set_checkpoint_behaviour(tmp_checkpoint_ptr)
-    call buoyancy%set_checkpoint_behaviour(tmp_checkpoint_ptr)
-
-    call wind%set_restart_behaviour(tmp_restart_ptr)
-    call pressure%set_restart_behaviour(tmp_restart_ptr)
-    call buoyancy%set_restart_behaviour(tmp_restart_ptr)
 
     ! Create runtime_constants object. This in turn creates various things
     ! needed by the timestepping algorithms such as mass matrix operators, mass
@@ -175,7 +180,7 @@ module init_catalyst_demo_mod
     call create_runtime_constants(mesh_id, chi)
 
     ! Initialise prognostic fields
-    call gw_init_fields_alg(wind, pressure, buoyancy, restart)
+    call gw_init_fields_alg(wind, pressure, buoyancy)
 
     nullify( tmp_write_diag_ptr, tmp_checkpoint_ptr, &
              tmp_restart_ptr, function_space )

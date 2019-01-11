@@ -29,9 +29,8 @@ module skeleton_driver_mod
                                              finalise_logging,   &
                                              LOG_LEVEL_ERROR,    &
                                              LOG_LEVEL_INFO
-  use output_config_mod,              only : write_xios_output
-  use restart_config_mod,             only : restart_filename => filename
-  use restart_control_mod,            only : restart_type
+  use io_config_mod,                  only : write_diag, &
+                                             use_xios_io
   use diagnostics_io_mod,             only : write_scalar_diagnostic
   use io_mod,                         only : xios_domain_init
   use checksum_alg_mod,               only : checksum_alg
@@ -46,8 +45,6 @@ module skeleton_driver_mod
 
   private
   public initialise, run, finalise
-
-  type(restart_type) :: restart
 
   ! Prognostic fields
   type( field_type ) :: field_1
@@ -102,8 +99,6 @@ contains
     call load_configuration( filename )
     call set_derived_config( .true. )
 
-    restart = restart_type( restart_filename, local_rank, total_ranks )
-
     !-------------------------------------------------------------------------
     ! Model init
     !-------------------------------------------------------------------------
@@ -131,14 +126,13 @@ contains
     ! If using XIOS for diagnostic output or checkpointing, then set up
     ! XIOS domain and context
 
-    if ( (write_xios_output) .or. (restart%use_xios()) ) then
+    if ( use_xios_io ) then
 
       dtime = 1
 
       call xios_domain_init( xios_ctx,     &
                              comm,         &
                              dtime,        &
-                             restart,      &
                              mesh_id,      &
                              twod_mesh_id, &
                              chi)
@@ -169,9 +163,10 @@ contains
     ! Write out output file
     call log_event("skeleton: Writing diagnostic output", LOG_LEVEL_INFO)
 
-    ! Calculation and output of diagnostics
-    call write_scalar_diagnostic('skeleton_field', field_1, 1, mesh_id, .false.)
-
+    if (write_diag ) then
+      ! Calculation and output of diagnostics
+      call write_scalar_diagnostic('skeleton_field', field_1, 1, mesh_id, .false.)
+    end if
 
   end subroutine run
 
@@ -198,7 +193,7 @@ contains
     !-------------------------------------------------------------------------
 
    ! Finalise XIOS context if we used it for diagnostic output or checkpointing
-    if ( (write_xios_output) .or. (restart%use_xios()) ) then
+    if ( use_xios_io ) then
       call xios_context_finalize()
     end if
 

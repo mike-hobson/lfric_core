@@ -30,8 +30,8 @@ contains
                                            use_wavedynamics,                   &
                                            transport_only,                     &
                                            dlayer_on
-    use output_config_mod,           only: write_xios_output,                  &
-                                           write_nodal_output
+    use io_config_mod,               only: write_diag,                         &
+                                           use_xios_io
     use planet_config_mod,           only: gravity,                            &
                                            radius,                             &
                                            omega,                              &
@@ -105,9 +105,9 @@ contains
         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
 
-      ! Check the output namelist
-      if ( .not. write_xios_output .and. .not. write_nodal_output ) then
-        write( log_scratch_space, '(A)' ) 'No output method selected'
+      ! Check the io namelist
+      if ( .not. write_diag ) then
+        write( log_scratch_space, '(A)' ) 'Diagnostic output not enabled'
         call log_event( log_scratch_space, LOG_LEVEL_WARNING )
       end if
 
@@ -224,7 +224,7 @@ contains
           write( log_scratch_space, '(A)' ) 'Tridiagonal helmholtz preconditioner only valid for  element_order = 0'
           call log_event( log_scratch_space, LOG_LEVEL_ERROR )
         end if
-        if ( write_xios_output ) then
+        if ( use_xios_io ) then
           write( log_scratch_space, '(A)' ) 'xios output may not work with element order > 0'
           call log_event( log_scratch_space, LOG_LEVEL_WARNING )
         end if

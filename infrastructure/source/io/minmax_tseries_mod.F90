@@ -11,7 +11,7 @@ module minmax_tseries_mod
   use field_mod,                         only: field_type, field_proxy_type
   use diagnostic_alg_mod,                only: scalar_nodal_diagnostic_alg, &
                                                vector_nodal_diagnostic_alg
-  use output_config_mod,                 only: diag_stem_name
+  use io_config_mod,                     only: diag_stem_name
   use mesh_mod,                          only: mesh_type
   use mesh_collection_mod,               only: mesh_collection
   use runtime_constants_mod,             only: get_coordinates

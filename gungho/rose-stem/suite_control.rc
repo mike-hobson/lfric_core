@@ -267,7 +267,7 @@
                              env={"crun": 15, "nrun":150,
                                   "directives":{"default":{"mpi_parts":400,
                                                            "threads":1,
-                                                           "wallclock":"01:00:00"} } },
+                                                           "wallclock":"01:30:00"} } },
                              plotstr="cartesian_mountain_plot.py $NODAL_DATA_DIR u 3 T002250 100 100 schar3d zoom_1 lines $PLOT_DIR")',
             'run_application("gungho", "bell_3d_cart",
                              resolutions=[("BiP300x200-200x200", 4.0)],

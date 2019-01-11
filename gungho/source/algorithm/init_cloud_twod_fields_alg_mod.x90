@@ -14,8 +14,11 @@ module init_cloud_twod_fields_alg_mod
 
   use constants_mod,                   only: r_def
 
-  ! Configuration and restart/checkpoint options
-  use restart_control_mod,             only: restart_type
+  use io_mod,                          only: ts_fname
+  use io_config_mod,                   only: checkpoint_read, &
+                                             restart_stem_name
+
+  use time_config_mod,                 only: timestep_start
 
   ! Derived Types
   use field_mod,                       only: field_type
@@ -46,8 +49,7 @@ contains
   !>          and rhcrit will be initialised to the values in this restart/checkpoint file
   !> @param[in,out] cloud_fields Cloud related fields 
   !> @param[in,out] twod_fields  Two dimensional fields
-  !> @param[in] restart         Checkpoint control object
-  subroutine init_cloud_twod_fields_alg(cloud_fields, twod_fields, restart)
+  subroutine init_cloud_twod_fields_alg(cloud_fields, twod_fields)
 
     use initial_cloud_kernel_mod,        only: initial_cloud_kernel_type
 
@@ -56,9 +58,6 @@ contains
     ! Moist fields
     type( field_collection_type ), intent( inout ) :: cloud_fields,twod_fields
     ! Prognostic fields
-
-    ! Control
-    type( restart_type ), intent(in)      :: restart
 
     type( field_type ), pointer :: cf_area  => null()
     type( field_type ), pointer :: cf_ice  => null()
@@ -89,7 +88,7 @@ contains
     ntml_twod => twod_fields%get_field('ntml')
     cumulus_twod => twod_fields%get_field('cumulus')
 
-    if (.not.restart%read_checkpoint() .or. cloud_scheme == physics_cloud_scheme_none) then  
+    if (.not. checkpoint_read .or. cloud_scheme == physics_cloud_scheme_none) then  
       ! No check point to start from
 
       call log_event( "Gungho: Initialising cloud fields", LOG_LEVEL_INFO )
@@ -102,24 +101,29 @@ contains
     else                                   ! Recorded check point to start from
 
       call log_event("Reading checkpoint file to restart area_fraction",LOG_LEVEL_INFO)
-      call cf_area%read_restart("restart_area_fraction", trim(restart%startfname("area_fraction")))
+      call cf_area%read_restart("restart_area_fraction", trim(ts_fname(restart_stem_name,"", &
+                            "area_fraction", (timestep_start - 1),"")))
 
       call log_event("Reading checkpoint file to restart ice_fraction",LOG_LEVEL_INFO)
-      call cf_ice%read_restart("restart_ice_fraction", trim(restart%startfname("ice_fraction")))
+      call cf_ice%read_restart("restart_ice_fraction", trim(ts_fname(restart_stem_name,"", &
+                            "ice_fraction", (timestep_start - 1),"")))
 
       call log_event("Reading checkpoint file to restart liquid_fraction",LOG_LEVEL_INFO)
-      call cf_liq%read_restart("restart_liquid_fraction", trim(restart%startfname("liquid_fraction")))
+      call cf_liq%read_restart("restart_liquid_fraction", trim(ts_fname(restart_stem_name,"", &
+                            "liquid_fraction", (timestep_start - 1),"")))
 
       call log_event("Reading checkpoint file to restart bulk_fraction",LOG_LEVEL_INFO)
-      call cf_bulk%read_restart("restart_bulk_fraction", trim(restart%startfname("bulk_fraction")))
+      call cf_bulk%read_restart("restart_bulk_fraction", trim(ts_fname(restart_stem_name,"", &
+                            "bulk_fraction", (timestep_start - 1),"")))
 
       call log_event("Reading checkpoint file to restart rhcrit",LOG_LEVEL_INFO)
-      call rhcrit_in_wth%read_restart("restart_rhcrit", trim(restart%startfname("rhcrit")))
+      call rhcrit_in_wth%read_restart("restart_rhcrit", trim(ts_fname(restart_stem_name,"", &
+                            "rhcrit", (timestep_start - 1),"")))
 
       call log_event( "Gungho: Read cloud fields from files", LOG_LEVEL_INFO )
     end if
 
-    if (.not.restart%read_checkpoint()) then
+    if (.not. checkpoint_read) then
       ! No check point to start from
 
       call log_event( "Gungho: Initialising twod fields", LOG_LEVEL_INFO )
@@ -135,19 +139,24 @@ contains
     else                                   ! Recorded check point to start from
 
       call log_event("Reading checkpoint file to restart tstar",LOG_LEVEL_INFO)
-      call tstar_twod%read_restart("restart_tstar", trim(restart%startfname("tstar")))
+      call tstar_twod%read_restart("restart_tstar", trim(ts_fname(restart_stem_name,"", &
+                            "tstar", (timestep_start - 1),"")))
 
       call log_event("Reading checkpoint file to restart zh",LOG_LEVEL_INFO)
-      call zh_twod%read_restart("restart_zh", trim(restart%startfname("zh")))
+      call zh_twod%read_restart("restart_zh", trim(ts_fname(restart_stem_name,"", &
+                            "zh", (timestep_start - 1),"")))
 
       call log_event("Reading checkpoint file to restart z0msea",LOG_LEVEL_INFO)
-      call z0msea_twod%read_restart("restart_z0msea", trim(restart%startfname("z0msea")))
+      call z0msea_twod%read_restart("restart_z0msea", trim(ts_fname(restart_stem_name,"", &
+                            "z0msea", (timestep_start - 1),"")))
 
       call log_event("Reading checkpoint file to restart ntml",LOG_LEVEL_INFO)
-      call ntml_twod%read_restart("restart_ntml", trim(restart%startfname("ntml")))
+      call ntml_twod%read_restart("restart_ntml", trim(ts_fname(restart_stem_name,"", &
+                            "ntml", (timestep_start - 1),"")))
 
       call log_event("Reading checkpoint file to restart cumulus",LOG_LEVEL_INFO)
-      call cumulus_twod%read_restart("restart_cumulus", trim(restart%startfname("cumulus")))
+      call cumulus_twod%read_restart("restart_cumulus", trim(ts_fname(restart_stem_name,"", &
+                            "cumulus", (timestep_start - 1),"")))
 
       call log_event( "Gungho: Read twod fields from files", LOG_LEVEL_INFO )
     end if

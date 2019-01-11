@@ -30,7 +30,7 @@ module rhs_alg_mod
   use quadrature_rule_gaussian_mod,        only: quadrature_rule_gaussian_type
   use derived_config_mod,                  only: bundle_size
   use field_indices_mod,                   only: igh_u, igh_t, igh_d, igh_p
-  use output_config_mod,                   only: subroutine_timers 
+  use io_config_mod,                       only: subroutine_timers 
   use timer_mod,                           only: timer
   use rhs_eos_kernel_mod,                  only: rhs_eos_kernel_type
   use moist_dyn_mod,                       only: num_moist_factors, gas_law

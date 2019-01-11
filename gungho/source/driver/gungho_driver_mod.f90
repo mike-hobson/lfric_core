@@ -13,6 +13,8 @@ module gungho_driver_mod
   use conservation_algorithm_mod, only : conservation_algorithm
   use constants_mod,              only : i_def, imdi, str_def, str_short
   use derived_config_mod,         only : set_derived_config
+  use time_config_mod,            only : timestep_start, &
+                                         timestep_end
   use diagnostics_io_mod,         only : write_scalar_diagnostic,     &
                                          write_vector_diagnostic
   use diagnostics_mod,            only : write_divergence_diagnostic, &
@@ -34,7 +36,17 @@ module gungho_driver_mod
   use init_gungho_mod,            only : init_gungho
   use init_mesh_mod,              only : init_mesh
   use init_physics_mod,           only : init_physics
-  use io_mod,                     only : xios_domain_init
+  use io_mod,                     only : xios_domain_init, &
+                                         ts_fname
+  use io_config_mod,              only : write_diag,           &
+                                         diagnostic_frequency, &
+                                         use_xios_io,          &
+                                         nodal_output_on_w3,   &
+                                         checkpoint_write,     &
+                                         restart_stem_name,    &
+                                         write_minmax_tseries, &
+                                         subroutine_timers,    &
+                                         subroutine_counters
   use iter_timestep_alg_mod,      only : iter_alg_init, &
                                          iter_alg_step, &
                                          iter_alg_final
@@ -57,16 +69,6 @@ module gungho_driver_mod
                                          physics_cloud_scheme_none
   use moist_dyn_mod,              only : num_moist_factors, gas_law, &
                                          total_mass, water
-  use output_config_mod,          only : diagnostic_frequency, &
-                                         subroutine_timers, &
-                                         nodal_output_on_w3, &
-                                         write_minmax_tseries, &
-                                         subroutine_counters, &
-                                         write_xios_output
-
-
-  use restart_config_mod,         only : restart_filename => filename
-  use restart_control_mod,        only : restart_type
   use rk_alg_timestep_mod,        only : rk_alg_init, &
                                          rk_alg_step, &
                                          rk_alg_final
@@ -91,8 +93,6 @@ module gungho_driver_mod
 
   private
   public initialise, run, finalise
-
-  type(restart_type) :: restart
 
   ! Prognostic fields
   type( field_type ) :: u,         &
@@ -180,8 +180,6 @@ contains
     call load_configuration( filename )
     call set_derived_config( .true. )
 
-    restart = restart_type( restart_filename, local_rank, total_ranks )
-
     !-------------------------------------------------------------------------
     ! Model init
     !-------------------------------------------------------------------------
@@ -214,17 +212,16 @@ contains
     ! IO init
     !-------------------------------------------------------------------------
 
-    ! If using XIOS for diagnostic output or checkpointing, then set up
+    ! If using XIOS for diagnostic output, checkpointing or dumping, then set up
     ! XIOS domain and context
 
-    if ( (write_xios_output) .or. (restart%use_xios()) ) then
+    if ( use_xios_io ) then
 
       dtime = int(dt)
 
       call xios_domain_init( xios_ctx,     &
                              comm,         &
                              dtime,        &
-                             restart,      & 
                              mesh_id,      &
                              twod_mesh_id, &
                              chi)
@@ -235,11 +232,11 @@ contains
     ! Create and initialise prognostic and auxilliary (diagnostic) fields
     timestep = 0
     call init_gungho( mesh_id, chi, u, rho, theta, exner, mr, moist_dyn, &
-                      xi, restart )
+                      xi )
 
     ! Create and initialise physics fields
     if (use_physics) then
-      call init_physics(mesh_id, twod_mesh_id, restart,             &
+      call init_physics(mesh_id, twod_mesh_id,                      &
                         u, exner, rho, theta,                       &
                         derived_fields, cloud_fields, twod_fields,  &
                         physics_incs)
@@ -247,42 +244,51 @@ contains
 
     ! Initial output
     ! We only want these once at the beginning of a run
-    ts_init = max( (restart%ts_start() - 1), 0 ) ! 0 or t previous.
+    ts_init = max( (timestep_start - 1), 0 ) ! 0 or t previous.
 
     if (ts_init == 0) then
 
-      if ( write_xios_output ) then
+      if ( use_xios_io ) then
 
         ! Need to ensure calendar is initialised here as XIOS has no concept of timestep 0
         call xios_update_calendar(ts_init + 1)
 
       end if
 
-      ! Calculation and output of diagnostics
+      if ( write_diag ) then
 
-      ! Scalar fields
-      call write_scalar_diagnostic('rho', rho, ts_init, mesh_id, nodal_output_on_w3)
-      call write_scalar_diagnostic('theta', theta, ts_init, mesh_id, nodal_output_on_w3)
-      call write_scalar_diagnostic('exner', exner, ts_init, mesh_id, nodal_output_on_w3)
+        ! Calculation and output of diagnostics
 
-      if (use_moisture) then
-        do i=1,nummr
-           call write_scalar_diagnostic(trim(mr_names(i)), mr(i), ts_init, mesh_id, nodal_output_on_w3)
-        end do
+        ! Prognostic Scalar fields
+        call write_scalar_diagnostic('rho', rho, ts_init, mesh_id, nodal_output_on_w3)
+        call write_scalar_diagnostic('theta', theta, ts_init, mesh_id, nodal_output_on_w3)
+        call write_scalar_diagnostic('exner', exner, ts_init, mesh_id, nodal_output_on_w3)
+
+        ! Prognostic Vector fields
+        call write_vector_diagnostic('u', u, ts_init, mesh_id, nodal_output_on_w3)
+        call write_vector_diagnostic('xi', xi, ts_init, mesh_id, nodal_output_on_w3)
+
+        ! Moisture fields
+        if (use_moisture) then
+          do i=1,nummr
+            call write_scalar_diagnostic(trim(mr_names(i)), mr(i), ts_init, mesh_id, nodal_output_on_w3)
+          end do
+        end if
+
+        ! Cloud fields
+        if (use_physics .and. cloud_scheme /= physics_cloud_scheme_none) then
+          do i=1,5
+            diag_ptr => cloud_fields%get_field(trim(cloudnames(i)))
+            call write_scalar_diagnostic(trim(cloudnames(i)), diag_ptr, ts_init, mesh_id, nodal_output_on_w3)
+          end do
+          diag_ptr => null()
+        end if
+
+       ! Other derived diagnostics with special pre-processing
+       call write_divergence_diagnostic(u, ts_init, mesh_id)
+       call write_hydbal_diagnostic(theta, moist_dyn, exner, mesh_id)
+
       end if
-
-      ! Vector fields
-      call write_vector_diagnostic('u', u, ts_init, mesh_id, nodal_output_on_w3)
-      call write_vector_diagnostic('xi', xi, ts_init, mesh_id, nodal_output_on_w3)
-
-      if (use_physics .and. cloud_scheme /= physics_cloud_scheme_none) then
-        do i=1,5
-          diag_ptr => cloud_fields%get_field(trim(cloudnames(i)))
-          call write_scalar_diagnostic(trim(cloudnames(i)), diag_ptr, ts_init, mesh_id, nodal_output_on_w3)
-        end do
-        diag_ptr => null()
-      end if
-
 
       if (write_minmax_tseries) then
 
@@ -290,10 +296,6 @@ contains
          call minmax_tseries(u, 'u', mesh_id)
 
       end if
-
-      ! Other derived diagnostics with special pre-processing
-      call write_divergence_diagnostic(u, ts_init, mesh_id)
-      call write_hydbal_diagnostic(theta, moist_dyn, exner, mesh_id)
 
     end if
 
@@ -308,10 +310,10 @@ contains
 
     integer(i_def) :: timestep
 
-    do timestep = restart%ts_start(),restart%ts_end()
+    do timestep = timestep_start, timestep_end
 
       ! Update XIOS calendar if we are using it for diagnostic output or checkpoint
-      if ( (write_xios_output) .or. (restart%use_xios()) ) then
+      if ( use_xios_io ) then
         call log_event( "Gungho: Updating XIOS timestep", LOG_LEVEL_INFO )
         call xios_update_calendar(timestep)
       end if
@@ -325,7 +327,7 @@ contains
 
         select case( scheme )
           case ( transport_scheme_method_of_lines )
-            if (timestep == restart%ts_start()) then
+            if (timestep == timestep_start) then
               ! Initialise and output initial conditions on first timestep
               call runge_kutta_init()
               call rk_transport_init( mesh_id, u, rho, theta)
@@ -342,7 +344,7 @@ contains
         select case( method )
           case( timestepping_method_semi_implicit )  ! Semi-Implicit
             ! Initialise and output initial conditions on first timestep
-            if (timestep == restart%ts_start()) then
+            if (timestep == timestep_start) then
               call runge_kutta_init()
               call iter_alg_init(mesh_id, u, rho, theta, exner, mr, &
                                  twod_fields)
@@ -354,7 +356,7 @@ contains
 
           case( timestepping_method_rk )             ! RK
             ! Initialise and output initial conditions on first timestep
-            if (timestep == restart%ts_start()) then
+            if (timestep == timestep_start) then
               call runge_kutta_init()
               call rk_alg_init(mesh_id, u, rho, theta, exner)
               call conservation_algorithm(timestep, rho, u, theta, exner, xi)
@@ -382,27 +384,29 @@ contains
       ! Use diagnostic output frequency to determine whether to write
       ! diagnostics on this timestep
 
-      if ( mod(timestep, diagnostic_frequency) == 0 ) then
+      if ( ( mod(timestep, diagnostic_frequency) == 0 ) .and. ( write_diag ) ) then
 
         call log_event("Gungho: writing diagnostic output", LOG_LEVEL_INFO)
 
         ! Calculation and output of diagnostics
 
-        ! Scalar fields
+        ! Prognostic Scalar fields
         call write_scalar_diagnostic('rho', rho, timestep, mesh_id, nodal_output_on_w3)
         call write_scalar_diagnostic('theta', theta, timestep, mesh_id, nodal_output_on_w3)
         call write_scalar_diagnostic('exner', exner, timestep, mesh_id, nodal_output_on_w3)
 
+        ! Prognostic Vector fields
+        call write_vector_diagnostic('u', u, timestep, mesh_id, nodal_output_on_w3)
+        call write_vector_diagnostic('xi', u, timestep, mesh_id, nodal_output_on_w3)
+
+        ! Moisture fields
         if (use_moisture)then
           do i=1,nummr
             call write_scalar_diagnostic(trim(mr_names(i)), mr(i), timestep, mesh_id, nodal_output_on_w3)
           end do
         end if
 
-        ! Vector fields
-        call write_vector_diagnostic('u', u, timestep, mesh_id, nodal_output_on_w3)
-        call write_vector_diagnostic('xi', u, timestep, mesh_id, nodal_output_on_w3)
-
+        ! Cloud fields
         if (use_physics .and. cloud_scheme /= physics_cloud_scheme_none) then
            do i=1,5
             diag_ptr => cloud_fields%get_field(trim(cloudnames(i)))
@@ -410,6 +414,11 @@ contains
            end do 
            diag_ptr => null()
          end if
+
+        ! Other derived diagnostics with special pre-processing
+
+        call write_divergence_diagnostic(u, timestep, mesh_id)
+        call write_hydbal_diagnostic(theta, moist_dyn, exner, mesh_id)
 
       end if
 
@@ -441,43 +450,50 @@ contains
     end if
 
     ! Write checkpoint files if required
-    if( restart%checkpoint() ) then 
+    if( checkpoint_write ) then 
 
-       write(log_scratch_space,'(A,I6)') "Checkpointing rho at ts ",restart%ts_end() 
+       write(log_scratch_space,'(A,I6)') "Checkpointing rho at ts ", timestep_end 
        call log_event(log_scratch_space,LOG_LEVEL_INFO)
-       call rho%write_checkpoint("checkpoint_rho", trim(restart%endfname("rho")))
+       call rho%write_checkpoint("checkpoint_rho", trim(ts_fname(restart_stem_name,&
+                                  "", "rho", timestep_end,"")))
 
-       write(log_scratch_space,'(A,I6)') "Checkpointing u at ts ",restart%ts_end() 
+       write(log_scratch_space,'(A,I6)') "Checkpointing u at ts ", timestep_end 
        call log_event(log_scratch_space,LOG_LEVEL_INFO)
-       call u%write_checkpoint("checkpoint_u", trim(restart%endfname("u")))
+       call u%write_checkpoint("checkpoint_u", trim(ts_fname(restart_stem_name,&
+                                  "", "u", timestep_end,"")))
 
-       write(log_scratch_space,'(A,I6)') "Checkpointing theta at ts ",restart%ts_end() 
+       write(log_scratch_space,'(A,I6)') "Checkpointing theta at ts ", timestep_end
        call log_event(log_scratch_space,LOG_LEVEL_INFO)
-       call theta%write_checkpoint("checkpoint_theta", trim(restart%endfname("theta")))
+       call theta%write_checkpoint("checkpoint_theta", trim(ts_fname(restart_stem_name,&
+                                  "", "theta", timestep_end,"")))
 
-       write(log_scratch_space,'(A,I6)') "Checkpointing exner at ts ",restart%ts_end() 
+       write(log_scratch_space,'(A,I6)') "Checkpointing exner at ts ", timestep_end 
        call log_event(log_scratch_space,LOG_LEVEL_INFO)
-       call exner%write_checkpoint("checkpoint_exner", trim(restart%endfname("exner")))
+       call exner%write_checkpoint("checkpoint_exner", trim(ts_fname(restart_stem_name,&
+                                  "", "exner", timestep_end,"")))
   
-       write(log_scratch_space,'(A,I6)') "Checkpointing xi at ts ",restart%ts_end() 
+       write(log_scratch_space,'(A,I6)') "Checkpointing xi at ts ", timestep_end 
        call log_event(log_scratch_space,LOG_LEVEL_INFO)
-       call xi%write_checkpoint("checkpoint_xi", trim(restart%endfname("xi")))
+       call xi%write_checkpoint("checkpoint_xi", trim(ts_fname(restart_stem_name,&
+                                  "", "xi", timestep_end,"")))
 
        if (use_moisture)then
          do i=1,nummr
            write(name, '(A,A)') 'checkpoint_',trim(mr_names(i))
-           write(log_scratch_space,'(A,A,A,I6)') "Checkpointing ",  trim(name), " at ts ",restart%ts_end() 
+           write(log_scratch_space,'(A,A,A,I6)') "Checkpointing ",  trim(name), " at ts ",timestep_end
            call log_event(log_scratch_space,LOG_LEVEL_INFO)
-           call mr(i)%write_checkpoint(trim(name), trim(restart%endfname(mr_names(i))))
+           call mr(i)%write_checkpoint(trim(name), trim(ts_fname(restart_stem_name,"", &
+                            trim(mr_names(i)), timestep_end,"")))
          end do
 
          if (use_physics .and. cloud_scheme /= physics_cloud_scheme_none)then
            do i=1,5
              diag_ptr => cloud_fields%get_field(trim(cloudnames(i)))
              write(name, '(A,A)') 'checkpoint_',trim(cloudnames(i))
-             write(log_scratch_space,'(3A,I6)') "Checkpointing ", trim(name) ," at ts ",restart%ts_end() 
+             write(log_scratch_space,'(3A,I6)') "Checkpointing ", trim(name) ," at ts ",timestep_end
              call log_event(log_scratch_space,LOG_LEVEL_INFO)
-             call diag_ptr%write_checkpoint(trim(name), trim(restart%endfname(cloudnames(i))))
+             call diag_ptr%write_checkpoint(trim(name), trim(ts_fname(restart_stem_name,"", &
+                            trim(cloudnames(i)), timestep_end,"")))
            end do 
          endif
 
@@ -487,9 +503,10 @@ contains
          do i=1,5
            diag_ptr => twod_fields%get_field(trim(twodnames(i)))
            write(name, '(A,A)') 'checkpoint_',trim(twodnames(i))
-           write(log_scratch_space,'(3A,I6)') "Checkpointing ", trim(name) ," at ts ",restart%ts_end()
+           write(log_scratch_space,'(3A,I6)') "Checkpointing ", trim(name) ," at ts ",timestep_end
            call log_event(log_scratch_space,LOG_LEVEL_INFO)
-           call diag_ptr%write_checkpoint(trim(name),trim(restart%endfname(twodnames(i))))
+           call diag_ptr%write_checkpoint(trim(name), trim(ts_fname(restart_stem_name,"", &
+                            trim(twodnames(i)), timestep_end,"")))
          end do
 
        endif
@@ -553,8 +570,9 @@ contains
     ! Driver layer finalise
     !-------------------------------------------------------------------------
 
-    ! Finalise XIOS context if we used it for diagnostic output or checkpointing
-    if ( (write_xios_output) .or. (restart%use_xios()) ) then
+    ! Finalise XIOS context if we used it
+
+    if ( use_xios_io ) then
       call xios_context_finalize()
     end if
 

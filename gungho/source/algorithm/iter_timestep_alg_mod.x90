@@ -16,13 +16,12 @@ module iter_timestep_alg_mod
                                        LOG_LEVEL_ERROR
 
   ! Configuration options
-  use restart_control_mod,       only: restart_type
   use formulation_config_mod,    only: use_moisture, use_physics, dlayer_on, &
                                        use_wavedynamics,          &
                                        dry_static_adjust,         &
                                        exner_from_eos
-  use output_config_mod,         only: diagnostic_frequency, subroutine_timers, &
-                                       write_xios_output
+  use io_config_mod,             only: diagnostic_frequency, subroutine_timers, &
+                                       use_xios_io, write_diag
   use mixed_solver_config_mod,   only: guess_np1,                                &
                                        reference_reset_freq
   use timestepping_config_mod,   only: dt, alpha, &
@@ -394,7 +393,7 @@ contains
                   extract_w_kernel_type(w_physics, u_physics) )
       call u_physics%log_minmax(LOG_LEVEL_INFO, 'u_physics')
       call w_physics%log_minmax(LOG_LEVEL_INFO, 'w_physics')
-      if (write_xios_output) then
+      if (use_xios_io .and. write_diag) then
         call write_scalar_diagnostic("w_physics", w_physics, timestep,  &
                                       w_physics%get_mesh_id(), .false.)
       end if

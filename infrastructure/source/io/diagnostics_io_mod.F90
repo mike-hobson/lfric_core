@@ -14,8 +14,8 @@ module diagnostics_io_mod
                                            scalar_nodal_diagnostic_alg, &
                                            scalar_ugrid_diagnostic_alg, &
                                            vector_nodal_diagnostic_alg
-  use output_config_mod,             only: write_nodal_output, &
-                                           write_xios_output
+  use io_config_mod,                 only: use_xios_io, &
+                                           diag_stem_name
   use project_output_mod,            only: project_output
   use io_mod,                        only: ts_fname, &
                                            nodal_write_field, &
@@ -62,35 +62,22 @@ subroutine write_scalar_diagnostic(field_name, field, ts, mesh_id, W3_project)
   logical,          intent(in)    :: W3_project
 
   ! Local Variables 
-  type(mesh_type), pointer        :: mesh => null()
   type(field_type)                :: nodal_coordinates(3)
   type(field_type)                :: output_field(3)
   type(field_type)                :: level
-  character(len=str_max_filename) :: rank_name
   character(len=str_max_filename) :: fname
   integer(i_def), parameter       :: nodal_output_unit = 21
 
+  procedure(write_diag_interface), pointer  :: tmp_write_ptr => null()
+
   ! Nodal output
-  if ( write_nodal_output)  then
-
-    ! Setup output filename
-    ! Determine the rank and set rank_name for nodal output filename
-    ! No rank name appended for a serial run
-
-    ! get pointer to local mesh
-    mesh => mesh_collection%get_mesh( mesh_id )
-
-    if ( mesh%get_total_ranks() == 1 ) then
-      rank_name=".m"
-    else
-      write( rank_name, "("".Rank"", I6.6, A)") mesh%get_local_rank(), ".m"
-    end if
+  if ( .not. (use_xios_io) )  then
 
     ! Always call straight nodal output
 
     ! Setup output filename
 
-    fname=trim(ts_fname("nodal_", field_name, ts, rank_name))
+    fname=trim(ts_fname(trim(diag_stem_name), "nodal_", field_name, ts, ".m"))
 
     ! Call diagnostic processing to create nodal field
     call scalar_nodal_diagnostic_alg(output_field, nodal_coordinates, &
@@ -98,14 +85,16 @@ subroutine write_scalar_diagnostic(field_name, field, ts, mesh_id, W3_project)
                                      mesh_id, .false.)
 
     ! Call write routine
-    call nodal_write_field(nodal_coordinates, level, output_field, &
+    call nodal_write_field(nodal_coordinates, level, output_field,    &
                            1, nodal_output_unit, fname)
 
     ! If projection to W3 was requested then output that as well
 
     if (W3_project .and. (field%which_function_space() /= W3)) then
-      fname=trim(ts_fname("nodal_w3projection_", field_name, &
-                               ts, rank_name))
+
+      fname=trim(ts_fname(trim(diag_stem_name), "nodal_w3projection_",  &
+                          field_name, ts, ".m"))
+
 
       ! Call diagnostic processing to create nodal field
       call scalar_nodal_diagnostic_alg(output_field, nodal_coordinates, &
@@ -113,19 +102,22 @@ subroutine write_scalar_diagnostic(field_name, field, ts, mesh_id, W3_project)
                                        mesh_id, .true.)
 
       ! Call write routine
-      call nodal_write_field(nodal_coordinates, level, output_field, &
+      call nodal_write_field(nodal_coordinates, level, output_field,    &
                                    1, nodal_output_unit, fname)
 
     end if 
 
-  end if
+  else
 
-  ! XIOS UGRID output
-  if (write_xios_output) then
+    ! XIOS UGRID output
 
     ! Call diagnostic processing to create ugrid field
     call scalar_ugrid_diagnostic_alg(output_field, field_name, field, &
                                      mesh_id, .false.)
+
+    ! Set a field I/O method appropriately
+    tmp_write_ptr => xios_write_field_face
+    call output_field(1)%set_write_diag_behaviour(tmp_write_ptr)
 
     ! Call write on the output field
 
@@ -135,6 +127,8 @@ subroutine write_scalar_diagnostic(field_name, field, ts, mesh_id, W3_project)
     else
        call output_field(1)%write_diag(trim(field_name))
     end if 
+
+    nullify(tmp_write_ptr)
 
   end if
 
@@ -169,7 +163,6 @@ subroutine write_vector_diagnostic(field_name, field, ts, mesh_id, W3_project)
   type(field_type)                :: projected_field(3)
   type(field_type)                :: level
   type(field_type)                :: u1_wind, u2_wind, u3_wind
-  character(len=str_max_filename) :: rank_name
   character(len=str_max_filename) :: fname
   character(len=1)                :: uchar
   character(len=str_max_filename) :: field_name_new
@@ -177,28 +170,18 @@ subroutine write_vector_diagnostic(field_name, field, ts, mesh_id, W3_project)
   integer(i_def)                  :: i
   integer(i_def)                  :: output_dim
 
-  procedure(write_diag_interface), pointer  :: tmp_diag_write_ptr
+  procedure(write_diag_interface), pointer  :: tmp_write_ptr
 
   ! get pointer to local mesh
   mesh => mesh_collection%get_mesh( mesh_id )
 
   ! Nodal output
-  if ( write_nodal_output)  then
-
-
-    ! Determine the rank and set rank_name for nodal output filename
-    ! No rank name appended for a serial run
-
-    if ( mesh%get_total_ranks() == 1 ) then
-      rank_name=".m"
-    else
-      write( rank_name, "("".Rank"", I6.6, A)") mesh%get_local_rank(), ".m"
-    end if
+  if ( .not. (use_xios_io) )  then
 
     ! Always call straight nodal output
 
     ! Setup output filename
-    fname=trim(ts_fname("nodal_", field_name, ts, rank_name))
+    fname=trim(ts_fname(trim(diag_stem_name), "nodal_", field_name, ts, ".m"))
 
     call vector_nodal_diagnostic_alg(output_field, output_dim, &
                                      nodal_coordinates, level, &
@@ -223,7 +206,7 @@ subroutine write_vector_diagnostic(field_name, field, ts, mesh_id, W3_project)
          field_name_new = trim("w3projection_"//field_name//uchar)
 
          ! Setup output filename
-         fname=trim(ts_fname("nodal_", field_name_new, ts, rank_name))
+         fname=trim(ts_fname(trim(diag_stem_name), "nodal_", field_name_new, ts, ".m"))
 
          ! Call scalar output on each component
          call scalar_nodal_diagnostic_alg(output_field(i), nodal_coordinates,        &
@@ -239,10 +222,9 @@ subroutine write_vector_diagnostic(field_name, field, ts, mesh_id, W3_project)
 
     end if 
 
-  end if
+  else
 
   ! XIOS UGRID output
-  if (write_xios_output) then
 
     ! Check for specific vector fields and applying appropriate processing 
 
@@ -255,7 +237,12 @@ subroutine write_vector_diagnostic(field_name, field, ts, mesh_id, W3_project)
       ! Project the field to the output field
       call project_output(field, projected_field, output_dim, W3 , mesh_id)
 
+      ! Set up correct I/O handler for Xi projected to W3
+      tmp_write_ptr => xios_write_field_face
+
       do i =1,output_dim
+
+        call projected_field(i)%set_write_diag_behaviour(tmp_write_ptr)
 
         ! Write the component number into a new field name
         write(uchar,'(i1)') i
@@ -283,11 +270,11 @@ subroutine write_vector_diagnostic(field_name, field, ts, mesh_id, W3_project)
 
 
       ! Set up I/O handler as these are derived fields
-      tmp_diag_write_ptr => xios_write_field_face
-      call u3_wind%set_write_diag_behaviour(tmp_diag_write_ptr)
-      tmp_diag_write_ptr => xios_write_field_edge
-      call u1_wind%set_write_diag_behaviour(tmp_diag_write_ptr)
-      call u2_wind%set_write_diag_behaviour(tmp_diag_write_ptr)
+      tmp_write_ptr => xios_write_field_face
+      call u3_wind%set_write_diag_behaviour(tmp_write_ptr)
+      tmp_write_ptr => xios_write_field_edge
+      call u1_wind%set_write_diag_behaviour(tmp_write_ptr)
+      call u2_wind%set_write_diag_behaviour(tmp_write_ptr)
 
       if (ts == 0) then
         call u1_wind%write_diag("init_"//trim(field_name)//"1")
@@ -301,8 +288,9 @@ subroutine write_vector_diagnostic(field_name, field, ts, mesh_id, W3_project)
 
     end if ! Check for wind fields
 
+    nullify(tmp_write_ptr)
 
-  end if ! XIOS UGRID output
+  end if
 
 
 end subroutine write_vector_diagnostic

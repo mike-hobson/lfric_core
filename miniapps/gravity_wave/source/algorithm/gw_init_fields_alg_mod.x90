@@ -18,9 +18,12 @@ module gw_init_fields_alg_mod
   use mass_matrix_solver_alg_mod,        only: mass_matrix_solver_alg
   use runtime_constants_mod,             only: get_coordinates
 
-  ! Configuration and restart/checkpoint options
-  use finite_element_config_mod,       only: element_order
-  use restart_control_mod,             only: restart_type
+  ! Configuration options
+  use finite_element_config_mod,         only: element_order
+  use io_mod,                            only: ts_fname
+  use io_config_mod,                     only: checkpoint_read, &
+                                               restart_stem_name
+  use time_config_mod,                   only: timestep_start
 
   ! PsyKAl PSYClone kernels
   use initial_u_kernel_mod,              only: initial_u_kernel_type
@@ -49,15 +52,12 @@ contains
   !> @param[inout] wind  The 3D wind field
   !> @param[inout] pressure The pressure
   !> @param[inout] buoyancy The buoyancy
-  !> @param[in] restart Checkpoint/restart type with timestepping information
-  subroutine gw_init_fields_alg( wind, pressure, buoyancy, restart)
+  subroutine gw_init_fields_alg( wind, pressure, buoyancy)
 
     implicit none
 
     ! Prognostic fields
     type( field_type ),   intent(inout)   :: wind, pressure, buoyancy
-    ! Control
-    type( restart_type ), intent(in)      :: restart
 
     type( quadrature_xyoz_type )          :: qr
     type( quadrature_rule_gaussian_type ) :: quadrature_rule
@@ -74,7 +74,7 @@ contains
 
     !=== Initialise global prognostic fields ==================================!
 
-    if (.not.restart%read_checkpoint()) then           ! No check point to start from
+    if (.not.checkpoint_read) then           ! No check point to start from
 
       call log_event( 'gravity_wave: Initialising prognostic fields', LOG_LEVEL_INFO )
 
@@ -94,13 +94,16 @@ contains
     else                                   ! Recorded check point to start from
 
       call log_event('Reading checkpoint file to restart pressure',LOG_LEVEL_INFO)
-      call pressure%read_restart('restart_pressure', trim(restart%startfname('pressure')))
+      call pressure%read_restart("restart_pressure", trim(ts_fname(restart_stem_name,"", &
+                            "pressure", (timestep_start - 1),"")))
 
       call log_event('Reading checkpoint file to restart wind',LOG_LEVEL_INFO)
-      call wind%read_restart('restart_wind', trim(restart%startfname('wind')))
+      call wind%read_restart("restart_wind", trim(ts_fname(restart_stem_name,"", &
+                            "wind", (timestep_start - 1),"")))
 
       call log_event('Reading checkpoint file to restart buoyancy',LOG_LEVEL_INFO)
-      call buoyancy%read_restart('restart_buoyancy', trim(restart%startfname('buoyancy')))
+      call buoyancy%read_restart("restart_buoyancy", trim(ts_fname(restart_stem_name,"", &
+                            "buoyancy", (timestep_start - 1),"")))
 
       call log_event( 'Gravity wave: Read prognostic fields from checkpoint files', LOG_LEVEL_INFO )
 

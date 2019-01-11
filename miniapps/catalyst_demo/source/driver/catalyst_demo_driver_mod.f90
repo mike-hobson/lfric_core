@@ -25,7 +25,8 @@ module catalyst_demo_driver_mod
   use init_fem_mod,                   only: init_fem
   use init_catalyst_demo_mod,         only: init_catalyst_demo
   use init_mesh_mod,                  only: init_mesh
-  use io_mod,                         only: xios_domain_init
+  use io_mod,                         only: xios_domain_init,   &
+                                            ts_fname
   use diagnostics_io_mod,             only: write_scalar_diagnostic, &
                                             write_vector_diagnostic
   use log_mod,                        only: log_event,          &
@@ -40,13 +41,15 @@ module catalyst_demo_driver_mod
                                             log_scratch_space
   use mod_wait
   use operator_mod,                   only: operator_type
-  use output_config_mod,              only: diagnostic_frequency, &
+  use io_config_mod,                  only: write_diag,           &
+                                            diagnostic_frequency, &
+                                            use_xios_io,          &
                                             nodal_output_on_w3,   &
-                                            subroutine_timers,    &
-                                            write_nodal_output,   &
-                                            write_xios_output
-  use restart_config_mod,             only: restart_filename => filename
-  use restart_control_mod,            only: restart_type
+                                            checkpoint_write,     &
+                                            restart_stem_name,    &
+                                            subroutine_timers
+  use time_config_mod,                only: timestep_start, &
+                                            timestep_end
   use timer_mod,                      only: timer, output_timer
   use timestepping_config_mod,        only: dt
   use mpi_mod,                        only: initialise_comm, store_comm, &
@@ -158,14 +161,13 @@ contains
 
   ! If using XIOS for diagnostic output or checkpointing, then set up XIOS
   ! domain and context
-  if ( (write_xios_output) .or. (restart%use_xios()) ) then
+  if ( use_xios_io ) then
 
     dtime = int(dt)
 
     call xios_domain_init( xios_ctx,     &
                            comm,         &
                            dtime,        &
-                           restart,      &
                            mesh_id,      &
                            twod_mesh_id, &
                            chi)
@@ -194,7 +196,7 @@ contains
 
   ! Create function space collection and initialise prognostic fields
   call init_catalyst_demo( mesh_id, chi, multigrid_function_space_chain, &
-                           wind, pressure, buoyancy, restart )
+                           wind, pressure, buoyancy )
 
   ! Full global meshes no longer required, so reclaim
   ! the memory from global_mesh_collection
@@ -209,10 +211,19 @@ contains
 
   if (ts_init == 0) then
 
-    ! Calculation and output of diagnostics
-    call write_vector_diagnostic('wind', wind, ts_init, mesh_id, nodal_output_on_w3)
-    call write_scalar_diagnostic('pressure', pressure, ts_init, mesh_id, nodal_output_on_w3)
-    call write_scalar_diagnostic('buoyancy', buoyancy, ts_init, mesh_id, nodal_output_on_w3)
+    if ( use_xios_io ) then
+
+      ! Need to ensure calendar is initialised here as XIOS has no concept of timestep 0
+      call xios_update_calendar(ts_init + 1)
+
+    end if
+
+    if ( write_diag ) then
+      ! Calculation and output of diagnostics
+      call write_vector_diagnostic('wind', wind, ts_init, mesh_id, nodal_output_on_w3)
+      call write_scalar_diagnostic('pressure', pressure, ts_init, mesh_id, nodal_output_on_w3)
+      call write_scalar_diagnostic('buoyancy', buoyancy, ts_init, mesh_id, nodal_output_on_w3)
+    end if
 
     ! Catalyst visualisation
     if (write_catalyst_output) then
@@ -239,10 +250,10 @@ contains
   !--------------------------------------------------------------------------
   ! Model step
   !--------------------------------------------------------------------------
-  do timestep = restart%ts_start(),restart%ts_end()
+  do timestep = timestep_start,timestep_end
 
     ! Update XIOS calendar if we are using it for diagnostic output or checkpoint
-    if ( (write_xios_output) .or. (restart%use_xios()) ) then
+    if ( use_xios_io ) then
       call log_event( program_name//': Updating XIOS timestep', LOG_LEVEL_INFO )
       call xios_update_calendar(timestep)
     end if
@@ -252,7 +263,7 @@ contains
     LOG_LEVEL_TRACE )
     write( log_scratch_space, '(A,I0)' ) 'Start of timestep ', timestep
     call log_event( log_scratch_space, LOG_LEVEL_INFO )
-    if (timestep == restart%ts_start()) then
+    if (timestep == timestep_start) then
       call gravity_wave_alg_init(mesh_id, wind, pressure, buoyancy)
     end if
 
@@ -262,7 +273,7 @@ contains
     call log_event( &
     '\****************************************************************************/ ', &
     LOG_LEVEL_INFO )
-    if ( mod(timestep, diagnostic_frequency) == 0 ) then
+    if ( (mod(timestep, diagnostic_frequency) == 0) .and. (write_diag) ) then
 
       call log_event("Catalyst demo: writing diagnostic output", LOG_LEVEL_INFO)
 
@@ -280,24 +291,24 @@ contains
   end do
 
   ! Write checkpoint/restart files if required
-  if( restart%checkpoint() ) then
+  if( checkpoint_write ) then
     write(log_scratch_space,'(A,I6)') &
-        "Checkpointing pressure at timestep ", restart%ts_end()
+        "Checkpointing pressure at timestep ", timestep_end
     call log_event(log_scratch_space,LOG_LEVEL_INFO)
-    call pressure%write_checkpoint( 'checkpoint_pressure', &
-                                    trim(restart%endfname("pressure")) )
+    call pressure%write_checkpoint("checkpoint_pressure", trim(ts_fname(restart_stem_name,&
+                                  "", "pressure", timestep_end,"")))
 
     write(log_scratch_space,'(A,I6)') &
-         "Checkpointing wind at timestep ", restart%ts_end()
+         "Checkpointing wind at timestep ", timestep_end
     call log_event(log_scratch_space,LOG_LEVEL_INFO)
-    call wind%write_checkpoint( 'checkpoint_wind', &
-                                trim(restart%endfname("wind")) )
+    call wind%write_checkpoint("checkpoint_wind", trim(ts_fname(restart_stem_name,&
+                                  "", "wind", timestep_end,"")))
 
     write(log_scratch_space,'(A,I6)') &
-         "Checkpointing buoyancy at timestep ", restart%ts_end()
+         "Checkpointing buoyancy at timestep ", timestep_end
     call log_event(log_scratch_space,LOG_LEVEL_INFO)
-    call buoyancy%write_checkpoint( 'checkpoint_buoyancy', &
-                                    trim(restart%endfname("buoyancy")) )
+    call buoyancy%write_checkpoint("checkpoint_buoyancy", trim(ts_fname(restart_stem_name,&
+                                  "", "buoyancy", timestep_end,"")))
   end if
 
   end subroutine run
@@ -337,7 +348,7 @@ contains
   end if
 
   ! Finalise XIOS context if we used it for diagnostic output or checkpointing
-  if ( (write_xios_output) .or. (restart%use_xios()) ) then
+  if ( use_xios_io ) then
     call xios_context_finalize()
   end if
 

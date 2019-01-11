@@ -21,7 +21,6 @@ module init_physics_mod
   use log_mod,                        only : log_event,         &
                                              LOG_LEVEL_INFO,         &
                                              LOG_LEVEL_ERROR
-  use restart_control_mod,            only : restart_type
   use formulation_config_mod,         only : transport_only, &
                                              use_moisture
 
@@ -39,7 +38,6 @@ contains
   !>@brief Routine to initialise the field objects required by the physics
   !> @param[in] mesh_id Identifier of the mesh
   !> @param[in] twod_mesh_id Identifier of the 2D (surface) mesh
-  !> @param[in] restart checkpoint/restart type with timestepping information 
   !> @param[in,out] u Wind field
   !> @param[in,out] exner Exner pressure field
   !> @param[in,out] rho Density field
@@ -48,7 +46,7 @@ contains
   !> @param[out]   cloud_fields Collection of FD cloud fields
   !> @param[out]   twod_fields Collection of two fields
   !> @param[out]   physics_incs Collection of physics increments
-  subroutine init_physics(mesh_id, twod_mesh_id, restart,             &
+  subroutine init_physics(mesh_id, twod_mesh_id,                      &
                           u, exner, rho, theta,                       &
                           derived_fields, cloud_fields, twod_fields,  &
                           physics_incs)
@@ -56,7 +54,6 @@ contains
     implicit none
 
     integer(i_def), intent(in)               :: mesh_id
-    type(restart_type), intent(in)           :: restart
     integer(i_def), intent(in)               :: twod_mesh_id
     ! Prognostic fields
     type( field_type ), intent(inout)        :: u, exner, rho, theta
@@ -94,31 +91,31 @@ contains
     ! Wtheta fields
     vector_space=>function_space_collection%get_fs(mesh_id, 0, Wtheta)
 
-    call add_physics_field(derived_fields, 'w_physics',      vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'rho_in_wth',     vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'wetrho_in_wth',  vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'exner_in_wth',   vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'w_physics_star', vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'theta_star',     vector_space, checkpoint_restart_flag, restart)
+    call add_physics_field(derived_fields, 'w_physics',      vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'rho_in_wth',     vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'wetrho_in_wth',  vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'exner_in_wth',   vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'w_physics_star', vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'theta_star',     vector_space, checkpoint_restart_flag)
 
     ! W3 fields
     vector_space=> function_space_collection%get_fs(mesh_id, 0, W3) 
 
-    call add_physics_field(derived_fields, 'u1_in_w3',      vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'u2_in_w3',      vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'u3_in_w3',      vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'theta_in_w3',   vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'wetrho_in_w3',  vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'u1_in_w3_star', vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'u2_in_w3_star', vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'u3_in_w3_star', vector_space, checkpoint_restart_flag, restart)
+    call add_physics_field(derived_fields, 'u1_in_w3',      vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'u2_in_w3',      vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'u3_in_w3',      vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'theta_in_w3',   vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'wetrho_in_w3',  vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'u1_in_w3_star', vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'u2_in_w3_star', vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'u3_in_w3_star', vector_space, checkpoint_restart_flag)
 
     ! W2 fields
     vector_space=>function_space_collection%get_fs(mesh_id, 0, W2)
 
-    call add_physics_field(derived_fields, 'u_physics',      vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'u_physics_star', vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(derived_fields, 'u_star',         vector_space, checkpoint_restart_flag, restart)
+    call add_physics_field(derived_fields, 'u_physics',      vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'u_physics_star', vector_space, checkpoint_restart_flag)
+    call add_physics_field(derived_fields, 'u_star',         vector_space, checkpoint_restart_flag)
 
 
     !========================================================================
@@ -128,16 +125,16 @@ contains
     vector_space=> function_space_collection%get_fs(twod_mesh_id, 0, W3) 
     checkpoint_restart_flag = .true.
 
-    call add_physics_field(twod_fields, 'tstar',   vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(twod_fields, 'zh',      vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(twod_fields, 'z0msea',  vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(twod_fields, 'ntml',    vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(twod_fields, 'cumulus', vector_space, checkpoint_restart_flag, restart)
+    call add_physics_field(twod_fields, 'tstar',   vector_space, checkpoint_restart_flag)
+    call add_physics_field(twod_fields, 'zh',      vector_space, checkpoint_restart_flag)
+    call add_physics_field(twod_fields, 'z0msea',  vector_space, checkpoint_restart_flag)
+    call add_physics_field(twod_fields, 'ntml',    vector_space, checkpoint_restart_flag)
+    call add_physics_field(twod_fields, 'cumulus', vector_space, checkpoint_restart_flag)
 
     checkpoint_restart_flag = .false.
-    call add_physics_field(twod_fields, 'cos_zenith_angle',   vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(twod_fields, 'lit_fraction',       vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(twod_fields, 'stellar_irradiance', vector_space, checkpoint_restart_flag, restart)
+    call add_physics_field(twod_fields, 'cos_zenith_angle',   vector_space, checkpoint_restart_flag)
+    call add_physics_field(twod_fields, 'lit_fraction',       vector_space, checkpoint_restart_flag)
+    call add_physics_field(twod_fields, 'stellar_irradiance', vector_space, checkpoint_restart_flag)
 
     !========================================================================
     ! Here we create some cloud fields
@@ -147,14 +144,14 @@ contains
     vector_space=>function_space_collection%get_fs(mesh_id, 0, Wtheta)
     checkpoint_restart_flag = .true.
 
-    call add_physics_field(cloud_fields, 'area_fraction',    vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(cloud_fields, 'ice_fraction',     vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(cloud_fields, 'liquid_fraction',  vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(cloud_fields, 'bulk_fraction',    vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(cloud_fields, 'rhcrit',           vector_space, checkpoint_restart_flag, restart)
+    call add_physics_field(cloud_fields, 'area_fraction',    vector_space, checkpoint_restart_flag)
+    call add_physics_field(cloud_fields, 'ice_fraction',     vector_space, checkpoint_restart_flag)
+    call add_physics_field(cloud_fields, 'liquid_fraction',  vector_space, checkpoint_restart_flag)
+    call add_physics_field(cloud_fields, 'bulk_fraction',    vector_space, checkpoint_restart_flag)
+    call add_physics_field(cloud_fields, 'rhcrit',           vector_space, checkpoint_restart_flag)
 
     ! Initialise cloud fields
-    call init_cloud_twod_fields_alg( cloud_fields, twod_fields, restart )
+    call init_cloud_twod_fields_alg( cloud_fields, twod_fields )
 
     !========================================================================
     ! Increment values from individual physics parametrizations
@@ -164,12 +161,12 @@ contains
     vector_space => function_space_collection%get_fs(mesh_id, 0, Wtheta)
     checkpoint_restart_flag = .false. ! no need to dump any of these
 
-    call add_physics_field(physics_incs, 'dt_bl', vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(physics_incs, 'dmv_bl', vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(physics_incs, 'dt_conv', vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(physics_incs, 'dmv_conv', vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(physics_incs, 'dtl_mphys', vector_space, checkpoint_restart_flag, restart)
-    call add_physics_field(physics_incs, 'dmt_mphys', vector_space, checkpoint_restart_flag, restart)
+    call add_physics_field(physics_incs, 'dt_bl', vector_space, checkpoint_restart_flag)
+    call add_physics_field(physics_incs, 'dmv_bl', vector_space, checkpoint_restart_flag)
+    call add_physics_field(physics_incs, 'dt_conv', vector_space, checkpoint_restart_flag)
+    call add_physics_field(physics_incs, 'dmv_conv', vector_space, checkpoint_restart_flag)
+    call add_physics_field(physics_incs, 'dtl_mphys', vector_space, checkpoint_restart_flag)
+    call add_physics_field(physics_incs, 'dmt_mphys', vector_space, checkpoint_restart_flag)
 
     call log_event( 'Physics initialised', LOG_LEVEL_INFO ) 
 
@@ -182,12 +179,11 @@ contains
   !> @param[in]     vector_space     Function space of field to set behaviour for
   !> @param[in]     checkpoint_restart_flag  Flag to allow checkpoint and
   !>                                        restart behaviour of field to be set
-  !> @param[in]     restart          Checkpoint/restart type with timestepping
-  !>                                information 
   subroutine add_physics_field(field_collection, name, vector_space, &
-                               checkpoint_restart_flag, restart)
+                               checkpoint_restart_flag)
 
-    use output_config_mod,  only : write_xios_output
+    use io_config_mod,      only : use_xios_io, &
+                                   write_diag
     use io_mod,             only : xios_write_field_face, &
                                    checkpoint_xios,       &
                                    checkpoint_netcdf,     &
@@ -199,7 +195,6 @@ contains
     character(*), intent(in)                   :: name
     type(field_collection_type), intent(inout) :: field_collection
     type(function_space_type), intent(in)      :: vector_space
-    type(restart_type), intent(in)             :: restart
     logical(l_def), intent(in)                 :: checkpoint_restart_flag
 
     !Local variables
@@ -213,7 +208,7 @@ contains
     ! All physics fields currently require output on faces...
     write_diag_behaviour => xios_write_field_face
 
-    if (restart%use_xios()) then
+    if ( use_xios_io) then
       checkpoint_behaviour => checkpoint_xios
       restart_behaviour => restart_xios
     else
@@ -223,7 +218,7 @@ contains
 
     new_field = field_type( vector_space, name=trim(name) )
 
-    if (write_xios_output) then
+    if (use_xios_io .and. write_diag) then
       call new_field%set_write_diag_behaviour(write_diag_behaviour)
     end if
     if (checkpoint_restart_flag) then

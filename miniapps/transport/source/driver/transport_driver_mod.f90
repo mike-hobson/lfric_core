@@ -32,12 +32,13 @@ module transport_driver_mod
                                             LOG_LEVEL_ERROR,                  &
                                             LOG_LEVEL_INFO,                   &
                                             LOG_LEVEL_TRACE
-  use output_config_mod,              only: diagnostic_frequency,             &
+  use io_config_mod,                  only: diagnostic_frequency,             &
                                             nodal_output_on_w3,               &
-                                            write_xios_output,                &
+                                            write_diag,                       &
+                                            use_xios_io,                      &
                                             subroutine_timers
-  use restart_config_mod,             only: restart_filename => filename
-  use restart_control_mod,            only: restart_type
+  use time_config_mod,                only: timestep_start, &
+                                            timestep_end
   use timer_mod,                      only: timer, output_timer
   use timestepping_config_mod,        only: dt
   use mpi_mod,                        only: initialise_comm, store_comm,      &
@@ -64,8 +65,6 @@ module transport_driver_mod
   public :: initialise_transport, run_transport, finalise_transport
 
   character(*), public, parameter :: program_name = 'transport'
-
-  type(restart_type) :: restart
 
   ! Prognostic fields
   type(field_type) :: wind
@@ -136,8 +135,6 @@ contains
     call transport_load_configuration( filename )
     call set_derived_config( .true. )
 
-    restart = restart_type( restart_filename, local_rank, total_ranks )
-
     !-------------------------------------------------------------------------
     ! Model init
     !-------------------------------------------------------------------------
@@ -159,30 +156,34 @@ contains
     call init_shifted_fields( shifted_mesh_id, wind_shifted, density_shifted )
 
 
-    if ( (write_xios_output) ) then
+    if ( use_xios_io ) then
       dtime = int(dt)
       call xios_domain_init( xios_ctx,     &
                              comm,         &
                              dtime,        &
-                             restart,      &
                              mesh_id,      &
                              twod_mesh_id, &
                              chi)
     end if
 
     ! Output initial conditions
-    ts_init = max( (restart%ts_start() - 1), 0 )
+    ts_init = max( (timestep_start - 1), 0 )
+
     if ( ts_init == 0 ) then
 
-      if (write_xios_output) then
+      if ( write_diag ) then
 
-        ! Need to ensure calendar is initialised here as XIOS has no concept of timestep 0
-        call xios_update_calendar(1)
+        if ( use_xios_io ) then
 
-      end if
+          ! Need to ensure calendar is initialised here as XIOS has no concept of timestep 0
+          call xios_update_calendar(1)
 
-      call write_vector_diagnostic('wind', wind, ts_init, mesh_id, nodal_output_on_w3)
-      call write_scalar_diagnostic('density', density, ts_init, mesh_id, nodal_output_on_w3)
+        end if
+
+        call write_vector_diagnostic('wind', wind, ts_init, mesh_id, nodal_output_on_w3)
+        call write_scalar_diagnostic('density', density, ts_init, mesh_id, nodal_output_on_w3)
+
+     end if
 
     end if
 
@@ -200,7 +201,7 @@ contains
     !--------------------------------------------------------------------------
     ! Model step
     !--------------------------------------------------------------------------
-    do timestep = restart%ts_start(), restart%ts_end()
+    do timestep = timestep_start, timestep_end
 
       call log_event( &
       "/****************************************************************************\ ", &
@@ -209,7 +210,7 @@ contains
       call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
       ! Update XIOS calendar if we are using it for diagnostic output or checkpoint
-      if ( write_xios_output ) then
+      if ( use_xios_io ) then
         call log_event( "Transport: Updating XIOS timestep", LOG_LEVEL_INFO )
         call xios_update_calendar( timestep )
       end if
@@ -245,7 +246,7 @@ contains
       LOG_LEVEL_INFO )
 
       ! Output wind and density values.
-      if ( mod( timestep, diagnostic_frequency ) == 0 ) then
+      if ( (mod( timestep, diagnostic_frequency ) == 0) .and. write_diag ) then
 
         call write_vector_diagnostic('wind', wind, timestep, mesh_id, nodal_output_on_w3)
         call write_scalar_diagnostic('density', density, timestep, mesh_id, nodal_output_on_w3)
@@ -277,7 +278,7 @@ contains
       call output_timer()
     end if
 
-    if ( write_xios_output ) then
+    if ( use_xios_io ) then
       call xios_context_finalize()
     end if
 

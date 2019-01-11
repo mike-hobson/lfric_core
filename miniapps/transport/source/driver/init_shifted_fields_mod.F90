@@ -13,7 +13,6 @@ module init_shifted_fields_mod
   use field_mod,                      only: field_type
   use finite_element_config_mod,      only: element_order
   use fs_continuity_mod,              only: W2, W3
-  use restart_control_mod,            only: restart_type
   use function_space_mod,             only: function_space_type
   use function_space_collection_mod,  only: function_space_collection
 

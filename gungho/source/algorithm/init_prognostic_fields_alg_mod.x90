@@ -24,7 +24,10 @@ module init_prognostic_fields_alg_mod
   use formulation_config_mod,          only: use_moisture, set_hydrostatic_init
   use initial_density_config_mod,      only: sample_init_rho
   use initial_wind_config_mod,         only: smp_init_wind
-  use restart_control_mod,             only: restart_type
+  use io_mod,                          only: ts_fname
+  use io_config_mod,                   only: checkpoint_read, &
+                                             restart_stem_name
+  use time_config_mod,                 only: timestep_start
 
   ! PsyKAl-lite kernels
   use psykal_lite_mod,                 only: invoke_initial_rho_sample_kernel,  &
@@ -71,17 +74,14 @@ contains
   !> @param[in,out] mr Field bundle containing the moisture mixring ratios
   !> @param[in,out] moist_dyn Auxilliary fields for moist dynamics
   !> @param[in,out] xi The vorticity field 
-  !> @param[in] restart Checkpoint/restart type with timestepping information
   subroutine init_prognostic_fields_alg(u, rho, theta, exner,  mr, moist_dyn, &
-                                        xi, restart)
+                                        xi)
 
     implicit none
 
     ! Prognostic fields
     type( field_type ), intent( inout ) :: u, rho, theta, exner, xi, mr(nummr), &
                                            moist_dyn(num_moist_factors)
-    ! Control
-    type( restart_type ), intent(in)      :: restart
 
     type( quadrature_xyoz_type )          :: qr
     type( quadrature_rule_gaussian_type ) :: quadrature_rule
@@ -109,7 +109,7 @@ contains
 
     !=== Initialise global prognostic fields ==================================!
 
-    if (.not.restart%read_checkpoint()) then           ! No check point to start from
+    if (.not. checkpoint_read ) then           ! No check point to start from
 
       call log_event( "Gungho: Initialising prognostic fields", LOG_LEVEL_INFO )
 
@@ -183,26 +183,32 @@ contains
     else                                   ! Recorded check point to start from
 
       call log_event("Reading checkpoint file to restart rho",LOG_LEVEL_INFO)
-      call rho%read_restart("restart_rho", trim(restart%startfname("rho")))
+      call rho%read_restart("restart_rho", trim(ts_fname(restart_stem_name,"", &
+                            "rho", (timestep_start - 1),"")))
 
       call log_event("Reading checkpoint file to restart u",LOG_LEVEL_INFO)
-      call u%read_restart("restart_u", trim(restart%startfname("u")))
+      call u%read_restart("restart_u", trim(ts_fname(restart_stem_name,"", &
+                            "u", (timestep_start - 1),"")))
 
       call log_event("Reading checkpoint file to restart theta",LOG_LEVEL_INFO)
-      call theta%read_restart("restart_theta", trim(restart%startfname("theta")))
+      call theta%read_restart("restart_theta", trim(ts_fname(restart_stem_name,"", &
+                            "theta", (timestep_start - 1),"")))
 
       call log_event("Reading checkpoint file to restart exner",LOG_LEVEL_INFO)
-      call exner%read_restart("restart_exner", trim(restart%startfname("exner")))
+      call exner%read_restart("restart_exner", trim(ts_fname(restart_stem_name,"", &
+                            "exner", (timestep_start - 1),"")))
 
       call log_event("Reading checkpoint file to restart xi",LOG_LEVEL_INFO)
-      call xi%read_restart("restart_xi", trim(restart%startfname("xi")))
+      call xi%read_restart("restart_xi", trim(ts_fname(restart_stem_name,"", &
+                            "xi", (timestep_start - 1),"")))
 
       if (use_moisture)then
         do i=1,nummr
           write(name, '(A)') 'restart_'//trim(mr_names(i))
           write(log_scratch_space,'(A,A)') "Reading checkpoint file to restart ", trim(name)
           call log_event(log_scratch_space,LOG_LEVEL_INFO)
-          call mr(i)%read_restart(trim(name),trim(restart%startfname(mr_names(i))))
+          call mr(i)%read_restart(trim(name), trim(ts_fname(restart_stem_name,"", &
+                            trim(mr_names(i)), (timestep_start - 1),"")))
         end do
         ! Update factors for moist dynamics
         write(log_scratch_space,'(A)') 'Restart step 1: update moist_dyn'

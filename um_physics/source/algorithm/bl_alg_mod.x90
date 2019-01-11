@@ -14,7 +14,8 @@ module bl_alg_mod
   use mr_indices_mod,       only: nummr, imr_v, imr_cl, imr_ci
 
   ! xios output
-  use output_config_mod,  only: write_xios_output
+  use io_config_mod,      only: write_diag, &
+                                use_xios_io
   use diagnostics_io_mod, only: write_scalar_diagnostic
 
   implicit none
@@ -152,7 +153,7 @@ contains
                            mr(imr_v), mr(imr_cl),mr(imr_ci), cf_area,          &
                            cf_ice, cf_liq, cf_bulk, rhcrit_in_wth ))
 
-    if (write_xios_output) then
+    if (write_diag .and. use_xios_io) then
       call write_scalar_diagnostic("dt_bl", dt_bl, timestep, &
                                     dt_bl%get_mesh_id(), .false. )
       call write_scalar_diagnostic("dmv_bl", dmv_bl, timestep, &

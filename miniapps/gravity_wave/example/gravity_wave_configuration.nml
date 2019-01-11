@@ -39,13 +39,22 @@
   sbr_angle_lon  = 0.0
 /
 
-&output
+&io
   diag_stem_name            = 'gravity_wave'
-  write_xios_output         = .false.
-  write_nodal_output        = .true.
-  diagnostic_frequency      =  36
+  restart_stem_name         = "restartGravityWave"
+  use_xios_io               = .false.
+  write_diag                = .true.
+  diagnostic_frequency      = 36
+  nodal_output_on_w3        = .false.
   subroutine_timers         = .true.
   subroutine_counters       = .false.
+  checkpoint_read           = .false.
+  checkpoint_write          = .false.
+/
+
+&time
+ timestep_start             = 1
+ timestep_end               = 36
 /
 
 &planet
@@ -57,10 +66,6 @@
   p_zero         = 100000.0
   scaling_factor = 125.0
   epsilon        = 0.62918
-/
-
-&restart
-  filename = 'gravity_wave_restart.nml'
 /
 
 &solver

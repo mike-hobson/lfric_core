@@ -30,13 +30,21 @@ smp_init_wind=.false.,
 u0=38.61073731e-3,
 v0=0.0,
 /
-&output
-diag_stem_name='transport',
-diagnostic_frequency=32,
-subroutine_counters=.false.,
-subroutine_timers=.true.,
-write_nodal_output=.true.,
-write_xios_output=.true.,
+&io
+  diag_stem_name            = 'transport'
+  restart_stem_name         = "restartTransport"
+  use_xios_io               = .false.
+  write_diag                = .true.
+  diagnostic_frequency      = 32
+  nodal_output_on_w3        = .false.
+  subroutine_timers         = .true.
+  subroutine_counters       = .false.
+  checkpoint_read           = .false.
+  checkpoint_write          = .false.
+/
+&time
+ timestep_start             = 1
+ timestep_end               = 288
 /
 &subgrid
 dep_pt_stencil_extent=1,
@@ -65,9 +73,7 @@ scheme='horz_cosmic',
 radius=6371229.0e-3,
 scaling_factor=1.0,
 /
-&restart
-filename='transport_restart.nml',
-/
+
 &idealised
 test='cosine_hill',
 /

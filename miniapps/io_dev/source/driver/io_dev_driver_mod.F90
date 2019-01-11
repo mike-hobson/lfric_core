@@ -34,8 +34,6 @@ use log_mod,                    only: log_event,          &
                                       LOG_LEVEL_TRACE,    &
                                       log_scratch_space
 use mod_wait
-use restart_config_mod,         only: restart_filename => filename
-use restart_control_mod,        only: restart_type
 use timestepping_config_mod,    only: dt
 use mpi_mod,                    only: initialise_comm, store_comm, &
                                       finalise_comm,               &
@@ -53,7 +51,6 @@ character(*), public, parameter :: program_name = 'io_dev'
 character(*), public, parameter :: xios_ctx = 'io_dev'
 character(*), public, parameter :: xios_id  = 'lfric_client'
 
-type(restart_type) :: restart
 
 ! Examples of fields that are output on different I/O domains
 type( field_type ) :: density ! on W3
@@ -109,9 +106,6 @@ contains
   call load_configuration( filename )
   call set_derived_config( .true. )
 
-  restart = restart_type( restart_filename, local_rank, total_ranks )
-
-
   !----------------------------------------------------------------------------
   ! Mesh init
   !----------------------------------------------------------------------------
@@ -138,7 +132,6 @@ contains
   call xios_domain_init( xios_ctx,     &
                          comm,         &
                          dtime,        &
-                         restart,      &
                          mesh_id,      &
                          twod_mesh_id, &
                          chi )

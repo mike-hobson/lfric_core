@@ -42,7 +42,7 @@ module mass_matrix_solver_alg_mod
                                                 precondition_only_type
 
 
-  use output_config_mod,                  only: subroutine_timers
+  use io_config_mod,                      only: subroutine_timers
   use timer_mod,                          only: timer
 
   implicit none

@@ -67,17 +67,24 @@
   smp_init_wind=.false.
 /
 
-&output
+&io
   diag_stem_name            = 'diagDynamo'
-  write_xios_output         = .false.
-  write_nodal_output        = .true.
+  restart_stem_name         = 'restartDynamo'
+  use_xios_io               = .false.
+  write_diag                = .true.
   diagnostic_frequency      = 10
   nodal_output_on_w3        = .false.
   subroutine_timers         = .true.
   subroutine_counters       = .true.
   write_minmax_tseries      = .false.
+  checkpoint_read           = .false.
+  checkpoint_write          = .false.
 /
 
+&time
+ timestep_start             = 1
+ timestep_end               = 10
+/
 
 &physics
   heldsuarez_thermo_placement = 0
@@ -98,10 +105,6 @@
   p_zero         = 100000.0
   scaling_factor = 1.0
   epsilon        = 0.62918
-/
-
-&restart
-  filename = 'restart.nml'
 /
 
 &solver

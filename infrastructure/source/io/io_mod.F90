@@ -23,10 +23,13 @@ module io_mod
   use mesh_collection_mod,           only: mesh_collection 
   use function_space_mod,            only: function_space_type, BASIS
   use function_space_collection_mod, only: function_space_collection
-
   use project_output_mod,            only: project_output
-  use output_config_mod,             only: diag_stem_name, &
-                                           diagnostic_frequency
+  use io_config_mod,                 only: restart_stem_name,    &
+                                           diagnostic_frequency, &
+                                           checkpoint_write,     &
+                                           checkpoint_read
+  use time_config_mod,               only: timestep_start, &
+                                           timestep_end
   use runtime_constants_mod,         only: get_coordinates
   use coord_transform_mod,           only: xyz2llr
   use log_mod,                       only: log_event,         &
@@ -36,7 +39,6 @@ module io_mod
                                            LOG_LEVEL_INFO,    &
                                            LOG_LEVEL_DEBUG,   &
                                            LOG_LEVEL_TRACE
-  use restart_control_mod,           only: restart_type
 
   use psykal_lite_mod,               only: invoke_nodal_coordinates_kernel, &
                                            invoke_pointwise_convert_xyz2llr
@@ -73,7 +75,7 @@ contains
 !!  @param[in]      chi           Coordinate field
 !-------------------------------------------------------------------------------
 
-subroutine xios_domain_init(xios_ctx, mpi_comm, dtime, restart, &
+subroutine xios_domain_init(xios_ctx, mpi_comm, dtime, &
                             mesh_id, twod_mesh_id,  chi)
 
   use fs_continuity_mod, only : name_from_functionspace
@@ -84,7 +86,6 @@ subroutine xios_domain_init(xios_ctx, mpi_comm, dtime, restart, &
   character(len=*),   intent(in)       :: xios_ctx
   integer(i_def),     intent(in)       :: mpi_comm
   integer(i_def),     intent(in)       :: dtime
-  type(restart_type), intent(in)       :: restart
   integer(i_def),     intent(in)       :: mesh_id
   integer(i_def),     intent(in)       :: twod_mesh_id
   type(field_type),   intent(in)       :: chi(:)
@@ -154,7 +155,7 @@ subroutine xios_domain_init(xios_ctx, mpi_comm, dtime, restart, &
 
   ! Set diagnostic output (configured in timesteps) frequency in seconds
   if (xios_is_valid_file("lfric_averages")) then
-    av_freq%second = restart%ts_end()*dtime
+    av_freq%second = timestep_end*dtime
     
     call xios_get_handle("lfric_averages",ofile_hdl)
     call xios_set_attr(ofile_hdl, output_freq=av_freq)
@@ -162,55 +163,54 @@ subroutine xios_domain_init(xios_ctx, mpi_comm, dtime, restart, &
 
   !!!!!!!!!!!!! Setup checkpoint / restart context information !!!!!!!!!!!!!!!!!!
 
-  if (restart%use_xios()) then
+  ! Enable the checkpoint/restart field group
 
-    ! Enable the checkpoint/restart field group
+  if ( checkpoint_write .or. checkpoint_read ) then
 
     call xios_get_handle("checkpoint_fields",cpfieldgroup_hdl)
     call xios_set_attr(cpfieldgroup_hdl, enabled=.true.)
 
+  end if
 
-    ! Checkpointing
-    if( restart%checkpoint() ) then
+  ! Checkpointing
+  if ( checkpoint_write ) then
 
-      ! Get the checkpoint file definition handle, set its filename and frequency
-      ! and enable/disable as required
+    ! Get the checkpoint file definition handle, set its filename and frequency
+    ! and enable/disable as required
 
-      ! Create checkpoint filename from stem and end timestep
-      write(checkpoint_fname,'(A,A,I6.6)') &
-                              trim(restart%stem_fname()),"_",restart%ts_end()
+    ! Create checkpoint filename from stem and end timestep
+    write(checkpoint_fname,'(A,A,I6.6)') &
+                              trim(restart_stem_name),"_", timestep_end
 
-      ! Set checkpoint frequency (end timestep) in seconds
-      cp_freq%second = restart%ts_end()*dtime
+    ! Set checkpoint frequency (end timestep) in seconds
+    cp_freq%second = timestep_end*dtime
 
-      call xios_get_handle("lfric_checkpoint",cpfile_hdl)
-      call xios_set_attr(cpfile_hdl,name=checkpoint_fname, enabled=.true.)
-      call xios_set_attr(cpfile_hdl, output_freq=cp_freq)
+    call xios_get_handle("lfric_checkpoint",cpfile_hdl)
+    call xios_set_attr(cpfile_hdl,name=checkpoint_fname, enabled=.true.)
+    call xios_set_attr(cpfile_hdl, output_freq=cp_freq)
 
-    end if
+  end if
 
-    ! Restarting
-    if (restart%read_checkpoint()) then
+  ! Restarting
+  if ( checkpoint_read ) then
 
-      ! Get the restart file definition handle, set its filename
-      ! and enable/disable as required
+    ! Get the restart file definition handle, set its filename
+    ! and enable/disable as required
 
-      ! Create checkpoint filename from stem and (start - 1) timestep
-      write(restart_fname,'(A,A,I6.6)') &
-                            trim(restart%stem_fname()),"_", (restart%ts_start() - 1)
+    ! Create checkpoint filename from stem and (start - 1) timestep
+    write(restart_fname,'(A,A,I6.6)') &
+                            trim(restart_stem_name),"_", (timestep_start - 1)
 
-      ! Set restart frequency (end timestep) in seconds
-      ! Note although this is a restart file and is going to be read and not
-      ! written in this run, XIOS needs this to be set otherwise horrible things
-      ! happen
-      cp_freq%second = restart%ts_end()*dtime
+    ! Set restart frequency (end timestep) in seconds
+    ! Note although this is a restart file and is going to be read and not
+    ! written in this run, XIOS needs this to be set otherwise horrible things
+    ! happen
+    cp_freq%second = timestep_end*dtime
 
-      call xios_get_handle("lfric_restart",rsfile_hdl)
-      call xios_set_attr(rsfile_hdl, name=restart_fname, enabled=.true.)
-      call xios_set_attr(rsfile_hdl, output_freq=cp_freq)
+    call xios_get_handle("lfric_restart",rsfile_hdl)
+    call xios_set_attr(rsfile_hdl, name=restart_fname, enabled=.true.)
+    call xios_set_attr(rsfile_hdl, output_freq=cp_freq)
 
-
-    end if
 
   end if
 
@@ -1060,16 +1060,35 @@ subroutine calc_xios_domain_coords(local_mesh, nodal_coords, chi, &
 
 end subroutine calc_xios_domain_coords
 
+!> @brief   Function to determine output filename at a given timestep
+!> @details Function to determine output filename at a given timestep
+!>@param[in] stem_name string file stem
+!>@param[in] file_type string used to identify file type (e.g. 'nodal')
+!>@param[in] field_name name of the field
+!>@param[in] ts time step
+!>@param[in] file extension
 
-! Function to determine diagnostic output filename at a given timestep
-function ts_fname(file_type, field_name, ts, rank_name)
+function ts_fname(stem_name, file_type, field_name, ts, ext)
 
-  character(len=*),    intent(in) :: field_name, file_type
+  character(len=*),    intent(in) :: field_name, stem_name, &
+                                     file_type, ext
   integer(i_def),      intent(in) :: ts
-  character(len=*),    intent(in) :: rank_name
+  character(len=str_max_filename) :: rank_name
   character(len=str_max_filename) :: ts_fname
-  write(ts_fname,'(A,A,A,A,A,I6.6,A)') trim(diag_stem_name),"_", &
-         trim(file_type),trim(field_name),"_T",ts,trim(rank_name)
+  integer(i_def)                  :: total_ranks
+  integer(i_def)                  :: local_rank
+
+  total_ranks = get_comm_size()
+  local_rank = get_comm_rank()
+
+  if( total_ranks == 1 )then
+      rank_name=ext
+    else
+      write(rank_name,"("".Rank"",I6.6)")local_rank
+  end if
+
+  write(ts_fname,'(A,A,A,A,A,I6.6,A)') trim(stem_name),"_", &
+         trim(file_type),trim(field_name),"_T",ts,trim(rank_name)//ext
 
 end function ts_fname
 

@@ -38,13 +38,11 @@ contains
     character(*), intent(in) :: filename
 
     character(*), parameter :: &
-                            required_configuration(11) = ['base_mesh             ', &
+                            required_configuration(9) = ['base_mesh             ', &
                                                           'planet                ', &
-                                                          'restart               ', &
                                                           'extrusion             ', &
                                                           'initial_temperature   ', &
                                                           'initial_wind          ', &
-                                                          'output                ', &
                                                           'timestepping          ', &
                                                           'multigrid             ', &
                                                           'gravity_wave_constants', &

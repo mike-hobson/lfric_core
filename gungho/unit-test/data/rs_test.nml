@@ -1,8 +1,0 @@
-&RESTART_NML
-checkpoint_read = .T
-timestep_start = 4
-timestep_end = 6
-checkpoint_write = .T
-restart_stem_name="hswarez_100day"
-checkpoint_frequency = 3
-/

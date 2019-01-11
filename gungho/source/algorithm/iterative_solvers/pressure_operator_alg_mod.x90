@@ -114,7 +114,7 @@ contains
                                                opt_apply_variable_hx_kernel_type
     use dg_matrix_vector_kernel_mod,     only: dg_matrix_vector_kernel_type
     use finite_element_config_mod,       only: element_order
-    use output_config_mod,               only: subroutine_timers 
+    use io_config_mod,                   only: subroutine_timers 
     use timer_mod,                       only: timer
     use helmholtz_solver_config_mod,     only: normalise
     implicit none

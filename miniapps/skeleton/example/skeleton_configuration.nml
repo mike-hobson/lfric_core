@@ -37,12 +37,23 @@ use_physics=.false.
 l_multigrid=.false.,
 /
 
-&output
-diag_stem_name='skeleton',
-diagnostic_frequency=1,
-subroutine_timers=.false.,
-write_nodal_output=.true.,
-write_xios_output=.true.,
+
+&io
+  diag_stem_name            = 'diagDynamo'
+  restart_stem_name         = "restartSkeleton"
+  use_xios_io               = .false.
+  write_diag                = .true.
+  diagnostic_frequency      = 1
+  nodal_output_on_w3        = .false.
+  subroutine_timers         = .false.
+  subroutine_counters       = .false.
+  checkpoint_read           = .false.
+  checkpoint_write          = .false.
+/
+
+&time
+ timestep_start             = 1
+ timestep_end               = 1
 /
 
 &partitioning
@@ -58,10 +69,6 @@ radius=6371229.0,
 rd=287.05,
 scaling_factor=125.0,
 epsilon=0.62918,
-/
-
-&restart
-filename = 'skeleton_restart.nml'
 /
 
 

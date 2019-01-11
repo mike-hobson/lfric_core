@@ -56,7 +56,7 @@ module runtime_constants_mod
   use w2_normalisation_kernel_mod,           only: w2_normalisation_kernel_type
   use compute_coriolis_matrix_kernel_mod,    only: compute_coriolis_matrix_kernel_type
   use compute_mass_matrix_kernel_w2_mod,     only: compute_mass_matrix_kernel_w2_type
-  use output_config_mod,                     only: subroutine_timers 
+  use io_config_mod,                         only: subroutine_timers 
   use timer_mod,                             only: timer
   implicit none
 

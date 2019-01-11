@@ -66,14 +66,24 @@
     v0=0.0,
 /
 
-&output
-    diag_stem_name='diagDynamo',
-    diagnostic_frequency=1,
-    nodal_output_on_w3=.true.,
-    subroutine_counters=.false.,
-    subroutine_timers=.true.,
-    write_nodal_output=.false.,
-    write_xios_output=.true.,
+
+&io
+  diag_stem_name            = 'diagDynamo'
+  restart_stem_name         = 'restartDynamo'
+  use_xios_io               = .true.
+  write_diag                = .true.
+  diagnostic_frequency      = 1
+  nodal_output_on_w3        = .false.
+  subroutine_timers         = .true.
+  subroutine_counters       = .false.
+  write_minmax_tseries      = .false.
+  checkpoint_read           = .false.
+  checkpoint_write          = .true.
+/
+
+&time
+ timestep_start             = 1
+ timestep_end               = 48
 /
 
 &planet
@@ -137,10 +147,6 @@
     cfc113_mix_ratio = 4.826e-10,
     hcfc22_mix_ratio = 6.866e-10,
     hfc134a_mix_ratio = 2.536e-10,
-/
-
-&restart
-    filename='restart.nml',
 /
 
 &subgrid

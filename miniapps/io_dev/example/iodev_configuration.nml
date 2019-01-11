@@ -66,21 +66,23 @@
   smp_init_wind=.false.
 /
 
-&output
+
+&io
   diag_stem_name            = 'diagDynamo'
-  write_xios_output         = .true.
-  write_nodal_output        = .false.
+  restart_stem_name         = "restartIoDev"
+  use_xios_io               = .false.
+  write_diag                = .true.
   diagnostic_frequency      = 1
-  nodal_output_on_w3         = .false.
-  subroutine_timers         = .true.
-  subroutine_counters       = .true.
-  write_minmax_tseries      = .false.
+  nodal_output_on_w3        = .false.
+  subroutine_timers         = .false.
+  subroutine_counters       = .false.
+  checkpoint_read           = .false.
+  checkpoint_write          = .false.
 /
 
-&physics
-  heldsuarez_thermo_placement = 0
-  heldsuarez_wind_placement   = 0
-  hs_random = .false.
+&time
+ timestep_start             = 1
+ timestep_end               = 1
 /
 
 &planet
@@ -93,10 +95,6 @@
   scaling_factor = 1.0
 /
 
-&restart
-  filename = 'iodev_restart.nml'
-/
-
 &solver
   method                         = 'bicgstab'
   preconditioner                 = 'diagonal'
@@ -107,15 +105,13 @@
 
 &mixed_solver
   si_method                      = 'gcr'
-  si_postconditioner             = 'pressure'
-  si_preconditioner              = 'none'
+  si_preconditioner              = 'pressure'
   si_maximum_iterations          = 10
   gcrk                           = 18
   si_tolerance                   = 1.0e-6
   guess_np1                      = .F
   reference_reset_freq           = 4
   normalise                      = .T
-  use_operators                  = .T
 /
 
 &helmholtz_solver

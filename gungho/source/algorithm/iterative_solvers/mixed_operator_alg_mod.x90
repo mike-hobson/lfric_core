@@ -80,7 +80,7 @@ contains
   subroutine apply_mixed_operator(self, x, y)
 
     use formulation_config_mod,      only: dlayer_on, rotating
-    use output_config_mod,           only: subroutine_timers 
+    use io_config_mod,               only: subroutine_timers 
     use timestepping_config_mod,     only: dt, tau_u, tau_r
     use timer_mod,                   only: timer
     use field_indices_mod,           only: igh_u, igh_t, igh_d, igh_p

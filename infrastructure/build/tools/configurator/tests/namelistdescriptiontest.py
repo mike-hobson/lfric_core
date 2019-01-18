@@ -182,15 +182,21 @@ contains
   !> @param [in] local_rank Rank of current process.
   !>
   subroutine read_test_namelist( file_unit, local_rank )
+
     implicit none
+
     integer(i_native), intent(in) :: file_unit
     integer(i_native), intent(in) :: local_rank
-    call read_namelist( file_unit, local_rank, enum )
+
+    call read_namelist( file_unit, local_rank, &
+                        enum )
+
   end subroutine read_test_namelist
 
   ! Reads the namelist file.
   !
-  subroutine read_namelist( file_unit, local_rank, dummy_enum )
+  subroutine read_namelist( file_unit, local_rank, &
+                            dummy_enum )
 
     use constants_mod, only : cmdi, emdi, imdi, rmdi
 
@@ -426,10 +432,14 @@ contains
   !> @param [in] local_rank Rank of current process.
   !>
   subroutine read_test_namelist( file_unit, local_rank )
+
     implicit none
+
     integer(i_native), intent(in) :: file_unit
     integer(i_native), intent(in) :: local_rank
+
     call read_namelist( file_unit, local_rank )
+
   end subroutine read_test_namelist
 
   ! Reads the namelist file.
@@ -566,10 +576,14 @@ contains
   !> @param [in] local_rank Rank of current process.
   !>
   subroutine read_test_namelist( file_unit, local_rank )
+
     implicit none
+
     integer(i_native), intent(in) :: file_unit
     integer(i_native), intent(in) :: local_rank
+
     call read_namelist( file_unit, local_rank )
+
   end subroutine read_test_namelist
 
   ! Reads the namelist file.
@@ -813,15 +827,21 @@ contains
   !> @param [in] local_rank Rank of current process.
   !>
   subroutine read_enum_namelist( file_unit, local_rank )
+
     implicit none
+
     integer(i_native), intent(in) :: file_unit
     integer(i_native), intent(in) :: local_rank
-    call read_namelist( file_unit, local_rank, value )
+
+    call read_namelist( file_unit, local_rank, &
+                        value )
+
   end subroutine read_enum_namelist
 
   ! Reads the namelist file.
   !
-  subroutine read_namelist( file_unit, local_rank, dummy_value )
+  subroutine read_namelist( file_unit, local_rank, &
+                            dummy_value )
 
     use constants_mod, only : cmdi, emdi, imdi, rmdi
 
@@ -1133,15 +1153,23 @@ contains
   !> @param [in] local_rank Rank of current process.
   !>
   subroutine read_twoenum_namelist( file_unit, local_rank )
+
     implicit none
+
     integer(i_native), intent(in) :: file_unit
     integer(i_native), intent(in) :: local_rank
-    call read_namelist( file_unit, local_rank, first, second )
+
+    call read_namelist( file_unit, local_rank, &
+                        first, &
+                        second )
+
   end subroutine read_twoenum_namelist
 
   ! Reads the namelist file.
   !
-  subroutine read_namelist( file_unit, local_rank, dummy_first, dummy_second )
+  subroutine read_namelist( file_unit, local_rank, &
+                            dummy_first, &
+                            dummy_second )
 
     use constants_mod, only : cmdi, emdi, imdi, rmdi
 
@@ -1297,10 +1325,14 @@ contains
   !> @param [in] local_rank Rank of current process.
   !>
   subroutine read_teapot_namelist( file_unit, local_rank )
+
     implicit none
+
     integer(i_native), intent(in) :: file_unit
     integer(i_native), intent(in) :: local_rank
+
     call read_namelist( file_unit, local_rank )
+
   end subroutine read_teapot_namelist
 
   ! Reads the namelist file.
@@ -1451,10 +1483,14 @@ contains
   !> @param [in] local_rank Rank of current process.
   !>
   subroutine read_cheese_namelist( file_unit, local_rank )
+
     implicit none
+
     integer(i_native), intent(in) :: file_unit
     integer(i_native), intent(in) :: local_rank
+
     call read_namelist( file_unit, local_rank )
+
   end subroutine read_cheese_namelist
 
   ! Reads the namelist file.
@@ -1614,10 +1650,14 @@ contains
   !> @param [in] local_rank Rank of current process.
   !>
   subroutine read_aerial_namelist( file_unit, local_rank )
+
     implicit none
+
     integer(i_native), intent(in) :: file_unit
     integer(i_native), intent(in) :: local_rank
+
     call read_namelist( file_unit, local_rank )
+
   end subroutine read_aerial_namelist
 
   ! Reads the namelist file.

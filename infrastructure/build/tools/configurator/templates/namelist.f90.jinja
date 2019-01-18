@@ -162,21 +162,38 @@ contains
   !> @param [in] local_rank Rank of current process.
   !>
   subroutine read_{{listname}}_namelist( file_unit, local_rank )
+
     implicit none
+
     integer(i_native), intent(in) :: file_unit
     integer(i_native), intent(in) :: local_rank
+
     call read_namelist( file_unit, local_rank
 {%- if enumerations -%}
-    , {{enumerations | sort | join( ', ' )}}
-{%- endif %} )
+{%-   for name in enumerations | sort %}
+{%-     if loop.first %}{{', &\n'}}{%- endif -%}
+{{' ' * 24}}{{name}}
+{%-     if not loop.last %}{{', &\n'}}{%- endif -%}
+{%-   endfor %} )
+{%- else -%}
+{{' )'}}
+{%- endif %}
+
   end subroutine read_{{listname}}_namelist
 
   ! Reads the namelist file.
   !
   subroutine read_namelist( file_unit, local_rank
 {%- if enumerations -%}
-    , {{ enumerations | sort | decorate( 'dummy_' ) | join( ', ' ) }}
-{%- endif %} )
+{%-   for name in enumerations | sort | decorate( 'dummy_' ) %}
+{%-     if loop.first %}{{', &\n'}}{%- endif -%}
+{{' ' * 28}}{{name}}
+{%-     if not loop.last -%}{{', &\n'}}{%- endif -%}
+{%-   endfor %} )
+{%- else -%}
+{{' )'}}
+{%- endif %}
+
 
 {%- for module, symbols in use_from | dictsort %}
 {%-   if loop.first %}{{'\n'}}{% endif %}

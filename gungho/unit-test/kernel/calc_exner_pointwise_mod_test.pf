@@ -34,7 +34,6 @@ module calc_exner_pointwise_mod_test
   real(r_def), parameter :: rd       = 300.0_r_def
   real(r_def), parameter :: cp       = 1000.0_r_def
   real(r_def), parameter :: scaling  = 1.0_r_def
-  real(r_def), parameter :: epsilon  = 0.6_r_def
 
 contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -53,7 +52,7 @@ contains
 
     call feign_planet_config( gravity=gravity, radius=radius, omega=omega, &
                               rd=rd, cp=cp, p_zero=p_zero,                 &
-                              scaling_factor=scaling, epsilon=epsilon )
+                              scaling_factor=scaling )
 
   end subroutine setUp
 

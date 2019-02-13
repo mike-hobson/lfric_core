@@ -10,8 +10,8 @@ module planet_constants_mod
 
   use, intrinsic :: iso_fortran_env, only: real32
   ! Universal constants
-  use constants_mod, only: l_def, i_um, r_um, pi, rmdi, imdi
-  use lfric_atm_water_constants_mod, only: gas_constant_h2o
+  use constants_mod, only: l_def, i_def, r_def, i_um, r_um, pi, rmdi, imdi
+  use driver_water_constants_mod, only: gas_constant_h2o
 
   implicit none
 
@@ -102,24 +102,27 @@ contains
 
 subroutine set_planet_constants()
 
-  use planet_config_mod, only: gravity, radius, rd,      &
-                               lfric_omega => omega,     &
-                               lfric_cp => cp,           &
+  use planet_config_mod, only: gravity, radius, rd, epsilon,         &
+                               lfric_recip_epsilon => recip_epsilon, &
+                               lfric_omega => omega,                 &
+                               lfric_cp => cp,                       &
                                lfric_p_zero => p_zero
 
-  use lfric_atm_water_constants_mod, only: latent_heat_h2o_condensation, &
-                                           latent_heat_h2o_fusion,       &
-                                           gas_constant_h2o
+  use driver_water_constants_mod, only: latent_heat_h2o_condensation, &
+                                        latent_heat_h2o_fusion,       &
+                                        gas_constant_h2o
 
   implicit none
 
-  omega  = real(lfric_omega, r_um)
-  r      = real(rd, r_um)
-  cp     = real(lfric_cp, r_um)
-  g      = real(gravity, r_um)
+  omega         = real(lfric_omega, r_um)
+  r             = real(rd, r_um)
+  cp            = real(lfric_cp, r_um)
+  g             = real(gravity, r_um)
   planet_radius = real(radius, r_um)
-  pref   = real(lfric_p_zero, r_um)
-
+  pref          = real(lfric_p_zero, r_um)
+  repsilon      = real(epsilon, r_um)
+  recip_epsilon = real(lfric_recip_epsilon, r_um)
+  kappa         = real(rd/lfric_cp, r_um)
 
   ! These variables left in hardwired to earth values as LFRic does not
   ! currently read in any data for these variables.
@@ -128,33 +131,30 @@ subroutine set_planet_constants()
 
 
   ! Set derived constants
-  two_omega         = real( 2.0*omega, r_um )
-  repsilon          = real( r/gas_constant_h2o, r_um )
-  p_zero            = real( pref, r_um)
-  recip_p_zero      = real( 1.0/pref, r_um )
-  kappa             = real( r/cp, r_um )
-  recip_kappa       = real( 1.0/kappa, r_um )
-  recip_epsilon     = real( 1.0/repsilon, r_um )
-  one_minus_epsilon = real( 1.0-repsilon, r_um )
-  c_virtual         = real( 1.0/repsilon-1.0, r_um )
+  two_omega         = 2.0_r_um * omega
+  p_zero            = pref
+  recip_p_zero      = 1.0_r_um / pref
+  recip_kappa       = 1.0_r_um / kappa
+  one_minus_epsilon = real(1.0_r_def - epsilon, r_um )
+  c_virtual         = real(1.0_r_def/epsilon - 1.0_r_def, r_um )
 
-  etar     = real( 1.0/(1.0-repsilon), r_um )
-  grcp     = real( gravity/cp, r_um )
-  lcrcp    = real( latent_heat_h2o_condensation / cp, r_um )
-  lfrcp    = real( latent_heat_h2o_fusion / cp, r_um )
+  etar     = real( 1.0_r_def/(1.0_r_def - epsilon), r_um )
+  grcp     = real( gravity/lfric_cp, r_um )
+  lcrcp    = real( latent_heat_h2o_condensation / lfric_cp, r_um )
+  lfrcp    = real( latent_heat_h2o_fusion / lfric_cp, r_um )
   ls       = real( latent_heat_h2o_condensation + latent_heat_h2o_fusion, r_um )
   lsrcp    = real( (latent_heat_h2o_condensation + latent_heat_h2o_fusion) / &
-                   cp, r_um )
+                   lfric_cp, r_um )
 
-  cv       = real( cp - r, r_um )
+  cv       = real( lfric_cp - rd, r_um )
 
-  recip_a2 = real( 1.0/(planet_radius**2), r_um )
-  g_over_r = real( g/r, r_um )
+  recip_a2 = real( 1.0_r_def/(radius**2_i_def), r_um )
+  g_over_r = real( gravity/rd, r_um )
 
 
   ! Set 32-bit versions as required, eg in qsat_mod
-  repsilon_32b          = real( repsilon, real32 )
-  one_minus_epsilon_32b = real( one_minus_epsilon, real32 )
+  repsilon_32b          = real( epsilon, real32 )
+  one_minus_epsilon_32b = real( 1.0_r_def - epsilon, real32 )
 
 end subroutine set_planet_constants
 

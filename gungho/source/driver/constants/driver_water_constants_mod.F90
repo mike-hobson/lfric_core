@@ -6,7 +6,25 @@
 !> @brief LFRic water constants module
 !----------------------------------------------------------------------------
 
-module lfric_atm_water_constants_mod
+module driver_water_constants_mod
+
+!> @todo This module contains water related variables that "should" be
+!>       universally constant. It should also be set at the top-level driver
+!>       (i.e. not specified by any specific scheme). However, there is
+!>       currently no driver for LFRic, the driver functionality being spread
+!>       across lfric_atm/gungho code. Since gas_constant_h2o is required
+!>       to derived a consistent epsilon for MoistDynamics and UM Physics,
+!>       gas_constant_h2o, and thus this module must be available when either
+!>       gungho or lfric_atm is built.
+!>
+!>       Once a driver has been established for the LFRic project this module
+!>       should be relocated to it's top-level equivalent.
+!>
+!>       In addition, while this module mirrors water_constants in the UM,
+!>       some variables would technically be Planet dependant, i.e. sea-related
+!>       variables. Given the UM source code this came from did not deem that
+!>       a requirement, a resolution for this issue (if any) should be science
+!>       led.
 
   use constants_mod, only : r_def
 
@@ -65,4 +83,4 @@ module lfric_atm_water_constants_mod
   !< Rate of change of soil matrix potential with temperature at
   !< equilibrium between water and ice in partially frozen soil [m/K].
 
-end module lfric_atm_water_constants_mod
+end module driver_water_constants_mod

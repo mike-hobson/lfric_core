@@ -97,8 +97,7 @@ contains
                               rd=300.0_r_def,           &
                               cp=1000.0_r_def,          &
                               p_zero=100000.0_r_def,    &
-                              scaling_factor=0.5_r_def, &
-                              epsilon=0.6_r_def )
+                              scaling_factor=0.5_r_def )
 
     allocate( unit_under_test, source=create_extrusion() )
 
@@ -142,8 +141,7 @@ contains
                               rd=300.0_r_def,           &
                               cp=1000.0_r_def,          &
                               p_zero=100000.0_r_def,    &
-                              scaling_factor=2.0_r_def, &
-                              epsilon=0.6_r_def )
+                              scaling_factor=2.0_r_def )
 
     allocate( unit_under_test, source=create_extrusion() )
 

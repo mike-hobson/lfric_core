@@ -34,7 +34,6 @@
   cp             = 1005.0
   p_zero         = 100000.0
   scaling_factor = 125.0
-  epsilon        = 0.62918
 /
 
 &partitioning

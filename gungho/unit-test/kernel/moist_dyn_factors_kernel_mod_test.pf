@@ -37,7 +37,6 @@ module moist_dyn_factors_kernel_mod_test
   real(r_def), parameter :: rd       = 300.0_r_def
   real(r_def), parameter :: cp       = 1000.0_r_def
   real(r_def), parameter :: scaling  = 1.0_r_def
-  real(r_def), parameter :: epsilon  = 0.6_r_def
 
   integer(i_def), parameter :: nummr = 6
   integer(i_def), parameter :: num_moist_factors = 3
@@ -71,8 +70,7 @@ contains
                              rd = rd,                  &
                              cp=cp,                    &
                              p_zero = p_zero,          &
-                             scaling_factor = scaling, &
-                             epsilon = epsilon)
+                             scaling_factor = scaling )
 
     allocate(this%map_wtheta(ndf_wtheta))
     allocate(this%mr(undf_wtheta, nummr))
@@ -103,7 +101,8 @@ contains
   @Test( npes=[1] )
   subroutine test_all( this )
 
-    use moist_dyn_factors_kernel_mod, only : moist_dyn_factors_code
+    use moist_dyn_factors_kernel_mod, only: moist_dyn_factors_code
+    use planet_config_mod,            only: epsilon
 
     implicit none
 

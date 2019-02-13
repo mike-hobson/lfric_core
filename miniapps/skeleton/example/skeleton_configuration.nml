@@ -68,7 +68,6 @@ p_zero=100000.0,
 radius=6371229.0,
 rd=287.05,
 scaling_factor=125.0,
-epsilon=0.62918,
 /
 
 

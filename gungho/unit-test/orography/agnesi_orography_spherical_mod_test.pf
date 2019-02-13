@@ -58,7 +58,6 @@ module agnesi_orography_spherical_mod_test
   real(r_def), parameter :: rd       = 300.0_r_def
   real(r_def), parameter :: cp       = 1000.0_r_def
   real(r_def), parameter :: scaling  = 125.0_r_def
-  real(r_def), parameter :: epsilon  = 0.6_r_def
 
 contains
 
@@ -106,8 +105,7 @@ contains
                               rd             = rd,      &
                               cp             = cp,      &  
                               p_zero         = p_zero,  &
-                              scaling_factor = scaling, &
-                              epsilon        = epsilon )
+                              scaling_factor = scaling )
 
     ! Set Witch-of-Agnesi spherical configuration
     this%mountain_height   = 100.0_r_def

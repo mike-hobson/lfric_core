@@ -56,7 +56,6 @@ contains
     call store_comm(this%getMpiCommunicator())
 
     call feign_planet_config( cp=1000.0_r_def,         &
-                              epsilon=0.6_r_def,       &
                               gravity=10.0_r_def,      &
                               omega=7.292116E-5_r_def, &
                               p_zero=100000.0_r_def,   &

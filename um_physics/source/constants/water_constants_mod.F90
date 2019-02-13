@@ -9,17 +9,17 @@
 module water_constants_mod
 
   use constants_mod, only : r_um
-  use lfric_atm_water_constants_mod, only: t_freeze_h2o_sea,             &
-                                           t_freeze_h2o,                 &
-                                           density_h2o,                  &
-                                           density_h2o_sea,              &
-                                           density_ice,                  &
-                                           latent_heat_h2o_condensation, &
-                                           latent_heat_h2o_fusion,       &
-                                           heat_capacity_h2o_vapour,     &
-                                           heat_capacity_h2o,            &
-                                           heat_capacity_ice,            &
-                                           jules_dpsidt
+  use driver_water_constants_mod, only: t_freeze_h2o_sea,             &
+                                        t_freeze_h2o,                 &
+                                        density_h2o,                  &
+                                        density_h2o_sea,              &
+                                        density_ice,                  &
+                                        latent_heat_h2o_condensation, &
+                                        latent_heat_h2o_fusion,       &
+                                        heat_capacity_h2o_vapour,     &
+                                        heat_capacity_h2o,            &
+                                        heat_capacity_ice,            &
+                                        jules_dpsidt
 
   implicit none
 

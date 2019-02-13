@@ -49,7 +49,7 @@ contains
     call feign_planet_config( gravity=10.0_r_def, radius=6000000.0_r_def, &
                               omega=8.0E-5_r_def, rd=300.0_r_def,         &
                               cp=1000.0_r_def, p_zero=100000.0_r_def,     &
-                              scaling_factor=1.0_r_def, epsilon=1.0_r_def )
+                              scaling_factor=1.0_r_def )
 
     call feign_initial_density_config( tracer_background=0.0_r_def,     &
                                        tracer_max=1.0_r_def,            &

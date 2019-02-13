@@ -41,7 +41,6 @@ module compute_tri_precon_kernel_mod_test
   real(r_def), parameter :: rd       = 300.0_r_def
   real(r_def), parameter :: cp       = 1000.0_r_def
   real(r_def), parameter :: scaling  = 1.0_r_def
-  real(r_def), parameter :: epsilon  = 0.6_r_def
 
   integer(i_def), parameter :: method    = timestepping_method_semi_implicit
   integer(i_def), parameter :: rk_method = timestepping_runge_kutta_method_ssp4
@@ -83,7 +82,7 @@ contains
 
     call feign_planet_config( gravity=gravity, radius=radius, omega=omega, &
                               rd=rd, cp=cp, p_zero=p_zero,                 &
-                              scaling_factor=scaling, epsilon=epsilon )
+                              scaling_factor=scaling )
 
     call feign_timestepping_config(    &
          method=method,                &

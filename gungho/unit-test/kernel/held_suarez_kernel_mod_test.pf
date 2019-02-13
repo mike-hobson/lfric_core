@@ -63,8 +63,6 @@ module held_suarez_kernel_mod_test
   real(r_def), parameter :: rd       = 287.05_r_def
   real(r_def), parameter :: cp       = 1005.0_r_def
   real(r_def), parameter :: scaling  = 1.0_r_def
-  real(r_def), parameter :: epsilon  = 0.6_r_def
-
   real(r_def), parameter :: dt = 600.0_r_def
   real(r_def), parameter :: rsecs_in_day = 1.0_r_def/86400.0_r_def
 
@@ -109,7 +107,7 @@ contains
 
     call feign_planet_config( gravity=gravity, radius=radius, omega=omega, &
                               rd=rd, cp=cp, p_zero=p_zero,                 &
-                              scaling_factor=scaling, epsilon=epsilon )
+                              scaling_factor=scaling )
 
     call feign_timestepping_config(method=timestepping_method_semi_implicit,          &
                                    dt=dt, alpha=0.5_r_def, tau_u=0.5_r_def,           &

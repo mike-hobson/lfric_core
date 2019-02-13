@@ -89,7 +89,6 @@ contains
              vorticity_in_w1=.false. )
 
     call feign_planet_config( cp=1000.0_r_def,        &
-                              epsilon=0.6_r_def,      &
                               gravity=10.0_r_def,     &
                               omega=8.0E-5_r_def,     &
                               p_zero=100000.0_r_def,  &

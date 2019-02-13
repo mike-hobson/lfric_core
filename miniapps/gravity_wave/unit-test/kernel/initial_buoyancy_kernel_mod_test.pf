@@ -49,7 +49,6 @@ module initial_buoyancy_kernel_mod_test
   real(r_def), parameter :: rd      = 287.05_r_def
   real(r_def), parameter :: cp      = 1005.0_r_def
   real(r_def), parameter :: scaling = 1.0_r_def
-  real(r_def), parameter :: epsilon = 0.6_r_def
 
 contains
 
@@ -95,7 +94,7 @@ contains
 
     call feign_planet_config( gravity=gravity, radius=radius, omega=omega, &
                               rd=rd, cp=cp, p_zero=p_zero,                 &
-                              scaling_factor=scaling, epsilon=epsilon )
+                              scaling_factor=scaling )
 
     ! Create top level mesh collection
     mesh_collection = mesh_collection_type()

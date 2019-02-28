@@ -246,7 +246,7 @@ launch-test-suite:
 	echo Launching $(PROJECT_NAME) test suite against $$target with $(SUITE_GROUP) group ; \
 	rose stem --name=$(SUITE_NAME) \
 	          --config=$(SUITE_CONFIG) \
-	          --opt-conf-key=$$target \
+	          --opt-conf-key=$$target --no-gcontrol \
 	          $(CLEAN_OPT) $(QUIET_ARG) \
 	          --define-suite=RDEF_PRECISION=$(RDEF_PRECISION) \
 	          --group=$(SUITE_GROUP) ; \

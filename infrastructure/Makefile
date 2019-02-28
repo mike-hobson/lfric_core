@@ -40,6 +40,9 @@ export ROOT_DIR    ?= ..
 export PATH        := $(PATH):$(abspath $(ROOT_DIR)/GPL/bin)
 export PYTHONPATH  := $(PYTHONPATH):$(abspath $(ROOT_DIR)/GPL/lib/python)
 
+export SUITE_GROUP ?= developer
+export SUITE_GROUP_NAME ?= $(notdir $(realpath $(shell pwd)/$(ROOT_DIR)))-$(PROJECT_NAME)-.*
+
 META_VN       ?= HEAD
 META_FILE_DIR  = $(PROJECT_DIR)/config-meta/lfric-$(PROJECT_NAME)/$(META_VN)
 
@@ -51,10 +54,23 @@ default: unit-tests integration-tests
 documentation doc docs: document-uml document-api
 	$(Q)echo > /dev/null
 
+##############################################################################
+# Launch gscan to monitor suites from this suite-group
+#
+.PHONY: launch-suite-gscan
+launch-suite-gscan: gscan_processes := $(shell ps --no-headers -o command -C cylc-gscan)
+launch-suite-gscan: ALWAYS
+	$(Q)-if [[ "$(gscan_processes)" != *"--name=$(SUITE_GROUP_NAME)"* ]]; then \
+          cylc gscan  $(DOUBLE_VERBOSE_ARG) --name=$(SUITE_GROUP_NAME) &           \
+          usleep 1                                                                ;\
+        fi
+
+##############################################################################
+
 .PHONY: test-suite
-test-suite: SUITE_BASE_NAME = $(notdir $(realpath $(shell pwd)/..))-$(PROJECT_NAME)
+test-suite: SUITE_BASE_NAME = $(notdir $(realpath $(shell pwd)/$(ROOT_DIR)))-$(PROJECT_NAME)
 test-suite: SUITE_CONFIG = rose-stem
-test-suite: launch-test-suite
+test-suite: launch-suite-gscan launch-test-suite
 	$(Q)echo > /dev/null
 
 include build/lfric.mk

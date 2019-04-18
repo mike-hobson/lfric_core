@@ -299,10 +299,10 @@
     max_cfl=0.75,
 /
 
-&child
-radiation_code='none',
-boundary_layer_code='um',
-convection_code='none',
-microphysics_code='um',
-cloud_code='um'
+&section_choice
+radiation='none',
+boundary_layer='um',
+convection='none',
+microphysics='um',
+cloud='um'
 /

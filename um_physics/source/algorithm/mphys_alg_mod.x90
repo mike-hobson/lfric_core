@@ -43,8 +43,8 @@ contains
     use mphys_kernel_mod, only: mphys_kernel_type
     use mr_indices_mod,   only: imr_v, imr_cl, imr_r, imr_ci, imr_g, nummr
     use planet_constants_mod, only: lcrcp, lsrcp
-    use child_config_mod,   only: boundary_layer_code, &
-                                  child_boundary_layer_code_um
+    use section_choice_config_mod, only: boundary_layer, &
+                                         section_choice_boundary_layer_um
 
     implicit none
 
@@ -91,7 +91,7 @@ contains
                                      dmr_mphys(imr_g),  theta_inc ) )
 
     ! Calculate increments required by the BL scheme
-    if ( boundary_layer_code == child_boundary_layer_code_um ) then
+    if ( boundary_layer == section_choice_boundary_layer_um ) then
 
       dtl_mphys => physics_incs%get_field('dtl_mphys')
       dmt_mphys => physics_incs%get_field('dmt_mphys')

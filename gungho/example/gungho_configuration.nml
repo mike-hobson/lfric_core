@@ -258,10 +258,10 @@ phi_centre_dec      = 0.0
   max_cfl   = 0.75
 /
 
-&child
-radiation_code='socrates'
-boundary_layer_code='none'
-convection_code='none'
-microphysics_code='none'
-cloud_code='none'
+&section_choice
+radiation='socrates'
+boundary_layer='none'
+convection='none'
+microphysics='none'
+cloud='none'
 /

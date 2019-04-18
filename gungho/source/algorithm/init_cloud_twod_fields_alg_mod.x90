@@ -11,8 +11,8 @@ module init_cloud_twod_fields_alg_mod
 
   use log_mod,                         only: log_event,         &
                                              LOG_LEVEL_INFO
-  use child_config_mod,                only: cloud_code, &
-                                             child_cloud_code_none
+  use section_choice_config_mod,       only: cloud, &
+                                             section_choice_cloud_none
   use constants_mod,                   only: r_def
 
   use io_mod,                          only: ts_fname, &
@@ -82,7 +82,7 @@ contains
     z0msea_twod => twod_fields%get_field('z0msea')
 
     if (.not. checkpoint_read .or. &
-        cloud_code == child_cloud_code_none ) then
+        cloud == section_choice_cloud_none ) then
 
       ! No check point to start from
 

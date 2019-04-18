@@ -10,7 +10,7 @@
 module gungho_driver_mod
 
   use checksum_alg_mod,           only : checksum_alg
-  use child_config_mod,           only : cloud_code, child_cloud_code_um
+  use section_choice_config_mod,  only : cloud, section_choice_cloud_um
   use conservation_algorithm_mod, only : conservation_algorithm
   use constants_mod,              only : i_def, imdi, str_def, str_short
   use derived_config_mod,         only : set_derived_config
@@ -282,7 +282,7 @@ contains
         end if
 
         ! Cloud fields
-        if (use_physics .and. cloud_code == child_cloud_code_um) then
+        if (use_physics .and. cloud == section_choice_cloud_um) then
 
           iterator = cloud_fields%get_iterator()
           do
@@ -418,7 +418,7 @@ contains
         end if
 
         ! Cloud fields
-        if ( use_physics .and. cloud_code == child_cloud_code_um ) then
+        if ( use_physics .and. cloud == section_choice_cloud_um ) then
 
           iterator = cloud_fields%get_iterator()
           do
@@ -481,7 +481,7 @@ contains
          end do
        end if
 
-       if (use_physics .and. cloud_code == child_cloud_code_um) then
+       if (use_physics .and. cloud == section_choice_cloud_um) then
          call write_checkpoint(cloud_fields, timestep_end)
        endif
 

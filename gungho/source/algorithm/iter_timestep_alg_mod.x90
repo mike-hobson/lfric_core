@@ -16,12 +16,12 @@ module iter_timestep_alg_mod
                                        LOG_LEVEL_ERROR
 
   ! Configuration options
-  use child_config_mod,          only: cloud_code,                   &
-                                       boundary_layer_code,          &
-                                       radiation_code,               &
-                                       child_cloud_code_um,          &
-                                       child_boundary_layer_code_um, &
-                                       child_radiation_code_socrates
+  use section_choice_config_mod, only: cloud,                            &
+                                       boundary_layer,                   &
+                                       radiation,                        &
+                                       section_choice_cloud_um,          &
+                                       section_choice_boundary_layer_um, &
+                                       section_choice_radiation_socrates
 
   use formulation_config_mod,    only: use_moisture, use_physics, dlayer_on, &
                                        use_wavedynamics,          &
@@ -263,7 +263,7 @@ contains
 
 #ifdef UM_PHYSICS
     if ( use_physics ) then
-      if (radiation_code == child_radiation_code_socrates) then
+      if (radiation == section_choice_radiation_socrates) then
         ! Initialisation for the Socrates radiation scheme
         call socrates_init()
       end if
@@ -653,7 +653,7 @@ contains
 
 #ifdef UM_PHYSICS
     if (use_physics) then
-     if ( cloud_code == child_cloud_code_um .and. &
+     if ( cloud == section_choice_cloud_um .and. &
           scheme == cloud_um_scheme_smith ) then
       if (use_moisture) then
 
@@ -698,7 +698,7 @@ contains
     if ( smagorinsky ) then
       !  Tracer mixing:
       call log_event( 'Applying Smagorinsky mixing', LOG_LEVEL_INFO )
-      if ( boundary_layer_code == child_boundary_layer_code_um ) then
+      if ( boundary_layer == section_choice_boundary_layer_um ) then
         ! Use blended BL-Smag diffusion coefficient
         call log_event( 'Using blended BL-Smagorinsky coefficient', LOG_LEVEL_INFO )
         call invoke( tracer_smagorinsky_diff_kernel_type( inc(igh_t),        &

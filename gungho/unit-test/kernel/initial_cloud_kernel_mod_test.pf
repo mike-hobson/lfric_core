@@ -38,19 +38,19 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use gungho_feign_config_mod, only : feign_child_config,    &
-                                        feign_cloud_um_config, &
+    use gungho_feign_config_mod, only : feign_section_choice_config, &
+                                        feign_cloud_um_config,       &
                                         feign_extrusion_config
 
     use extrusion_config_mod, only: extrusion_method_uniform
     use cloud_um_config_mod,  only: cloud_um_scheme_smith
-    use child_config_mod,     only: child_boundary_layer_code_none, &
-                                    child_cloud_code_um,            &
-                                    child_convection_code_none,     &
-                                    child_dynamics_code_none,       &
-                                    child_land_surface_code_none,   &
-                                    child_microphysics_code_none,   &
-                                    child_radiation_code_none
+    use section_choice_config_mod, only: section_choice_boundary_layer_none, &
+                                         section_choice_cloud_um,            &
+                                         section_choice_convection_none,     &
+                                         section_choice_dynamics_none,       &
+                                         section_choice_land_surface_none,   &
+                                         section_choice_microphysics_none,   &
+                                         section_choice_radiation_none
 
     implicit none
 
@@ -69,13 +69,14 @@ contains
     undf_wth  = 1_i_def
     nlayers  = 3_i_def
 
-    call feign_child_config( boundary_layer_code = child_boundary_layer_code_none, &
-                             cloud_code = child_cloud_code_um,                     &
-                             convection_code = child_convection_code_none,         &
-                             dynamics_code = child_dynamics_code_none,             &
-                             microphysics_code = child_microphysics_code_none,     &
-                             land_surface_code = child_land_surface_code_none,     &
-                             radiation_code = child_radiation_code_none )
+    call feign_section_choice_config(                             &
+             boundary_layer = section_choice_boundary_layer_none, &
+             cloud = section_choice_cloud_um,                     &
+             convection = section_choice_convection_none,         &
+             dynamics = section_choice_dynamics_none,             &
+             microphysics = section_choice_microphysics_none,     &
+             land_surface = section_choice_land_surface_none,     &
+             radiation = section_choice_radiation_none )
 
     call feign_extrusion_config( method=extrusion_method_uniform, &
                                  domain_top=1000.0_r_def,         &

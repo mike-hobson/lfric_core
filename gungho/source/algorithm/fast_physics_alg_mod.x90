@@ -7,10 +7,10 @@
 !>@brief Calls to the fast physics schemes
 module fast_physics_alg_mod
 
-  use child_config_mod,     only: boundary_layer_code,          &
-                                  child_boundary_layer_code_um, & 
-                                  convection_code,              &
-                                  child_convection_code_um
+  use section_choice_config_mod, only: boundary_layer,                   &
+                                       section_choice_boundary_layer_um, & 
+                                       convection,                       &
+                                       section_choice_convection_um
 
   use constants_mod,        only: i_def,r_def
   use log_mod,              only: log_event,       &
@@ -114,7 +114,7 @@ contains
     end if
 
 #ifdef UM_PHYSICS
-    if (convection_code == child_convection_code_um .and. &
+    if (convection == section_choice_convection_um .and. &
         convection_placement == physics_convection_placement_fast) then
       ! Algorithm that calls the UM convection scheme
       call log_event( 'fast_physics: Running the convection scheme', LOG_LEVEL_INFO )
@@ -124,7 +124,7 @@ contains
       convection_done=.true.
     end if
 
-    if (boundary_layer_code == child_boundary_layer_code_um .and. &
+    if (boundary_layer == section_choice_boundary_layer_um .and. &
         blayer_placement == physics_blayer_placement_fast) then  
       ! Algorithm that calls the UM Boundary Layer scheme
       call log_event( 'fast_physics: Running Boundary layer', LOG_LEVEL_INFO )

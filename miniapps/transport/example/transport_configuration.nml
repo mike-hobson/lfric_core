@@ -109,10 +109,10 @@ planar_domain_min_x=-1.0,
 planar_domain_min_y=-1.0,
 /
 
-&child
-radiation_code='none',
-boundary_layer_code='none',
-convection_code='none',
-microphysics_code='none',
-cloud_code='none'
+&section_choice
+radiation='none',
+boundary_layer='none',
+convection='none',
+microphysics='none',
+cloud='none'
 /

@@ -7,9 +7,10 @@
 !>@brief Calls to the slow physics schemes
 module slow_physics_alg_mod
 
-  use child_config_mod, only:                                              &
-                        microphysics_code, child_microphysics_code_um,     &
-                        radiation_code, child_radiation_code_socrates
+  use section_choice_config_mod, only: microphysics,                   &
+                                       section_choice_microphysics_um, &
+                                       radiation,                      &
+                                       section_choice_radiation_socrates
 
   use constants_mod,    only: i_def,r_def
   use log_mod,          only: log_event,                         &
@@ -143,7 +144,7 @@ contains
     end if
 
 #ifdef UM_PHYSICS
-    if ( microphysics_code == child_microphysics_code_um .and. &
+    if ( microphysics == section_choice_microphysics_um .and. &
          microphysics_placement == physics_microphysics_placement_slow) then
       if (use_moisture) then
         ! Algorithm which calls the UM microphysics scheme
@@ -177,7 +178,7 @@ contains
 
     end if   ! microphysics placement slow
 
-    if (radiation_code == child_radiation_code_socrates .and. &
+    if (radiation == section_choice_radiation_socrates .and. &
         radiation_placement == physics_radiation_placement_slow) then
       call log_event( 'slow_physics: Running Radiation', LOG_LEVEL_INFO )
       dtheta_rad = field_type( vector_space = theta%get_function_space() )

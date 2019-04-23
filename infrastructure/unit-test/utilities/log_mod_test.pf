@@ -107,6 +107,9 @@ contains
     !>       for logging in parallel as it is slightly different to the serial
     !>       logger
 
+    ! Initialise log_mod to use the serial method for logging
+    call initialise_logging(0, 1, 'log_mod_unit_test')
+
     open( INFO_UNIT, status='scratch', action='readwrite', &
           iostat=condition )
     @assertEqual( condition, 0 )
@@ -130,6 +133,8 @@ contains
     class( log_test_type ), intent( inout ) :: this
 
     integer(i_def) :: condition
+
+    call finalise_logging()
 
     close( ALERT_UNIT, iostat=condition )
     @assertEqual( condition, 0 )

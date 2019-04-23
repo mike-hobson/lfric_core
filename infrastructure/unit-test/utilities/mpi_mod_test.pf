@@ -15,7 +15,8 @@ module mpi_mod_test
   use mpi_mod, only: store_comm, clear_comm, &
                      global_sum, global_max, global_min, &
                      all_gather, broadcast, &
-                     get_mpi_datatype
+                     get_mpi_datatype, &
+                     get_comm_size, get_comm_rank
   use yaxt, only : xt_initialize, xt_finalize
 
   implicit none
@@ -80,6 +81,7 @@ contains
     integer(i_def) :: i, num_pes, mpi_datatype
     integer(i_def) :: l_sum_i, answer_i
     character(len=2) :: str_buffer(1)
+    integer(i_def) :: rank_number, total_ranks
 
     l_sum=0.0_r_def
     do i=1,size(l_array)
@@ -133,6 +135,12 @@ contains
 
     mpi_datatype=get_mpi_datatype( real_type, r_single )
     @assertEqual( MPI_REAL4, mpi_datatype )
+
+    total_ranks=get_comm_size()
+    @assertEqual( 1, total_ranks )
+
+    rank_number=get_comm_rank()
+    @assertEqual( 0, rank_number )
 
   end subroutine test_all
 

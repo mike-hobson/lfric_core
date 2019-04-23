@@ -164,10 +164,12 @@ contains
   !> Finalise logging functionality by closing the log files
   subroutine finalise_logging()
     integer :: ios
-    close(unit=log_unit_number,iostat=ios)
-    if ( ios /= 0 )then
-      write(error_unit,"('Cannot close logging file. iostat = ',i0)")ios
-      stop EXIT_CODE_ON_ERROR
+    if ( is_parallel ) then
+      close(unit=log_unit_number,iostat=ios)
+      if ( ios /= 0 )then
+        write(error_unit,"('Cannot close logging file. iostat = ',i0)")ios
+        stop EXIT_CODE_ON_ERROR
+      end if
     end if
   end subroutine finalise_logging
 

@@ -133,7 +133,7 @@ contains
 
   end subroutine global_sum_r_def
 
-  !> Calculates the global sum of a collection of real local sums
+  !> Calculates the global sum of a collection of integer local sums
   !>
   !> @param l_sum The sum of the integers on the local partition
   !> @param g_sum The calculated global sum 
@@ -351,7 +351,7 @@ contains
 
 
 
-  !> Generate the halo exchange redistribution object fo be used for future
+  !> Generate the halo exchange redistribution object to be used for future
   !> halo exchanges
   !>
   !> @param src_indices The global indices of all the owned points in this
@@ -409,10 +409,10 @@ contains
   !> Returns the appropriate MPI datatype enumerator for all the Fortran
   !> kinds supported by the LFRic distributed memory code
   !>
+  !> @param fortran_type An integer parameter indicating the Fortran data type
   !> @param fortran_kind A Fortran kind variable
-  !> @param fortran_kind An integer parameter indicating the Fortran data type
   !> @return mpi_datatype The MPI datatype enumerator associated with the
-  !>                      given Fortran kind
+  !>                      given Fortran type and kind
   function get_mpi_datatype( fortran_type, fortran_kind ) result(mpi_datatype)
     use, intrinsic :: iso_fortran_env, only : real128, real64, real32, &
                                               int64, int32, int16, int8

@@ -76,6 +76,7 @@ module ru_bd_kernel_mod
 contains
 
   type(ru_bd_kernel_type) function ru_bd_kernel_constructor() result(self)
+    implicit none
     return
   end function ru_bd_kernel_constructor
 

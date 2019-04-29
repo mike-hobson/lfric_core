@@ -375,6 +375,9 @@ contains
   !> @param[in] source Object to be copied.
   !>
   subroutine partition_type_assign(dest, source)
+
+    implicit none
+
     class(partition_type), intent(out)   :: dest
     class(partition_type), intent(in)    :: source
 

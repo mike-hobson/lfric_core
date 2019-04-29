@@ -50,6 +50,7 @@ contains
 
   type(dg_matrix_vector_kernel_type) &
   function dg_matrix_vector_kernel_constructor() result(self)
+    implicit none
     return
   end function dg_matrix_vector_kernel_constructor
 
@@ -73,7 +74,9 @@ subroutine dg_matrix_vector_code(cell,        &
                                  matrix,      &
                                  ndf1, undf1, map1, &
                                  ndf2, undf2, map2)
- 
+
+  implicit none
+
   !Arguments
   integer,                   intent(in)    :: cell, nlayers, ncell_3d
   integer,                   intent(in)    :: undf1, ndf1

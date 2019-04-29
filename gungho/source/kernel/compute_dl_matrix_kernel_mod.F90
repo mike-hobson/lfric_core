@@ -71,6 +71,7 @@ contains
 
   type(compute_dl_matrix_kernel_type) &
        function compute_dl_matrix_constructor() result(self)
+       implicit none
        return
   end function compute_dl_matrix_constructor
 

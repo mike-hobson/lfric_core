@@ -53,6 +53,7 @@ module initial_exner_sample_kernel_mod
 contains
 
   type(initial_exner_sample_kernel_type) function initial_exner_sample_kernel_constructor() result(self)
+      implicit none
       return
   end function initial_exner_sample_kernel_constructor
 

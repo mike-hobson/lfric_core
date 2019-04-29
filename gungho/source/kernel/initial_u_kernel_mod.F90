@@ -63,6 +63,7 @@ module initial_u_kernel_mod
 contains
 
 type(initial_u_kernel_type) function initial_u_kernel_constructor() result(self)
+  implicit none
   return
 end function initial_u_kernel_constructor
 
@@ -101,6 +102,8 @@ subroutine initial_u_code(nlayers, &
                                          geometry_spherical
   use coordinate_jacobian_mod,    only : coordinate_jacobian
   use coord_transform_mod,        only : sphere2cart_vector, xyz2llr
+
+  implicit none
 
   !Arguments
   integer, intent(in) :: nlayers, ndf, ndf_chi

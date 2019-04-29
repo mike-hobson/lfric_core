@@ -34,6 +34,8 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
+    implicit none
+
     class(counter_test_type), intent(inout) :: this
 
     integer(i_def) :: condition
@@ -50,6 +52,8 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
+    implicit none
+
     class(counter_test_type), intent(inout) :: this
 
     integer(i_def) :: condition
@@ -64,6 +68,8 @@ contains
   subroutine test_counter(this)
 
     use count_mod, only: count_type, halo_calls
+
+    implicit none
 
     class(counter_test_type), intent(inout) :: this
 

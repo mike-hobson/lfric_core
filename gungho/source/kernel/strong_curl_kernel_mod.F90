@@ -62,6 +62,7 @@ module strong_curl_kernel_mod
 contains
 
 type(strong_curl_kernel_type) function strong_curl_kernel_constructor() result(self)
+  implicit none
   return
 end function strong_curl_kernel_constructor
 
@@ -82,7 +83,9 @@ subroutine strong_curl_code(nlayers,                         &
                             ndf2, undf2, map2, basis_w2,     &
                             ndf1, undf1, map1, diff_basis_w1 &
                             )
-                           
+
+  implicit none
+
   !Arguments
   integer(kind=i_def),                      intent(in)    :: nlayers
   integer(kind=i_def),                      intent(in)    :: ndf1, undf1, &

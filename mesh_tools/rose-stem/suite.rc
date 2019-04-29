@@ -1,5 +1,6 @@
 #!jinja2
 
+%include inc/common_macros.rc
 %include inc/suite_macros.rc
 %include suite_control.rc
 
@@ -111,14 +112,19 @@
 
 {%- endif %}
 
+##############################################################################
+
+  [[TECHNICAL]]
+    [[[environment]]]
+      SOURCE_DIRECTORY = $SOURCE_ROOT/{{projectName}}
+
 {%- if 'validate_'+projectName+'_rose-meta' in scheduledTasks %}
     [[validate_{{projectName}}_rose-meta]]
-       inherit = PRELIMINARIES, LOCAL
+       inherit = TECHNICAL, LOCAL
        script = $SOURCE_ROOT/bin/validate_rose_meta {{projectName}}
-
 {%- endif %}
 
-
+{{check_style_task( 'TECHNICAL', '$SOURCE_DIRECTORY' )}}
 
 {# PUBLISH #}
 ##############################################################################

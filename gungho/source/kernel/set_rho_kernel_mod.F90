@@ -60,6 +60,7 @@ module set_rho_kernel_mod
 contains
 
 type(set_rho_kernel_type) function set_rho_kernel_constructor() result(self)
+  implicit none
   return
 end function set_rho_kernel_constructor
 
@@ -93,6 +94,8 @@ subroutine set_rho_code(nlayers, rho, chi_1, chi_2, chi_3, time, &
    use analytic_density_profiles_mod, only : analytic_density
   ! needs to compute the integral of rho_df * P
   ! P_analytic over a single column
+
+  implicit none
 
   !Arguments
   integer, intent(in) :: nlayers, ndf_w3, ndf_chi, undf_w3, undf_chi, nqp_h, nqp_v

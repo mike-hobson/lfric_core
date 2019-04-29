@@ -69,6 +69,7 @@ contains
 
 type(held_suarez_fv_wind_kernel_type) &
 function held_suarez_fv_wind_kernel_constructor() result(self)
+  implicit none
   return
 end function held_suarez_fv_wind_kernel_constructor
 

@@ -62,6 +62,8 @@ contains
 
 type(compute_q_operator_type) &
                        function compute_q_operator_constructor() result(self)
+  implicit none
+
   return
 end function compute_q_operator_constructor
 
@@ -84,6 +86,8 @@ subroutine compute_q_operator_code(cell, nlayers, ncell_3d,     &
                                    ndf_w2, basis_w2,            &
                                    ndf_wt, basis_wt,            &
                                    nqp_h, nqp_v, wqp_h, wqp_v )
+
+  implicit none
 
   !Arguments
   integer(kind=i_def),                    intent(in) :: cell, nqp_h, nqp_v

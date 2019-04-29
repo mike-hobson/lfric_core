@@ -725,7 +725,6 @@ end subroutine xios_diagnostic_domain_init
 
 subroutine xios_checkpoint_domain_init(fs_id, domain_name, mesh_id, chi, use_index)
 
-
   implicit none
 
   ! Arguments
@@ -1073,6 +1072,8 @@ end subroutine calc_xios_domain_coords
 !>@param[in] file extension
 
 function ts_fname(stem_name, file_type, field_name, ts, ext)
+
+  implicit none
 
   character(len=*),    intent(in) :: field_name, stem_name, &
                                      file_type, ext

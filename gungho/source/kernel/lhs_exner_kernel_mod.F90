@@ -71,6 +71,7 @@ contains
 
 type(lhs_exner_kernel_type) &
 function lhs_exner_kernel_constructor() result(self)
+  implicit none
   return
 end function lhs_exner_kernel_constructor
 

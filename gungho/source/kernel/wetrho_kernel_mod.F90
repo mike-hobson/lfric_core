@@ -51,6 +51,7 @@ module wetrho_kernel_mod
 contains
 
 type(wetrho_kernel_type) function wetrho_kernel_constructor() result(self)
+  implicit none
   return
 end function wetrho_kernel_constructor
 

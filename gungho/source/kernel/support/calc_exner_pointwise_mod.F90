@@ -30,6 +30,8 @@ contains
 !! @result    exner Pressure perturbation
 function calc_exner_pointwise(rho, theta) result(exner)
 
+  implicit none
+
   real(kind=r_def)              :: exner
   real(kind=r_def), intent(in)  :: rho, theta
 
@@ -50,6 +52,8 @@ end function calc_exner_pointwise
 !! @result    exner   Pressure perturbation
 function linear_calc_exner_pointwise(rho, theta, exner_s, rho_s, theta_s) result(exner)
 
+  implicit none
+
   real(kind=r_def)              :: exner
   real(kind=r_def), intent(in)  :: rho, theta, exner_s, rho_s, theta_s
 
@@ -67,6 +71,8 @@ end function linear_calc_exner_pointwise
 !! @param[in] theta Potential temperature perturbation
 !! @result    pressure Pressure perturbation
 function calc_pressure_pointwise(rho, theta) result(pressure)
+
+  implicit none
 
   real(kind=r_def)              :: pressure
   real(kind=r_def), intent(in)  :: rho, theta

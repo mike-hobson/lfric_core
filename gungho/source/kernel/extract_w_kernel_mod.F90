@@ -51,6 +51,7 @@ module extract_w_kernel_mod
 contains
 
 type(extract_w_kernel_type) function extract_w_kernel_constructor() result(self)
+  implicit none
   return
 end function extract_w_kernel_constructor
 

@@ -61,6 +61,7 @@ module initial_mr_kernel_mod
 contains
 
     type(initial_mr_kernel_type) function initial_mr_kernel_constructor() result(self)
+        implicit none
         return
     end function initial_mr_kernel_constructor
 

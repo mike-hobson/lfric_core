@@ -55,6 +55,7 @@ end interface
 contains
 
 type(gp_rhs_kernel_type) function gp_rhs_kernel_constructor() result(self)
+  implicit none
   return
 end function gp_rhs_kernel_constructor
 
@@ -94,7 +95,9 @@ subroutine gp_rhs_code(nlayers, &
                        nqp_h, nqp_v, wqp_h, wqp_v                    )
                        
   use coordinate_jacobian_mod, only: coordinate_jacobian                       
-                         
+
+  implicit none
+
   !Arguments
   integer,          intent(in) :: nlayers, ndf, undf 
   integer,          intent(in) :: ndf_f, undf_f, ndf_chi, undf_chi

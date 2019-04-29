@@ -63,6 +63,7 @@ module weighted_proj_theta2_vert_kernel_mod
 contains
 
 type(weighted_proj_theta2_vert_kernel_type) function weighted_proj_theta2_vert_kernel_constructor() result(self)
+  implicit none
   return
 end function weighted_proj_theta2_vert_kernel_constructor
 

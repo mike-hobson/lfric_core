@@ -61,6 +61,7 @@ public mm_diagonal_assembled_kernel_code
 contains
 
   type(mm_diagonal_assembled_kernel_type) function mm_diagonal_assembled_kernel_constructor() result(self)
+  implicit none
   return
 end function mm_diagonal_assembled_kernel_constructor
 
@@ -82,6 +83,8 @@ subroutine mm_diagonal_assembled_kernel_code(cell,        &
                                              mass_matrix, &
                                              ndf,undf,map)
  
+  implicit none
+
   !Arguments
   integer(kind=i_def),                              intent(in)  :: cell, nlayers
   integer(kind=i_def),                              intent(in)  :: ncell_3d

@@ -84,6 +84,7 @@ contains
 
 type(hydrostatic_kernel_type) &
 function hydrostatic_kernel_constructor() result(self)
+  implicit none
   return
 end function hydrostatic_kernel_constructor
 

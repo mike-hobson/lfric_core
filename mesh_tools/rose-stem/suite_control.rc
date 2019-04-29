@@ -3,7 +3,8 @@
 {%- set miniappFlag = False %}
 {%- set mesh_rdef_precision = "64" %}
 
-{%- set groups = {'developer': ['check_compilers("fast-debug", publish=True)'],
+{%- set groups = {'developer': ['check_compilers("fast-debug", publish=True)',
+                                'check_style_graph'],
                   'nightly'  : ['check_compilers("full-debug", publish=True)',
                                 'publish_commit']} %}
 

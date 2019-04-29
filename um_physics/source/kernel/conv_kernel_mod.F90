@@ -52,6 +52,7 @@ module conv_kernel_mod
 contains
 
   type(conv_kernel_type) function conv_kernel_constructor() result(self)
+    implicit none
     return
   end function conv_kernel_constructor
 

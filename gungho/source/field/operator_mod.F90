@@ -324,6 +324,8 @@ contains
   !>
   function operator_constructor( fs_to,fs_from ) result(self)
 
+    implicit none
+
     class(function_space_type), target, intent(in) :: fs_to
     class(function_space_type), target, intent(in) :: fs_from
 
@@ -338,6 +340,9 @@ contains
   end function operator_constructor
 
   function operator_type_deep_copy(self) result(other)
+
+    implicit none
+
     class(operator_type), intent(inout) :: self
     type(operator_type) :: other
     ! make field_vector

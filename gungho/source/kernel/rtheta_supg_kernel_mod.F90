@@ -67,6 +67,7 @@ contains
 
 type(rtheta_supg_kernel_type) function rtheta_supg_kernel_constructor() &
                               result(self)
+  implicit none
   return
 end function rtheta_supg_kernel_constructor
 !> @details Kernel to  compute the application of streamline upwind

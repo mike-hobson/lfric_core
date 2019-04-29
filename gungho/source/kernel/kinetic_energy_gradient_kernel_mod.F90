@@ -72,6 +72,7 @@ contains
 
 type(kinetic_energy_gradient_kernel_type) &
 function kinetic_energy_gradient_kernel_constructor() result(self)
+  implicit none
   return
 end function kinetic_energy_gradient_kernel_constructor
 
@@ -103,7 +104,9 @@ subroutine kinetic_energy_gradient_code(nlayers,                                
                                         )
                            
   use coordinate_jacobian_mod,  only: coordinate_jacobian
-  
+
+  implicit none
+
   !Arguments
   integer, intent(in) :: nlayers,nqp_h, nqp_v
   integer, intent(in) :: ndf_chi, ndf_w2

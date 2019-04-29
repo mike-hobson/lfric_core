@@ -64,6 +64,7 @@ contains
 
 type(w2_normalisation_kernel_type) &
 function w2_normalisation_kernel_constructor() result(self)
+  implicit none
   return
 end function w2_normalisation_kernel_constructor
 

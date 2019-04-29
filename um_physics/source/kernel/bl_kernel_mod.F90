@@ -98,6 +98,7 @@ module bl_kernel_mod
 contains
 
   type(bl_kernel_type) function bl_kernel_constructor() result(self)
+    implicit none
     return
   end function bl_kernel_constructor
 

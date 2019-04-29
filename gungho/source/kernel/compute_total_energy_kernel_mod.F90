@@ -68,6 +68,7 @@ public compute_total_energy_code
 contains
 
 type(compute_total_energy_kernel_type) function compute_total_energy_kernel_constructor() result(self)
+  implicit none
   return
 end function compute_total_energy_kernel_constructor
 

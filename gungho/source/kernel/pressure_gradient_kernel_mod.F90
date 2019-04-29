@@ -77,6 +77,7 @@ contains
 
 type(pressure_gradient_kernel_type) &
 function pressure_gradient_kernel_constructor() result(self)
+  implicit none
   return
 end function pressure_gradient_kernel_constructor
 

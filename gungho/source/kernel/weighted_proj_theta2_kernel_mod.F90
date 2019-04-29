@@ -59,6 +59,7 @@ public weighted_proj_theta2_code
 contains
 
 type(weighted_proj_theta2_kernel_type) function weighted_proj_theta2_kernel_constructor() result(self)
+  implicit none
   return
 end function weighted_proj_theta2_kernel_constructor
 

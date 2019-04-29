@@ -73,6 +73,7 @@ module w2_vorticity_advection_kernel_mod
 contains
 
 type(w2_vorticity_advection_kernel_type) function w2_vorticity_advection_kernel_constructor() result(self)
+  implicit none
   return
 end function w2_vorticity_advection_kernel_constructor
 

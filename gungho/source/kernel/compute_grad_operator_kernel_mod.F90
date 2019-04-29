@@ -58,6 +58,7 @@ contains
 
 type(compute_grad_operator_kernel_type) &
 function compute_grad_operator_constructor() result(self)
+  implicit none
   return
 end function compute_grad_operator_constructor
 
@@ -96,6 +97,8 @@ subroutine compute_grad_operator_code(cell, nlayers, ncell_3d,          &
                                       ndf_chi, undf_chi,                &
                                       map_chi, diff_basis_chi,          &
                                       nqp_h, nqp_v, wqp_h, wqp_v )
+
+  implicit none
 
   !Arguments
   integer,                     intent(in) :: cell, nqp_h, nqp_v

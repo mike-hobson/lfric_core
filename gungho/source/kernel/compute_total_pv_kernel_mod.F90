@@ -63,6 +63,7 @@ module compute_total_pv_kernel_mod
 contains
 
 type(compute_total_pv_kernel_type) function compute_total_pv_kernel_constructor() result(self)
+  implicit none
   return
 end function compute_total_pv_kernel_constructor
 
@@ -107,6 +108,8 @@ subroutine compute_total_pv_code(                                               
 
   use coordinate_jacobian_mod, only: coordinate_jacobian, &
                                      coordinate_jacobian_inverse
+
+  implicit none
 
   !Arguments
   integer, intent(in) :: nlayers, nqp_h, nqp_v

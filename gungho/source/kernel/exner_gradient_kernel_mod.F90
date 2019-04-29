@@ -65,6 +65,7 @@ contains
 
 type(exner_gradient_kernel_type) &
 function exner_gradient_kernel_constructor() result(self)
+  implicit none
   return
 end function exner_gradient_kernel_constructor
 

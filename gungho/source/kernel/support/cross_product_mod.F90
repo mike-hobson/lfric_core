@@ -22,6 +22,9 @@ contains
 !! @param[in] y The second 3d vector
 !! @result z The output vector z = x cross y
 pure function cross_product(x, y) result(z)
+
+  implicit none
+
   real(kind=r_def), intent(in) :: x(3), y(3)
   real(kind=r_def)             :: z(3)
 

@@ -20,6 +20,7 @@ module mpi_mod
                            xt_redist_p2p_off_new, &
                            xt_xmap_delete, xt_idxlist_delete
   use log_mod,       only: log_event, LOG_LEVEL_ERROR
+
   implicit none
 
   private
@@ -256,6 +257,9 @@ contains
   !> @param count The number of items in buffer
   !> @param root The MPI task from which data will be broadcast
   subroutine broadcast_l_def(buffer, count, root)
+
+    implicit none
+
     logical(l_def), intent(inout) :: buffer(:)
     integer(i_def), intent(in)    :: count
     integer(i_def), intent(in)    :: root
@@ -281,6 +285,9 @@ contains
   !> @param count The number of items in buffer
   !> @param root The MPI task from which data will be broadcast
   subroutine broadcast_i_def(buffer, count, root)
+
+    implicit none
+
     integer(i_def), intent(inout) :: buffer(:)
     integer(i_def), intent(in)    :: count
     integer(i_def), intent(in)    :: root
@@ -306,6 +313,9 @@ contains
   !> @param count The number of items in buffer
   !> @param root The MPI task from which data will be broadcast
   subroutine broadcast_r_def(buffer, count, root)
+
+    implicit none
+
     real(r_def),    intent(inout) :: buffer(:)
     integer(i_def), intent(in)    :: count
     integer(i_def), intent(in)    :: root
@@ -331,6 +341,9 @@ contains
   !> @param count The number of items in buffer
   !> @param root The MPI task from which data will be broadcast
   subroutine broadcast_str(buffer, count, root)
+
+    implicit none
+
     character(len=*), intent(inout) :: buffer(:)
     integer(i_def),   intent(in)    :: count
     integer(i_def),   intent(in)    :: root

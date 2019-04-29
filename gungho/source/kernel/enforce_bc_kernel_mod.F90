@@ -50,6 +50,7 @@ public enforce_bc_code
 contains
 
 type(enforce_bc_kernel_type) function enforce_bc_kernel_constructor() result(self)
+  implicit none
   return
 end function enforce_bc_kernel_constructor
 
@@ -65,7 +66,9 @@ subroutine enforce_bc_code(nlayers,                        &
                            field,                          &
                            ndf, undf, map, boundary_value  &
                           )
-  
+
+  implicit none
+
   !Arguments
   integer, intent(in) :: nlayers
   integer, intent(in) :: ndf

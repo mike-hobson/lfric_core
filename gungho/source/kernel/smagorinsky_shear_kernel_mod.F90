@@ -55,6 +55,7 @@ module smagorinsky_shear_kernel_mod
 contains
 
 type(smagorinsky_shear_kernel_type) function smagorinsky_shear_kernel_constructor() result(self)
+  implicit none
   return
 end function smagorinsky_shear_kernel_constructor
 

@@ -59,6 +59,7 @@ public nodal_coordinates_code
 contains
 
 type(nodal_coordinates_kernel_type) function nodal_coordinates_kernel_constructor() result(self)
+  implicit none
   return
 end function nodal_coordinates_kernel_constructor
 !> @brief   Compute the coordinates fields at nodal points of another
@@ -84,7 +85,9 @@ subroutine nodal_coordinates_code(nlayers,                                    &
                                   ndf_chi, undf_chi, map_chi,                 &
                                   basis_chi                                   &
                                   )
-                           
+
+  implicit none
+
   ! Arguments
   integer, intent(in) :: nlayers
   integer, intent(in) :: ndf_x, ndf_chi, undf_x, undf_chi

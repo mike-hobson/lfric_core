@@ -856,6 +856,8 @@ contains
   !
   pure function choose_colour_greedy(used_colours)  result(colour)
 
+    implicit none
+
     integer, intent(in)     :: used_colours(0:MAXCOLS)
     integer                 :: colour
     integer                 :: idx
@@ -881,6 +883,8 @@ contains
   ! Returns chosen colour.
   !
   pure function choose_colour_balanced(used_colours)  result(colour)
+
+    implicit none
 
     integer, intent(in)     :: used_colours(0:MAXCOLS)
     integer                 :: colour

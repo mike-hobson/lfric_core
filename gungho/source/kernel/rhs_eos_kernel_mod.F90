@@ -67,6 +67,7 @@ module rhs_eos_kernel_mod
 contains
 
 type(rhs_eos_kernel_type) function rhs_eos_kernel_constructor() result(self)
+  implicit none
   return
 end function rhs_eos_kernel_constructor
 

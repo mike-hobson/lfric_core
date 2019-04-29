@@ -54,6 +54,7 @@ module tracer_viscosity_kernel_mod
 contains
 
 type(tracer_viscosity_kernel_type) function tracer_viscosity_kernel_constructor() result(self)
+  implicit none
   return
 end function tracer_viscosity_kernel_constructor
 

@@ -51,6 +51,7 @@ contains
 
 type(invert_local_operator_kernel_type) &
 function invert_local_operator_constructor() result(self)
+  implicit none
   return
 end function invert_local_operator_constructor
   

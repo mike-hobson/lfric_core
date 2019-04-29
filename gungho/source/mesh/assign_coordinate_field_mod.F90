@@ -15,6 +15,8 @@ module assign_coordinate_field_mod
   use planet_config_mod,    only : scaled_radius
   use mesh_collection_mod,  only : mesh_collection
 
+  implicit none
+
 contains
 !> @brief Subroutine which assigns the values of the coordinates of the mesh
 !! to a field

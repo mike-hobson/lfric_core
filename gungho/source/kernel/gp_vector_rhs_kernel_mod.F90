@@ -65,6 +65,7 @@ module gp_vector_rhs_kernel_mod
 contains
 
 type(gp_vector_rhs_kernel_type) function gp_vector_rhs_kernel_constructor() result(self)
+  implicit none
   return
 end function gp_vector_rhs_kernel_constructor
 
@@ -117,6 +118,8 @@ subroutine gp_vector_rhs_code(nlayers, &
                               ndf_w2, undf_w2, map_w2, &
                               nqp_h, nqp_v, wqp_h, wqp_v &
                              )
+
+  implicit none
 
   !Arguments
   integer, intent(in) :: nlayers, ndf, ndf_f, ndf_chi, ndf_w2

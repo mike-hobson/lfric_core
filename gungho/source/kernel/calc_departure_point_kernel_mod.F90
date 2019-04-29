@@ -53,6 +53,7 @@ module calc_departure_point_kernel_mod
 contains
 
 type(calc_departure_point_kernel_type) function calc_departure_point_kernel_constructor() result(self)
+  implicit none
   return
 end function calc_departure_point_kernel_constructor
 
@@ -92,6 +93,8 @@ subroutine calc_departure_point_code( nlayers,                       &
   use biperiodic_deppts_mod, only : calc_dep_point
   use cosmic_flux_mod,       only : calc_stencil_ordering, w2_dof, reorientate_w2field
   use flux_direction_mod,    only : x_direction, y_direction
+
+  implicit none
 
   integer, intent(in)                     :: nlayers
   integer, intent(in)                     :: undf_w2

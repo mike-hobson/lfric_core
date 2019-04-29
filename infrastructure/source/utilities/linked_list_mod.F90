@@ -67,6 +67,8 @@ contains
 !> current items are initialised
 type(linked_list_type) function linked_list_constructor()
 
+  implicit none
+
   linked_list_constructor%length = 0
 
 end function linked_list_constructor
@@ -74,6 +76,8 @@ end function linked_list_constructor
 !> Gets the current length of the list 
 !> @return list length
 function get_length(self) result(length)
+
+  implicit none
 
   class(linked_list_type), intent (in)  :: self
   integer(i_def)                   :: length
@@ -86,6 +90,8 @@ end function get_length
 !> @return current item
 function get_current(self) result(curr_item)
 
+  implicit none
+
   class(linked_list_type), intent (in)  :: self
   class(linked_list_item_type),pointer  :: curr_item
 
@@ -95,6 +101,8 @@ end function get_current
 
 !> Set the item currently pointed to.
 subroutine set_current(self, new_item)
+
+  implicit none
 
   class(linked_list_type), intent (inout)  :: self
   class(linked_list_item_type),pointer  :: new_item
@@ -107,6 +115,8 @@ end subroutine set_current
 !> @return head item
 function get_head(self) result(head_item)
 
+  implicit none
+
   class(linked_list_type), intent (in)  :: self
   class(linked_list_item_type),pointer  :: head_item
 
@@ -117,6 +127,8 @@ end function get_head
 !> Gets the item at the tail of the list
 !> @return tail item
 function get_tail(self) result(tail_item)
+
+  implicit none
 
   class(linked_list_type), intent (in)  :: self
   class(linked_list_item_type),pointer  :: tail_item
@@ -131,6 +143,8 @@ end function get_tail
 !> @param in finish (optional) finish of extent to check
 !> @return true if the item exists or false if it doesn't
 function item_exists(this, id, start, finish) result(exists)
+
+  implicit none
 
   class(linked_list_type), intent(in)   :: this
   integer(i_def), intent(in)            :: id
@@ -181,6 +195,8 @@ end function item_exists
 !> @param in insert_point (optional) the point to insert at
 !> @param in placement (optional) insert before or after insert point
 subroutine insert_item(self, new_data, insert_point, placement)
+
+  implicit none
 
   class(linked_list_type), intent (inout)   :: self
   class(linked_list_data_type), intent (in) :: new_data
@@ -307,6 +323,8 @@ end subroutine insert_item
 
 !> Clears the list
 subroutine clear(self)
+
+  implicit none
 
   class(linked_list_type), intent(inout):: self
 

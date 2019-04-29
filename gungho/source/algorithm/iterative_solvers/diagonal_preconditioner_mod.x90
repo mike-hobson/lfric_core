@@ -96,8 +96,8 @@ contains
   !> Finalizer for the diagonal preconditioner
   !> @param [inout] self the diagonal preconditioner
   subroutine destroy_diagonal_preconditioner(self)
-    type(diagonal_preconditioner_type), intent(inout) :: self
-  
+    implicit none
+    type(diagonal_preconditioner_type), intent(inout) :: self  
   end subroutine destroy_diagonal_preconditioner
 
 end module diagonal_preconditioner_alg_mod

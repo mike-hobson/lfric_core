@@ -73,6 +73,7 @@ contains
 
 type(geopotential_gradient_kernel_type) &
 function geopotential_gradient_kernel_constructor() result(self)
+  implicit none
   return
 end function geopotential_gradient_kernel_constructor
 
@@ -99,7 +100,9 @@ subroutine geopotential_gradient_code(nlayers,                                 &
                                       ndf_w0, undf_w0, map_w0, w0_diff_basis,  &
                                       nqp_h, nqp_v, wqp_h, wqp_v               &
                                       )
-                           
+
+  implicit none
+
   !Arguments
   integer, intent(in) :: nlayers,nqp_h, nqp_v
   integer, intent(in) :: ndf_w0, ndf_w2

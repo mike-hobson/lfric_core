@@ -58,6 +58,7 @@ public assign_field_single_column_code
 contains
 
   type(assign_field_single_column_kernel_type) function assign_field_single_column_kernel_constructor() result(self)
+  implicit none
   return
 end function assign_field_single_column_kernel_constructor
 

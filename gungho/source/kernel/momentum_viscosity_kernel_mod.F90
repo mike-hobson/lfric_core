@@ -54,6 +54,7 @@ module momentum_viscosity_kernel_mod
 contains
 
 type(momentum_viscosity_kernel_type) function momentum_viscosity_kernel_constructor() result(self)
+  implicit none
   return
 end function momentum_viscosity_kernel_constructor
 

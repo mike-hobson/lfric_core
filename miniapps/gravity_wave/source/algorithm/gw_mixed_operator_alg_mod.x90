@@ -222,8 +222,8 @@ contains
   !> @brief Finalizer for the gravity wave mixed operator
   !> @param [inout] self the mixed operator
   subroutine destroy_gw_mixed_operator(self)
-    type(gw_mixed_operator_type), intent(inout) :: self
-    
+    implicit none
+    type(gw_mixed_operator_type), intent(inout) :: self    
   end subroutine destroy_gw_mixed_operator
 
 end module gw_mixed_operator_alg_mod

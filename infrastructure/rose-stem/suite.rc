@@ -1,5 +1,6 @@
 #!jinja2
 
+%include inc/common_macros.rc
 %include inc/suite_macros.rc
 %include suite_control.rc
 
@@ -112,15 +113,8 @@
       SOURCE_DIRECTORY = $SOURCE_ROOT
 {%- endif %}
 
-{%- if 'validate_' + projectName + '_rose-meta' in scheduledTasks %}
-    [[validate_{{projectName}}_rose-meta]]
-       inherit = PRELIMINARIES, LOCAL
-       script = $SOURCE_ROOT/bin/validate_rose_meta {{projectName}}
-{%- endif %}
-
-
-
 ##############################################################################
+
 {%- set publish_destination = '$CYLC_SUITE_SHARE_DIR/publish-' + TARGET_OPT %}
   [[PUBLISH]]
     [[[environment]]]
@@ -179,6 +173,14 @@
             SOURCE_DIRECTORY      = $SOURCE_ROOT/{{projectName}}
             DESTINATION_DIRECTORY = $OUTPUT_ROOT/{{TARGET_TECHNICAL_COMPILER}}_fast-debug
             WORKING_DIR           = {{LOCAL_BUILD_ROOT}}/{{TARGET_TECHNICAL_COMPILER}}_fast-debug
+
+{%- if 'validate_' + projectName + '_rose-meta' in scheduledTasks %}
+    [[validate_{{projectName}}_rose-meta]]
+       inherit = TECHNICAL, LOCAL
+       script = $SOURCE_DIRECTORY/bin/validate_rose_meta {{projectName}}
+{%- endif %}
+
+{{check_style_task( 'TECHNICAL', '$SOURCE_DIRECTORY' )}}
 
     # Run locally as they need workstation tools such as Doxygen.
 {%- if 'api_documentation' in scheduledTasks %}

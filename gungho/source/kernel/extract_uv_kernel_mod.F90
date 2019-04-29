@@ -52,6 +52,7 @@ public extract_uv_code
 contains
 
 type(extract_uv_kernel_type) function extract_uv_kernel_constructor() result(self)
+  implicit none
   return
 end function extract_uv_kernel_constructor
 

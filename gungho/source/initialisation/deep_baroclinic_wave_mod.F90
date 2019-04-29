@@ -172,6 +172,8 @@ contains
 !>@brief stream function perturbation function
   real(kind=r_def) function evaluate_streamfunction(lon, lat, z)
 
+    implicit none
+
     real(kind=r_def), intent(in)  :: &
                 lon,        & ! Longitude (radians)
                 lat,        & ! Latitude (radians)

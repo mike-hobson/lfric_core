@@ -29,6 +29,8 @@ contains
 
     use tri_solve_kernel_mod, only: tri_solve_code
 
+    implicit none
+
     class(tri_solve_kernel_test_type), intent(inout) :: this
 
     real(r_def) :: tol = 1.0e010_r_def

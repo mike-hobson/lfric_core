@@ -70,6 +70,7 @@ contains
 
 type(subgrid_coeffs_kernel_type) &
 function subgrid_coeffs_kernel_constructor() result(self)
+  implicit none
   return
 end function subgrid_coeffs_kernel_constructor
 
@@ -105,6 +106,8 @@ subroutine subgrid_coeffs_code(                                               &
   use subgrid_rho_mod, only: second_order_coeffs
   use cosmic_flux_mod,    only : stencil_ordering_and_orientation
   use log_mod,          only : log_event, LOG_LEVEL_ERROR, LOG_LEVEL_INFO, log_scratch_space
+
+  implicit none
 
   ! Arguments
   integer, intent(in)               :: nlayers

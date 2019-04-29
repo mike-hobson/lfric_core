@@ -57,6 +57,7 @@ module weighted_m3_kernel_mod
 contains
 
 type(weighted_m3_kernel_type) function weighted_m3_constructor() result(self)
+  implicit none
   return
 end function weighted_m3_constructor
   

@@ -160,7 +160,8 @@ contains
   !> Finalizer for the dense operator
   !> @param [inout] self the dense operator
   subroutine destroy_dense_op(self)
+    implicit none
     type(dense_operator_type), intent(inout) :: self
-
   end subroutine destroy_dense_op
+
 end module dense_operator_alg_mod

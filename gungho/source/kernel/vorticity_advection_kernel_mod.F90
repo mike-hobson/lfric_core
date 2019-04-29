@@ -74,6 +74,7 @@ module vorticity_advection_kernel_mod
 contains
 
 type(vorticity_advection_kernel_type) function vorticity_advection_kernel_constructor() result(self)
+  implicit none
   return
 end function vorticity_advection_kernel_constructor
 

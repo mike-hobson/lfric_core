@@ -60,6 +60,7 @@ module set_exner_kernel_mod
 contains
 
 type(set_exner_kernel_type) function set_exner_kernel_constructor() result(self)
+  implicit none
   return
 end function set_exner_kernel_constructor
 

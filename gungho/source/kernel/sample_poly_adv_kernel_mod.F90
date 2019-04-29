@@ -86,6 +86,7 @@ public sample_poly_adv_final
 contains
 
 type(sample_poly_adv_kernel_type) function sample_poly_adv_kernel_constructor() result(self)
+  implicit none
   return
 end function sample_poly_adv_kernel_constructor
 

@@ -7,6 +7,7 @@ module flux_direction_mod
 
   use constants_mod, only : i_native
 
+  implicit none
   private
 
   integer(i_native), public, parameter :: x_direction = 100

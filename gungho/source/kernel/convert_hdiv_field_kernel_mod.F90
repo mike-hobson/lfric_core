@@ -58,6 +58,7 @@ public convert_hdiv_field_code
 contains
 
 type(convert_hdiv_field_kernel_type) function convert_hdiv_field_kernel_constructor() result(self)
+  implicit none
   return
 end function convert_hdiv_field_kernel_constructor
 

@@ -3059,6 +3059,9 @@ end subroutine invoke_sample_poly_adv
   subroutine invoke_enforce_operator_bc_kernel_type(op)
     use enforce_operator_bc_kernel_mod, only: enforce_operator_bc_code
     use mesh_mod, only: mesh_type
+
+    implicit none
+
     type(operator_type), intent(inout) :: op
     integer, pointer                   :: boundary_dofs(:,:) => null()
     integer                            :: cell, ncell_3d
@@ -3649,6 +3652,8 @@ end subroutine invoke_sample_poly_adv
     use moist_dyn_mod,                only: num_moist_factors, gas_law, total_mass, water
     use function_space_mod,           only: BASIS, DIFF_BASIS
     use mesh_mod,                     only: mesh_type
+
+    implicit none
 
     type(field_type), intent(inout) :: exner
     type(field_type), intent(in)    :: theta, moist_dyn(num_moist_factors), height_wt, height_w3, chi(3)

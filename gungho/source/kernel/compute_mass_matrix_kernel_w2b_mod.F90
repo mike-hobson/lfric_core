@@ -59,6 +59,7 @@ contains
 
   type(compute_mass_matrix_kernel_w2b_type) function compute_mass_matrix_constructor() &
      result(self)
+    implicit none
     return
   end function compute_mass_matrix_constructor
 

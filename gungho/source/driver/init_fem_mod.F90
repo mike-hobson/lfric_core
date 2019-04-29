@@ -36,6 +36,8 @@ module init_fem_mod
   !> @param[in,out] shifted_chi Spatial coordinates of vertically shifted mesh
   subroutine init_fem( mesh_id, chi, shifted_mesh_id, shifted_chi )
 
+    implicit none
+
     integer(i_def), intent(in)                  :: mesh_id
     ! Coordinate field
     type( field_type ), intent(inout)           :: chi(:)

@@ -64,6 +64,7 @@ module project_pressure_kernel_mod
 contains
 
 type(project_pressure_kernel_type) function project_pressure_kernel_constructor() result(self)
+  implicit none
   return
 end function project_pressure_kernel_constructor
 

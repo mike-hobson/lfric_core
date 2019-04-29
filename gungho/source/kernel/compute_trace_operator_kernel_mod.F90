@@ -83,6 +83,7 @@ contains
 
   type(compute_trace_operator_type) function compute_trace_operator_constructor() &
      result(self)
+    implicit none
     return
   end function compute_trace_operator_constructor
 

@@ -90,6 +90,7 @@ contains
 
   ! compute the norm of a field vector  
   function norm_field_vector(self) result(normal)
+    implicit none
     class(field_vector_type), intent(in) :: self
     real(kind=r_def)    :: normal
     integer(kind=i_def) :: fctr
@@ -108,6 +109,7 @@ contains
 
   ! compute the dot of inner product of a field vector
   function dot_field_vector(self, x) result(dot_prod)
+    implicit none
     class(field_vector_type),    intent(in) :: self
     class(abstract_vector_type), intent(in) :: x
     real(kind=r_def)                        :: dot_prod
@@ -132,6 +134,7 @@ contains
 
   ! computes y = alpha * x + y on a field vector
   subroutine axpy_field_vector(self, alpha, x)
+    implicit none
     class(field_vector_type),    intent(inout) :: self
     real(kind=r_def),            intent(in)    :: alpha
     class(abstract_vector_type), intent(inout) :: x
@@ -155,6 +158,7 @@ contains
   ! the vector (array of fields) then there is no function space information
   ! so can't set the field to the scalar value. The procedure throws an error.
   subroutine set_field_vector_scalar(self, scalar)
+    implicit none
     class(field_vector_type), intent(inout) :: self
     real(kind=r_def),         intent(in)    :: scalar
     integer(kind=i_def) :: fctr
@@ -171,6 +175,7 @@ contains
   ! computes y = alpha * y + x
   ! where self is y
   subroutine aypx_field_vector(self, alpha, x)
+    implicit none
     class(field_vector_type),    intent(inout) :: self
     real(kind=r_def),            intent(in)    :: alpha
     class(abstract_vector_type), intent(inout) :: x
@@ -193,6 +198,7 @@ contains
 
   ! multiply the field vector by a scalar
   subroutine scale_field_vector(self, scalar)
+    implicit none
     class(field_vector_type), intent(inout) :: self
     real(kind=r_def),         intent(in)    :: scalar
     integer(kind=i_def) :: fctr
@@ -206,6 +212,7 @@ contains
 
   ! Copy a field into the field vector
   subroutine import_field(self, field, position)
+    implicit none
     class(field_vector_type ), intent(inout) :: self
     type(field_type),             intent(in)    :: field
     integer(kind=i_def),          intent(in)    :: position
@@ -227,6 +234,7 @@ contains
    ! @param[in] position integer postion in the field array where the field is 
    ! located.
   subroutine export_field(self, field, position) 
+    implicit none
     class(field_vector_type),  intent(in)    :: self
     type(field_type),             intent(inout) :: field
     integer(kind=i_def),          intent(in)    :: position
@@ -242,6 +250,7 @@ contains
 
   ! allocates the array of fields to the given size
   function field_vector_constructor(nfields) result(self)
+    implicit none
     integer(kind=i_def), intent(in) :: nfields
     type(field_vector_type) :: self
     allocate(self%vector(nfields))
@@ -249,6 +258,7 @@ contains
 
   subroutine duplicate_field_vector(self, vec)
     ! makes a new field_vector when called on abstract type
+    implicit none
     class(field_vector_type),                 intent(in)    :: self
     class(abstract_vector_type), allocatable, intent(inout) :: vec
     integer :: pos, mesh_id, elem, fs_label, astat
@@ -279,6 +289,7 @@ contains
 
   ! The destructor/finalizer
   subroutine field_vector_destroy(self)
+    implicit none
     type(field_vector_type), intent(inout) :: self
 
     if(allocated(self%vector)) then

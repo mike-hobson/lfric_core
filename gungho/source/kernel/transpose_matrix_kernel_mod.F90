@@ -51,6 +51,7 @@ public transpose_matrix_code
 contains
 
   type(transpose_matrix_kernel_type) function transpose_matrix_kernel_constructor() result(self)
+  implicit none
   return
 end function transpose_matrix_kernel_constructor
 
@@ -71,7 +72,9 @@ subroutine transpose_matrix_code(cell,        &
                                  mat_out,     & 
                                  ndf1,        &
                                  ndf2)
- 
+
+  implicit none
+
   !Arguments
   integer,                   intent(in)    :: cell,      &
                                               nlayers,   &

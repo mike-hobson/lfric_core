@@ -1,9 +1,7 @@
 #!jinja2
 
-{# Include suite macros #}
+%include inc/common_macros.rc
 %include inc/suite_macros.rc
-
-{# Include suite control #}
 %include suite_control.rc
 
 
@@ -169,12 +167,6 @@
             SOURCE_DIRECTORY = $SOURCE_ROOT
 {%- endif %}
 
-{%- if 'validate_'+projectName+'_rose-meta' in scheduledTasks %}
-    [[validate_{{projectName}}_rose-meta]]
-       inherit = PRELIMINARIES, LOCAL
-       script  = $SOURCE_ROOT/bin/validate_rose_meta {{projectName}}
-{%- endif %}
-
 ##############################################################################
 
 {%- if 'documentation' not in rose_suite_gui_headers %}
@@ -239,6 +231,14 @@
             SOURCE_DIRECTORY      = $SOURCE_ROOT/lfric_atm
             DESTINATION_DIRECTORY = $OUTPUT_ROOT/{{TARGET_TECHNICAL_COMPILER}}_fast-debug
             WORKING_DIR           = {{LOCAL_BUILD_ROOT}}/{{TARGET_TECHNICAL_COMPILER}}_fast-debug
+
+{%- if 'validate_'+projectName+'_rose-meta' in scheduledTasks %}
+    [[validate_{{projectName}}_rose-meta]]
+       inherit = TECHNICAL, LOCAL
+       script  = $SOURCE_ROOT/bin/validate_rose_meta {{projectName}}
+{%- endif %}
+
+{{check_style_task( 'TECHNICAL', '$SOURCE_DIRECTORY' )}}
 
 {%- if 'check_for_unused_source' in scheduledTasks %}
     [[check_for_unused_source]]

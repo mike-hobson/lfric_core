@@ -54,6 +54,7 @@ module cosmic_halo_correct_x_kernel_mod
 contains
 
 type(cosmic_halo_correct_x_kernel_type) function cosmic_halo_correct_x_kernel_constructor() result(self)
+  implicit none
   return
 end function cosmic_halo_correct_x_kernel_constructor
 
@@ -73,6 +74,8 @@ subroutine cosmic_halo_correct_x_code( nlayers,              &
                                        ndf_w3,               &
                                        undf_w3,              &
                                        map_w3 )
+
+  implicit none
 
   ! Arguments
   integer, intent(in)                                   :: nlayers

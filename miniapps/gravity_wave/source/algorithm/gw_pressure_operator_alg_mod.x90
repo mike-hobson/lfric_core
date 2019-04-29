@@ -240,8 +240,8 @@ contains
   !> Finalizer for the Helmholtz operator
   !> @param [inout] self the pressure operator
   subroutine destroy_gw_pressure_operator(self)
-    type(gw_pressure_operator_type), intent(inout) :: self
-    
+    implicit none
+    type(gw_pressure_operator_type), intent(inout) :: self    
   end subroutine destroy_gw_pressure_operator
 
 end module gw_pressure_operator_alg_mod

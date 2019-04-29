@@ -63,6 +63,7 @@ module weighted_div_kernel_mod
 contains
 
 type(weighted_div_kernel_type) function weighted_div_kernel_constructor() result(self)
+  implicit none
   return
 end function weighted_div_kernel_constructor
 

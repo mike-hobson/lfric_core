@@ -26,6 +26,7 @@ contains
   ! Based on tetans formula
   ! QS=3.8/(P*EXP(-17.2693882*(T-273.15)/(T-35.86))-6.109)
   function qsaturation (T, p)    
+    implicit none
     real(r_def), intent(IN) :: T, p
     real(r_def) :: Qsaturation
     ! Temperature in Kelvin

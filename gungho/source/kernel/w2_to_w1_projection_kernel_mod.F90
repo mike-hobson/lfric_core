@@ -54,6 +54,7 @@ module w2_to_w1_projection_kernel_mod
 contains
 
 type(w2_to_w1_projection_kernel_type) function w2_to_w1_projection_kernel_constructor() result(self)
+  implicit none
   return
 end function w2_to_w1_projection_kernel_constructor
 
@@ -82,7 +83,9 @@ subroutine w2_to_w1_projection_code(nlayers, &
                                     ndf1, undf1, map1, basis_w1, &
                                     ndf2, undf2, map2, basis_w2, &
                                     nqp_h, nqp_v, wqp_h, wqp_v)
-                       
+
+  implicit none
+
   !Arguments
   integer,          intent(in) :: nlayers, ndf1, undf1
   integer,          intent(in) :: ndf2, undf2

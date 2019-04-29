@@ -64,6 +64,7 @@ contains
 
 type(weighted_proj_3theta_kernel_type) &
 function weighted_proj_3theta_constructor() result(self)
+  implicit none
   return
 end function weighted_proj_3theta_constructor
   

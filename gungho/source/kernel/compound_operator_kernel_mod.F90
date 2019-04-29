@@ -53,6 +53,7 @@ public compound_operator_kernel_code
 contains
 
 type(compound_operator_kernel_type) function compound_operator_kernel_constructor() result(self)
+  implicit none
   return
 end function compound_operator_kernel_constructor
 

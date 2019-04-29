@@ -35,6 +35,8 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
+    implicit none
+
     class(dino_test_type), intent(inout) :: this
     integer(kind=i_def) :: stat
     
@@ -48,6 +50,8 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
+    implicit none
+
     class(dino_test_type), intent(inout) :: this
 
   end subroutine tearDown
@@ -56,6 +60,8 @@ contains
   !> test the default behaviour of the serial io lib.
   @test
   subroutine test_dino(this)
+
+    implicit none
 
     class(dino_test_type), intent(inout) :: this
     type(dino_type) :: dino_out, dino_in

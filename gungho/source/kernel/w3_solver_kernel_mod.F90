@@ -59,6 +59,7 @@ contains
 
 type(w3_solver_kernel_type) &
 function w3_solver_kernel_constructor() result(self)
+  implicit none
   return
 end function w3_solver_kernel_constructor
 
@@ -91,7 +92,9 @@ subroutine solver_w3_code(nlayers,                                    &
                          
   use matrix_invert_mod,       only : matrix_invert 
   use coordinate_jacobian_mod, only : coordinate_jacobian 
-  
+
+  implicit none
+
   ! needs to compute the integral of rho_df * P 
   ! P_analytic over a single column    
   

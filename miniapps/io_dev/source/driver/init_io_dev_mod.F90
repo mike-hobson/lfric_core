@@ -29,12 +29,13 @@ module init_io_dev_mod
 
   subroutine init_io_dev(mesh_id, chi, density, theta, wind)
 
+    implicit none
+
     integer(i_def), intent(in)               :: mesh_id
     type( field_type ), intent(inout)        :: chi(:)
     type( field_type ), intent(inout)        :: density
     type( field_type ), intent(inout)        :: theta
     type( field_type ), intent(inout)        :: wind
-
 
     procedure(write_diag_interface), pointer      :: tmp_diag_write_ptr
 

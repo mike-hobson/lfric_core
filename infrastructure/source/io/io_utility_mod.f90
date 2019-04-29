@@ -29,6 +29,8 @@ contains
   !>
   function claim_io_unit() result(unit)
 
+    implicit none
+
     integer(i_native) :: unit
 
     unit = next_unit
@@ -47,6 +49,8 @@ contains
   !> @param unit [in] The unit to release.
   !>
   subroutine release_io_unit( unit )
+
+    implicit none
 
     integer(i_native), intent(inout) :: unit
 

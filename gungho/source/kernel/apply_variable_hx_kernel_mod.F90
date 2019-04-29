@@ -79,11 +79,13 @@ contains
 
   type(apply_variable_hx_kernel_type) &
   function apply_variable_hx_kernel_constructor() result(self)
+    implicit none
     return
   end function apply_variable_hx_kernel_constructor
 
   type(opt_apply_variable_hx_kernel_type) &
   function opt_apply_variable_hx_kernel_constructor() result(self)
+    implicit none
     return
   end function opt_apply_variable_hx_kernel_constructor
 

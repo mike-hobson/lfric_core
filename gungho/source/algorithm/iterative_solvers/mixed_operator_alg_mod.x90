@@ -236,8 +236,8 @@ contains
   !> @brief Finalizer for the mixed operator
   !> @param [inout] self the mixed operator
   subroutine destroy_mixed_operator(self)
+    implicit none
     type(mixed_operator_type), intent(inout) :: self
-
   end subroutine destroy_mixed_operator
 
 end module mixed_operator_alg_mod

@@ -62,6 +62,7 @@ public vertical_trapezoidal_code
 contains
 
 type(vertical_trapezoidal_kernel_type) function vertical_trapezoidal_kernel_constructor() result(self)
+  implicit none
   return
 end function vertical_trapezoidal_kernel_constructor
 

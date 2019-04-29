@@ -62,6 +62,7 @@ module vorticity_rhs_kernel_mod
 contains
 
 type(vorticity_rhs_kernel_type) function vorticity_rhs_kernel_constructor() result(self)
+  implicit none
   return
 end function vorticity_rhs_kernel_constructor
 
@@ -97,7 +98,9 @@ subroutine vorticity_rhs_code(nlayers,                                          
                          )
                            
   use coordinate_jacobian_mod,  only: coordinate_jacobian
-  
+
+  implicit none
+
   !Arguments
   integer, intent(in) :: nlayers
   integer, intent(in) :: ndf_chi, ndf_u, ndf_xi, undf_chi, undf_u, undf_xi  

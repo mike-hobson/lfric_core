@@ -98,6 +98,7 @@ contains
   !> Finalizer for the mass matrix operator
   !> @param [inout] self the mass matrix operator
   subroutine destroy_mass_matrix_operator(self)
+    implicit none
     type(mass_matrix_operator_type), intent(inout) :: self
     nullify( self%mass_matrix )
   end subroutine destroy_mass_matrix_operator

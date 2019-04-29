@@ -54,6 +54,7 @@ module tri_solve_kernel_mod
 contains
 
 type(tri_solve_kernel_type) function tri_solve_constructor() result(self)
+  implicit none
   return
 end function tri_solve_constructor
 

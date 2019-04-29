@@ -64,6 +64,7 @@ module compute_total_aam_kernel_mod
 contains
 
 type(compute_total_aam_kernel_type) function compute_total_aam_kernel_constructor() result(self)
+  implicit none
   return
 end function compute_total_aam_kernel_constructor
 
@@ -104,6 +105,8 @@ subroutine compute_total_aam_code(                                              
   use coordinate_jacobian_mod, only: coordinate_jacobian
   use coord_transform_mod,     only: xyz2llr, cart2sphere_vector
   use cross_product_mod,       only: cross_product
+
+  implicit none
 
   !Arguments
   integer,                     intent(in)    :: nlayers, nqp_h, nqp_v

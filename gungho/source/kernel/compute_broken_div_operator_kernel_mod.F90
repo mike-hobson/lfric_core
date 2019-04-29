@@ -61,6 +61,7 @@ contains
 
   type(compute_broken_div_operator_kernel_type) function compute_broken_div_operator_constructor() &
      result(self)
+    implicit none
     return
   end function compute_broken_div_operator_constructor
 

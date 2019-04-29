@@ -48,6 +48,7 @@ public compute_dof_level_code
 contains
 
 type(compute_dof_level_kernel_type) function compute_dof_level_kernel_constructor() result(self)
+  implicit none
   return
 end function compute_dof_level_kernel_constructor
 
@@ -62,7 +63,9 @@ subroutine compute_dof_level_code(nlayers,                                  &
                                   ndf, undf, map,                           &
                                   nodes                                     &
                                   )
-                           
+
+  implicit none
+
   !Arguments
   integer, intent(in)                             :: nlayers
   integer, intent(in)                             :: ndf

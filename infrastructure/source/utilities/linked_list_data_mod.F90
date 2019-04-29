@@ -27,6 +27,8 @@ contains
 
 function get_id(self) result(id)
 
+  implicit none
+
   class(linked_list_data_type), intent (in)  :: self
   integer(i_def)                             :: id
 
@@ -36,13 +38,13 @@ end function get_id
 
 subroutine set_id(self, id)
 
+  implicit none
+
   class(linked_list_data_type), intent (inout) :: self
   integer(i_def)  , intent(in)                 :: id
 
   self%id = id
 
 end subroutine set_id
-
-
 
 end module linked_list_data_mod

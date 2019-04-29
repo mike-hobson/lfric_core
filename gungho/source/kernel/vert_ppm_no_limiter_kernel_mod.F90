@@ -61,6 +61,7 @@ end interface
 contains
 
 type(vert_ppm_no_limiter_kernel_type) function vert_ppm_no_limiter_kernel_constructor() result(self)
+  implicit none
   return
 end function vert_ppm_no_limiter_kernel_constructor
 

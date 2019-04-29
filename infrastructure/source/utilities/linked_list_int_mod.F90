@@ -36,8 +36,10 @@ contains
 ! constructor
 type(linked_list_int_type) function int_constructor(id)
 
-   integer, intent(in)           :: id
-   call int_constructor%set_id(id)
+  implicit none
+
+  integer, intent(in)           :: id
+  call int_constructor%set_id(id)
 
 end function int_constructor
 

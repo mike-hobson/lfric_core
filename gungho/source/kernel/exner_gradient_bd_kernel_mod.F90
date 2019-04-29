@@ -73,6 +73,7 @@ module exner_gradient_bd_kernel_mod
 contains
 
   type(exner_gradient_bd_kernel_type) function exner_gradient_bd_kernel_constructor() result(self)
+    implicit none
     return
   end function exner_gradient_bd_kernel_constructor
 

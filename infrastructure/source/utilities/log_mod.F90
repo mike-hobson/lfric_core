@@ -163,6 +163,7 @@ contains
 
   !> Finalise logging functionality by closing the log files
   subroutine finalise_logging()
+    implicit none
     integer :: ios
     if ( is_parallel ) then
       close(unit=log_unit_number,iostat=ios)

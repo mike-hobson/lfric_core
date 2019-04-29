@@ -54,6 +54,7 @@ contains
 
 type(sample_initial_u_kernel_type) &
 function sample_initial_u_kernel_constructor() result(self)
+  implicit none
   return
 end function sample_initial_u_kernel_constructor
 

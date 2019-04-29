@@ -59,6 +59,7 @@ module rrho_kernel_mod
 contains
 
 type(rrho_kernel_type) function rrho_kernel_constructor() result(self)
+  implicit none
   return
 end function rrho_kernel_constructor
 
@@ -83,6 +84,8 @@ subroutine rrho_code(nlayers,                                                 &
                      ndf_w3, undf_w3, map_w3, w3_basis,                       &
                      ndf_w2, undf_w2, map_w2, w2_diff_basis,                  &
                      nqp_h, nqp_v, wqp_h, wqp_v )
+
+  implicit none
 
   !Arguments
   integer, intent(in) :: nlayers, nqp_h, nqp_v

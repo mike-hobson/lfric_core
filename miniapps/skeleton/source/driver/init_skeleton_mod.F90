@@ -30,6 +30,8 @@ module init_skeleton_mod
 
   subroutine init_skeleton(mesh_id, chi, field_1)
 
+    implicit none
+
     integer(i_def), intent(in)               :: mesh_id
     ! Prognostic fields
     type( field_type ), intent(inout)        :: field_1

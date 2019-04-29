@@ -66,6 +66,7 @@ public mphys_code
 contains
 
 type(mphys_kernel_type) function mphys_kernel_constructor() result(self)
+  implicit none
   return
 end function mphys_kernel_constructor
 

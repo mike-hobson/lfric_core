@@ -60,6 +60,7 @@ module initial_theta_kernel_mod
 contains
 
     type(initial_theta_kernel_type) function initial_theta_kernel_constructor() result(self)
+        implicit none
         return
     end function initial_theta_kernel_constructor
 

@@ -46,6 +46,7 @@ contains
 
     type(moist_dyn_factors_kernel_type) function moist_dyn_factors_kernel_constructor() &
                                         result(self)
+        implicit none
         return
     end function moist_dyn_factors_kernel_constructor
 

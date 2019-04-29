@@ -60,6 +60,7 @@ module fv_divergence_kernel_mod
 contains
 
 type(fv_divergence_kernel_type) function fv_divergence_kernel_constructor() result(self)
+  implicit none
   return
 end function fv_divergence_kernel_constructor
 

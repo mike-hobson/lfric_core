@@ -51,6 +51,7 @@ public calc_delta_at_wtheta_code
 contains
 
 type(calc_delta_at_wtheta_kernel_type) function calc_delta_at_wtheta_kernel_constructor() result(self)
+  implicit none
   return
 end function calc_delta_at_wtheta_kernel_constructor
 

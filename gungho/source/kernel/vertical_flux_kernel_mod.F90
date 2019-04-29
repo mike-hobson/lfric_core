@@ -60,6 +60,7 @@ public vertical_flux_code
 contains
 
 type(vertical_flux_kernel_type) function vertical_flux_kernel_constructor() result(self)
+  implicit none
   return
 end function vertical_flux_kernel_constructor
 

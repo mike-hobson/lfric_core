@@ -15,6 +15,8 @@ program log_mod_error_test
                               finalise_comm, &
                               get_comm_size, get_comm_rank
 
+  implicit none
+
   integer :: total_ranks, local_rank, comm
 
   ! Initialse mpi and create the default communicator: mpi_comm_world

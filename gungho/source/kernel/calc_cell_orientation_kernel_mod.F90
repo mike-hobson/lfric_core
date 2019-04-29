@@ -58,6 +58,7 @@ contains
 
 type(calc_cell_orientation_kernel_type) &
 function calc_cell_orientation_kernel_constructor() result(self)
+  implicit none
   return
 end function calc_cell_orientation_kernel_constructor
 
@@ -74,6 +75,8 @@ end function calc_cell_orientation_kernel_constructor
 !--------------------------------------------------------------------------------
 function index_of_interest_map(branch, orientation)
 
+  implicit none
+
   integer(kind=i_def) :: index_of_interest_map, branch, orientation
 
   index_of_interest_map = mod(orientation + 2 + branch, 4) + 1
@@ -88,6 +91,8 @@ end function index_of_interest_map
 !!  @param[return]  orientation_of_cell    orientation of the cell
 !--------------------------------------------------------------------------------
 function orientation_of_cell(branch,ii)
+
+  implicit none
 
   integer(kind=i_def) :: branch, ii
   real(kind=r_def)    :: orientation_of_cell

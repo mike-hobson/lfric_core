@@ -49,6 +49,7 @@ public multiplicity_code
 contains
 
 type(multiplicity_kernel_type) function multiplicity_kernel_constructor() result(self)
+  implicit none
   return
 end function multiplicity_kernel_constructor
 
@@ -64,7 +65,8 @@ subroutine multiplicity_code(nlayers,                        &
                              ndf, undf, map                  &
                             )
 
-  
+  implicit none
+
   !Arguments
   integer, intent(in) :: nlayers
   integer, intent(in) :: ndf

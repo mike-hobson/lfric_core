@@ -19,6 +19,8 @@ contains
     use constants_mod,                only: r_def
     use quadrature_rule_gaussian_mod, only: quadrature_rule_gaussian_type
 
+    implicit none
+
     integer, parameter :: nqp=3
 
     real(kind=r_def) :: epsilon
@@ -88,6 +90,8 @@ contains
     use quadrature_xoyoz_mod,         only: quadrature_xoyoz_type, quadrature_xoyoz_proxy_type
     use constants_mod,                only: r_def
     use quadrature_rule_gaussian_mod, only: quadrature_rule_gaussian_type
+
+    implicit none
 
     integer, parameter :: nqp_x=3, nqp_y=3, nqp_z=3
 

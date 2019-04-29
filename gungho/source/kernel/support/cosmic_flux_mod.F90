@@ -153,6 +153,8 @@ contains
   !--------------------------------------------------------------------------------
   function map_cell_index(ii,stencil_length) result(cell_index)
 
+    implicit none
+
     integer, intent(in) :: ii
     integer, intent(in) :: stencil_length
     integer             :: cell_index
@@ -172,6 +174,8 @@ contains
   !!  @param[return]  part_mass       integrated mass
   !--------------------------------------------------------------------------------
   function return_part_mass(n_coeffs,subgrid_coeffs,x_left_limit,x_right_limit) result(part_mass)
+
+    implicit none
 
     integer, intent(in) :: n_coeffs
     real(kind=r_def), intent(in)    :: subgrid_coeffs(1:n_coeffs)
@@ -194,6 +198,8 @@ contains
   !!  @param[return]  func_at_xx      Function evaluated at xx
   !--------------------------------------------------------------------------------
   function eval_integral(n_coeffs,subgrid_coeffs,xx) result(func_at_xx)
+
+    implicit none
 
     integer, intent(in) :: n_coeffs
     real(kind=r_def), intent(in)    :: subgrid_coeffs(1:n_coeffs)
@@ -322,6 +328,7 @@ contains
   function w2_dof(orientation,local_dof)
 
     implicit none
+
     integer             :: w2_dof
     integer, intent(in) :: local_dof, orientation
 

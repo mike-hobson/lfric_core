@@ -51,6 +51,7 @@ module cld_kernel_mod
 contains
 
 type(cld_kernel_type) function cld_kernel_constructor() result(self)
+  implicit none
   return
 end function cld_kernel_constructor
 

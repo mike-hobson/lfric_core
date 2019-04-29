@@ -64,6 +64,7 @@ contains
 
 type(compute_tri_precon_kernel_type) &
 function compute_tri_precon_constructor() result(self)
+  implicit none
   return
 end function compute_tri_precon_constructor
 

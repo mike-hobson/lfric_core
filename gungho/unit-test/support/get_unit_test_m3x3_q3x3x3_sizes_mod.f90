@@ -281,7 +281,8 @@ module get_unit_test_m3x3_q3x3x3_sizes_mod
     !  * dim_space: no of dimensions in this function space
     !  * dim_space_diff: no. of dims in this funct space when differentiated
     !  * nqp_h: no. of quadrature points in the horiz for a 3x3x3 quadrature
-    !  * nqp_v: no. of quadrature points in the vertical for a 3x3x3 quadrature    implicit none
+    !  * nqp_v: no. of quadrature points in the vertical for a 3x3x3 quadrature
+    implicit none
     integer(i_def), intent(out) :: ndf
     integer(i_def), intent(out) :: undf
     integer(i_def), intent(out) :: ncells

@@ -58,6 +58,7 @@ public convert_hcurl_field_code
 contains
 
 type(convert_hcurl_field_kernel_type) function convert_hcurl_field_kernel_constructor() result(self)
+  implicit none
   return
 end function convert_hcurl_field_kernel_constructor
 

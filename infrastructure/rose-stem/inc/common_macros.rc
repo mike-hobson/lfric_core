@@ -1,0 +1,21 @@
+{%- macro check_style_graph() %}
+    export_source => check_style
+{%- endmacro %}
+
+{%- macro check_style_task( family ) %}
+{#- Only one argument is specified but varargs is used to bring in the #}
+{#- paths to check.                                                    #}
+{%-   if 'check_style' in scheduledTasks %}
+    [[check_style]]
+        inherit = {{family}}, LOCAL
+        pre-script = """
+                     {{'\n'|command_list( LOCAL_BASE_SETUP,
+                                          LOCAL_TECHNICAL_SETUP,
+                                          LOCAL_REVEAL_SETUP)}}
+                     """
+        script = stylist -verbose {{varargs | join(' ')}}
+        [[[environment]]]
+            PYTHONPATH = $CYLC_SUITE_SHARE_DIR/source/infrastructure/tools/lib-python:$PYTHONPATH
+            PATH = $CYLC_SUITE_SHARE_DIR/source/infrastructure/tools/bin:$PATH
+{%-   endif %}
+{%- endmacro %}

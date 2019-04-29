@@ -61,6 +61,7 @@ contains
 
 type(sample_eos_rho_kernel_type) &
    function sample_eos_rho_kernel_constructor() result(self)
+  implicit none
   return
 end function sample_eos_rho_kernel_constructor
 

@@ -85,6 +85,7 @@ contains
 
 type(compute_derahm_matrices_kernel_type) &
                         function compute_derahm_matrices_constructor() result(self)
+  implicit none
   return
 end function compute_derahm_matrices_constructor
 

@@ -63,6 +63,7 @@ contains
 
 type(sample_flux_kernel_type) &
 function sample_flux_kernel_constructor() result(self)
+  implicit none
   return
 end function sample_flux_kernel_constructor
 
@@ -85,6 +86,8 @@ subroutine sample_flux_code(nlayers,                                           &
                             ndf_q, undf_q, map_q, basis_q                      &
                             )
                            
+  implicit none
+
   !Arguments
   integer, intent(in) :: nlayers
   integer, intent(in) :: ndf_f, ndf_q, undf_f, undf_q

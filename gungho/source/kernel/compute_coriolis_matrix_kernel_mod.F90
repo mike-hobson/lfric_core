@@ -74,6 +74,7 @@ contains
 
 type(compute_coriolis_matrix_kernel_type) &
                         function compute_coriolis_matrix_constructor() result(self)
+  implicit none
   return
 end function compute_coriolis_matrix_constructor
 

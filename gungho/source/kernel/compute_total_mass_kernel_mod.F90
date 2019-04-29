@@ -59,6 +59,7 @@ module compute_total_mass_kernel_mod
 contains
 
 type(compute_total_mass_kernel_type) function compute_total_mass_kernel_constructor() result(self)
+  implicit none
   return
 end function compute_total_mass_kernel_constructor
 
@@ -90,6 +91,8 @@ subroutine compute_total_mass_code(                                            &
                                  )
 
   use coordinate_jacobian_mod, only : coordinate_jacobian 
+
+  implicit none
 
   !Arguments
   integer, intent(in) :: nlayers, nqp_h, nqp_v

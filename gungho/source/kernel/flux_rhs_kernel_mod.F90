@@ -63,6 +63,7 @@ module flux_rhs_kernel_mod
 contains
 
 type(flux_rhs_kernel_type) function flux_rhs_kernel_constructor() result(self)
+  implicit none
   return
 end function flux_rhs_kernel_constructor
 
@@ -99,7 +100,9 @@ subroutine flux_rhs_code(nlayers, rhs, u, f, chi_1, chi_2, chi_3, &
 
                            
   use coordinate_jacobian_mod,  only: coordinate_jacobian
-  
+
+  implicit none
+
   !Arguments
   integer, intent(in) :: nlayers
   integer, intent(in) :: ndf_chi, ndf_u, ndf_f, undf_chi, undf_u, undf_f

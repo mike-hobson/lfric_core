@@ -72,6 +72,7 @@ contains
 
 type(eos_operators_kernel_type) &
 function eos_operators_constructor() result(self)
+  implicit none
   return
 end function eos_operators_constructor
   

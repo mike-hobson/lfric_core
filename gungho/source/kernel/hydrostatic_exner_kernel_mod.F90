@@ -65,6 +65,7 @@ contains
 
 type(hydrostatic_exner_kernel_type) &
    function hydrostatic_exner_kernel_constructor() result(self)
+  implicit none
   return
 end function hydrostatic_exner_kernel_constructor
 

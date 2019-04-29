@@ -62,6 +62,7 @@ module get_height_kernel_mod
 contains
 
 type(get_height_kernel_type) function get_height_kernel_constructor() result(self)
+  implicit none
   return
 end function get_height_kernel_constructor
 

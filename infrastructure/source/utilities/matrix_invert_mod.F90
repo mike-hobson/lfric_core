@@ -27,10 +27,13 @@ contains
 !! @param[out] b Holds the computed inverse
 !! @param[in] n Rank/dim size of the matrix/array
   subroutine matrix_invert(a,b,n)
-    !-------------------------------------------------------------------------------
+ !-------------------------------------------------------------------------------
     ! Compute the inverse (b) of n x n matrix a
     ! using LU factorization by Dolittle algorithm
     !-------------------------------------------------------------------------------
+
+    implicit none
+
     integer,          intent(in)  :: n
     real(kind=r_def), intent(in)  :: a(n,n)
     real(kind=r_def), intent(out) :: b(n,n)
@@ -137,6 +140,9 @@ contains
 !> @result determinant_3x3 Holds the values of the computed
 !! determinant
 pure real(kind=r_def) function determinant_3x3(j)
+
+  implicit none
+
   real(kind=r_def), intent(in) :: j(3,3)
   
   determinant_3x3 = j(1,1)*(j(2,2)*j(3,3) - j(2,3)*j(3,2)) &

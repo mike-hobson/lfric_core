@@ -34,6 +34,7 @@ contains
   !> @param[inout] derived_fields Group of derived fields
   subroutine map_physics_fields_alg(u, exner, rho, theta, mr, &
                                     derived_fields)
+    implicit none
     ! Prognostic fields
     type( field_type ), intent(in)               :: u, rho, theta, exner
     type( field_type ), intent(in)               :: mr ( nummr )

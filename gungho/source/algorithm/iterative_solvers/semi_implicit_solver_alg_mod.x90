@@ -18,6 +18,7 @@ module semi_implicit_solver_alg_mod
   ! Derived Types
   use field_vector_mod,                   only: field_vector_type
   use derived_config_mod,                 only: bundle_size
+  use field_indices_mod,                  only: igh_p
 
   ! Algorithms
   use mixed_operator_alg_mod,             only: mixed_operator_type
@@ -26,6 +27,7 @@ module semi_implicit_solver_alg_mod
   use pressure_precon_alg_mod,            only: pressure_preconditioner_type
   use pressure_diag_precon_alg_mod,       only: pressure_diag_preconditioner_type
   use null_preconditioner_alg_mod,        only: null_preconditioner_type
+  use multigrid_preconditioner_alg_mod,   only: multigrid_preconditioner_type
 
   ! preconditioner and solver
   use preconditioner_mod,                 only: abstract_preconditioner_type
@@ -71,37 +73,38 @@ contains
   !> @details Initialisation procedure for the semi-implicit solver 
   !> @param[in] state Prognostic state for the solver
   subroutine semi_implicit_solver_alg_init(state)
-    use mixed_solver_config_mod,       only: si_maximum_iterations,         &
-                                             si_tolerance,                  &
-                                             si_method,                     &
-                                             mixed_gcrk => gcrk,            &
-                                             si_method_cg,                  &
-                                             si_method_bicgstab,            &
-                                             si_method_gmres,               &
-                                             si_method_fgmres,              &
-                                             si_method_gcr,                 &
-                                             si_method_prec_only,           &
-                                             si_method_jacobi,              &
-                                             si_preconditioner,             &
+    use mixed_solver_config_mod,       only: si_maximum_iterations,                      &
+                                             si_tolerance,                               &
+                                             si_method,                                  &
+                                             mixed_gcrk => gcrk,                         &
+                                             si_method_cg,                               &
+                                             si_method_bicgstab,                         &
+                                             si_method_gmres,                            &
+                                             si_method_fgmres,                           &
+                                             si_method_gcr,                              &
+                                             si_method_prec_only,                        &
+                                             si_method_jacobi,                           &
+                                             si_preconditioner,                          &
                                              si_preconditioner_pressure,    &
                                              si_preconditioner_diagonal,    &
                                              si_preconditioner_none
 
-    use helmholtz_solver_config_mod,   only: si_pressure_maximum_iterations, &
-                                             helmholtz_gcrk => gcrk,         &
-                                             si_pressure_tolerance,          &
-                                             helmholtz_method => method,     &
-                                             method_cg,                      &
-                                             method_bicgstab,                &
-                                             method_gmres,                   &
-                                             method_fgmres,                  &
-                                             method_gcr,                     &
-                                             method_prec_only,               &
-                                             method_jacobi,             &
+    use helmholtz_solver_config_mod,   only: si_pressure_maximum_iterations,             &
+                                             helmholtz_gcrk => gcrk,                     &
+                                             si_pressure_tolerance,                      &
+                                             helmholtz_method => method,                 &
+                                             method_cg,                                  &
+                                             method_bicgstab,                            &
+                                             method_gmres,                               &
+                                             method_fgmres,                              &
+                                             method_gcr,                                 &
+                                             method_prec_only,                           &
+                                             method_jacobi,                              &
                                              helmholtz_preconditioner => preconditioner, &
-                                             preconditioner_none,            &
-                                             preconditioner_diagonal,        &
-                                             preconditioner_tridiagonal
+                                             preconditioner_none,                        &
+                                             preconditioner_diagonal,                    &
+                                             preconditioner_tridiagonal,                 &
+                                             preconditioner_multigrid
     implicit none
 
     ! Prognostic fields    
@@ -109,221 +112,169 @@ contains
 
     ! *** Allocate polymorphic solver- and preconditioner objects ***
 
-    ! Allocate pressure solver of correct type
-    select case( helmholtz_method )
-    case (METHOD_BICGSTAB)
-       allocate ( bicgstab_type :: pressure_solver )
-    case(METHOD_CG)
-       allocate ( conjugate_gradient_type :: pressure_solver )
-    case(METHOD_GMRES)
-       allocate ( gmres_type :: pressure_solver )
-    case(METHOD_FGMRES)
-       allocate ( fgmres_type :: pressure_solver )
-    case(METHOD_GCR)
-       allocate ( gcr_type :: pressure_solver )
-    case(METHOD_PREC_ONLY)
-       allocate ( precondition_only_type :: pressure_solver )
-    case (METHOD_JACOBI)
-       allocate ( jacobi_type :: pressure_solver )
-
-    case default
-       call log_event("Unknown pressure solver specified",LOG_LEVEL_ERROR)
-    end select
-
+    call log_event( "semi_implicit_solver_alg_init: allocate and construct pressure/Helmholtz preconditioner", &
+                       LOG_LEVEL_INFO)        
     ! Allocate pressure preconditioner preconditioner of correct type
     select case(helmholtz_preconditioner)
     case(PRECONDITIONER_NONE)
-       allocate ( null_preconditioner_type :: pressure_preconditioner)
+       allocate( pressure_preconditioner, &
+                 source = null_preconditioner_type() )
     case(PRECONDITIONER_DIAGONAL)
-       allocate ( pressure_diag_preconditioner_type :: pressure_preconditioner)
+       allocate ( pressure_preconditioner, &
+                 source = pressure_diag_preconditioner_type() )
     case(PRECONDITIONER_TRIDIAGONAL)
-       allocate ( pressure_preconditioner_type :: pressure_preconditioner)
+       allocate( pressure_preconditioner, &
+                 source = pressure_preconditioner_type() )       
+    case(PRECONDITIONER_MULTIGRID)
+       allocate( pressure_preconditioner, &
+                 source = multigrid_preconditioner_type(state%vector(igh_p)) )
     case default
        call log_event( "Unknown pressure preconditioner specified", &
                        LOG_LEVEL_ERROR)
     end select
 
-    ! Allocate mixed preconditioner of correct type
-    select case(si_preconditioner)
-    case(SI_PRECONDITIONER_PRESSURE)
-       allocate ( mixed_schur_preconditioner_type :: mixed_preconditioner)
-    case(SI_PRECONDITIONER_NONE)
-       allocate ( null_preconditioner_type :: mixed_preconditioner)
-    case default
-       call log_event("Unknown mixed preconditioner specified",LOG_LEVEL_ERROR)
-    end select
+    call log_event( "semi_implicit_solver_alg_inti:Setting up pressure solver", LOG_LEVEL_INFO )    
+      pressure_operator = pressure_operator_type(state)
 
-    ! Allocate mixed solver of correct type
-    select case(si_method)
-    case(SI_METHOD_BICGSTAB)
-      allocate ( bicgstab_type :: mixed_solver )
-    case(SI_METHOD_CG)
-      allocate ( conjugate_gradient_type :: mixed_solver )
-    case(SI_METHOD_GMRES)
-      allocate ( gmres_type :: mixed_solver )
-    case(SI_METHOD_FGMRES)
-      allocate ( fgmres_type :: mixed_solver )
-    case(SI_METHOD_GCR)
-      allocate ( gcr_type :: mixed_solver )
-    case(SI_METHOD_PREC_ONLY)
-       allocate ( precondition_only_type :: mixed_solver )
-    case (SI_METHOD_JACOBI)
-       allocate ( jacobi_type :: mixed_solver )
-    case default
-       call log_event("Unknown mixed solver specified",LOG_LEVEL_ERROR)
-    end select
-
-    ! *** Construct solver-, preconditioner- and operator-objects
-
-    ! Construct Helmholtz operator and preconditioner
-    pressure_operator = pressure_operator_type(state)
-
-    ! Construct pressure preconditioner
-    select type(pressure_preconditioner)
-    type is ( null_preconditioner_type )
-       ! Null preconditioner
-       pressure_preconditioner = null_preconditioner_type()
-    type is ( pressure_preconditioner_type )
-       ! Vertical preconditioner
-       pressure_preconditioner = pressure_preconditioner_type()
-    type is ( pressure_diag_preconditioner_type )
-       ! Diagonal preconditioner
-       pressure_preconditioner = pressure_diag_preconditioner_type()
-    class default
-       call log_event( "Can not initialise pressure preconditioner", &
-                       LOG_LEVEL_ERROR )
-    end select
-
-    call log_event( "Setting up pressure solver", LOG_LEVEL_INFO )
-
-    ! Construct pressure solver
-    select type(pressure_solver)
-    type is ( conjugate_gradient_type )        
-       ! CG solver
-       pressure_solver = conjugate_gradient_type( pressure_operator,           &
-                                                  pressure_preconditioner,     &
-                                                  si_pressure_tolerance,       &
-                                                  pressure_solver_a_tol,       &
-                                                  si_pressure_maximum_iterations)
-    type is ( bicgstab_type )        
-       ! BiCGStab solver
-       pressure_solver = bicgstab_type( pressure_operator,           &
+    
+    ! Allocate pressure solver of correct type
+    select case( helmholtz_method )
+    case (METHOD_BICGSTAB)
+       allocate ( pressure_solver, &
+                  source = bicgstab_type( pressure_operator,         &
                                         pressure_preconditioner,     &
                                         si_pressure_tolerance,       &
                                         pressure_solver_a_tol,       &
-                                        si_pressure_maximum_iterations)
-    type is ( gmres_type )        
-       ! GMRES solver
-       pressure_solver = gmres_type( pressure_operator,           &
+                                        si_pressure_maximum_iterations) )
+    case(METHOD_CG)
+       allocate ( pressure_solver, &
+                  source = conjugate_gradient_type( pressure_operator,         &
+                                                  pressure_preconditioner,     &
+                                                  si_pressure_tolerance,       &
+                                                  pressure_solver_a_tol,       &
+                                                  si_pressure_maximum_iterations) )
+    case(METHOD_GMRES)
+       allocate ( pressure_solver, &
+                  source = gmres_type( pressure_operator,         &
                                      pressure_preconditioner,     &
                                      helmholtz_gcrk,              &
                                      si_pressure_tolerance,       &
                                      pressure_solver_a_tol,       &
-                                     si_pressure_maximum_iterations)
-    type is ( fgmres_type )        
-       ! fGMRES solver
-       pressure_solver = fgmres_type( pressure_operator,           &
+                                     si_pressure_maximum_iterations) )
+    case(METHOD_FGMRES)
+       allocate ( pressure_solver, &
+                  source = fgmres_type( pressure_operator,         &
                                       pressure_preconditioner,     &
                                       helmholtz_gcrk,              &
                                       si_pressure_tolerance,       &
                                       pressure_solver_a_tol,       &
-                                      si_pressure_maximum_iterations)
-    type is ( gcr_type )        
-       ! GCR solver
-       pressure_solver = gcr_type( pressure_operator,           &
+                                      si_pressure_maximum_iterations) )
+    case(METHOD_GCR)
+       allocate ( pressure_solver, &
+                  source = gcr_type( pressure_operator,         &
                                    pressure_preconditioner,     &
                                    helmholtz_gcrk,              &
                                    si_pressure_tolerance,       &
                                    pressure_solver_a_tol,       &
-                                   si_pressure_maximum_iterations)
-    type is ( precondition_only_type )        
-       ! Precondition only solver
-       pressure_solver = precondition_only_type( pressure_operator,           &
+                                   si_pressure_maximum_iterations) )
+    case(METHOD_PREC_ONLY)
+       allocate ( pressure_solver, &
+                  source = precondition_only_type( pressure_operator,         &
                                                  pressure_preconditioner,     &
                                                  si_pressure_tolerance,       &
-                                                 pressure_solver_a_tol)
-
-    type is ( jacobi_type )        
-       ! Jacobi solver
-       pressure_solver = jacobi_type( pressure_operator,           &
-                                      pressure_preconditioner,     &
-                                      si_pressure_tolerance,       &
-                                      pressure_solver_a_tol,       &
-                                      si_pressure_maximum_iterations)
-    class default
-       call log_event("Can not initialise pressure solver",LOG_LEVEL_ERROR)
+                                                 pressure_solver_a_tol) )
+    case(METHOD_JACOBI)
+       allocate ( pressure_solver,                                 &
+                  source = jacobi_type( pressure_operator,         &
+                           pressure_preconditioner,                &
+                           si_pressure_tolerance,                  &
+                           pressure_solver_a_tol,                  &
+                           si_pressure_maximum_iterations ) )
+    case default
+       call log_event("Unknown pressure solver specified",LOG_LEVEL_ERROR)
     end select
 
-    call log_event( "Setting up mixed operator", LOG_LEVEL_INFO )
+    call log_event( "semi_implicit_solver_alg_init: ... Helmholtz done ", &
+                       LOG_LEVEL_INFO)        
+
+    call log_event( "semi_implicit_solver_alg_init: allocate and construct mixed preconditioner", &
+                       LOG_LEVEL_INFO)    
+    ! Allocate mixed preconditioner of correct type and call constructor
+    select case(si_preconditioner)
+    case(SI_PRECONDITIONER_PRESSURE)
+       allocate ( mixed_preconditioner, &
+                  source = mixed_schur_preconditioner_type(state, pressure_solver) )
+    case(SI_PRECONDITIONER_NONE)
+       allocate ( mixed_preconditioner, &
+                  source = null_preconditioner_type() )
+    case default
+       call log_event("Unknown mixed preconditioner specified",LOG_LEVEL_ERROR)
+    end select
+
+    call log_event( "semi_implicit_solver_alg_init: Setting up mixed operator", LOG_LEVEL_INFO )
     ! Set up mixed operator
     mixed_operator = mixed_operator_type()
-    
-    call log_event( "Setting up mixed precon", LOG_LEVEL_INFO )
-    ! Set up mixed preconditioner
-    select type(mixed_preconditioner)
-    type is ( mixed_schur_preconditioner_type )
-       ! Schur-complement preconditioner
-       mixed_preconditioner = &
-           mixed_schur_preconditioner_type(state, pressure_solver)
-    type is ( null_preconditioner_type )
-       ! Null preconditioner
-       mixed_preconditioner = null_preconditioner_type()
-    class default
-       call log_event("Can not initialise mixed preconditioner", &
-                      LOG_LEVEL_ERROR)
-    end select
 
-    call log_event( "Setting up mixed solver", LOG_LEVEL_INFO )
-    select type(mixed_solver) 
-    type is ( conjugate_gradient_type )        
-       mixed_solver = conjugate_gradient_type( mixed_operator,       &
-                                               mixed_preconditioner, &
-                                               si_tolerance,         &
-                                               mixed_solver_a_tol,   &
-                                               si_maximum_iterations)
-    type is ( bicgstab_type )        
-       mixed_solver = bicgstab_type( mixed_operator,       &
+    call log_event( "semi_implicit_solver_alg_init: allocate and construct mixed solver", &
+                       LOG_LEVEL_INFO)        
+    ! Allocate mixed solver of correct type
+    select case(si_method)
+    case(SI_METHOD_BICGSTAB)
+       allocate ( mixed_solver, &
+                  source = bicgstab_type( mixed_operator,  &
                                      mixed_preconditioner, &
                                      si_tolerance,         &
                                      mixed_solver_a_tol,   &
-                                     si_maximum_iterations)
-    type is ( gmres_type )        
-       mixed_solver = gmres_type( mixed_operator,       &
+                                     si_maximum_iterations) ) 
+    case(SI_METHOD_CG)
+       allocate ( mixed_solver, &
+                  source = conjugate_gradient_type( mixed_operator,       &
+                                               mixed_preconditioner, &
+                                               si_tolerance,         &
+                                               mixed_solver_a_tol,   &
+                                               si_maximum_iterations) )
+    case(SI_METHOD_GMRES)
+       allocate ( mixed_solver, &
+                  source = gmres_type( mixed_operator,  &
                                   mixed_preconditioner, &
                                   mixed_gcrk,           &
                                   si_tolerance,         &
                                   mixed_solver_a_tol,   &
-                                  si_maximum_iterations)
-    type is ( fgmres_type )        
-       mixed_solver = fgmres_type( mixed_operator,       &
+                                  si_maximum_iterations) )
+    case(SI_METHOD_FGMRES)
+       allocate ( mixed_solver, &
+                  source = fgmres_type( mixed_operator,  &
                                    mixed_preconditioner, &
                                    mixed_gcrk,           &
                                    si_tolerance,         &
                                    mixed_solver_a_tol,   &
-                                   si_maximum_iterations)
-    type is ( gcr_type )        
-       mixed_solver = gcr_type( mixed_operator,       &
+                                   si_maximum_iterations) )
+    case(SI_METHOD_GCR)
+       allocate ( mixed_solver, &
+                  source = gcr_type( mixed_operator,  &
                                 mixed_preconditioner, &
                                 mixed_gcrk,           &
                                 si_tolerance,         &
                                 mixed_solver_a_tol,   &
-                                si_maximum_iterations)
-    type is ( precondition_only_type )        
-       mixed_solver = precondition_only_type( mixed_operator,       &
+                                si_maximum_iterations) ) 
+    case(SI_METHOD_PREC_ONLY)
+       allocate ( mixed_solver, &
+                  source = precondition_only_type( mixed_operator,  &
                                               mixed_preconditioner, &
                                               si_tolerance,         &
-                                              mixed_solver_a_tol)
-    type is ( jacobi_type )        
-       mixed_solver = jacobi_type( mixed_operator,       &
-                                   mixed_preconditioner, &
-                                   si_tolerance,         &
-                                   mixed_solver_a_tol,   &
-                                   si_maximum_iterations)
-    class default
-       call log_event("Can not initialise mixed solver",LOG_LEVEL_ERROR)
+                                              mixed_solver_a_tol) )
+    case(SI_METHOD_JACOBI)
+       allocate ( mixed_solver, &
+                  source = jacobi_type( mixed_operator,       &
+                                        mixed_preconditioner, &
+                                        si_tolerance,         &
+                                        mixed_solver_a_tol,   &
+                                        si_maximum_iterations) )       
+    case default
+       call log_event("Unknown mixed solver specified",LOG_LEVEL_ERROR)
     end select
 
-    call log_event( "Initialised semi-implicit solver", LOG_LEVEL_INFO )
+    call log_event( "semi_implicit_solver_alg_init: Initialised semi-implicit solver", LOG_LEVEL_INFO )
 
   end subroutine semi_implicit_solver_alg_init
 

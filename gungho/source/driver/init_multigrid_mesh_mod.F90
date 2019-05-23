@@ -60,17 +60,6 @@ mesh_name = prime_mesh_name
 global_mesh_ids(:) = 0
 allocate(mesh_ids(multigrid_chain_nitems))
 
-!----------------------------------------------------------------------------
-! First global mesh should be the prime mesh so check that first
-if ( trim(ugrid(1)) /= 'prime' ) then
-  ! Error illegal input for multigrid
-  write( log_scratch_space,'(A)')                                &
-      'First function space in function space chains must be ' //&
-      'based on the "prime" mesh.'//trim(ugrid(1))
-  call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-end if
-
-
 mesh_ids(1) = prime_mesh_id
 prime_mesh  => mesh_collection%get_mesh(prime_mesh_id)
 global_mesh_ids(1) = prime_mesh%get_global_mesh_id()

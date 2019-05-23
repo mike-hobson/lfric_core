@@ -14,7 +14,8 @@ module runtime_constants_mod
   use constants_mod,                     only: i_def, r_def
   use log_mod,                           only: log_event, &
                                                LOG_LEVEL_INFO, &
-                                               LOG_LEVEL_ERROR
+                                               LOG_LEVEL_ERROR, &
+                                               log_scratch_space
   ! Configuration
   use finite_element_config_mod,         only: element_order
   use formulation_config_mod,            only: dlayer_on, &
@@ -26,6 +27,15 @@ module runtime_constants_mod
   use mixing_config_mod,                 only: smagorinsky
   use timestepping_config_mod,           only: dt
 
+  use multigrid_config_mod,              only: multigrid_chain_nitems, l_multigrid
+  use finite_element_config_mod,         only: coordinate_order  
+  
+  use function_space_chain_mod,          only: multigrid_function_space_chain, &
+                                               w2_multigrid_function_space_chain, &
+                                               wtheta_multigrid_function_space_chain
+  use assign_coordinate_field_mod,       only: assign_coordinate_field
+  use assign_orography_field_mod,        only: assign_orography_field
+  
   ! Derived Types
   use field_mod,                         only: field_type
   use function_space_mod,                only: function_space_type
@@ -43,6 +53,7 @@ module runtime_constants_mod
 
   ! PsyKAl PSYClone kernels
   use compute_derahm_matrices_kernel_mod,    only: compute_derahm_matrices_kernel_type
+  use mg_derahm_mat_kernel_mod,              only: mg_derahm_mat_kernel_type
   use compute_mass_matrix_kernel_w2_mod,     only: compute_mass_matrix_kernel_w2_type
   use compute_div_operator_kernel_mod,       only: compute_div_operator_kernel_type
   use compute_dl_matrix_kernel_mod,          only: compute_dl_matrix_kernel_type
@@ -67,47 +78,48 @@ module runtime_constants_mod
   ! Variables private to this module that can only be accessed by public
   ! functions returning pointers to them
 
-  type(field_type), target              :: mm0_diag
-  type(field_type), target              :: mm1_diag
-  type(field_type), target              :: mm2_diag
-  type(field_type), target              :: mm3_diag
-  type(field_type), target              :: eye
-  type(field_type), target              :: mmtheta_diag
-  type(operator_type), target           :: mm_w0
-  type(operator_type), target           :: mm_w1
-  type(operator_type), target           :: mm_w2
-  type(operator_type), target           :: mm_w2b
-  type(operator_type), target           :: mm_w2v
-  type(operator_type), target           :: mm_w2h
-  type(operator_type), target           :: mm_w3
-  type(operator_type), target           :: mm_w3_inv
-  type(operator_type), target           :: mm_wtheta
-  type(operator_type), target           :: mm_dl
-  type(field_type), target              :: geopotential
-  type(field_type), pointer             :: coords(:)
-  type(field_type), target              :: temp_w2_field
-  type(field_type), target              :: cell_orientation
-  type(field_type), target              :: detj_at_w2
-  type(field_type), target              :: detj_at_w2_shifted
-  type(field_type), target              :: dA_at_w2
-  type(field_type), target              :: delta_at_wtheta
-  type(field_type), target              :: max_diff_wtheta
-  type(operator_type), target           :: grad, curl, div, &
-                                           div_v, div_h,    &
-                                           broken_div
-  type( quadrature_xyoz_type ),target   :: qr
-  type( quadrature_rule_gaussian_type ) :: quadrature_rule
-  type(field_type), target              :: m0_lumped_inv
-  type(field_type), target              :: m1_lumped_inv
-  type(field_type), target              :: mt_lumped_inv
-  type(field_type), target              :: height_wth, height_w3
-  type(field_type), target              :: nodal_rmultiplicity_w1
-  type(field_type), target              :: nodal_rmultiplicity_w2
-  type(field_type), target              :: nodal_rmultiplicity_w2h
-  type(field_type), target              :: nodal_rmultiplicity_w0
-  type(field_type), target              :: w2_normalisation
-  type(operator_type), target           :: coriolis
-
+  type(field_type), target                               :: mm0_diag
+  type(field_type), target                               :: mm1_diag
+  type(field_type), target                               :: mm2_diag
+  type(field_type), target                               :: mm3_diag
+  type(field_type), target                               :: eye
+  type(field_type), target                               :: mmtheta_diag
+  type(operator_type), target                            :: mm_w0
+  type(operator_type), target                            :: mm_w1
+  type(operator_type), allocatable, dimension(:), target :: mm_w2
+  type(operator_type), target                            :: mm_w2b
+  type(operator_type), target                            :: mm_w2v
+  type(operator_type), target                            :: mm_w2h
+  type(operator_type), allocatable, dimension(:), target :: mm_w3
+  type(operator_type), allocatable, dimension(:), target :: mm_w3_inv
+  type(operator_type), allocatable, dimension(:), target :: mm_wtheta
+  type(operator_type), allocatable, dimension(:), target :: mm_dl
+  type(field_type), target                               :: geopotential
+  type(field_type), target                               :: temp_w2_field
+  type(field_type), target                               :: cell_orientation
+  type(field_type), target                               :: detj_at_w2
+  type(field_type), target                               :: detj_at_w2_shifted
+  type(field_type), target                               :: dA_at_w2
+  type(field_type), target                               :: delta_at_wtheta
+  type(field_type), target                               :: max_diff_wtheta
+  type(operator_type), allocatable, dimension(:), target :: div
+  type(operator_type), target                            :: grad, curl,  &
+                                                            div_v, div_h,    &
+                                                            broken_div
+  type( quadrature_xyoz_type ),target                    :: qr
+  type( quadrature_rule_gaussian_type )                  :: quadrature_rule
+  type(field_type), target                               :: m0_lumped_inv
+  type(field_type), target                               :: m1_lumped_inv 
+  type(field_type), allocatable, dimension(:), target    :: mt_lumped_inv
+  type(field_type), target                               :: height_wth, height_w3
+  type(field_type), target                               :: nodal_rmultiplicity_w1
+  type(field_type), allocatable, dimension(:), target    :: nodal_rmultiplicity_w2
+  type(field_type), target                               :: nodal_rmultiplicity_w2h
+  type(field_type), target                               :: nodal_rmultiplicity_w0
+  type(field_type), allocatable, dimension(:), target    :: w2_normalisation
+  type(operator_type), target                            :: coriolis
+  type(field_type), allocatable, dimension(:,:), target  :: chi_mg
+  
   ! Enumerated types
   integer(i_def), parameter, public :: w0_id          = 0_i_def
   integer(i_def), parameter, public :: w1_id          = 1_i_def
@@ -149,7 +161,28 @@ module runtime_constants_mod
   public :: get_height
   public :: get_normalisation
   public :: get_coriolis
+  
+  ! overload the interfaces for MG versions
+  interface get_coordinates
+     module procedure get_coordinates_fine, get_coordinates_mg
+  end interface get_coordinates
 
+  interface get_div
+     module procedure get_div_fine, get_div_mg
+  end interface get_div
+
+  interface get_mass_matrix
+     module procedure get_mass_matrix_fine, get_mass_matrix_mg
+  end interface get_mass_matrix
+
+  interface get_normalisation
+     module procedure get_normalisation_fine, get_normalisation_mg
+  end interface get_normalisation
+
+  interface get_inverse_lumped_mass_matrix
+     module procedure get_inverse_lumped_mass_matrix_fine, get_inverse_lumped_mass_matrix_mg
+  end interface get_inverse_lumped_mass_matrix
+  
 contains
   !>@brief Subroutine to create the runtime constants
   !> @param[in] mesh_id         Mesh_id
@@ -189,11 +222,55 @@ contains
     integer(i_def), parameter :: i_minus_one = -1_i_def
     integer(i_def) :: iconst
     real(r_def) :: const
-
+    ! temporaries needed for Multigrid
+    integer(kind=i_def)       :: i, level, chi_space, multigrid_levels
+    integer(kind=i_def)       :: mg_mesh_id
+    
     if ( subroutine_timers ) call timer('runtime_constants_alg')
     call log_event( "Gungho: creating runtime_constants", LOG_LEVEL_INFO )
 
+    if(l_multigrid) then
+       multigrid_levels=multigrid_chain_nitems
+    else
+       multigrid_levels=1
+    end if
+    
+    ! make the multigrid chi field.
+    allocate(chi_mg(3,multigrid_levels))
+    do i = 1, 3
+       chi_mg(i,1) = chi(i)
+    end do
+     ! Compute coordinates
+    if ( coordinate_order == 0 ) then
+       chi_space = W0
+       call log_event( "runtime_constants: Computing W0 coordinate fields for MG", LOG_LEVEL_INFO )
+    else
+       chi_space = Wchi
+       call log_event( "runtime_constants: Computing Wchi coordinate fields for MG", LOG_LEVEL_INFO )
+    end if
 
+    if(l_multigrid) then
+       ! get the mesh_id from the other function space
+       ! need to get the mesh_id to create the chi fs, so get it from the W3 chain
+       w3_fs     => function_space_collection%get_fs( mesh_id, element_order, W3 )
+       call multigrid_function_space_chain%set_current(w3_fs%get_id())
+       
+       ! finest level is already done, so loop through levels 2, multigrid_levels
+       do level = 2, multigrid_levels
+          w3_fs=>multigrid_function_space_chain%get_next()
+          mg_mesh_id=w3_fs%get_mesh_id()
+          do i = 1, 3
+             chi_mg(i,level) = field_type(vector_space = &
+                  function_space_collection%get_fs( &
+                  mg_mesh_id, coordinate_order, chi_space) )
+          end do
+          call assign_coordinate_field(chi_mg(:,level),mg_mesh_id)
+          call assign_orography_field(chi_mg(:,level),mg_mesh_id)
+       end do
+    end if
+    ! set level = 1 for the finest level MG/ or single level only
+    level = 1   
+    
     !=========== Create function spaces required for setup ===================!
 
     w0_fs     => function_space_collection%get_fs( mesh_id, element_order, W0 )
@@ -209,12 +286,10 @@ contains
 
     !================= Create quadrature object =====================!
     qr = quadrature_xyoz_type(element_order+3, quadrature_rule)
-
     !=================== Create geopotential field ============================!
 
     geopotential = field_type( vector_space = w0_fs )
     call invoke( compute_geopotential_kernel_type( geopotential, chi ) )
-
     !=================== Create cell orientation field ========================!
 
     if (scheme == scheme_yz_bip_cosmic .or. &
@@ -227,50 +302,53 @@ contains
                    setval_c(cell_orientation, 9999.0_r_def) )
       call invoke_mpi_calc_cell_orientation( temp_w2_field, cell_orientation )
 
-    end if
+   end if
+!=================== Create DeRahm cochain operators =========================!
 
-
-
-    !=================== Create DeRahm cochain operators =========================!
-
+   ! multigrid ops
+    allocate(mm_w2(multigrid_levels), &
+             mm_dl(multigrid_levels), &
+             mm_w3(multigrid_levels), &
+             mm_w3_inv(multigrid_levels), &
+             div(multigrid_levels),   &
+             mm_wtheta(multigrid_levels) )
+    allocate(w2_normalisation(multigrid_levels))
+    ! These operators are MG valued (which could be 1 if then single level)
+    mm_w2(level)     = operator_type( w2_fs, w2_fs )  
+    mm_dl(level)     = operator_type( w2_fs, w2_fs )
+    mm_wtheta(level) = operator_type( wtheta_fs, wtheta_fs )
+    mm_w3(level)     = operator_type( w3_fs, w3_fs )
+    mm_w3_inv(level) = operator_type( w3_fs, w3_fs ) 
+    div(level)       = operator_type( w3_fs, w2_fs )   
     mm_w0 = operator_type( w0_fs, w0_fs )
     mm_w1 = operator_type( w1_fs, w1_fs )
-    mm_w2 = operator_type( w2_fs, w2_fs )
     mm_w2b = operator_type( w2b_fs, w2b_fs )
     mm_w2v = operator_type( w2v_fs, w2v_fs )
     mm_w2h = operator_type( w2h_fs, w2h_fs )
-    mm_dl = operator_type( w2_fs, w2_fs )
-    mm_w3 = operator_type( w3_fs, w3_fs )
-    mm_w3_inv = operator_type( w3_fs, w3_fs )
-    mm_wtheta = operator_type( wtheta_fs, wtheta_fs )
     grad = operator_type( w1_fs, w0_fs )
     curl = operator_type( w2_fs, w1_fs )
-    div  = operator_type( w3_fs, w2_fs )
     broken_div = operator_type( w3_fs, w2b_fs )
     div_v  = operator_type( w3_fs, w2v_fs )
     div_h  = operator_type( w3_fs, w2h_fs )
-
-    call invoke( name = "Create mass matrix operators",                   &
-                 compute_derahm_matrices_kernel_type(mm_w0, mm_w1,        &
-                                                     mm_w2, mm_w2b,       &
-                                                     mm_w3, mm_wtheta,    &
-                                                     grad, curl,          &
-                                                     div, broken_div,     &
-                                                     chi, qr),            &
-                 invert_local_operator_kernel_type(mm_w3_inv, mm_w3) )
-
+    call invoke( name = "Create mass matrix operators",                              &
+                 compute_derahm_matrices_kernel_type(mm_w0, mm_w1,                   &
+                                                     mm_w2(level), mm_w2b,           &
+                                                     mm_w3(level), mm_wtheta(level), &
+                                                     grad, curl,                     &
+                                                     div(level), broken_div,         &
+                                                     chi_mg(:,level), qr),           &
+                 invert_local_operator_kernel_type(mm_w3_inv(level), mm_w3(level)) )
     ! Construct vertical- and horizontal-only velocity mass matrices
-    call invoke( compute_mass_matrix_kernel_w2_type( mm_w2v, chi, qr ) )
-    call invoke( compute_mass_matrix_kernel_w2_type( mm_w2h, chi, qr ) )
-
-    ! Construct vertical- and horizontal-only weak divergence operator
-    call invoke( compute_div_operator_kernel_type( div_v, chi, qr ) )
-    call invoke( compute_div_operator_kernel_type( div_h, chi, qr ) )
-
+    call invoke( compute_mass_matrix_kernel_w2_type( mm_w2v, chi_mg(:,level), qr ) )
+    call invoke( compute_mass_matrix_kernel_w2_type( mm_w2h, chi_mg(:,level), qr ) )
+    ! Construct vertical- and horizontal-only weak divergence operator    
+    call invoke( compute_div_operator_kernel_type( div_v, chi_mg(:,level), qr ) )
+    call invoke( compute_div_operator_kernel_type( div_h, chi_mg(:,level), qr ) )
     ! Compute W2 mass matrix with damping layer
     ! Eventually this may be absorbed into the DeRham complex computations
     ! but until the final form is settled upon it is left separate
-    if (dlayer_on) call invoke( compute_dl_matrix_kernel_type(mm_dl, chi, qr) )
+    if (dlayer_on) call invoke( compute_dl_matrix_kernel_type( &
+                                    mm_dl(level), chi_mg(:,level), qr) )
 
     !================= Create mass matrix diagonal fields =====================!
 
@@ -280,7 +358,6 @@ contains
     mm3_diag       = field_type( vector_space = w3_fs )
     mmtheta_diag   = field_type( vector_space = wtheta_fs )
     eye            = field_type( vector_space = w3_fs )
-
     ! Initialise fields
     call invoke( name = "Create mass matrix diagonal fields",      &
                  setval_c(mm0_diag,     0.0_r_def),                &
@@ -289,15 +366,14 @@ contains
                  setval_c(mm3_diag,     0.0_r_def),                &
                  setval_c(mmtheta_diag, 0.0_r_def),                &
     ! Compute mass matrices
-                 mm_diagonal_kernel_type(mm0_diag, mm_w0),         &
-                 mm_diagonal_kernel_type(mm1_diag, mm_w1),         &
-                 mm_diagonal_kernel_type(mm2_diag, mm_w2),         &
-                 mm_diagonal_kernel_type(mm3_diag, mm_w3),         &
-                 mm_diagonal_kernel_type(mmtheta_diag, mm_wtheta), &
+                 mm_diagonal_kernel_type(mm0_diag, mm_w0),                &
+                 mm_diagonal_kernel_type(mm1_diag, mm_w1),                &
+                 mm_diagonal_kernel_type(mm2_diag, mm_w2(level)),         &
+                 mm_diagonal_kernel_type(mm3_diag, mm_w3(level)),         &
+                 mm_diagonal_kernel_type(mmtheta_diag, mm_wtheta(level)), &
     ! W3 equations are solved pointwise and so the mass matrix is inverted
     ! exactly, therefore the diagonal, where used should be 1
                  setval_c(eye, 1.0_r_def) )
-
 
     !================= Create inverse lumped mass matrices =====================!
 
@@ -318,12 +394,13 @@ contains
                  inc_X_powint_n(m0_lumped_inv, i_minus_one) )
 
     ones           = field_type( vector_space = wtheta_fs )
-    mt_lumped_inv  = field_type( vector_space = wtheta_fs )
-    call invoke( name = "Create mt_lumped_inv",                             &
-                 setval_c(ones,          1.0_r_def),                        &
-                 setval_c(mt_lumped_inv, 0.0_r_def),                        &
-                 matrix_vector_kernel_type(mt_lumped_inv, ones, mm_wtheta), &
-                 inc_X_powint_n(mt_lumped_inv, i_minus_one) )
+    allocate(mt_lumped_inv(multigrid_levels))
+    mt_lumped_inv(level)  = field_type( vector_space = wtheta_fs )
+    call invoke( name = "Create mt_lumped_inv",                                           &
+                 setval_c(ones,          1.0_r_def),                                      &
+                 setval_c(mt_lumped_inv(level), 0.0_r_def),                               &
+                 matrix_vector_kernel_type(mt_lumped_inv(level), ones, mm_wtheta(level)), &
+                 inc_X_powint_n(mt_lumped_inv(level), i_minus_one) )
 
     !================= Create a height field =====================!
     ! Note that these fields represent the height relative to
@@ -359,10 +436,10 @@ contains
                  setval_c(nodal_multiplicity_w0, 0.0_r_def),       &
                  multiplicity_kernel_type(nodal_multiplicity_w0) )
 
-
     ! Calculate the reciprocals
     nodal_rmultiplicity_w1  = field_type( vector_space = w1_fs )
-    nodal_rmultiplicity_w2  = field_type( vector_space = w2_fs )
+    allocate(nodal_rmultiplicity_w2(multigrid_levels))
+    nodal_rmultiplicity_w2(level)  = field_type( vector_space = w2_fs )
     nodal_rmultiplicity_w2h = field_type( vector_space = w2h_fs )
     nodal_rmultiplicity_w0  = field_type( vector_space = w0_fs )
 
@@ -372,7 +449,7 @@ contains
 
     ones = field_type( vector_space = w2_fs )
     call invoke( setval_c(ones, 1.0_r_def), &
-                 X_divideby_Y(nodal_rmultiplicity_w2, ones, nodal_multiplicity_w2) )
+                 X_divideby_Y(nodal_rmultiplicity_w2(level), ones, nodal_multiplicity_w2) )
 
     ones = field_type( vector_space = w2h_fs )
     call invoke( setval_c( ones, 1.0_r_def ), &
@@ -382,11 +459,11 @@ contains
     call invoke( setval_c(ones, 1.0_r_def), &
                  X_divideby_Y(nodal_rmultiplicity_w0, ones, nodal_multiplicity_w0) )
 
-    w2_normalisation = field_type( vector_space = w2_fs )
-    call invoke( setval_c(w2_normalisation, 0.0_r_def),                     &
-                 w2_normalisation_kernel_type(w2_normalisation, chi),       &
-                 inc_X_divideby_Y(w2_normalisation, nodal_multiplicity_w2), &
-                 inc_X_powint_n(w2_normalisation, i_minus_one) )
+    w2_normalisation(level) = field_type( vector_space = w2_fs )
+    call invoke( setval_c(w2_normalisation(level), 0.0_r_def),                     &
+                 w2_normalisation_kernel_type(w2_normalisation(level), chi),       &
+                 inc_X_divideby_Y(w2_normalisation(level), nodal_multiplicity_w2), &
+                 inc_X_powint_n(w2_normalisation(level), i_minus_one) )
 
     ! Compute Coriolis operator
     if ( rotating ) then
@@ -394,7 +471,7 @@ contains
       call invoke( compute_coriolis_matrix_kernel_type(coriolis, chi, qr) )
     end if
 
-
+  
     !================ Create detj values at W2 dof locations ==================!
 
     detj_at_w2 = field_type( vector_space = w2_fs )
@@ -441,13 +518,64 @@ contains
                    inc_a_times_X( const, max_diff_wtheta )     &
                  )
 
-    end if
+   end if
 
+   
+   if(l_multigrid) then
+      ! compute on the courser multigrid levels
+      call multigrid_function_space_chain%set_current(w3_fs%get_id())
+      call w2_multigrid_function_space_chain%set_current(w2_fs%get_id())
+      call wtheta_multigrid_function_space_chain%set_current(wtheta_fs%get_id())    
+      
+      do level = 2, multigrid_levels
+         
+         write(log_scratch_space,'(A,I0,A)') "runtime_constants[",level,"]:creating ops"
+         call log_event(log_scratch_space,LOG_LEVEL_INFO)
+         
+         w3_fs=>multigrid_function_space_chain%get_next()
+         w2_fs=>w2_multigrid_function_space_chain%get_next()
+         wtheta_fs=>wtheta_multigrid_function_space_chain%get_next()
+         
+         mm_w2(level)     = operator_type( w2_fs, w2_fs )  
+         mm_dl(level)     = operator_type( w2_fs, w2_fs )
+         mm_wtheta(level) = operator_type( wtheta_fs, wtheta_fs )
+         mm_w3(level)     = operator_type( w3_fs, w3_fs )
+         mm_w3_inv(level) = operator_type( w3_fs, w3_fs ) 
+         div(level)       = operator_type( w3_fs, w2_fs )
+         
+         call invoke(mg_derahm_mat_kernel_type( mm_w2(level), &
+              mm_w3(level), mm_wtheta(level), div(level), chi_mg(:,level), qr),&
+              invert_local_operator_kernel_type(mm_w3_inv(level), mm_w3(level)) )        
+         
+         ! Compute W2 mass matrix with damping layer
+         ! Eventually this may be absorbed into the DeRham complex computations
+         ! but until the final form is settled upon it is left separate
+         if (dlayer_on) call invoke( compute_dl_matrix_kernel_type( &
+              mm_dl(level), chi_mg(:,level), qr) )
+         
+         ones = field_type( vector_space = wtheta_fs )
+         
+         mt_lumped_inv(level)  = field_type( vector_space = wtheta_fs )
+         ! Create mt_lumped_inv    
+         call invoke(  &
+              setval_c(ones,          1.0_r_def),                        &
+              setval_c(mt_lumped_inv(level), 0.0_r_def),                        &
+              matrix_vector_kernel_type(mt_lumped_inv(level), ones, mm_wtheta(level)), &
+              inc_X_powint_n(mt_lumped_inv(level), i_minus_one) )
+         
+         w2_normalisation(level) = field_type( vector_space = w2_fs )
+         nodal_multiplicity_w2 = field_type( vector_space = w2_fs )
+         call invoke( setval_c(w2_normalisation(level), 0.0_r_def),                 &
+              setval_c(nodal_multiplicity_w2, 2.0_r_def),                   &
+              w2_normalisation_kernel_type(w2_normalisation(level), chi_mg(:,level) ),       &
+              inc_X_divideby_Y(w2_normalisation(level), nodal_multiplicity_w2), &
+              inc_X_powint_n(w2_normalisation(level), i_minus_one) )       
 
-    ! Store pointer to chi field so things downstream can access it via
-    ! runtime_constants
-    coords => chi
-
+         
+         
+      end do
+   end if
+   
     nullify( w0_fs  )
     nullify( w1_fs  )
     nullify( w2_fs  )
@@ -464,15 +592,25 @@ contains
 
   end subroutine create_runtime_constants
 
-
-  !> @brief Function to return a pointer to the coordinate array
+  !> @brief Function to return a pointer to the coordinate array on the finest level
   !> @return The coordinate field array
-  function get_coordinates() result(coords_ptr)
+  function get_coordinates_fine() result(coords_ptr)
     implicit none
     type(field_type), pointer :: coords_ptr(:)
-    coords_ptr => coords
+    coords_ptr => chi_mg(:,1)
 
-  end function get_coordinates
+  end function get_coordinates_fine
+
+  !> @brief Function to return a pointer to the coordinate array on the specified level
+  !> @param level integer multigrid level
+  !> @return The coordinate field array
+  function get_coordinates_mg(level) result(coords_ptr)
+    implicit none
+    integer, intent(in) :: level
+    type(field_type), pointer :: coords_ptr(:)
+    
+    coords_ptr => chi_mg(:,level)
+  end function get_coordinates_mg
 
   !> @brief Function to return a pointer to a height field
   !> @param[in] space the space of the desired height field
@@ -569,12 +707,13 @@ contains
   end function get_max_diff
 
   !> @brief Function to return a pointer to a mass matrix
+  !! If the operator is evaluated on several multigrid layers, then the finest is returned
   !> @param[in] i the index of the desired mass matrix field
   !> @return The mass matrix operator
-  function get_mass_matrix(i) result(mm)
+  function get_mass_matrix_fine(i) result(mm)
     implicit none
     integer(i_def), intent(in) :: i
-    type(operator_type), pointer :: mm
+    type(operator_type), pointer :: mm 
 
     select case (i)
       case (w0_id)
@@ -582,7 +721,7 @@ contains
       case (w1_id)
         mm => mm_w1
       case (w2_id)
-        mm => mm_w2
+        mm => mm_w2(1)
       case (w2b_id)
         mm => mm_w2b
       case (w2v_id)
@@ -590,22 +729,50 @@ contains
       case (w2h_id)
         mm => mm_w2h
       case (w3_id)
-        mm => mm_w3
+        mm => mm_w3(1)
       case (w3inv_id)
-        mm => mm_w3_inv
+        mm => mm_w3_inv(1)
       case (wt_id)
-        mm => mm_wtheta
+        mm => mm_wtheta(1)
       case (theta_space_id)
-        mm => mm_wtheta
+        mm => mm_wtheta(1)
       case (dl_id)
-        mm => mm_dl
+        mm => mm_dl(1)
       case default
         mm => null()
         call log_event( "Mass matrix operator does not exist", LOG_LEVEL_ERROR)
         stop
     end select
 
-  end function get_mass_matrix
+  end function get_mass_matrix_fine
+
+  !> @brief Function to return a pointer to a mass matrix
+  !! Only for operator evaluated on several multigrid layers
+  !> @param[in] i the index of the desired mass matrix field
+  !> @param[in] level integer multigrid level  
+  !> @return The mass matrix operator  
+  function get_mass_matrix_mg(i, level) result(mm)
+    implicit none
+    integer(i_def), intent(in) :: i
+    integer(kind=i_def), intent(in) :: level
+    type(operator_type), pointer :: mm 
+
+    select case (i)
+      case (w2_id)
+        mm => mm_w2(level)
+      case (w3_id)
+        mm => mm_w3(level)
+      case (w3inv_id)
+        mm => mm_w3_inv(level)
+      case (dl_id)
+        mm => mm_dl(level)
+      case default
+        mm => null()
+        call log_event( "Mass matrix operator does not exist", LOG_LEVEL_ERROR)
+        stop
+    end select
+
+  end function get_mass_matrix_mg
 
   !> @brief Function to return a pointer to a mass matrix diagonal
   !> @param[in] i Index of the desired mass matrix diagonal field
@@ -656,14 +823,25 @@ contains
 
   end function get_curl
 
-  !> @brief Function to return a pointer to the div operator
+  !> @brief Function to return a pointer to the div operator, on the finest multigrid_level
   !> @return The grad operator
-  function get_div() result(div_op)
+  function get_div_fine() result(div_op)
     implicit none
     type(operator_type), pointer :: div_op
-    div_op => div
+    div_op => div(1)
 
-  end function get_div
+  end function get_div_fine
+
+  !> @brief Function to return a pointer to the div operator
+  !! on the specified multigrid_level
+  !> @param[in] level integer multigrid level    
+  !> @return The grad operator  
+  function get_div_mg(level) result(div_op)
+    implicit none
+    integer, intent(in) :: level
+    type(operator_type), pointer :: div_op
+    div_op => div(level)
+  end function get_div_mg
 
   !> @brief Function to return a pointer to the broken div operator
   !> @return The broken div operator
@@ -702,9 +880,10 @@ contains
   end function get_qr
 
   !> @brief Function to return a pointer to a inverse lumped mass matrix
+  !! on the finest multigrid level
   !> @param[in] i Index of the desired lumped mass matrix inverse field
-  !> @return The lumped inverse mass matrix
-  function get_inverse_lumped_mass_matrix(i) result(mm)
+  !> @return The lumped inverse mass matrix 
+  function get_inverse_lumped_mass_matrix_fine(i) result(mm)
     implicit none
     integer(i_def), intent(in) :: i
     type(field_type), pointer :: mm
@@ -715,16 +894,40 @@ contains
       case (w1_id)
         mm => m1_lumped_inv
       case (wt_id)
-        mm => mt_lumped_inv
+        mm => mt_lumped_inv(1)
       case (theta_space_id)
-        mm => mt_lumped_inv
+        mm => mt_lumped_inv(1)
       case default
         mm => null()
         call log_event( "Lumped inverse mass matrix does not exist", LOG_LEVEL_ERROR)
         stop
     end select
 
-  end function get_inverse_lumped_mass_matrix
+  end function get_inverse_lumped_mass_matrix_fine
+
+  !> @brief Function to return a pointer to a inverse lumped mass matrix
+  !! on the specified multigrid level
+  !> @param[in] i Index of the desired lumped mass matrix inverse field
+  !> @param[in] level Integer the multigrid level
+  !> @return The lumped inverse mass matrix   
+    function get_inverse_lumped_mass_matrix_mg(i,level) result(mm)
+    implicit none
+    integer(kind=i_def), intent(in) :: i
+    integer(kind=i_def), intent(in) :: level
+    type(field_type), pointer :: mm
+
+    select case (i)
+      case (wt_id)
+        mm => mt_lumped_inv(level)
+      case (theta_space_id)
+        mm => mt_lumped_inv(level)
+      case default
+        mm => null()
+        call log_event( "Lumped inverse mass matrix does not exist", LOG_LEVEL_ERROR)
+        stop
+    end select
+
+  end function get_inverse_lumped_mass_matrix_mg
 
   !> @brief Function to return a pointer to the reciprocal of the multiplicity field
   !> @return The nodal multiplicity field
@@ -740,7 +943,7 @@ contains
       case (W1)
         rmultiplicity => nodal_rmultiplicity_w1
       case (W2)
-        rmultiplicity => nodal_rmultiplicity_w2
+        rmultiplicity => nodal_rmultiplicity_w2(1)
       case (W2H)
         rmultiplicity => nodal_rmultiplicity_w2h
       case default
@@ -752,27 +955,55 @@ contains
   end function get_rmultiplicity
 
   !> @brief Function to return a pointer to the normalisation of prognostic fields
+  !! on the finest multigrid level
   !> @return The normalisation field
   !> @param[in] space enumeration of the function space
-  function get_normalisation(space) result(normalisation)
+  function get_normalisation_fine(space) result(normalisation)
     implicit none
     integer(i_def), intent(in) :: space
     type(field_type), pointer :: normalisation
 
     select case (space)
       case (w2_id)
-        normalisation => w2_normalisation
+        normalisation => w2_normalisation(1)
       case (wt_id)
-        normalisation => mt_lumped_inv
+        normalisation => mt_lumped_inv(1)
       case (theta_space_id)
-        normalisation => mt_lumped_inv
+        normalisation => mt_lumped_inv(1)
       case default
         normalisation => null()
         call log_event( " Normalisation does not exist for given space", &
            LOG_LEVEL_ERROR)
     end select
 
-  end function get_normalisation
+  end function get_normalisation_fine
+
+  !> @brief Function to return a pointer to the normalisation of prognostic fields
+  !! on the specified multigrid level
+  !> @return The normalisation field
+  !> @param[in] space enumeration of the function space
+  !> @param[in] level integer the multigrid level
+  function get_normalisation_mg(space, level) result(normalisation)
+    implicit none
+    integer(kind=i_def), intent(in) :: space
+    integer(kind=i_def), intent(in) :: level
+    type(field_type), pointer :: normalisation
+
+    select case (space)
+      case (w2_id)
+        normalisation => w2_normalisation(level)       
+      case (wt_id)
+        normalisation => mt_lumped_inv(level)
+      case (theta_space_id)
+        normalisation => mt_lumped_inv(level)
+      case default
+        normalisation => null()
+        call log_event( " Normalisation does not exist for given space", &
+           LOG_LEVEL_ERROR)
+    end select
+
+  end function get_normalisation_mg  
+  
 
   !> @brief Function to return the Coriolis operator
   !> @return The Coriolis operator
@@ -801,12 +1032,22 @@ contains
     call mmtheta_diag%field_final()
     call mm_w0%operator_final()
     call mm_w1%operator_final()
-    call mm_w2%operator_final()
+    if(allocated(mm_w2)) then
+       deallocate(mm_w2)
+    end if
     call mm_w2b%operator_final()
-    call mm_w3%operator_final()
-    call mm_w3_inv%operator_final()
-    call mm_wtheta%operator_final()
-    call mm_dl%operator_final()
+    if(allocated(mm_w3)) then
+       deallocate(mm_w3)
+    end if
+    if(allocated(mm_w3_inv)) then
+       deallocate(mm_w3_inv)
+    end if
+    if(allocated(mm_wtheta)) then
+       deallocate(mm_wtheta)
+    end if
+    if(allocated(mm_dl)) then
+       deallocate(mm_dl)
+    end if
     call geopotential%field_final()
     call temp_w2_field%field_final()
     call cell_orientation%field_final()
@@ -815,21 +1056,27 @@ contains
     call dA_at_w2%field_final()
     call grad%operator_final()
     call curl%operator_final()
-    call div%operator_final()
+    if(allocated(div)) then
+       deallocate(div)
+    end if
     call broken_div%operator_final()
     call qr%quadrature_final()
     call m0_lumped_inv%field_final()
     call m1_lumped_inv%field_final()
-    call mt_lumped_inv%field_final()
+    if(allocated(mt_lumped_inv)) then
+       deallocate(mt_lumped_inv)
+    end if
     call height_wth%field_final()
     call height_w3%field_final()
     call nodal_rmultiplicity_w1%field_final()
-    call nodal_rmultiplicity_w2%field_final()
+    if(allocated(nodal_rmultiplicity_w2)) then
+       deallocate(nodal_rmultiplicity_w2)
+    end if
     call nodal_rmultiplicity_w2h%field_final()
     call nodal_rmultiplicity_w0%field_final()
-    call w2_normalisation%field_final()
-
-    nullify(coords)
+    if(allocated(w2_normalisation)) then
+       deallocate(w2_normalisation)
+    end if    
 
   end subroutine final_runtime_constants
 

@@ -86,7 +86,10 @@ module argument_mod
 ! Evaluator metadata
   integer, public, parameter :: GH_EVALUATOR        = 959
 
-
+! Coarse and fine function spaces
+  integer, public, parameter :: GH_FINE   = 27745
+  integer, public, parameter :: GH_COARSE = 83491
+  
   !> @defgroup stencil_items Enumeration of stencil types.
   !> @{
   integer, public, parameter :: XORY1D = 1
@@ -123,6 +126,7 @@ module argument_mod
      integer :: wspace      = -1 ! {W0, W1, W2, W3, ANY_SPACE_[0-9]+, ANY_W2}
      integer :: from_wspace = -1 ! { " } only required for gh_operator
      integer :: stencil_map = -1 !{XORY1D,X1D,Y1D,CROSS} optional, type of stencil map to use
+     integer :: mesh_arg    = -1 !{GH_FINE,GH_COARSE} optional, for inter mesh mapping kernels     
   end type arg_type
 
 ! Metadata argument function space type 

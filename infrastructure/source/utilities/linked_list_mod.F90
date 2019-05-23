@@ -37,6 +37,7 @@ module linked_list_mod
     procedure, public :: insert_item
     procedure, public :: item_exists
     procedure, public :: get_length
+    procedure, public :: get_item
     procedure, public :: get_current
     procedure, public :: set_current
     procedure, public :: get_head
@@ -98,6 +99,36 @@ function get_current(self) result(curr_item)
   curr_item => self%current
 
 end function get_current
+
+!> Gets the item with payload of provided id
+function get_item(this, id) result(item)
+  implicit none
+  class(linked_list_type), intent(in)   :: this
+  integer(i_def), intent(in)            :: id
+
+  type(linked_list_item_type),pointer  :: item
+
+  ! temp ptr to loop through list
+  type(linked_list_item_type),pointer  :: loop
+
+  ! start from beginning of list
+  loop => this%head
+  item => null()
+
+  do
+    ! if it isn't pointing at anything or we finished just exit
+    if ( .not. associated(loop) ) exit
+
+    if (loop%payload%get_id() == id) then
+      item => loop
+      exit
+    end if
+    loop=>loop%next
+  end do
+
+  return
+
+end function get_item
 
 !> Set the item currently pointed to.
 subroutine set_current(self, new_item)

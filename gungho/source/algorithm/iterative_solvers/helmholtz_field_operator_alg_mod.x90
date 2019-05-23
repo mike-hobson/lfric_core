@@ -1,0 +1,219 @@
+!-----------------------------------------------------------------------------
+! (C) Crown copyright 2018 Met Office. All rights reserved.
+! For further details please refer to the file COPYRIGHT.txt
+! which you should have received as part of this distribution.
+!-----------------------------------------------------------------------------
+!>@brief Application of the Helmholtz operator
+!>
+!>@details The Helmholtz operator is given by
+!>
+!>   \f[ H =  M_3^{\Pi} + \tau_u\tau_\rho\Delta t*2 M_3^{\rho}M_3^{-1} D\left(\rho^*\mathbf{X}\right)
+!>                      + \tau_u\tau_\theta\Delta t*2 P_{3\theta}\tilde{M}_\theta^{-1} P_{\theta2}\mathbf{X}\right) \f]
+!>
+!>
+!> with the lumped matrix \f$H_B\f$ defined by
+!>
+!>   \f[ H_B=\tilde{M}_2 + M_\mu + \tau_u\tau_\theta(\Delta t)^2 \tilde{P_{2\theta}\tilde{M}_\theta^{-1}P_{theta2}\f]
+
+!>
+!> This module provides a type derived from the abstract operator type which
+!> allows application of this Helmholtz operator.
+
+module helmholtz_field_operator_alg_mod
+  use abstract_field_operator_mod,        only: abstract_field_operator_type
+  use vector_mod,                         only: abstract_vector_type
+  use field_mod,                          only: field_type
+  use field_vector_mod,                   only: field_vector_type
+  use constants_mod,                      only: i_def, r_def
+  use log_mod,                            only: log_event,       &
+                                                LOG_LEVEL_ERROR, &
+                                                LOG_LEVEL_INFO,  &
+                                                log_scratch_space
+  use operator_mod,                       only: operator_type
+  use runtime_constants_mod,              only: get_mass_matrix, &
+                                                get_normalisation, &
+                                                w2_id, wt_id, w3inv_id
+  use si_operators_alg_mod,               only: get_m3_exner_star, &
+                                                get_compound_div, &
+                                                get_div_star, &
+                                                get_ptheta2v, &
+                                                get_p3theta, &
+                                                get_helm_diag, &
+                                                get_hb_lumped_inv, &
+                                                get_tri_precon
+  implicit none
+
+  type, public, extends(abstract_field_operator_type) :: &
+       helmholtz_operator_type
+     private
+     !> Temporary fields used in operator application
+     type(field_type) :: grad_p, div_grad_p
+     integer(kind=i_def) :: mg_level
+
+     contains
+     procedure, public  :: apply => apply_helmholtz_operator
+     procedure, private :: apply_helmholtz_operator
+     procedure, public  :: apply_inv_diag => apply_inv_diag_helmholtz
+     procedure, private :: apply_inv_diag_helmholtz
+     final :: destroy_helmholtz_operator
+
+  end type helmholtz_operator_type
+
+  interface helmholtz_operator_type
+     module procedure helmholtz_operator_constructor
+  end interface
+
+contains
+
+  !>@brief Construct new instance of type
+  !>
+  !>@details Extract function spaces and build the lumped approximate
+  !>         inverse \f$ \tilde{H}_b^{-1} \f$ as well as other operators
+  !>         such as div and grad for the Helmholtz operator application.
+  !>
+  !>@param[in] state Field vector \f$(\textbf{U},P,B)\f$ representing
+  !>                 current state. This is required for extracting the
+  !>                 relevant function spaces required for operator
+  !>                 construction
+  !>@return instance of the Helmholtz operator
+  function helmholtz_operator_constructor(fs_w3, mg_level) result(self)
+    use function_space_mod,            only: function_space_type
+    use function_space_collection_mod, only: function_space_collection
+    use fs_continuity_mod,             only: W2
+    implicit none    
+    type(function_space_type), intent(in) :: fs_w3
+    integer(kind=i_def),       intent(in) :: mg_level
+
+    type(helmholtz_operator_type)         :: self    
+    type(function_space_type), pointer    :: fs_w2
+
+
+    call log_event( 'Constructing MG Helmholtz operator...', LOG_LEVEL_INFO )
+    ! get the w2 space from the collection and w3 mesh and element order
+    fs_w2     => function_space_collection%get_fs( fs_w3%get_mesh_id(), fs_w3%get_element_order(), W2 )
+    
+    ! Temporaries required in operator application
+    self%grad_p     = field_type(vector_space = fs_w2)
+    self%div_grad_p = field_type(vector_space = fs_w3)
+    self%mg_level   = mg_level
+    
+    call log_event( 'done', LOG_LEVEL_INFO )
+    
+
+  end function helmholtz_operator_constructor
+
+  !>@brief Apply Helmholtz operator to a pressure field to obtain \f$y=Hx\f$
+  !>
+  !>@param[in] self instance of pressure_operator_type
+  !>@param[in] x field \f$x\f$ to apply operator to
+  !>@param[inout] y Resulting field \f$y=Hx\f$ in pressure space
+  subroutine apply_helmholtz_operator(self, x, y)
+    use scaled_matrix_vector_kernel_mod, only: scaled_matrix_vector_kernel_type, &
+                                               opt_scaled_matrix_vector_kernel_type
+    use operator_mod,                    only: operator_type
+    use enforce_bc_kernel_mod,           only: enforce_bc_kernel_type
+    use apply_variable_hx_kernel_mod,    only: apply_variable_hx_kernel_type, &
+                                               opt_apply_variable_hx_kernel_type
+    use dg_matrix_vector_kernel_mod,     only: dg_matrix_vector_kernel_type
+    use finite_element_config_mod,       only: element_order
+    use io_config_mod,                   only: subroutine_timers 
+    use timer_mod,                       only: timer
+    use helmholtz_solver_config_mod,     only: normalise
+    implicit none
+    class(helmholtz_operator_type), intent(inout) :: self
+    class(field_type),    intent(in)    :: x
+    class(field_type),    intent(inout) :: y
+
+    type(operator_type), pointer :: m3_exner_star => null(),   &
+                                    div_star => null(),        &
+                                    compound_div => null(),    &
+                                    ptheta2 => null(),         &
+                                    p3theta => null(),         &
+                                    m3_inv => null()
+    real(kind=r_def), parameter  :: one = 1.0_r_def
+    type(field_type),    pointer :: mt_lumped_inv => null(),   &
+                                    u_normalisation => null(), &
+                                    h_diag => null(),          &
+                                    hb_lumped_inv => null()
+
+    if ( subroutine_timers ) call timer('helmholtz mg')
+
+    
+    m3_exner_star   => get_m3_exner_star(self%mg_level)
+    div_star        => get_div_star(self%mg_level)
+    compound_div    => get_compound_div(self%mg_level)
+    ptheta2         => get_ptheta2v(self%mg_level)
+    mt_lumped_inv   => get_normalisation(wt_id,self%mg_level)
+    p3theta         => get_p3theta(self%mg_level)
+    u_normalisation => get_normalisation(w2_id,self%mg_level)
+    hb_lumped_inv   => get_hb_lumped_inv(self%mg_level)
+    ! Compute M3*p + H[ D{\theta*}*p ]
+    if ( element_order == 0 ) then
+       ! Hard wired optimisation for desired configuration
+       call invoke( setval_c( self%grad_p, 0.0_r_def ),                              &
+                    opt_scaled_matrix_vector_kernel_type(self%grad_p, x,             &
+                                                         div_star, hb_lumped_inv,    &
+                                                         u_normalisation),           &
+                    opt_apply_variable_hx_kernel_type(self%div_grad_p, self%grad_p,  &
+                                                      mt_lumped_inv, x,              &
+                                                      Compound_div, p3theta, ptheta2,&
+                                                      m3_exner_star, one) )
+    else
+       call invoke( setval_c( self%grad_p, 0.0_r_def ),                              &
+                    scaled_matrix_vector_kernel_type(self%grad_p, x,                 &
+                                                     div_star, hb_lumped_inv,        &
+                                                     u_normalisation),               &
+                    enforce_bc_kernel_type( self%grad_p ),                           &
+                    apply_variable_hx_kernel_type(self%div_grad_p, self%grad_p,      &
+                                                  mt_lumped_inv, x,                  &
+                                                  compound_div, p3theta, ptheta2,    &
+                                                  m3_exner_star, one) )
+
+    end if
+    
+    m3_inv => get_mass_matrix(w3inv_id,self%mg_level)
+    call invoke( dg_matrix_vector_kernel_type(y, self%div_grad_p, m3_inv) )
+    
+    if ( normalise ) then
+       h_diag => get_helm_diag(self%mg_level)
+       call invoke( inc_X_times_Y(y, h_diag) )
+    end if
+
+    nullify( m3_exner_star, div_star, compound_div, ptheta2,  &
+         p3theta, m3_inv, mt_lumped_inv, u_normalisation, &
+         h_diag )
+         
+    if ( subroutine_timers ) call timer('helmholtz mg')
+    
+    
+  end subroutine apply_helmholtz_operator
+
+  !>@brief Apply the inverse of the Helmholtz operator to a pressure field 
+  !>@param[in] self instance of pressure_operator_type
+  !>@param[in] x field \f$x\f$ to apply operator to
+  !>@param[inout] y Resulting field in pressure space
+  subroutine apply_inv_diag_helmholtz(self, x, y)
+    use tri_solve_kernel_mod, only : tri_solve_kernel_type
+    implicit none
+
+    class(helmholtz_operator_type), intent(inout) :: self
+    class(field_type),              intent(in)    :: x
+    class(field_type),              intent(inout) :: y    
+
+    type(field_type), pointer                  :: tri(:) => null()
+    
+    ! Multiply by inverse of vertical operator
+    tri => get_tri_precon(self%mg_level)
+    call invoke( tri_solve_kernel_type(y, x, tri) )
+
+  end subroutine apply_inv_diag_helmholtz
+
+  !> Finalizer for the Helmholtz operator
+  !> @param [inout] self the pressure operator
+  subroutine destroy_helmholtz_operator(self)
+   implicit none
+   type(helmholtz_operator_type), intent(inout) :: self
+    
+  end subroutine destroy_helmholtz_operator
+
+end module helmholtz_field_operator_alg_mod

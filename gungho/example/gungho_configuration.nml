@@ -175,6 +175,13 @@
 
 &multigrid
   l_multigrid = .false.
+  multigrid_chain_nitems = 4
+  ugrid      = 'prime', 'mesh_C12.nc', 'mesh_C6.nc', 'mesh_C3.nc'
+  smooth_relaxation = 0.8
+  n_presmooth = 2
+  n_postsmooth = 2
+  n_coarsesmooth = 4
+/
 /
 
 &domain_size

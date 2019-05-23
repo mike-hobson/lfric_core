@@ -205,6 +205,9 @@ contains
     ! Create the mesh
     call init_mesh(local_rank, total_ranks, mesh_id, twod_mesh_id)
 
+    ! Create FEM specifics (function spaces and chi field)
+    call init_fem(mesh_id, chi)
+
     ! Full global meshes no longer required, so reclaim
     ! the memory from global_mesh_collection
     write(log_scratch_space,'(A)') &
@@ -213,9 +216,6 @@ contains
 
     call global_mesh_collection%clear()
     deallocate(global_mesh_collection)
-
-    ! Create FEM specifics (function spaces and chi field)
-    call init_fem(mesh_id, chi)
 
     !-------------------------------------------------------------------------
     ! IO init
@@ -244,7 +244,7 @@ contains
 
     ! Create gungho prognostics and auxilliary (diagnostic) fields
     call create_gungho_prognostics( mesh_id, chi, &
-                                    prognostic_fields, mr, moist_dyn, xi )
+         prognostic_fields, mr, moist_dyn, xi )
 
     ! Create prognostics used by physics
     if (use_physics) then

@@ -12,6 +12,8 @@ class function_space_chain_mod::function_space_chain_type{
 +get_start(): function_space_type <<pointer>>
 +get_next(): function_space_type <<pointer>>
 +get_previous(): function_space_type <<pointer>>
++exists(): <<logical>>
++set_current():
 }
 
 function_space_chain_mod::function_space_chain_type -> linked_list_mod::linked_list_type : <size:8>-function_space_chain_list

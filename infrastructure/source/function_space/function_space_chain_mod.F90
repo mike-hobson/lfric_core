@@ -21,7 +21,7 @@
 
 module function_space_chain_mod
 
-use constants_mod,              only: i_def
+use constants_mod,              only: i_def, l_def
 use linked_list_mod,            only: linked_list_type, &
                                       linked_list_item_type
 use linked_list_int_mod,        only: linked_list_int_type
@@ -78,7 +78,15 @@ contains
   !> @return  previous_function_space Pointer to the previous function
   !>                                  space in this chain
   procedure, public :: get_previous
+  
+  !> @brief Check if a chain item exists
+  !> @param[in] fs_id ID of function space to check
+  !> @return answer Flag showing if item exists
+  procedure, public :: exists
 
+  !> @brief Set the current item in the list to point to a given ID
+  !> @param[in] fs_id ID of function space to set to current
+  procedure, public :: set_current
   !> @brief   Manually release memory used by this object.
   procedure, public :: clear
 
@@ -90,6 +98,12 @@ interface function_space_chain_type
   module procedure function_space_chain_constructor
 end interface
 
+type(function_space_chain_type), public, allocatable :: &
+                                           multigrid_function_space_chain
+type(function_space_chain_type), public, allocatable :: &
+                                           W2_multigrid_function_space_chain
+type(function_space_chain_type), public, allocatable :: &
+                                           Wtheta_multigrid_function_space_chain
 
 !===============================================================================
 contains ! Module procedures
@@ -293,6 +307,42 @@ nullify( function_space_pointer )
 
 return
 end function get_previous
+
+function exists(self, fs_id) result (answer)
+
+  implicit none
+
+  class(function_space_chain_type), intent(in) :: self
+  integer(i_def), intent(in) :: fs_id
+  logical(l_def) :: answer
+
+  answer = self%function_space_chain_list%item_exists(fs_id)
+
+  return
+
+end function exists
+!==============================================================================
+
+
+subroutine set_current(self, fs_id)
+
+  implicit none
+
+  class(function_space_chain_type), intent(inout) :: self
+  integer(i_def), intent(in) :: fs_id
+  class(linked_list_item_type), pointer   :: item => null()
+
+  item => self%function_space_chain_list%get_item(fs_id)
+  if(associated( item) ) then
+     call self%function_space_chain_list%set_current(item)
+  else
+     write(log_scratch_space,'(A,I0,A)') &
+     "function_space_chain_mod:set_current: fs_id=",fs_id, " not found in chain"
+     call log_event(log_scratch_space,LOG_LEVEL_ERROR)
+  end if
+
+  return
+end subroutine set_current
 
 
 !==============================================================================

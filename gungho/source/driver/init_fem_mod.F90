@@ -16,11 +16,18 @@ module init_fem_mod
   use fs_continuity_mod,              only : W0, W1, W2, W3, Wtheta, Wchi
   use function_space_mod,             only : function_space_type
   use function_space_collection_mod,  only : function_space_collection_type, &
-                                             function_space_collection
+       function_space_collection
+  use function_space_chain_mod,       only : function_space_chain_type, &
+                                             multigrid_function_space_chain, &
+                                             W2_multigrid_function_space_chain, &
+                                             wtheta_multigrid_function_space_chain  
   use assign_coordinate_field_mod,    only : assign_coordinate_field
   use assign_orography_field_mod,     only : assign_orography_field
   use log_mod,                        only : log_event,         &
-                                             LOG_LEVEL_INFO
+                                             LOG_LEVEL_INFO,    &
+                                             log_scratch_space
+  use multigrid_config_mod,           only : l_multigrid, multigrid_chain_nitems, ugrid
+  use init_multigrid_mesh_mod,        only : mesh_ids
 
 
   implicit none
@@ -51,6 +58,7 @@ module init_fem_mod
     integer(i_native)                  :: fs_index
     integer(i_def)                     :: chi_space
     integer(i_def)                     :: coord
+    integer(kind=i_def)                :: mesh_ctr
 
 
     call log_event( 'FEM specifics: creating function spaces...', LOG_LEVEL_INFO )
@@ -97,7 +105,47 @@ module init_fem_mod
       call assign_orography_field(shifted_chi, shifted_mesh_id)
 
       nullify( shifted_fs )
+   end if
+
+   ! === === === === === === === === === === === !
+    ! Create Function space chains for Multigrid   !
+    ! --- --- --- --- --- --- --- --- --- --- --- !
+    if (l_multigrid) then
+       multigrid_function_space_chain        = function_space_chain_type()
+       w2_multigrid_function_space_chain     = function_space_chain_type()
+       wtheta_multigrid_function_space_chain = function_space_chain_type()       
+       write(log_scratch_space,'(A,I1)') &
+            'init_fem: Intialising function space chains Multigrid levels = ', &
+                                         multigrid_chain_nitems
+       call log_event( log_scratch_space, LOG_LEVEL_INFO )
+       do mesh_ctr = 1, multigrid_chain_nitems
+          ! Make sure this function_space is in the collection
+          fs => function_space_collection%get_fs( mesh_ids(mesh_ctr), &
+               0, W3 )
+          write( log_scratch_space,"(A,I0,A)")                       &
+               'Adding function_space id ', fs%get_id(), &
+               ' to multigrid function_space chain'
+          call log_event( log_scratch_space, LOG_LEVEL_INFO )
+          call multigrid_function_space_chain%add( fs )
+
+          fs => function_space_collection%get_fs( mesh_ids(mesh_ctr), &
+               0, W2 )
+          write( log_scratch_space,"(A,I0,A)")                       &
+               'Adding function_space id ', fs%get_id(), &
+               ' to w2_multigrid function_space chain'
+          call log_event( log_scratch_space, LOG_LEVEL_INFO )
+          call w2_multigrid_function_space_chain%add( fs )
+
+          fs => function_space_collection%get_fs( mesh_ids(mesh_ctr), &
+               0, Wtheta )
+          write( log_scratch_space,"(A,I0,A)")                       &
+               'Adding function_space id ', fs%get_id(), &
+               ' to wtheta_multigrid function_space chain'
+          call log_event( log_scratch_space, LOG_LEVEL_INFO )
+          call wtheta_multigrid_function_space_chain%add( fs )          
+       end do
     end if
+    
 
     nullify( fs )
     call log_event( 'FEM specifics created', LOG_LEVEL_INFO )

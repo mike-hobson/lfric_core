@@ -12,11 +12,11 @@
 !>
 !> The discretised mixed system for the velocity
 !> (\f$\textbf{u}\f$), pressure (\f$\Pi\f$), density (\f$\rho\f$) and  potential 
-!> temperature (\f$theta\f$) unknowns is:
+!> temperature (\f$\theta\f$) unknowns is:
 !>
 !>  \f[ \delta\mathbf{u} = \left(M_2 + M_\mu + \tau_u C\right)\mathbf{u}' - \tau_u\Delta t(D^* \Pi' + P_{2\theta} \theta') \f]
 !>  \f[ \delta\rho       = \rho'  + \tau_\rho\Delta t M_3^{-1} D \left(\rho^*\mathbf{u}'\right)  \f]
-!>  \f[ \delta\theta     = M_theta \theta' + \tau_\theta\Delta t P_{\theta2} \mathbf{u}'  \f]
+!>  \f[ \delta\theta     = M_{\theta} \theta' + \tau_\theta\Delta t P_{\theta2} \mathbf{u}'  \f]
 !>  \f[ \delta\Pi        = M_3^{\Pi}\Pi' - M_3^{\rho}\rho' - P_{3\theta}\theta' \f]
 
 !>
@@ -35,7 +35,7 @@
 !>
 !>   where
 !>   \f[ \textbf{R}^*_u=\textbf{R}_u+\tau_u\Delta t P_{2\theta} \tilde{M}_\theta^{-1} R_t  \f]
-!>   \f[ H_B=\tilde{M}_2 + M_\mu + \tau_u\tau_\theta(\Delta t)^2 \tilde{P_{2\theta}\tilde{M}_\theta^{-1}P_{theta2}\f]
+!>   \f[ H_B=\tilde{M}_2 + M_{\mu} + \tau_u\tau_{\theta}(\Delta t)^2 \tilde{P_{2\theta}\tilde{M}_\theta^{-1}P_{theta2}\f]
 !>
 !>   and \f$\tilde{A}\f$ is the lumped version of a matrix \f$A\f$. Note that
 !>   any lumped matrix is diagonal, so inversion is straightforward. The lumped
@@ -196,7 +196,7 @@ contains
 
     ! Helmholtz rhs
     self%rhs_p = field_type( vector_space = state%vector(igh_p)%get_function_space() )
-
+    
     ! right hand side and solution as a one-component field-vector in
     ! pressure space
     self%pressure_b = field_vector_type(1)
@@ -239,10 +239,10 @@ contains
                        setval_c( y%vector(igh_t), 0.0_r_def ),  &
                        setval_c( y%vector(igh_d), 0.0_r_def ),  &
                        setval_c( y%vector(igh_p), 0.0_r_def ) )
-
+          
           ! STEP 1: Build RHS for Helmholtz system
           call self%build_pressure_rhs(x)
-       
+
           ! STEP 2: Solve Helmholtz system
           ! Krylov solver to obtain pressure increment
           exner_inc = field_type( vector_space = y%vector(igh_p)%get_function_space() )
@@ -319,7 +319,7 @@ contains
     m3_inv          => get_mass_matrix(w3inv_id)
     compound_div    => get_compound_div()
     u_normalisation => get_normalisation(w2_id)
-    Hb_lumped_inv   => get_Hb_lumped_inv()
+    Hb_lumped_inv   => get_Hb_lumped_inv()    
     ! rhs_u = rhs_u + UNORM*P02*rhs_t
     call invoke( name = "Compute helmholtz R_u",                                     &
                  setval_c(self%rhs_u, 0.0_r_def),                                    &
@@ -350,8 +350,8 @@ contains
     end if
 
     if ( normalise ) then
-      h_diag => get_helm_diag()
-      call invoke( inc_X_times_Y(self%rhs_p, h_diag) )
+       h_diag => get_helm_diag()
+       call invoke( inc_X_times_Y(self%rhs_p, h_diag) )
     end if
 
     call self%rhs_p%log_minmax(LOG_LEVEL_DEBUG, 'helmholtz_rhs')

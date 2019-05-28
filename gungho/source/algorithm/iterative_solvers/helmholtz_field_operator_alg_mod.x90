@@ -71,10 +71,8 @@ contains
   !>         inverse \f$ \tilde{H}_b^{-1} \f$ as well as other operators
   !>         such as div and grad for the Helmholtz operator application.
   !>
-  !>@param[in] state Field vector \f$(\textbf{U},P,B)\f$ representing
-  !>                 current state. This is required for extracting the
-  !>                 relevant function spaces required for operator
-  !>                 construction
+  !>@param[in] fs_w3 the function space W3
+  !>@param[in] mg_level the multigrid level the space is on
   !>@return instance of the Helmholtz operator
   function helmholtz_operator_constructor(fs_w3, mg_level) result(self)
     use function_space_mod,            only: function_space_type

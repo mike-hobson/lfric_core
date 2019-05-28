@@ -66,7 +66,7 @@ module multigrid_preconditioner_alg_mod
 
 contains
   !> @brief constructor for the multigrid preconditioner
-  !> @param[in] p_rhs, field_type the pressure field used in the RHS expression
+  !> @param[in] p_rhs the pressure field used in the RHS expression
   !> @result self the constructed multigrid_preconditioner type
   function multigrid_preconditioner_constructor(p_rhs) result(self)
     use multigrid_config_mod, only : smooth_relaxation, &
@@ -96,7 +96,7 @@ contains
   !> @brief Construct fields on all multigrid levels
   !>
   !> @param[inout] self instance of type multigrid_preconditioner_type
-  !> @param[in] Pressure field (used to extract function spaces)
+  !> @param[in] p_rhs Pressure field (used to extract function spaces)
   subroutine construct_multigrid_fields(self,p_rhs)
     implicit none
     class(multigrid_preconditioner_type), intent(inout)    :: self
@@ -208,7 +208,7 @@ contains
 
   !> @brief over-ridden apply procedure for abstract_preconditioner type
   !! apply the preconditioner to x, store in y
-  !> @param[inout] self, multigrid_preconditioner_type
+  !> @param[inout] self
   !> @param[in]    x abstract_vector_type
   !> @param[inout] y abstract_vector_type  
   subroutine apply_multigrid_preconditioner(self,x,y)
@@ -307,6 +307,7 @@ contains
   subroutine destroy_multigrid_preconditioner(self)
     implicit none
     type(multigrid_preconditioner_type), intent(inout) :: self
+
     if (allocated(self%H_operator))           deallocate(self%H_operator)
     if (allocated(self%u_mg))                 deallocate(self%u_mg)
     if (allocated(self%b_mg))                 deallocate(self%b_mg)

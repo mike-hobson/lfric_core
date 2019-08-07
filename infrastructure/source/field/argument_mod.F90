@@ -21,7 +21,7 @@
 !> read, write etc and which function space it belongs. These are the three
 !> integers of
 !> the arg_type and the values are then one of the parameters
-!> defined in this module. 
+!> defined in this module.
 !> field metadata also has three logicals controlling whether the psy layer
 !> needs to pass the basis function, the differential basis function,
 !> and the guassian quadrature type.
@@ -51,19 +51,32 @@ module argument_mod
   integer, public, parameter :: GH_MIN       = 718
   integer, public, parameter :: GH_MAX       = 391
 
-! Distinct any_space id's. Separate id's required as we may have groups of fields
-! that must be on the same space within a kernel.
-  integer, public, parameter :: ANY_SPACE_1  = 368
-  integer, public, parameter :: ANY_SPACE_2  = 389
-  integer, public, parameter :: ANY_SPACE_3  = 194
-  integer, public, parameter :: ANY_SPACE_4  = 816
-  integer, public, parameter :: ANY_SPACE_5  = 461
-  integer, public, parameter :: ANY_SPACE_6  = 734
-  integer, public, parameter :: ANY_SPACE_7  = 890
-  integer, public, parameter :: ANY_SPACE_8  = 74
-  integer, public, parameter :: ANY_SPACE_9  = 922
-  integer, public, parameter :: ANY_SPACE_10 = 790
-  integer, public, parameter :: ANY_W2       = 353
+! General function space IDs. Distinct IDs required as we may have groups
+! of fields that must be on the same space within a kernel.
+! IDs for any space regardless of continuity
+  integer, public, parameter :: ANY_SPACE_1    = 368
+  integer, public, parameter :: ANY_SPACE_2    = 389
+  integer, public, parameter :: ANY_SPACE_3    = 194
+  integer, public, parameter :: ANY_SPACE_4    = 816
+  integer, public, parameter :: ANY_SPACE_5    = 461
+  integer, public, parameter :: ANY_SPACE_6    = 734
+  integer, public, parameter :: ANY_SPACE_7    = 890
+  integer, public, parameter :: ANY_SPACE_8    = 74
+  integer, public, parameter :: ANY_SPACE_9    = 922
+  integer, public, parameter :: ANY_SPACE_10   = 790
+! IDs for any discontinuous space
+  integer, public, parameter :: ANY_D_SPACE_1  = 43
+  integer, public, parameter :: ANY_D_SPACE_2  = 711
+  integer, public, parameter :: ANY_D_SPACE_3  = 267
+  integer, public, parameter :: ANY_D_SPACE_4  = 901
+  integer, public, parameter :: ANY_D_SPACE_5  = 174
+  integer, public, parameter :: ANY_D_SPACE_6  = 683
+  integer, public, parameter :: ANY_D_SPACE_7  = 425
+  integer, public, parameter :: ANY_D_SPACE_8  = 361
+  integer, public, parameter :: ANY_D_SPACE_9  = 536
+  integer, public, parameter :: ANY_D_SPACE_10 = 882
+! IDs for any W2-type space regardless of continuity
+  integer, public, parameter :: ANY_W2         = 353
 
 ! Function space attributes
   integer, public, parameter :: GH_BASIS       = 751
@@ -90,7 +103,7 @@ module argument_mod
 ! Coarse and fine function spaces
   integer, public, parameter :: GH_FINE   = 27745
   integer, public, parameter :: GH_COARSE = 83491
-  
+
   !> @defgroup stencil_items Enumeration of stencil types.
   !> @{
   integer, public, parameter :: XORY1D = 1
@@ -119,7 +132,7 @@ module argument_mod
   integer, public, parameter :: reference_element_out_face_normal         = 007
   !> @}
 
-! Metadata argument type 
+! Metadata argument type
   type, public :: arg_type
      integer :: arg_type         ! {GH_FIELD, GH_OPERATOR, GH_COLUMNWISE_OPERATOR, &
                                  !  GH_REAL, GH_INTEGER}
@@ -128,14 +141,14 @@ module argument_mod
      integer :: wspace      = -1 ! {W0, W1, W2, W3, ANY_SPACE_[0-9]+, ANY_W2}
      integer :: from_wspace = -1 ! { " } only required for gh_operator
      integer :: stencil_map = -1 !{XORY1D,X1D,Y1D,CROSS} optional, type of stencil map to use
-     integer :: mesh_arg    = -1 !{GH_FINE,GH_COARSE} optional, for inter mesh mapping kernels     
+     integer :: mesh_arg    = -1 !{GH_FINE,GH_COARSE} optional, for inter mesh mapping kernels
   end type arg_type
 
-! Metadata argument function space type 
+! Metadata argument function space type
   type, public :: func_type
      integer :: wspace            ! {W0, W1, W2, W3, ANY_SPACE_[0-9]+, ANY_W2}
      integer :: wproperties1      ! {GH_BASIS, GH_DIFF_BASIS, GH_OPERATOR, &
-                                  !  GH_COLUMN_BANDED_DOFMAP, & 
+                                  !  GH_COLUMN_BANDED_DOFMAP, &
                                   !  GH_COLUMN_INDIRECTION_DOFMAP}
      integer :: wproperties2 = -1 ! { " } optional and must be a distinct property
      integer :: wproperties3 = -1 ! { " } optional and must be a distinct property
@@ -148,4 +161,3 @@ module argument_mod
   end type mesh_data_type
 
 end module argument_mod
-

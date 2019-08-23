@@ -3448,13 +3448,14 @@ end subroutine invoke_calc_deppts
       call chi_proxy(3)%halo_exchange(depth=1)
     end if
     !
-    do cell=1,mesh%get_last_halo_cell(1)
+    ! Look-up dofmaps for each function space
+    !
+    map_w3  => exner_proxy%vspace%get_whole_dofmap()
+    map_wt  => theta_proxy%vspace%get_whole_dofmap()
+    map_chi => chi_proxy(1)%vspace%get_whole_dofmap()
+    !
+    do cell=1,mesh%get_last_edge_cell()
 
-      ! Look-up dofmaps for each function space
-      !
-      map_w3     => exner_proxy%vspace%get_whole_dofmap()
-      map_wt     => theta_proxy%vspace%get_whole_dofmap()
-      map_chi    => chi_proxy(1)%vspace%get_whole_dofmap()
 
       !
       call hydrostatic_exner_code(nlayers, &

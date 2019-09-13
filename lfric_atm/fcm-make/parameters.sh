@@ -6,10 +6,8 @@ export extract=extract
 export jules_rev=um11.4
 export jules_sources=
 export keys_atmos_extra=LFRIC=lfric
-export socrates_rev=um11.4
-export socrates_sources='fcm:socrates.xm_br/dev/jamesmanners/um11.4_bones@750'
+export socrates_rev=773
+export socrates_sources=
 export steplist="extract preprocess-atmos"
 export um_rev=vn11.4
 export um_sources=
-
-# um11.4_bones: socrates:#73

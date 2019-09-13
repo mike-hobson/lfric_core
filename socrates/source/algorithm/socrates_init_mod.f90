@@ -26,11 +26,13 @@ contains
 subroutine socrates_init()
 
   use radiation_config_mod,  only:                                     &
-    spectral_file_sw, spectral_file_lw,                                &
+    spectral_file_sw, spectral_file_lw, mcica_data_file,               &
     l_h2o_sw, l_co2_sw, l_o3_sw, l_n2o_sw, l_ch4_sw, l_o2_sw,          &
-    l_h2o_lw, l_co2_lw, l_o3_lw, l_n2o_lw, l_ch4_lw
+    l_h2o_lw, l_co2_lw, l_o3_lw, l_n2o_lw, l_ch4_lw,                   &
+    cloud_representation, cloud_representation_no_cloud,               &
+    cloud_inhomogeneity, cloud_inhomogeneity_mcica
   use rad_ccf, only: set_socrates_constants
-  use socrates_set_spectrum, only: set_spectrum, get_spectrum
+  use socrates_set_spectrum, only: set_spectrum, get_spectrum, set_mcica
   use log_mod, only: log_event, log_scratch_space, LOG_LEVEL_INFO
 
   implicit none
@@ -86,6 +88,12 @@ subroutine socrates_init()
       i_band, lw_wavelength_short(i_band), lw_wavelength_long(i_band)
     call log_event( log_scratch_space, LOG_LEVEL_INFO )
   end do
+
+  if ( (cloud_representation /= cloud_representation_no_cloud) .and. &
+       (cloud_inhomogeneity == cloud_inhomogeneity_mcica) ) then
+    call set_mcica(mcica_data_file, 'sw', 'lw')
+    call log_event( 'Read MCICA data file.', LOG_LEVEL_INFO )
+  end if
 
 end subroutine socrates_init
 end module socrates_init_mod

@@ -251,6 +251,7 @@
        <field id="cos_zenith_angle_rts" name="cos_zenith_angle_rts" long_name="Cosine of the solar zenith angle (radiative timestep)" unit="1" domain_ref="face_half_levels" />
        <field id="lit_fraction_rts" name="lit_fraction_rts" long_name="Sunlit fraction of the timestep (radiative timestep)" unit="1" domain_ref="face_half_levels" />
        <field id="stellar_irradiance_rts" name="stellar_irradiance_rts" long_name="Stellar irradiance (radiative timestep)" unit="1" domain_ref="face_half_levels" />
+       <field id="cloud_cover_rts" name="cloud_cover_rts" long_name="Total column cloud fraction" unit="1" domain_ref="face_half_levels" />
      </field_group>
 
       <!-- Initial conditions group -->
@@ -505,6 +506,7 @@
         <field field_ref="cos_zenith_angle_rts"/>
         <field field_ref="lit_fraction_rts"/>
         <field field_ref="stellar_irradiance_rts"/>
+        <field field_ref="cloud_cover_rts"/>
       </file>
 
       <file id="lfric_averages" name="lfric_averages" output_freq="12h" convention="UGRID" enabled=".TRUE.">

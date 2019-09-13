@@ -7,12 +7,12 @@
 
 module lw_kernel_mod
 
-use argument_mod,      only : arg_type, func_type,                       &
-                              GH_FIELD, GH_INTEGER, GH_READ, GH_WRITE,   &
-                              GH_READWRITE, GH_INC, CELLS,               &
+use argument_mod,      only : arg_type, &
+                              GH_FIELD, GH_INTEGER, GH_READ, GH_WRITE, &
+                              GH_READWRITE, GH_INC, CELLS, &
                               ANY_SPACE_1, ANY_SPACE_2, ANY_SPACE_3
 use fs_continuity_mod, only:  W3, Wtheta
-use constants_mod,     only : r_def, i_def
+use constants_mod,     only : r_def, i_def, radians_to_degrees
 use kernel_mod,        only : kernel_type
 
 implicit none
@@ -27,13 +27,14 @@ public :: lw_code
 ! Contains the metadata needed by the Psy layer.
 type, extends(kernel_type) :: lw_kernel_type
   private
-  type(arg_type) :: meta_args(23) = (/               &
+  type(arg_type) :: meta_args(26) = (/               &
     arg_type(GH_FIELD,   GH_WRITE,     Wtheta),      & ! lw_heating_rate
     arg_type(GH_FIELD,   GH_WRITE,     ANY_SPACE_1), & ! lw_down_surf
     arg_type(GH_FIELD,   GH_WRITE,     ANY_SPACE_2), & ! lw_up_tile
     arg_type(GH_FIELD,   GH_READWRITE, Wtheta),      & ! lw_heating_rate_rts
     arg_type(GH_FIELD,   GH_INC,       ANY_SPACE_1), & ! lw_down_surf_rts
     arg_type(GH_FIELD,   GH_INC,       ANY_SPACE_2), & ! lw_up_tile_rts
+    arg_type(GH_FIELD,   GH_WRITE,     ANY_SPACE_1), & ! cloud_cover_rts
     arg_type(GH_FIELD,   GH_READ,      Wtheta),      & ! theta
     arg_type(GH_FIELD,   GH_READ,      W3),          & ! theta_in_w3
     arg_type(GH_FIELD,   GH_READ,      W3),          & ! exner
@@ -50,6 +51,8 @@ type, extends(kernel_type) :: lw_kernel_type
     arg_type(GH_FIELD,   GH_READ,      ANY_SPACE_2), & ! tile_fraction
     arg_type(GH_FIELD,   GH_READ,      ANY_SPACE_2), & ! tile_temperature
     arg_type(GH_FIELD,   GH_READ,      ANY_SPACE_3), & ! tile_lw_albedo
+    arg_type(GH_FIELD,   GH_READ,      ANY_SPACE_1), & ! latitude
+    arg_type(GH_FIELD,   GH_READ,      ANY_SPACE_1), & ! longitude
     arg_type(GH_INTEGER, GH_READ                  )  & ! timestep
     /)
   integer :: iterates_over = CELLS
@@ -84,6 +87,7 @@ end function lw_kernel_constructor
 !> @param[in,out] lw_heating_rate_rts     LW heating rate
 !> @param[in,out] lw_down_surf_rts        LW downward flux at the surface
 !> @param[in,out] lw_up_tile_rts          LW upward tiled surface flux
+!> @param[out]    cloud_cover_rts         Total cloud cover 2D field
 !> @param[in]     theta                   Potential temperature
 !> @param[in]     theta_in_w3             Potential temperature in density space
 !> @param[in]     exner                   exner pressure in density space
@@ -100,6 +104,8 @@ end function lw_kernel_constructor
 !> @param[in]     tile_fraction           Surface tile fractions
 !> @param[in]     tile_temperature        Surface tile temperature
 !> @param[in]     tile_lw_albedo          LW tile albedos
+!> @param[in]     latitude                Latitude field
+!> @param[in]     longitude               Longitude field
 !> @param[in]     timestep                Timestep number
 !> @param[in]     ndf_wth                 No. DOFs per cell for wth space
 !> @param[in]     undf_wth                No. unique of DOFs for wth space
@@ -123,6 +129,7 @@ subroutine lw_code(nlayers,                          &
                    lw_heating_rate_rts,              &
                    lw_down_surf_rts,                 &
                    lw_up_tile_rts,                   &
+                   cloud_cover_rts,                  &
                    theta,                            &
                    theta_in_w3,                      &
                    exner,                            &
@@ -139,6 +146,7 @@ subroutine lw_code(nlayers,                          &
                    tile_fraction,                    &
                    tile_temperature,                 &
                    tile_lw_albedo,                   &
+                   latitude, longitude,              &
                    timestep,                         &
                    ndf_wth, undf_wth, map_wth,       &
                    ndf_2d, undf_2d, map_2d,          &
@@ -164,7 +172,8 @@ subroutine lw_code(nlayers,                          &
     cloud_inhomogeneity_homogeneous,          &
     cloud_inhomogeneity_scaling,              &
     cloud_inhomogeneity_mcica,                &
-    cloud_inhomogeneity_cairns
+    cloud_inhomogeneity_cairns,               &
+    cloud_horizontal_rsd, cloud_vertical_decorr
   use set_thermodynamic_mod, only: set_thermodynamic
   use set_cloud_top_mod, only: set_cloud_top
   use init_jules_alg_mod, only: n_surf_tile, first_sea_tile
@@ -175,6 +184,8 @@ subroutine lw_code(nlayers,                          &
     ip_overlap_exponential_random, ip_inhom_homogeneous, ip_inhom_scaling,  &
     ip_inhom_mcica, ip_inhom_cairns
   use socrates_bones, only: bones
+  use xios, only: xios_date, xios_get_current_date, &
+    xios_date_get_day_of_year, xios_date_get_second_of_day
 
   implicit none
 
@@ -199,6 +210,8 @@ subroutine lw_code(nlayers,                          &
   real(r_def), dimension(undf_2d),   intent(inout) :: lw_down_surf_rts
   real(r_def), dimension(undf_tile), intent(inout) :: lw_up_tile_rts
 
+  real(r_def), dimension(undf_2d), intent(out) :: cloud_cover_rts
+
   real(r_def), dimension(undf_w3),  intent(in) :: theta_in_w3, exner, height_w3
   real(r_def), dimension(undf_wth), intent(in) :: theta, exner_in_wth, &
     rho_in_wth, height_wth, mv, mcl, mci, &
@@ -206,10 +219,13 @@ subroutine lw_code(nlayers,                          &
   real(r_def), dimension(undf_tile),  intent(in) :: tile_fraction
   real(r_def), dimension(undf_tile),  intent(in) :: tile_temperature
   real(r_def), dimension(undf_rtile), intent(in) :: tile_lw_albedo
+  real(r_def), dimension(undf_2d),    intent(in) :: latitude, longitude
 
   ! Local variables for the kernel
-  integer, parameter :: n_profile = 1
-  integer :: i_cloud_representation, i_overlap, i_inhom
+  type(xios_date) :: datetime
+  integer(i_def), parameter :: n_profile = 1
+  integer(i_def) :: i_cloud_representation, i_overlap, i_inhom
+  integer(i_def) :: rand_seed(n_profile)
   integer(i_def) :: k, n_cloud_layer
   integer(i_def) :: df_rtile, i_tile, i_band
   integer(i_def) :: wth_1, wth_nlayers
@@ -224,6 +240,10 @@ subroutine lw_code(nlayers,                          &
     liq_dim
   real(r_def), dimension(0:nlayers) :: t_layer_boundaries
   real(r_def), dimension(0:nlayers) :: lw_down, lw_up
+  real(r_def), parameter :: dl = 100.0_r_def
+    ! Number of unique seeds per degree of latitude / longitude (for MCICA).
+    ! 100 per degree equates to approximately a 1km square area of the 
+    ! globe (for the Earth).
 
   ! Tiled surface fields
   real(r_def) :: frac_tile(n_profile, n_surf_tile)
@@ -284,6 +304,15 @@ subroutine lw_code(nlayers,                          &
       i_inhom = ip_inhom_scaling
     case (cloud_inhomogeneity_mcica)
       i_inhom = ip_inhom_mcica
+      call xios_get_current_date(datetime)
+      ! Generate a unique seed for each gridpoint (actually for each area of
+      ! the globe with a size defined by dl) at the given time in seconds.
+      rand_seed &
+        = int((latitude(map_2d(1))*radians_to_degrees + 90.0_r_def)*dl, i_def) &
+        + int(longitude(map_2d(1))*radians_to_degrees*dl, i_def)*180_i_def*dl &
+        + ((abs(int(datetime%year, i_def)-2000_i_def)*366_i_def) &
+        + int(xios_date_get_day_of_year(datetime), i_def))*86400_i_def &
+        + int(xios_date_get_second_of_day(datetime), i_def)
     case (cloud_inhomogeneity_cairns)
       i_inhom = ip_inhom_cairns
     case default
@@ -349,6 +378,9 @@ subroutine lw_code(nlayers,                          &
       liq_mmr_1d             = mcl(wth_1:wth_nlayers),                         &
       ice_mmr_1d             = mci(wth_1:wth_nlayers),                         &
       liq_dim_1d             = liq_dim,                                        &
+      cloud_horizontal_rsd   = cloud_horizontal_rsd,                           &
+      cloud_vertical_decorr  = cloud_vertical_decorr,                          &
+      rand_seed              = rand_seed,                                      &
       layer_heat_capacity_1d = layer_heat_capacity,                            &
       l_mixing_ratio         = .true.,                                         &
       i_cloud_representation = i_cloud_representation,                         &
@@ -357,6 +389,7 @@ subroutine lw_code(nlayers,                          &
       i_st_water             = i_cloud_liq_type_lw,                            &
       i_st_ice               = i_cloud_ice_type_lw,                            &
       l_invert               = .true.,                                         &
+      total_cloud_cover      = cloud_cover_rts(map_2d(1):map_2d(1)),           &
       flux_down_1d           = lw_down,                                        &
       flux_up_1d             = lw_up,                                          &
       flux_up_tile_1d        = flux_up_tile_rts,                               &

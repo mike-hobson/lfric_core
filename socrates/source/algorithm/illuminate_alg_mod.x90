@@ -7,11 +7,9 @@
 
 module illuminate_alg_mod
 
-use field_mod,                    only: field_type
-use field_collection_mod,         only: field_collection_type
-use quadrature_xyoz_mod,          only: quadrature_xyoz_type
-use quadrature_rule_gaussian_mod, only: quadrature_rule_gaussian_type
-
+use field_mod,             only: field_type
+use field_collection_mod,  only: field_collection_type
+use runtime_constants_mod, only: get_latitude, get_longitude
 use illuminate_kernel_mod, only: illuminate_kernel_type
 
 implicit none
@@ -26,20 +24,18 @@ contains
 
 ! @param[in,out] twod_fields    2D fields
 ! @param[in,out] radstep_fields Radiation timestep fields
-! @param[in]     chi            Coordinate array
 ! @param[in]     timestep       Model timestep number
 
-subroutine illuminate_alg_step(twod_fields, radstep_fields, chi, timestep)
+subroutine illuminate_alg_step(twod_fields, radstep_fields, timestep)
 
   implicit none
 
   type( field_collection_type ), intent(inout) :: twod_fields
   type( field_collection_type ), intent(inout) :: radstep_fields
-  type( field_type ),            intent(in)    :: chi(3)
   integer,                       intent(in)    :: timestep
 
-  type( quadrature_xyoz_type )          :: qr
-  type( quadrature_rule_gaussian_type ) :: quadrature_rule
+  type( field_type ), pointer :: latitude  => null()
+  type( field_type ), pointer :: longitude => null()
 
   ! Unpacked fields from collections
   type( field_type ), pointer :: cos_zenith_angle   => null()
@@ -52,6 +48,9 @@ subroutine illuminate_alg_step(twod_fields, radstep_fields, chi, timestep)
   type( field_type ), pointer :: stellar_eqn_of_time_rts => null()
 
 
+  latitude  => get_latitude()
+  longitude => get_longitude()
+
   cos_zenith_angle => twod_fields%get_field('cos_zenith_angle')
   lit_fraction     => twod_fields%get_field('lit_fraction')
 
@@ -62,8 +61,6 @@ subroutine illuminate_alg_step(twod_fields, radstep_fields, chi, timestep)
     => radstep_fields%get_field('sin_stellar_declination_rts')
   stellar_eqn_of_time_rts => radstep_fields%get_field('stellar_eqn_of_time_rts')
 
-  qr = quadrature_xyoz_type(1, quadrature_rule)
-
 
   call invoke( illuminate_kernel_type( &
                  cos_zenith_angle, lit_fraction, &
@@ -71,7 +68,7 @@ subroutine illuminate_alg_step(twod_fields, radstep_fields, chi, timestep)
                  stellar_irradiance_rts, &
                  sin_stellar_declination_rts, &
                  stellar_eqn_of_time_rts, &
-                 chi, timestep, qr) )
+                 latitude, longitude, timestep ) )
 
 end subroutine illuminate_alg_step
 

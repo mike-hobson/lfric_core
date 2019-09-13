@@ -7,12 +7,12 @@
 
 module sw_kernel_mod
 
-use argument_mod,      only : arg_type, func_type,                       &
-                              GH_FIELD, GH_INTEGER, GH_READ, GH_WRITE,   &
+use argument_mod,      only : arg_type, &
+                              GH_FIELD, GH_INTEGER, GH_READ, GH_WRITE, &
                               GH_READWRITE, GH_INC, CELLS, &
                               ANY_SPACE_1, ANY_SPACE_2, ANY_SPACE_3
 use fs_continuity_mod, only:  W3, Wtheta
-use constants_mod,     only : r_def, i_def
+use constants_mod,     only : r_def, i_def, radians_to_degrees
 use kernel_mod,        only : kernel_type
 
 implicit none
@@ -27,7 +27,7 @@ public :: sw_code
 ! Contains the metadata needed by the Psy layer.
 type, extends(kernel_type) :: sw_kernel_type
   private
-  type(arg_type) :: meta_args(35) = (/               &
+  type(arg_type) :: meta_args(37) = (/               &
     arg_type(GH_FIELD,   GH_WRITE,     Wtheta),      & ! sw_heating_rate
     arg_type(GH_FIELD,   GH_WRITE,     ANY_SPACE_1), & ! sw_down_surf
     arg_type(GH_FIELD,   GH_WRITE,     ANY_SPACE_1), & ! sw_direct_surf
@@ -62,6 +62,8 @@ type, extends(kernel_type) :: sw_kernel_type
     arg_type(GH_FIELD,   GH_READ,      ANY_SPACE_2), & ! tile_fraction
     arg_type(GH_FIELD,   GH_READ,      ANY_SPACE_3), & ! tile_sw_direct_albedo
     arg_type(GH_FIELD,   GH_READ,      ANY_SPACE_3), & ! tile_sw_diffuse_albedo
+    arg_type(GH_FIELD,   GH_READ,      ANY_SPACE_1), & ! latitude
+    arg_type(GH_FIELD,   GH_READ,      ANY_SPACE_1), & ! longitude
     arg_type(GH_INTEGER, GH_READ                  )  & ! timestep
     /)
   integer :: iterates_over = CELLS
@@ -124,6 +126,8 @@ end function sw_kernel_constructor
 ! @param[in]    tile_fraction           Surface tile fractions
 ! @param[in]    tile_sw_direct_albedo   SW direct tile albedos
 ! @param[in]    tile_sw_diffuse_albedo  SW diffuse tile albedos
+! @param[in]    latitude                Latitude field
+! @param[in]    longitude               Longitude field
 ! @param[in]    timestep                Timestep number
 ! @param[in]    ndf_wth                 No. DOFs per cell for wth space
 ! @param[in]    undf_wth                No. unique of DOFs for wth space
@@ -175,6 +179,7 @@ subroutine sw_code(nlayers,                          &
                    tile_fraction,                    &
                    tile_sw_direct_albedo,            &
                    tile_sw_diffuse_albedo,           &
+                   latitude, longitude,              &
                    timestep,                         &
                    ndf_wth, undf_wth, map_wth,       &
                    ndf_2d, undf_2d, map_2d,          &
@@ -197,7 +202,8 @@ subroutine sw_code(nlayers,                          &
     cloud_inhomogeneity_homogeneous,                          &
     cloud_inhomogeneity_scaling,                              &
     cloud_inhomogeneity_mcica,                                &
-    cloud_inhomogeneity_cairns
+    cloud_inhomogeneity_cairns,                               &
+    cloud_horizontal_rsd, cloud_vertical_decorr
   use set_thermodynamic_mod, only: set_thermodynamic
   use set_cloud_top_mod, only: set_cloud_top
   use init_jules_alg_mod, only: n_surf_tile
@@ -208,6 +214,8 @@ subroutine sw_code(nlayers,                          &
     ip_overlap_exponential_random, ip_inhom_homogeneous, ip_inhom_scaling,  &
     ip_inhom_mcica, ip_inhom_cairns
   use socrates_bones, only: bones
+  use xios, only: xios_date, xios_get_current_date, &
+    xios_date_get_day_of_year, xios_date_get_second_of_day
 
   implicit none
 
@@ -245,10 +253,13 @@ subroutine sw_code(nlayers,                          &
   real(r_def), dimension(undf_tile),  intent(in) :: tile_fraction
   real(r_def), dimension(undf_rtile), intent(in) :: &
     tile_sw_direct_albedo, tile_sw_diffuse_albedo
+  real(r_def), dimension(undf_2d), intent(in) :: latitude, longitude
 
   ! Local variables for the kernel
-  integer, parameter :: n_profile = 1
-  integer :: i_cloud_representation, i_overlap, i_inhom
+  type(xios_date) :: datetime
+  integer(i_def), parameter :: n_profile = 1
+  integer(i_def) :: i_cloud_representation, i_overlap, i_inhom
+  integer(i_def) :: rand_seed(n_profile)
   integer(i_def) :: k, n_cloud_layer
   integer(i_def) :: df_rtile, i_tile, i_band
   integer(i_def) :: wth_1, wth_nlayers
@@ -262,6 +273,10 @@ subroutine sw_code(nlayers,                          &
     ! Effective radius of droplets
     liq_dim
   real(r_def), dimension(0:nlayers) :: sw_direct, sw_down, sw_up
+  real(r_def), parameter :: dl = 100.0_r_def
+    ! Number of unique seeds per degree of latitude / longitude (for MCICA).
+    ! 100 per degree equates to approximately a 1km square area of the 
+    ! globe (for the Earth).
 
   ! Tiled surface fields
   real(r_def) :: frac_tile(n_profile, n_surf_tile)
@@ -308,6 +323,15 @@ subroutine sw_code(nlayers,                          &
       i_inhom = ip_inhom_scaling
     case (cloud_inhomogeneity_mcica)
       i_inhom = ip_inhom_mcica
+      call xios_get_current_date(datetime)
+      ! Generate a unique seed for each gridpoint (actually for each area of
+      ! the globe with a size defined by dl) at the given time in seconds.
+      rand_seed &
+        = int((latitude(map_2d(1))*radians_to_degrees + 90.0_r_def)*dl, i_def) &
+        + int(longitude(map_2d(1))*radians_to_degrees*dl, i_def)*180_i_def*dl &
+        + ((abs(int(datetime%year, i_def)-2000_i_def)*366_i_def) &
+        + int(xios_date_get_day_of_year(datetime), i_def))*86400_i_def &
+        + int(xios_date_get_second_of_day(datetime), i_def)
     case (cloud_inhomogeneity_cairns)
       i_inhom = ip_inhom_cairns
     case default
@@ -379,6 +403,9 @@ subroutine sw_code(nlayers,                          &
       liq_mmr_1d             = mcl(wth_1:wth_nlayers),                         &
       ice_mmr_1d             = mci(wth_1:wth_nlayers),                         &
       liq_dim_1d             = liq_dim,                                        &
+      cloud_horizontal_rsd   = cloud_horizontal_rsd,                           &
+      cloud_vertical_decorr  = cloud_vertical_decorr,                          &
+      rand_seed              = rand_seed,                                      &
       layer_heat_capacity_1d = layer_heat_capacity,                            &
       l_rayleigh             = l_rayleigh_sw,                                  &
       l_mixing_ratio         = .true.,                                         &

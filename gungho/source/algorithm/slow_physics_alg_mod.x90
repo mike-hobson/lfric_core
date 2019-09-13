@@ -225,7 +225,7 @@ contains
     if (radiation == radiation_socrates .and. &
         radiation_placement == radiation_placement_slow) then
       call log_event( 'slow_physics: Running Radiation', LOG_LEVEL_INFO )
-      call illuminate_alg_step(twod_fields, radstep_fields, chi, timestep)
+      call illuminate_alg_step(twod_fields, radstep_fields, timestep)
 
       ! Use a temporary treatment for multi-dimensional fields using
       ! higher-order fields

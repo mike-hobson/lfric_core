@@ -10,6 +10,7 @@
 {%- set compiler_setup = {} -%}
 {%- set appsToRun = [] -%}
 {%- set appConfigsCompilerRuns = {} -%}
+{%- set hosts_dictionary = {} %}
 {%- set rose_suite_gui_headers = [] -%}
 {%- set science_label = TARGET_SCIENCE_COMPILER + '_fast-debug' %}
 
@@ -37,6 +38,7 @@
 {%-   set MIRROR_UPLOAD_URL = MIRROR_UPLOAD_URL + '/' %}
 {%- endif %}
 
+{{set_hosts_dictionary()}}
 
 {# crunInfo is dictionary containing variables needed to dynamically    #}
 {# construct the graph for cruns:                                       #}
@@ -232,153 +234,15 @@
             DESTINATION_DIRECTORY = $OUTPUT_ROOT/{{TARGET_TECHNICAL_COMPILER}}_fast-debug
             WORKING_DIR           = {{LOCAL_BUILD_ROOT}}/{{TARGET_TECHNICAL_COMPILER}}_fast-debug
 
-{%- if 'validate_'+projectName+'_rose-meta' in scheduledTasks %}
-    [[validate_{{projectName}}_rose-meta]]
-       inherit = TECHNICAL, LOCAL
-       script  = $SOURCE_ROOT/bin/validate_rose_meta {{projectName}}
-{%- endif %}
 
-{{check_style_task( 'TECHNICAL', '$SOURCE_DIRECTORY' )}}
+{{validate_rose_meta_task(projectName, 'LOCAL')}}
+{{check_style_task('LOCAL')}}
 
-{%- if 'check_for_unused_source' in scheduledTasks %}
-    [[check_for_unused_source]]
-        inherit = None, TARGET, TECHNICAL
-        pre-script = """
-                     {{'\n                     '|
-                       command_list( LOCAL_BASE_SETUP,
-                                    LOCAL_TECHNICAL_SETUP,
-                                    LOCAL_REVEAL_SETUP,
-                                    'mkdir -p $WORKING_DIR',
-                                    'cp -rp $SOURCE_DIRECTORY/build/* $WORKING_DIR' )}}
-                     """
-        script = make -C $SOURCE_DIRECTORY/lfric_atm/source unused-check
-        post-script = {{deleteDirectory( '$WORKING_DIR' )}}
-        [[[directives]]]
-{%-   for DIRECTIVE in TARGET_TECHNICAL_BATCHER_DIRECTIVES %}
-            {{DIRECTIVE}}
-{%-   endfor %}
-{%- endif %}
+# Run locally as they need workstation tools such as Doxygen, Inkscape
+{{api_documentation_task('LOCAL')}}
+{{uml_documentation_task('LOCAL')}}
+{{design_documentation_task('LOCAL')}}
 
-    # Run locally as they need workstation tools such as Doxygen.
-{%- if 'api_documentation' in scheduledTasks %}
-    [[api_documentation]]
-        inherit = DOCUMENTATION, LOCAL, TECHNICAL
-        pre-script = """
-                     {{'\n                     '|
-                       command_list( LOCAL_BASE_SETUP,
-                                    LOCAL_TECHNICAL_SETUP,
-                                    LOCAL_REVEAL_SETUP,
-                                    'mkdir -p $DESTINATION_DIRECTORY' )}}
-                     """
-        script = make -C $SOURCE_DIRECTORY document-api
-        post-script = """
-                      # Future publisher stages need this information
-                      RELATIVE_LOG_ROOT=$(echo $CYLC_TASK_LOG_ROOT | sed "s|$HOME/||")
-                      echo $RELATIVE_LOG_ROOT > $DESTINATION_DIRECTORY/api.log.path
-                      """
-        [[[environment]]]
-          DOCUMENT_DIR = $DESTINATION_DIRECTORY/documents/api
-{%- endif %}
-
-{%- if 'publish_api_log' in scheduledTasks %}
-    [[publish_api_log]]
-        inherit = PUBLISH, TECHNICAL, LOCAL
-        pre-script = """
-                     {{ensureDestination()}}
-                     mkdir -p $DESTINATION_DIRECTORY/api
-                     cd $DESTINATION_DIRECTORY/api
-                     RELATIVE_DESTINATION_DIRECTORY=`echo $DESTINATION_DIRECTORY | sed "s|$HOME/||"`
-                     scp {{TARGET_HOST}}:$RELATIVE_DESTINATION_DIRECTORY/api.log.path .
-                     scp {{TARGET_HOST}}:$(cat api.log.path).status .
-                     scp {{TARGET_HOST}}:$(cat api.log.path).out .
-                     scp {{TARGET_HOST}}:$(cat api.log.path).err .
-                     """
-        script = rose task-run --app-key=publish_doxygen
-        [[[environment]]]
-            LOG_STATUS = $DESTINATION_DIRECTORY/api/job.status
-            LOG_ERR    = $DESTINATION_DIRECTORY/api/job.err
-{%- endif %}
-
-{%- if 'publish_api_documentation' in scheduledTasks %}
-    [[publish_api_documentation]]
-        inherit = PUBLISH, LOCAL, TECHNICAL
-        pre-script = """
-                     {{ensureDestination()}}
-                     """
-        script = rose task-run --app-key=publish --command-key=directory
-        [[[environment]]]
-            DIRECTORY   = $DESTINATION_DIRECTORY/documents/api/
-            DESTINATION = {{publish_destination}}/documentation/api
-{%- endif %}
-
-{%- if 'uml_documentation' in scheduledTasks %}
-    [[uml_documentation]]
-        inherit = DOCUMENTATION, LOCAL, TECHNICAL
-        pre-script = """
-                     {{'\n                     '|
-                       command_list( LOCAL_BASE_SETUP,
-                                    LOCAL_TECHNICAL_SETUP,
-                                    LOCAL_REVEAL_SETUP,
-                                    'mkdir -p $DESTINATION_DIRECTORY' )}}
-                     """
-        script = make -C $SOURCE_DIRECTORY document-uml
-        [[[environment]]]
-            DOCUMENT_DIR = $DESTINATION_DIRECTORY/documents/uml
-{%- endif %}
-
-{%- if 'publish_uml_documentation' in scheduledTasks %}
-    [[publish_uml_documentation]]
-        inherit = PUBLISH, LOCAL, TECHNICAL
-        pre-script = """
-                     {{ensureDestination()}}
-                     """
-        script = rose task-run --app-key=publish --command-key=directory
-        [[[environment]]]
-            DIRECTORY   = $DESTINATION_DIRECTORY/documents/uml
-            DESTINATION = {{publish_destination}}/documentation/uml
-{%- endif %}
-
-    # Run locally as they need workstation tools like Inkscape.
-    #
-    # The sleep is to help mitigate problems with
-    # overloaded Lustre filesystems.
-    #
-{%- if 'design_documentation' in scheduledTasks %}
-    [[design_documentation]]
-        inherit = DOCUMENTATION, LOCAL, TECHNICAL
-        pre-script = """
-                     {{'\n                     '|
-                       command_list( LOCAL_BASE_SETUP,
-                                     LOCAL_TECHNICAL_SETUP,
-                                     LOCAL_REVEAL_SETUP,
-                                     'sleep 30' )}}
-                     """
-
-        script = make -C $SOURCE_DIRECTORY document-latex {{verboseMake()}}
-
-        [[[environment]]]
-            DOCUMENT_DIR = $DESTINATION_DIRECTORY/documents
-
-        [[[job]]]
-            execution retry delays = 2*PT5S, 5*PT10S, 9*PT1M, 5*PT10M, 3*PT1H
-{%- endif %}
-
-{%- if 'publish_design_documentation' in scheduledTasks %}
-    [[publish_design_documentation]]
-        inherit = PUBLISH, LOCAL, TECHNICAL
-        pre-script = """
-                     {{ensureDestination()}}
-                     sleep 5
-                     """
-        script = rose task-run --app-key=publish --command-key=directory
-        [[[environment]]]
-            DIRECTORY = $DESTINATION_DIRECTORY/documents
-            DESTINATION = {{publish_destination}}/documentation/design
-            FILTERS = --exclude='*' --include='*.pdf'
-
-        [[[job]]]
-            execution retry delays = 3*PT5S
-{%- endif %}
 
 ##############################################################################
 
@@ -980,3 +844,6 @@
 {%-     endfor %} {# mesh_name #}
 {%-   endfor %} {# build #}
 {%- endfor %} {# compiler #}
+
+{{null_tasks()}}
+

@@ -17,22 +17,6 @@
 
 
 {#- #########################################################################}
-{%- macro documentation(publish=False) %}
-{%-   set label = TARGET_TECHNICAL_COMPILER | lower ~ '_fast-debug' %}
-{%-   if 'documentation' in TECHNICAL_DEVELOPER_TESTS %}
-    export_source => api_documentation
-    export_source => uml_documentation
-{%-     if publish %}
-    uml_documentation => publish_uml_documentation
-    api_documentation => publish_api_documentation
-    api_documentation => publish_api_log
-{%-     endif %}
-{%-   endif %}
-{%- endmacro %}
-
-
-
-{#- #########################################################################}
 {%- macro build_system() %}
 {%-   set label =  TARGET_TECHNICAL_COMPILER | lower + '_fast-debug' %}
     export_source => unit_test_build_tools
@@ -61,18 +45,4 @@
 {%-       endfor %}
 {%-     endif %}
 {%-   endfor %}
-{%- endmacro %}
-
-
-
-{#- #########################################################################}
-{% macro ensureDestination() -%}
-  mkdir -p $DESTINATION
-{%- endmacro %}
-
-
-
-{#- #########################################################################}
-{% macro deleteDirectory( directory ) -%}
-  test -w "{{directory}}" -o ! -e "{{directory}}" && rm -rf {{directory}} || ( echo ** Unable to delete "{{directory}}", not writable >&2; false )
 {%- endmacro %}

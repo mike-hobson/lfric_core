@@ -15,16 +15,17 @@
 
 {%- set groups = {
 'developer': [
+    'validate_rose_meta_graph("gravity_wave")',
+    'check_style_graph()',
+    'api_documentation_graph(publish=True)',
     'run_application("gravity_wave", "default", resolutions=[("C24",100.0)],
                      plotstr="slices.py ' + appDiagStemName + ' $NODAL_DATA_DIR buoyancy T000036 150 0 6 $PLOT_DIR")',
     'canned_test("gravity_wave")',
     'check_compilers("gravity_wave", "default", "fast-debug",
                      resolution=("C24",100.0), publish=True)',
     'check_compilers("gravity_wave", "default", "full-debug",
-                     resolution=("C24",100.0), publish=True)',
-    'godliness(publish=True)',
-    'cleanliness'],
+                     resolution=("C24",100.0), publish=True)'],
 'nightly': [
-    'cleanliness'] } %}
+    'null_task_graph()'] } %}
 
 #########################################################################################

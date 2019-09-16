@@ -208,7 +208,7 @@
                                          env={"crun":4, "nrun":90,
                                          "directives":{"default":{"mpi_parts":100,"threads":4,"wallclock":"02:30:00"} } },
                                          plotstr="warm3dbubble.py ' + appDiagStemName + ' $NODAL_DATA_DIR 100 100 theta T000000:T000160:T000320 $PLOT_DIR 0",
-                                         checkkgo=False)',
+                                         checkkgo=False)'
                              ],
 		'csar-hs':['run_application( "gungho", "hs",
                                           resolutions=[("C24",600.0),("C48",300.0,600.0)],
@@ -223,7 +223,7 @@
 								       "xios_nodes":1,},
                                                            }
                                              },
-                                          checkkgo=False)',  ],
+                                          checkkgo=False)' ],
 		'csar-hs-big':['run_application( "gungho", "hs",
                                           resolutions=[("C96",600.0),("C192",600.0)],
                                           env={"crun":200, "nrun": {"default":720,},
@@ -241,7 +241,7 @@
 								       "xios_nodes":1,},
                                                            }
                                              },
-                                          checkkgo=False)',  ],
+                                          checkkgo=False)' ],
                   }
 %}
 

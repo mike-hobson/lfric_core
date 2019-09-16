@@ -4,6 +4,7 @@
 %include inc/suite_macros.rc
 %include suite_control.rc
 
+{%- set hosts_dictionary = {} %}
 {%- set rose_suite_gui_headers = [] -%}
 {%- set publish_destination = '$CYLC_SUITE_SHARE_DIR/publish-mesh_tools-' + TARGET_OPT %}
 {%- set compiler_setup = {} -%}
@@ -29,6 +30,8 @@
 {%- else  %}
 {%-   set appPathFragment = '' %}
 {%- endif %}
+
+{{set_hosts_dictionary()}}
 
 [cylc]
   UTC mode = True
@@ -118,13 +121,15 @@
     [[[environment]]]
       SOURCE_DIRECTORY = $SOURCE_ROOT/{{projectName}}
 
-{%- if 'validate_'+projectName+'_rose-meta' in scheduledTasks %}
-    [[validate_{{projectName}}_rose-meta]]
-       inherit = TECHNICAL, LOCAL
-       script = $SOURCE_ROOT/bin/validate_rose_meta {{projectName}}
-{%- endif %}
+{{validate_rose_meta_task(projectName, 'LOCAL')}}
+{{check_style_task('LOCAL')}}
 
-{{check_style_task( 'TECHNICAL', '$SOURCE_DIRECTORY' )}}
+# Run locally as they need workstation tools such as Doxygen, Inkscape
+{{api_documentation_task('LOCAL')}}
+{{uml_documentation_task('LOCAL')}}
+{{design_documentation_task('LOCAL')}}
+
+
 
 {# PUBLISH #}
 ##############################################################################
@@ -403,3 +408,5 @@
 {%-     endfor %} {#- mesh in mesh_type #}
 {%-   endfor %}
 {%- endfor %}
+
+{{null_tasks()}}

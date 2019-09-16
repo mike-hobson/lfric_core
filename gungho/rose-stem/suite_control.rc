@@ -29,6 +29,10 @@
 
 {%- set groups = {
 'developer': [
+    'validate_rose_meta_graph("gungho")',
+    'check_style_graph()',
+    'api_documentation_graph(publish=True)',
+    'design_documentation_graph(publish=True)',
     'run_application("gungho", "agnesi_orog_cartesian",
                      resolutions=[("BiP40x4-100x100",3.0)] )',
     'run_application("gungho", "multigrid",
@@ -132,9 +136,8 @@
                                                   "directives":{"default":{"mpi_parts":1,"threads":1,"wallclock":"00:10:00"} } })',
     'check_compilers("gungho", "semi-implicit", "fast-debug",
                       resolution=("C12",10.0), publish=True )',
-    'canned_test("gungho")',
-    'godliness( publish=True )',
-    'cleanliness'],
+    'canned_test("gungho")'
+],
 'nightly': [
     'run_application("gungho", "agnesi_orog_cartesian_long",
                      resolutions=[("BiP180x4-800x800", 10.0)],
@@ -180,7 +183,6 @@
     'run_application( "gungho", "transport-rk-bip", resolutions=[("BiP300x4-1000x2000",50.0)],
                       env={"crun":1, "nrun":{"default":600},"directives":{"default":{"mpi_parts":6,"threads":1,"wallclock":"00:15:00"} } },
                            plotstr="cartesian_mountain_adv_plot.py $NODAL_DATA_DIR 300 4 theta:rho 1 T000100:T000200:T000300:T000400:T000500:T000600 lines $PLOT_DIR")',
-    'godliness(publish=True)',
     'publish_commit'],
 'weekly':[
             'run_application("gungho", "robert10m",

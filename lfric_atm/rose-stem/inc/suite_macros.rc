@@ -116,43 +116,6 @@
 {%- endmacro %}
 
 
-
-{#- #########################################################################}
-{%- macro cleanliness() %}
-      [[[R1]]]
-{%-   set label =  TARGET_TECHNICAL_COMPILER | lower + '_fast-debug' %}
-            export_source => compile_{{projectName}}_with_{{label}}
-            export_source => validate_{{projectName}}_rose-meta
-            {{check_style_graph()}}
-{%-   if 'cleanliness' in TECHNICAL_DEVELOPER_TESTS %}
-{#- The following line removed due to a bug brought to light by #730. #}
-{#- Ticket #762 has been created to fix this.                         #}
-{#-            compile_{{projectName}}_with_{{label}} => check_for_unused_source #}
-{%-   endif %}
-{%- endmacro %}
-
-
-
-{#- ######################################################################## #}
-{#- Documentation, it's next to cleanliness ##################################}
-{%- macro godliness(publish=False) %}
-      [[[R1]]]
-{%-   set label =  TARGET_TECHNICAL_COMPILER | lower + '_fast-debug' %}
-{%-   if 'documentation' in TECHNICAL_DEVELOPER_TESTS %}
-            export_source => api_documentation
-            export_source => uml_documentation
-            export_source => design_documentation
-{%-     if publish %}
-            api_documentation    => publish_api_documentation
-            api_documentation    => publish_api_log
-            design_documentation => publish_design_documentation
-            uml_documentation    => publish_uml_documentation
-{%-     endif %}
-{%-   endif %}
-{%- endmacro %}
-
-
-
 {#- #########################################################################}
 {%- macro publish_commit() %}
       [[[R1]]]
@@ -311,24 +274,3 @@
 {%-     endif %}
 {%-   endfor %} {# group #}
 {%- endmacro %} {# setResolutions #}
-
-
-
-{#- ######################################################################## #}
-{%- macro deleteDirectory( directory ) %}
-test -w "{{directory}}" -o ! -e "{{directory}}" && rm -rf {{directory}} || ( echo ** Unable to delete "{{directory}}", not writable >&2; false )
-{%- endmacro %}
-
-
-
-{#- ######################################################################## #}
-{%- macro verboseMake() %}
-{%- if VERBOSE_TASKS is defined %}VERBOSE=1{% endif %}
-{%- endmacro %}
-
-
-
-{#- ######################################################################## #}
-{%- macro ensureDestination() %}
-                     mkdir -p $DESTINATION
-{%- endmacro %}

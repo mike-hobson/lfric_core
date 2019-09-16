@@ -13,14 +13,15 @@
 
 {%- set groups = {
 'developer': [
+    'validate_rose_meta_graph("skeleton")',
+    'check_style_graph()',
+    'api_documentation_graph(publish=True)',
     'run_application("skeleton", "default", resolutions=[("C24",)])',
     'check_compilers("skeleton", "default", "fast-debug", resolution=("C24",))',
     'check_compilers("skeleton", "default", "full-debug", resolution=("C24",))',
-    'canned_test("skeleton")',
-    'godliness',
-    'cleanliness'],
+    'canned_test("skeleton")'],
 'nightly': [
-    'cleanliness'] } %}
+    'null_task_graph()'] } %}
 
 #########################################################################################
 

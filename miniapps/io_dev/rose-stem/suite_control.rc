@@ -13,6 +13,9 @@
 
 {%- set groups = {
 'developer': [
+    'validate_rose_meta_graph("io_dev")',
+    'check_style_graph()',
+    'api_documentation_graph(publish=True)',
     'run_application("io_dev", "default", resolutions=[("C12",1800)],
                      env={"directives":{"default":{"mpi_parts":6,
                                                    "threads":1,
@@ -22,11 +25,9 @@
     'check_compilers("io_dev", "default", "fast-debug",
                      resolution=("C12",1800))',
     'check_compilers("io_dev", "default", "full-debug",
-                     resolution=("C12",1800))',
-    'godliness',
-    'cleanliness'],
+                     resolution=("C12",1800))'],
 'nightly': [
-    'cleanliness'] } %}
+    'null_task_graph()'] } %}
 
 ##############################################################################
 

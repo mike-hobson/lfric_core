@@ -32,6 +32,8 @@
 
 {%- set groups = {
   'developer': [
+    'validate_rose_meta_graph("lfric_atm")',
+    'check_style_graph()',
     'run_application("lfric_atm", "dry_conv_bl_scm",
                      resolutions=[("BiP4x4-10000x10000",600.0)],
                      plotstr="plot_scm.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR")',
@@ -118,8 +120,7 @@
 		     )',
     'check_compilers("lfric_atm", "dry_conv_bl_scm", "fast-debug",
                      resolution=("BiP4x4-10000x10000",600.0))',
-    'canned_test("lfric_atm")',
-    'cleanliness'
+    'canned_test("lfric_atm")'
   ],
   'nightly': [
     'run_application("lfric_atm", "dry_conv_bl_scm",

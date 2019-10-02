@@ -133,7 +133,7 @@ subroutine hydrostatic_exner_code(nlayers, exner, theta, moist_dyn_gas, moist_dy
   end do
 
   ! Exner at the model surface or top
-  exner_start = analytic_pressure( (/x(1), x(2), x(3)/), test, 0.0_r_def)
+  exner_start = analytic_pressure( x, test, 0.0_r_def)
 
   if(init_exner_bt) then
 

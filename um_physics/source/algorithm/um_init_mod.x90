@@ -33,10 +33,10 @@ module um_init_mod
                                     method_blending,        &
                                     mix_factor_in => mix_factor
   use spectral_gwd_config_mod, only:                    &
-          	ussp_launch_factor_in => ussp_launch_factor,&
-           	wavelstar_in => wavelstar,                  &
-           	add_cgw_in => add_cgw,                      &
-           	cgw_scale_factor_in => cgw_scale_factor
+                ussp_launch_factor_in => ussp_launch_factor,&
+                wavelstar_in => wavelstar,                  &
+                add_cgw_in => add_cgw,                      &
+                cgw_scale_factor_in => cgw_scale_factor
 
   implicit none
 
@@ -121,8 +121,9 @@ contains
         sigl, tleaf_of, tlow, tupp, vint, vsl
     use jules_vegetation_mod, only: can_rad_mod, ilayers, l_vegcan_soilfx
     use g_wave_input_mod, only: ussp_launch_factor,                        &
-    	                          wavelstar, l_add_cgw, cgw_scale_factor
-
+                                  wavelstar, l_add_cgw, cgw_scale_factor
+    use dust_parameters_mod, only: i_dust, i_dust_off,                     &
+                                   dust_parameters_load
     use level_heights_mod, only: r_theta_levels, r_rho_levels, eta_theta_levels
     use lsm_switch_mod, only: init_lsm_um
     use model_domain_mod, only: model_type, mt_single_column
@@ -186,6 +187,9 @@ contains
                                  0_i_um, row_length, rows,rows,  &
                                  nlayers, bl_levels, nlayers )
 
+    i_dust = i_dust_off
+    call dust_parameters_load()
+
     ! Arrays that need to be allocated at startup
     allocate(f3_at_u(row_length,rows))
     allocate(r_theta_levels(row_length,rows,0:nlayers))
@@ -207,7 +211,6 @@ contains
     soil  = 8
     ice   = 9
     call init_lsm_um()
-    call allocate_jules_arrays(land_field,ntiles,sm_levels,nice_use,nice_use)
 
     ! Set up JULES soil values (GL7 config)
     dzsoil_io(1) = 0.1_r_um
@@ -234,8 +237,13 @@ contains
     l_spec_sea_alb=.true.
 
     ! JULES snow options (GL7 config) Temp: only cansnowpft
+    ! The order of the following three lines is important. The current
+    ! code is not robust to a change in call order, to fix it requires
+    ! changes to JULES(and or UM) and LFRic code.
     cansnowpft(1:5)=(/ .false.,.true.,.false.,.false.,.false. /)
     call check_jules_snow()
+    call allocate_jules_arrays(land_field,ntiles,sm_levels,nice_use,nice_use)
+
 
     ! Set up JULES hydrology values (will be GL7 with hydrology kernel present)
     l_hydrology    = .false.
@@ -253,7 +261,7 @@ contains
     vf_nvg=(/ 1.0,1.0,0.0,0.0 /)
     z0_nvg=(/ 1.00,1.00e-4,1.00e-3,5.00e-4 /)
 
-    ! Set up JULES pftparm values (GL7 config: jules_pftparm) 
+    ! Set up JULES pftparm values (GL7 config: jules_pftparm)
     a_wl=(/ 0.65,0.65,0.005,0.005,0.10 /)
     a_ws=(/ 10.00,10.00,1.00,1.00,10.00 /)
     albsnc_max=(/ 2.50000e-1,2.50000e-1,6.00000e-1,6.00000e-1,4.00000e-1 /)
@@ -386,7 +394,7 @@ contains
 
       ! Convection scheme
       select case (cv_scheme)
-        case(cv_scheme_gregory_rowntree) 
+        case(cv_scheme_gregory_rowntree)
           i_convection_vn = i_convection_vn_6a
           ! set for testing GA7 like 6A convection
           adapt   = 7
@@ -399,7 +407,7 @@ contains
           cca2d_dp_opt = 1
           cca2d_md_opt = 1
           cca2d_sh_opt = 2
-          cca_dp_knob = 0.10_r_um 
+          cca_dp_knob = 0.10_r_um
           cca_md_knob = 0.10_r_um
           cca_sh_knob = 0.20_r_um
           ccw_dp_knob = 1.00_r_um
@@ -454,18 +462,18 @@ contains
           call cv_set_dependent_switches( )
           ! Flags set to calculate all diagnostics i.e. as a SCM
           call set_convection_output_flags( )
-        case(cv_scheme_lambert_lewis) 
+        case(cv_scheme_lambert_lewis)
           i_convection_vn = i_cv_llcs
           non_local_bl    = off            ! Only valid for this option
         case default
           write( log_scratch_space, '(A,I5)' )  &
-          'Invalid convection scheme option, stopping', cv_scheme 
+          'Invalid convection scheme option, stopping', cv_scheme
           call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end select
     else
       ! No call to convection but using 6A convective diagnosis scheme
       i_convection_vn = i_convection_vn_6a
-    end if 
+    end if
 
     ! Cloud namelist options - should be moved to namelist in future
     if ( cloud == cloud_um ) then
@@ -575,17 +583,17 @@ contains
       allocate ( delta_smag(row_length, rows) )
 
       select case ( mixing_method )
-        case( method_3d_smag ) 
-          l_subfilter_horiz = .true. 
-          l_subfilter_vert  = .true. 
+        case( method_3d_smag )
+          l_subfilter_horiz = .true.
+          l_subfilter_vert  = .true.
           blending_option   = off
-        case( method_2d_smag ) 
-          l_subfilter_horiz = .true. 
-          l_subfilter_vert  = .false. 
+        case( method_2d_smag )
+          l_subfilter_horiz = .true.
+          l_subfilter_vert  = .false.
           blending_option   = off
-        case( method_blending ) 
-          l_subfilter_horiz = .true. 
-          l_subfilter_vert  = .true. 
+        case( method_blending )
+          l_subfilter_horiz = .true.
+          l_subfilter_vert  = .true.
           blending_option   = grey_zone_cu
       end select
 
@@ -602,8 +610,8 @@ contains
       allocate ( delta_smag(1,1) )
 
       blending_option   = off
-      l_subfilter_horiz = .false. 
-      l_subfilter_vert  = .false. 
+      l_subfilter_horiz = .false.
+      l_subfilter_vert  = .false.
 
     end if
 

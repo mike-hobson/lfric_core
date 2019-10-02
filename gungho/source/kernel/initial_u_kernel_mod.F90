@@ -17,7 +17,7 @@ module initial_u_kernel_mod
                                       GH_BASIS, GH_DIFF_BASIS,   &
                                       CELLS, GH_QUADRATURE_XYoZ, &
                                       GH_REAL
-  use constants_mod,           only : r_def, PI
+  use constants_mod,           only : r_def, i_def, PI
   use fs_continuity_mod,       only : W2
   use initial_wind_config_mod, only : profile_sin_uv,                        &
                                       profile, sbr_angle_lat, sbr_angle_lon, &
@@ -126,6 +126,10 @@ subroutine initial_u_code(nlayers, &
   real(kind=r_def), dimension(nqp_h), intent(in)      ::  wqp_h
   real(kind=r_def), dimension(nqp_v), intent(in)      ::  wqp_v
 
+
+  integer(i_def), parameter :: n_options = 3
+  real(r_def)               :: opt_args(n_options)
+
   !Internal variables
   integer               :: df, k, qp1, qp2
   real(kind=r_def), dimension(nqp_h,nqp_v)     :: dj
@@ -135,8 +139,18 @@ subroutine initial_u_code(nlayers, &
   real(kind=r_def)                             :: integrand
   real(kind=r_def), dimension(3)               :: optionset3
 
-  ! Options for Spherical domains
-  optionset3 = (/ u0, sbr_angle_lat, sbr_angle_lon /)
+
+  if ( geometry == geometry_spherical ) then
+    ! Options for spherical domains
+    opt_args = [ u0, sbr_angle_lat, sbr_angle_lon ]
+  else
+    ! Options for Cartesian domains
+    if ( profile == profile_sin_uv ) then
+      opt_args = [ u0, v0, wavelength ]
+    else
+      opt_args = [ u0, v0, shear ]
+    end if
+  end if
 
   do k = 0, nlayers-1
     do df = 1, ndf_chi
@@ -153,6 +167,7 @@ subroutine initial_u_code(nlayers, &
                              chi_diff_basis, &
                              jacobian, &
                              dj)
+
     do qp2 = 1, nqp_v
       do qp1 = 1, nqp_h
         ! Compute analytical vector wind in physical space
@@ -162,17 +177,15 @@ subroutine initial_u_code(nlayers, &
           xyz(2) = xyz(2) + chi_2_cell(df)*chi_basis(1,df,qp1,qp2)
           xyz(3) = xyz(3) + chi_3_cell(df)*chi_basis(1,df,qp1,qp2)
         end do
+
         if ( geometry == geometry_spherical ) then
           call xyz2llr(xyz(1), xyz(2), xyz(3), llr(1), llr(2), llr(3))
-          u_spherical = analytic_wind(llr, time, profile, 3, optionset3)
-          u_physical = sphere2cart_vector(u_spherical,llr)
+          u_spherical = analytic_wind(llr, time, profile, n_options, opt_args)
+          u_physical  = sphere2cart_vector(u_spherical,llr)
         else
-          if ( profile == profile_sin_uv ) then
-            u_physical = analytic_wind(xyz, time, profile, 3, (/ u0, v0, wavelength /))
-          else
-            u_physical = analytic_wind(xyz, time, profile, 3, (/ u0, v0, shear /))
-          end if
+          u_physical = analytic_wind(xyz, time, profile, n_options, opt_args)
         end if
+
         do df = 1, ndf
           integrand = dot_product(matmul(jacobian(:,:,qp1,qp2),&
                                          basis(:,df,qp1,qp2)),u_physical)

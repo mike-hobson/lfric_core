@@ -186,10 +186,17 @@ contains
     allocate(rhs_adv(bundle_size))
     allocate(rhs_phys(bundle_size))
     allocate(inc(bundle_size))
-    ! The following allocations are needed even if use_moisture=.false.
+
+    ! These need to be allocated for the call to 'slow_physics',
+    ! even if moisture is not used. The intention is that in future
+    ! there will be no use_moisture logical and moisture fields
+    ! will be set to zero for dry runs.
     allocate(mr_n(nummr)) 
-    allocate(mr_after_slow(nummr)) 
-    allocate(mr_inc(nummr))
+    allocate(mr_after_slow(nummr))
+
+    if (use_moisture)then
+      allocate(mr_inc(nummr))
+    end if
 
     !--------------------------------------------------------------------
     ! Initialise internal state field objects
@@ -858,15 +865,18 @@ contains
  
     call final_si_operators()
 
-    if (allocated(state))           deallocate(state)
-    if (allocated(state_n))         deallocate(state_n)
-    if (allocated(state_after_slow))         deallocate(state_after_slow)
-    if (allocated(reference_state)) deallocate(reference_state)
-    if (allocated(rhs_n))           deallocate(rhs_n)
-    if (allocated(rhs_np1))         deallocate(rhs_np1)
-    if (allocated(rhs_adv))         deallocate(rhs_adv)
-    if (allocated(rhs_phys))        deallocate(rhs_phys)
-    if (allocated(inc))             deallocate(inc)
+    if (allocated(state))            deallocate(state)
+    if (allocated(state_n))          deallocate(state_n)
+    if (allocated(state_after_slow)) deallocate(state_after_slow)
+    if (allocated(reference_state))  deallocate(reference_state)
+    if (allocated(rhs_n))            deallocate(rhs_n)
+    if (allocated(rhs_np1))          deallocate(rhs_np1)
+    if (allocated(rhs_adv))          deallocate(rhs_adv)
+    if (allocated(rhs_phys))         deallocate(rhs_phys)
+    if (allocated(inc))              deallocate(inc)
+    if (allocated(mr_n))             deallocate(mr_n)
+    if (allocated(mr_after_slow))    deallocate(mr_after_slow)
+    if (allocated(mr_inc))           deallocate(mr_inc)
 
     call u_adv%field_final()
     call dtheta%field_final()

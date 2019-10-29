@@ -31,8 +31,7 @@ module init_gungho_prognostics_alg_mod
   use time_config_mod,                 only: timestep_start
 
   ! PsyKAl-lite kernels
-  use psykal_lite_mod,                 only: invoke_initial_rho_sample_kernel,  &
-                                             invoke_initial_exner_sample_kernel,&
+  use psykal_lite_mod,                 only: invoke_initial_exner_sample_kernel,&
                                              invoke_hydrostatic_exner_kernel
   use field_bundle_mod,                only: set_bundle_scalar
 
@@ -49,6 +48,7 @@ module init_gungho_prognostics_alg_mod
   use initial_mr_kernel_mod,           only: initial_mr_kernel_type
   use initial_streamfunc_kernel_mod,   only: initial_streamfunc_kernel_type
   use strong_curl_kernel_mod,          only: strong_curl_kernel_type
+  use initial_rho_sample_kernel_mod,   only: initial_rho_sample_kernel_type
 
   ! Derived Types
   use field_mod,                       only: field_type
@@ -174,7 +174,7 @@ contains
                                                moist_dyn(gas_law) ) )
     else
       if(sample_init_rho) then
-        call invoke_initial_rho_sample_kernel  ( rho,   chi, initial_time )
+        call invoke( initial_rho_sample_kernel_type( rho, chi, initial_time ) )
         call invoke_initial_exner_sample_kernel( exner, chi, initial_time )
       else
         call invoke( set_rho_kernel_type   ( rho,   chi, initial_time, qr ), &

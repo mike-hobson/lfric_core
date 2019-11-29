@@ -51,6 +51,7 @@ contains
   procedure :: get_whole_dofmap
   procedure :: get_size
   procedure :: get_local_size
+  procedure :: get_stencil_sizes
 
   !> Forced clear of this object from memory.
   !> This routine should not need to be called manually except
@@ -423,6 +424,32 @@ function get_local_size(self, cell) result(stencil_size)
   end if
   return
 end function get_local_size
+
+!-----------------------------------------------------------------------------
+! Get the local stencil sizes
+!-----------------------------------------------------------------------------
+!> Returns a pointer to the stencil local_size array
+!! @param[in] self The calling space function
+!! @return Pointer to the array of local stencil sizes
+! TODO - Ticket #2019 Design discussion on how stencil sizes are passed to
+!        kernels.
+function get_stencil_sizes(self) result(stencil_sizes)
+  use log_mod,                only: log_event, &
+                                    log_scratch_space, &
+                                    LOG_LEVEL_ERROR
+  implicit none
+  class(stencil_dofmap_type), target, intent(in) :: self
+  integer(i_def), pointer                        :: stencil_sizes(:)
+
+  if (self%dofmap_shape == STENCIL_REGION) then
+    stencil_sizes => self%local_size(:)
+  else
+    write( log_scratch_space, '( A, I4 )' ) &
+    "Stencil sizes array not available for stencil ", self%dofmap_shape
+    call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+  end if
+  return
+end function get_stencil_sizes
 
 !> Returns required stencil size in cells for a given stencil shape and extent
 !! @param[in] self The calling function_space

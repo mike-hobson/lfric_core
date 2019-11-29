@@ -148,13 +148,14 @@ subroutine invoke_poly2d_flux( flux, wind, density, coeff, order, stencil_size, 
 
   integer(i_def), pointer :: map_w2(:,:)        => null()
   integer(i_def), pointer :: stencil_map(:,:,:) => null()
+  integer(i_def), pointer :: cells_in_stencil(:) => null()
 
   integer(i_def) :: undf_w3, ndf_w3
   integer(i_def) :: undf_w2, ndf_w2
   integer(i_def) :: df_w2, qp, df
   integer(i_def) :: cell
   integer(i_def) :: nlayers
-  integer(i_def) :: stencil_extent, cells_in_stencil
+  integer(i_def) :: stencil_extent
   integer(i_def) :: direction, polynomial, idx
   integer(i_def) :: dim_w2
   type(mesh_type), pointer :: mesh => null()
@@ -230,9 +231,9 @@ subroutine invoke_poly2d_flux( flux, wind, density, coeff, order, stencil_size, 
   mesh => flux%get_mesh()
   reference_element => mesh%get_reference_element()
   call reference_element%get_normals_to_out_faces( out_face_normal )
+  cells_in_stencil => stencil%get_stencil_sizes()
 
   do cell = 1,mesh%get_last_halo_cell(1)
-      cells_in_stencil = stencil%get_local_size(cell)
       call poly2d_flux_code( nlayers,                     &
                              flux_proxy%data,             &
                              wind_proxy%data,             &
@@ -247,7 +248,7 @@ subroutine invoke_poly2d_flux( flux, wind, density, coeff, order, stencil_size, 
                              stencil_size,                &
                              stencil_map(:,:,cell),       &
                              nfaces_h,                    &
-                             cells_in_stencil,            &
+                             cells_in_stencil(cell),      &
                              out_face_normal              &
                              )
 
@@ -291,6 +292,7 @@ subroutine invoke_poly2d_flux_coeffs( coeff, mdw3, chi, qr, qrf, order, stencil_
 
   integer(i_def), pointer :: w3_stencil_map(:,:,:) => null()
   integer(i_def), pointer :: wx_stencil_map(:,:,:) => null()
+  integer(i_def), pointer :: cells_in_stencil(:) => null()
 
   integer(i_def) :: undf_w3, ndf_w3
   integer(i_def) :: undf_wx, ndf_wx
@@ -300,7 +302,7 @@ subroutine invoke_poly2d_flux_coeffs( coeff, mdw3, chi, qr, qrf, order, stencil_
   integer(i_def) :: w3_stencil_size, wx_stencil_size
   integer(i_def) :: polynomial, direction, idx
   integer(i_def) :: dim_wx
-  integer(i_def) :: stencil_extent, cells_in_stencil
+  integer(i_def) :: stencil_extent
   integer(i_def) :: nqp_h, nqp_v, nqp_f, nfaces
 
   type(mesh_type), pointer :: mesh => null()
@@ -373,8 +375,9 @@ subroutine invoke_poly2d_flux_coeffs( coeff, mdw3, chi, qr, qrf, order, stencil_
 
 
   mesh => coeff(1,1)%get_mesh()
+  cells_in_stencil => w3_stencil%get_stencil_sizes()
+
   do cell = 1,mesh%get_last_halo_cell(1)
-      cells_in_stencil = w3_stencil%get_local_size(cell)
       call poly2d_flux_coeffs_code( nlayers,                     &
                                     flux_coeff_h,                &
                                     mdw3_proxy%data,             &
@@ -393,7 +396,7 @@ subroutine invoke_poly2d_flux_coeffs( coeff, mdw3, chi, qr, qrf, order, stencil_
                                     face_basis_wx,               &
                                     order,                       &
                                     nfaces_h,                    &
-                                    cells_in_stencil,            &
+                                    cells_in_stencil(cell),      &
                                     nqp_h, nqp_v, wqp_h, wqp_v,  &
                                     nfaces, nqp_f, wqp_f         &
                                   )
@@ -1262,13 +1265,14 @@ subroutine invoke_poly2d_adv_recon( reconstruction, wind, tracer, coeff, order, 
   integer(i_def), pointer :: map_w1(:,:)        => null()
   integer(i_def), pointer :: map_w2(:,:)        => null()
   integer(i_def), pointer :: stencil_map(:,:,:) => null()
+  integer(i_def), pointer :: cells_in_stencil(:) => null()
 
   integer(i_def) :: undf_wt, ndf_wt
   integer(i_def) :: undf_w2, ndf_w2
   integer(i_def) :: undf_w1, ndf_w1
   integer(i_def) :: df_w2, qp, df
   integer(i_def) :: cell
-  integer(i_def) :: nlayers, stencil_extent, cells_in_stencil
+  integer(i_def) :: nlayers, stencil_extent
   integer(i_def) :: direction, polynomial, idx
   integer(i_def) :: dim_w2
   type(mesh_type), pointer :: mesh => null()
@@ -1348,9 +1352,9 @@ subroutine invoke_poly2d_adv_recon( reconstruction, wind, tracer, coeff, order, 
   mesh => reconstruction%get_mesh()
   reference_element => mesh%get_reference_element()
   call reference_element%get_normals_to_out_faces( out_face_normal )
+  cells_in_stencil => stencil%get_stencil_sizes()
 
   do cell = 1,mesh%get_last_halo_cell(1)
-      cells_in_stencil = stencil%get_local_size(cell)
       call poly2d_adv_recon_code( nlayers,                     &
                                   recon_proxy%data,            &
                                   wind_proxy%data,             &
@@ -1367,7 +1371,7 @@ subroutine invoke_poly2d_adv_recon( reconstruction, wind, tracer, coeff, order, 
                                   undf_wt,                     &
                                   stencil_size,                &
                                   stencil_map(:,:,cell),       &
-                                  cells_in_stencil,            &
+                                  cells_in_stencil(cell),      &
                                   nfaces_h,                    &
                                   out_face_normal              &
                                   )
@@ -1413,6 +1417,7 @@ subroutine invoke_poly2d_advective_coeffs( coeff, mdwt, chi, qr, qre, order, ste
 
   integer(i_def), pointer :: wt_stencil_map(:,:,:) => null()
   integer(i_def), pointer :: wx_stencil_map(:,:,:) => null()
+  integer(i_def), pointer :: cells_in_stencil(:) => null()
 
   integer(i_def) :: undf_wt, ndf_wt
   integer(i_def) :: undf_wx, ndf_wx
@@ -1422,7 +1427,7 @@ subroutine invoke_poly2d_advective_coeffs( coeff, mdwt, chi, qr, qre, order, ste
   integer(i_def) :: wt_stencil_size, wx_stencil_size
   integer(i_def) :: polynomial, direction, idx
   integer(i_def) :: dim_wx
-  integer(i_def) :: stencil_extent, cells_in_stencil
+  integer(i_def) :: stencil_extent
   integer(i_def) :: nqp_h, nqp_v, nqp_e, nedge
 
   type(mesh_type), pointer :: mesh => null()
@@ -1491,10 +1496,10 @@ subroutine invoke_poly2d_advective_coeffs( coeff, mdwt, chi, qr, qre, order, ste
   end do
   if ( mdwt_proxy%is_dirty(depth=stencil_extent+1) )  &
     call mdwt_proxy%halo_exchange(depth=stencil_extent+1)
+  cells_in_stencil => wx_stencil%get_stencil_sizes()
 
   mesh => coeff(1,1)%get_mesh()
   do cell = 1,mesh%get_last_halo_cell(1)
-      cells_in_stencil = wt_stencil%get_local_size(cell)
       call poly2d_advective_coeffs_code( nlayers,                     &
                                          adv_coeff_h,                 &
                                          mdwt_proxy%data,             &
@@ -1513,7 +1518,7 @@ subroutine invoke_poly2d_advective_coeffs( coeff, mdwt, chi, qr, qre, order, ste
                                          edge_basis_wx,               &
                                          order,                       &
                                          nfaces_h,                    &
-                                         cells_in_stencil,            &
+                                         cells_in_stencil(cell),      &
                                          nqp_h, nqp_v, wqp_h, wqp_v,  &
                                          nedge, nqp_e, wqp_e          &
                                        )

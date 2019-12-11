@@ -43,7 +43,7 @@
             graph = """
             run_{{appName_res_label}}_{{label}}[-P1] => run_{{appName_res_label}}_{{label}}
                  """
-         [[[R1/P{{crun}}/{{crun}}]]]
+         [[[R1/P1/{{crun}}]]]
             graph = """
 {%-           if checkkgo %}
 {%-             if TARGET_SCIENCE_COMPILER in TARGET_PERFORM_KGO_TESTS  %}

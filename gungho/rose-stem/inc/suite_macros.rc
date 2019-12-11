@@ -55,26 +55,26 @@
 
             compile_{{projectName}}_with_{{label}} => run_{{appName_res_label}}_{{label}}
 
-{%-         if checkkgo and TARGET_SCIENCE_COMPILER in TARGET_PERFORM_KGO_TESTS  %}
-            run_{{appName_res_label}}_{{label}}[{{crun}}] => check_{{appName_res_label}}_{{label}}
-{%-         endif %}
-{%-         if plotstr %}
-{%-             do plot_config.update( {appLabel : plotstr} ) %}
-            run_{{appName_res_label}}_{{label}}[{{crun}}] => plot_{{appName_res_label}}_{{label}}
-            plot_{{appName_res_label}}_{{label}}:finish => publish_node
-{%-             if publish %}
-            plot_{{appName_res_label}}_{{label}} => publish_{{appName_res_label}}_{{label}}_plots
-            publish_{{appName_res_label}}_{{label}}_plots:finish => publish_node
-{%-             endif %}
-{%-         endif %}
                     """
          [[[R{{crun}}/P1/{{crun}}]]] {#- Repeat cycle times, once per cycle ending on last cycle #}
             graph = """
             run_{{appName_res_label}}_{{label}}[-P1] => run_{{appName_res_label}}_{{label}}
                     """
 
-         [[[R1/P{{crun}}/{{crun}}]]] {#- Repeat once at last cycle #}
+         [[[R1/P1/{{crun}}]]] {#- Repeat once at last cycle #}
            graph = """
+{%-         if checkkgo and TARGET_SCIENCE_COMPILER in TARGET_PERFORM_KGO_TESTS  %}
+            run_{{appName_res_label}}_{{label}} => check_{{appName_res_label}}_{{label}}
+{%-         endif %}
+{%-         if plotstr %}
+{%-             do plot_config.update( {appLabel : plotstr} ) %}
+            run_{{appName_res_label}}_{{label}} => plot_{{appName_res_label}}_{{label}}
+            plot_{{appName_res_label}}_{{label}}:finish => publish_node
+{%-             if publish %}
+            plot_{{appName_res_label}}_{{label}} => publish_{{appName_res_label}}_{{label}}_plots
+            publish_{{appName_res_label}}_{{label}}_plots:finish => publish_node
+{%-             endif %}
+{%-         endif %}
                    """
 {%-       endfor %} {# i #}
 {%-     endfor %} {# resolution #}
@@ -101,9 +101,9 @@
   # Repeat once in the final cycle
   graph = """
           publish_node => publish_index
-            publish_index      => mirror_results_local
+          publish_index      => mirror_results_local
 {%-   if MIRROR_UPLOAD_URL %}
-            publish_index      => mirror_results_remote
+          publish_index      => mirror_results_remote
 {%-   endif %}
           """
 

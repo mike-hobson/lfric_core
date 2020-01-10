@@ -19,9 +19,14 @@ module pc2_initiation_alg_mod
 
 contains
   !>@brief Run pc2_initiation
-  !>@details PC2 initiation creates cloud from clear sky
-  !>         or breaks up an overcast scene if certain conditions are met.
-  !>         1) Fields do not get updated. Increments are passed back out.
+  !>@details This algorithm calls the PC2 initiation kernel which assesses the
+  !>         current model state fields. If certain conditions are met, the
+  !>         kernel will create cloud from clear sky or break up an overcast
+  !>         scene.
+  !>   
+  !>         Moisture and Cloud fields are updated accordingly and
+  !>         PC2 increments to potential temperature returned.
+  !>
   !>         See UMDP30 for full scheme details.
   !>@param[inout]  mr               Current Mixing ratios
   !>@param[in]     theta            Current Potential temperature (theta) in wth space

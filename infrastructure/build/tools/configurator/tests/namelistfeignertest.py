@@ -8,7 +8,7 @@
 
 from __future__ import absolute_import
 import unittest
-import StringIO
+import io
 
 import configurator.namelistdescription as namelist
 import configurator.namelistfeigner as feigner
@@ -48,7 +48,7 @@ contains
 end module empty_mod
         '''.strip()
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
         uut = feigner.NamelistFeigner('empty_mod')
         uut.write_module(output_file)
 
@@ -138,7 +138,7 @@ end module simple_mod
         simple.add_usage('qux', 'constants_mod')
         simple.add_value('fred', 'logical')
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
         uut = feigner.NamelistFeigner('simple_mod')
         uut.add_namelist([simple])
         uut.write_module(output_file)
@@ -218,7 +218,7 @@ end module enumeration_mod
         enumable = namelist.NamelistDescription('enum')
         enumable.add_enumeration('thing', enumerators=['one', 'two'])
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
         uut = feigner.NamelistFeigner('enumeration_mod')
         uut.add_namelist([enumable])
         uut.write_module(output_file)
@@ -302,7 +302,7 @@ end module computed_mod
         simple.add_computed('biscuits', 'integer', 'default',
                             calculation=['teapot + cheese'])
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
         uut = feigner.NamelistFeigner('computed_mod')
         uut.add_namelist([simple])
         uut.write_module(output_file)
@@ -435,7 +435,7 @@ end module everything_mod
         everything.add_string('knife', configure_string_length='filename',
                               bounds=['tail'])
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
         uut = feigner.NamelistFeigner('everything_mod')
         uut.add_namelist([everything])
         uut.write_module(output_file)
@@ -575,7 +575,7 @@ end module multifile_mod
         secondfile.add_enumeration('yarn', enumerators=['fuzzy', 'colourful'])
         secondfile.add_value('tail', 'integer', 'native')
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
         uut = feigner.NamelistFeigner('multifile_mod')
         uut.add_namelist([firstfile, secondfile])
         uut.write_module(output_file)

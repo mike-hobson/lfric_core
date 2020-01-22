@@ -4,16 +4,16 @@
 ! received as part of this distribution.
 !-----------------------------------------------------------------------------
 
-!>@brief Diagonal preconditioner for the gravity-wave system
+!> @brief Diagonal preconditioner for the gravity-wave system
 !>
-!>@details This type is derived from the abstract preconditioner type and
+!> @details This type is derived from the abstract preconditioner type and
 !> implements a preconditioner for the mixed gravity-wave system in the
 !> variables \f$(\mathbf{U},P,B)\f$.
 !>
 !> This preconditioner simply divides each of the fields by the corresponding
 !> diagonal mass matrix.
 
-module gw_mixed_diag_preconditioner_alg_mod
+module gw_mixed_diag_precon_alg_mod
 
   use vector_mod,                     only: abstract_vector_type
   use preconditioner_mod,             only: abstract_preconditioner_type
@@ -31,25 +31,26 @@ module gw_mixed_diag_preconditioner_alg_mod
 
   private
 
-  !>@brief Mixed diagonal preconditioner type
+  !> @brief Mixed diagonal preconditioner type
   !>
-  !>@details Implements mixed diagonal preconditioner which can be used in the
-  !> iterative solver algorithms,
+  !> @details Implements mixed diagonal preconditioner which can be used in the
+  !> iterative solver algorithms.
   type, public, extends(abstract_preconditioner_type) :: &
                         gw_mixed_diag_preconditioner_type
 
      private
+
      !> Diagonal mass matrices
      type(field_type) :: mm_diagonal_p, mm_diagonal_u, mm_diagonal_b
+
      contains
+
      ! Overide the (abstract interface) for application of
      ! a preconditioner \f$y = P.x\f$
      procedure, public :: apply => apply_gw_mixed_diag_preconditioner
      procedure, private :: apply_gw_mixed_diag_preconditioner
 
-     !> performs a deep copy (for overriding the "=" operator)
-     !> @param[out] dest   gw_mixed_diag_preconditioner_type lhs
-     !> @param[in]  source gw_mixed_diag_preconditioner_type rhs
+     !> Performs a deep copy (for overriding the "=" operator)
      procedure, public  :: gw_mixed_diag_preconditioner_assign
 
      !> Destructor
@@ -57,6 +58,7 @@ module gw_mixed_diag_preconditioner_alg_mod
 
      !> Override default assignment for gw_mixed_diag_preconditioner_type pairs.
      generic            :: assignment(=) => gw_mixed_diag_preconditioner_assign
+
   end type gw_mixed_diag_preconditioner_type
 
   ! Overload the default structure constructor
@@ -65,12 +67,13 @@ module gw_mixed_diag_preconditioner_alg_mod
   end interface
 
 contains
+
   !> @brief Construct a <code> gw_mixed_diag_preconditioner_type</code> object
   !>
   !> @details This constructs all required fields and builds operators.
   !>
-  !> @param [in] state Current state (passed as a field-vector)
-  !> @return self the constructed preconditioner object
+  !> @param[in] state Current state (passed as a field-vector)
+  !> @return self The constructed preconditioner object
   function gw_mixed_diag_preconditioner_constructor(state) result(self)
 
     use gravity_wave_constants_config_mod, only: b_space,    &
@@ -103,14 +106,15 @@ contains
 
   end function gw_mixed_diag_preconditioner_constructor
 
-  !> Performs a deep copy between gw_mixed_diag_preconditioner_type pairs.
-  !> (for overriding the "=" operator)
+  !> @brief Performs a deep copy between gw_mixed_diag_preconditioner_type pairs
+  !> (for overriding the "=" operator).
   !>
-  !> @param[out] dest   gw_mixed_diag_preconditioner_type lhs
   !> @param[in]  source gw_mixed_diag_preconditioner_type rhs
+  !> @param[out] dest   gw_mixed_diag_preconditioner_type lhs
   subroutine gw_mixed_diag_preconditioner_assign(dest, source)
 
     implicit none
+
     class(gw_mixed_diag_preconditioner_type), intent(in)  :: source
     class(gw_mixed_diag_preconditioner_type), intent(out) :: dest
 
@@ -121,27 +125,28 @@ contains
 
   end subroutine gw_mixed_diag_preconditioner_assign
 
-  !>@brief Apply the preconditioner to calculate \f$y = P.x\f$ for the
+  !> @brief Apply the preconditioner to calculate \f$y = P.x\f$ for the
   !> mixed system in velocity, pressure and buoyancy
   !>
-  !>@details Apply the preconditioner by dividing each of the fields in the
+  !> @details Apply the preconditioner by dividing each of the fields in the
   !> fieldvector by its associated mass matrix
   !>
-  !>@param[inout] self instance of type gw_mixed_preconditioner_type
-  !>@param[inout] x field-vector containing the residuals
-  !>              \f$(\textbf{R}_u,R_p,r_b)\f$
-  !>@param[inout] y field-vector containing the solution
-  !>              \f$(\textbf{U},P,B)\f$ to be calculated
+  !> @param[in,out] self Instance of type gw_mixed_preconditioner_type
+  !> @param[in]     x    Field-vector containing the residuals
+  !>                     \f$(\textbf{R}_u,R_p,r_b)\f$
+  !> @param[in,out] y    Field-vector containing the solution
+  !>                     \f$(\textbf{U},P,B)\f$ to be calculated
   subroutine apply_gw_mixed_diag_preconditioner(self, x, y)
 
     use field_indices_mod,          only: igw_u, igw_p, igw_b
 
     implicit none
+
     class(gw_mixed_diag_preconditioner_type), intent(inout) :: self
     class(abstract_vector_type),              intent(in)    :: x
     class(abstract_vector_type),              intent(inout) :: y
 
-    if ( subroutine_timers ) call timer('gw_mixed_diag_preconditioner_alg')
+    if ( subroutine_timers ) call timer('gw_mixed_diag_precon_alg')
     select type(x)
     type is(field_vector_type)
        select type(y)
@@ -167,17 +172,18 @@ contains
        call log_event(log_scratch_space, LOG_LEVEL_ERROR)
     end select
 
-    if ( subroutine_timers ) call timer('gw_pressure_solver_alg')
+    if ( subroutine_timers ) call timer('gw_mixed_diag_precon_alg')
 
   end subroutine apply_gw_mixed_diag_preconditioner
 
-  !>@brief Destructor
-  !>@param[inout] self Instance of type to be destroyed
+  !> @brief Destructor
+  !> @param[in,out] self Instance of type to be destroyed
   subroutine destroy_gw_mixed_diag_preconditioner(self)
+
     implicit none
+
     type(gw_mixed_diag_preconditioner_type), intent(inout) :: self
 
   end subroutine destroy_gw_mixed_diag_preconditioner
 
-end module gw_mixed_diag_preconditioner_alg_mod
-
+end module gw_mixed_diag_precon_alg_mod

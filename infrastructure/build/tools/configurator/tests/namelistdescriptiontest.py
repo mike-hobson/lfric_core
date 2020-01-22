@@ -8,7 +8,7 @@
 
 from __future__ import absolute_import
 import unittest
-import StringIO
+import io
 import random
 import os
 import tempfile
@@ -36,7 +36,7 @@ class NamelistMetaTest(unittest.TestCase):
 ###############################################################################
     def test_module_write_empty(self):
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
 
         uut = description.NamelistDescription('test')
         self.assertRaises(description.NamelistDescriptionException,
@@ -78,9 +78,9 @@ module test_config_mod
             read_test_namelist, postprocess_test_namelist, &
             test_is_loadable, test_is_loaded, test_final
 
-  integer(i_native), public, parameter :: enum_one = 135
-  integer(i_native), public, parameter :: enum_three = 763
-  integer(i_native), public, parameter :: enum_two = 847
+  integer(i_native), public, parameter :: enum_one = 138
+  integer(i_native), public, parameter :: enum_three = 870
+  integer(i_native), public, parameter :: enum_two = 584
 
   integer(i_def), public, protected :: dint
   logical(l_def), public, protected :: dlog
@@ -104,9 +104,9 @@ module test_config_mod
                                        'two']
 
   integer(i_native), parameter :: enum_value(3) &
-          = [135_i_native, &
-             763_i_native, &
-             847_i_native]
+          = [138_i_native, &
+             870_i_native, &
+             584_i_native]
 
 contains
 
@@ -401,7 +401,7 @@ end module test_config_mod
         uut.add_string('dstr', configure_string_length='default')
         uut.add_string('fstr', configure_string_length='filename')
         uut.add_enumeration('enum', enumerators=['one', 'two', 'three'])
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
         uut.write_module(output_file)
 
         self.assertMultiLineEqual(expected_source + '\n',
@@ -704,7 +704,7 @@ contains
 end module test_config_mod
         '''.strip()
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
 
         uut = description.NamelistDescription('test')
         uut.add_value('foo', 'integer')
@@ -713,7 +713,7 @@ end module test_config_mod
         self.assertMultiLineEqual(first_expected_source + '\n',
                                   output_file.getvalue())
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
         uut.add_value('bar', 'real', 'default')
         uut.write_module(output_file)
 
@@ -746,9 +746,9 @@ module enum_config_mod
             read_enum_namelist, postprocess_enum_namelist, &
             enum_is_loadable, enum_is_loaded, enum_final
 
-  integer(i_native), public, parameter :: value_one = 135
-  integer(i_native), public, parameter :: value_three = 763
-  integer(i_native), public, parameter :: value_two = 847
+  integer(i_native), public, parameter :: value_one = 138
+  integer(i_native), public, parameter :: value_three = 870
+  integer(i_native), public, parameter :: value_two = 584
 
   integer(i_native), public, protected :: value
 
@@ -760,9 +760,9 @@ module enum_config_mod
                                        'two']
 
   integer(i_native), parameter :: value_value(3) &
-          = [135_i_native, &
-             763_i_native, &
-             847_i_native]
+          = [138_i_native, &
+             870_i_native, &
+             584_i_native]
 
 contains
 
@@ -967,7 +967,7 @@ end module enum_config_mod
         random.seed(1)
         uut = description.NamelistDescription('enum')
         uut.add_enumeration('value', enumerators=['one', 'two', 'three'])
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
         uut.write_module(output_file)
 
         self.assertMultiLineEqual(expected_source + '\n',
@@ -1001,12 +1001,12 @@ module twoenum_config_mod
             read_twoenum_namelist, postprocess_twoenum_namelist, &
             twoenum_is_loadable, twoenum_is_loaded, twoenum_final
 
-  integer(i_native), public, parameter :: first_one = 135
-  integer(i_native), public, parameter :: first_three = 763
-  integer(i_native), public, parameter :: first_two = 847
-  integer(i_native), public, parameter :: second_ay = 256
-  integer(i_native), public, parameter :: second_bee = 495
-  integer(i_native), public, parameter :: second_see = 449
+  integer(i_native), public, parameter :: first_one = 138
+  integer(i_native), public, parameter :: first_three = 870
+  integer(i_native), public, parameter :: first_two = 584
+  integer(i_native), public, parameter :: second_ay = 824
+  integer(i_native), public, parameter :: second_bee = 785
+  integer(i_native), public, parameter :: second_see = 65
 
   integer(i_native), public, protected :: first
   integer(i_native), public, protected :: second
@@ -1023,13 +1023,13 @@ module twoenum_config_mod
                                        'see']
 
   integer(i_native), parameter :: first_value(3) &
-          = [135_i_native, &
-             763_i_native, &
-             847_i_native]
+          = [138_i_native, &
+             870_i_native, &
+             584_i_native]
   integer(i_native), parameter :: second_value(3) &
-          = [256_i_native, &
-             495_i_native, &
-             449_i_native]
+          = [824_i_native, &
+             785_i_native, &
+             65_i_native]
 
 contains
 
@@ -1322,7 +1322,7 @@ end module twoenum_config_mod
         uut = description.NamelistDescription('twoenum')
         uut.add_enumeration('first', enumerators=['one', 'two', 'three'])
         uut.add_enumeration('second', enumerators=['ay', 'bee', 'see'])
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
         uut.write_module(output_file)
 
         self.assertMultiLineEqual(output_file.getvalue(),
@@ -1494,7 +1494,7 @@ contains
 end module teapot_config_mod
         '''.strip()
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
 
         uut = description.NamelistDescription('teapot')
         uut.add_value('foo', 'real', 'default')
@@ -1659,7 +1659,7 @@ contains
 end module cheese_config_mod
         '''.strip()
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
 
         uut = description.NamelistDescription('cheese')
         uut.add_usage('FUDGE', module='constants_mod')
@@ -1900,7 +1900,7 @@ contains
 end module aerial_config_mod
         '''.strip()
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
 
         uut = description.NamelistDescription('aerial')
         uut.add_usage('esize', module='wibble_mod')
@@ -2277,7 +2277,7 @@ contains
 end module telly_config_mod
         '''.strip()
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
 
         uut = description.NamelistDescription('telly', fix_enum=True)
         uut.add_enumeration('tubbies', enumerators=['lala', 'po', 'inky'])

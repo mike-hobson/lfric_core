@@ -4,9 +4,9 @@
 ! received as part of this distribution.
 !-----------------------------------------------------------------------------
 
-!>@brief Preconditioner for the gravity-wave system
+!> @brief Preconditioner for the gravity-wave system
 !>
-!>@details This type is derived from the abstract preconditioner type and
+!> @details This type is derived from the abstract preconditioner type and
 !> implements a preconditioner for the mixed gravity-wave system in the
 !> variables \f$(\mathbf{U},P,B)\f$.
 !>
@@ -65,7 +65,8 @@
 !> The Helmholtz system is solved with an iterative solver which is passed
 !> in the constructor.
 
-module gw_mixed_schur_preconditioner_alg_mod
+module gw_mixed_schur_precon_alg_mod
+
   use vector_mod,                      only: abstract_vector_type
   use field_mod,                       only: field_type
   use field_vector_mod,                only: field_vector_type
@@ -97,14 +98,15 @@ module gw_mixed_schur_preconditioner_alg_mod
 
   private
 
-  !>@brief Mixed preconditioner type
+  !> @brief Mixed preconditioner type
   !>
-  !>@details Implements mixed preconditioner which can be used in the
-  !> iterative solver algorithms,
+  !> @details Implements mixed preconditioner which can be used in the
+  !> iterative solver algorithms.
   type, public, extends(abstract_preconditioner_type) :: &
                         gw_mixed_schur_preconditioner_type
 
      private
+
      !> Off-centering parameter \f$\alpha\f$ in timestepping
      real(kind=r_def) :: alpha
      !> \f$Q\f$- matrix (projection in buoyancy equation)
@@ -132,6 +134,7 @@ module gw_mixed_schur_preconditioner_alg_mod
         gw_pressure_solver
 
      contains
+
      ! Overide the (abstract interface) for application of
      ! a preconditioner \f$y = P.x\f$
      procedure, public :: apply => apply_gw_mixed_schur_preconditioner
@@ -144,9 +147,7 @@ module gw_mixed_schur_preconditioner_alg_mod
      !> Helmholtz equation
      procedure, private :: back_substitute
 
-     !> performs a deep copy (for overriding the "=" operator)
-     !> @param[out] dest   gw_mixed_schur_preconditioner_type lhs
-     !> @param[in]  source gw_mixed_schur_preconditioner_type rhs
+     !> Performs a deep copy (for overriding the "=" operator)
      procedure, public  :: gw_mixed_schur_preconditioner_assign
 
      !> Destructor
@@ -154,6 +155,7 @@ module gw_mixed_schur_preconditioner_alg_mod
 
      !> Override default assignment for gw_mixed_schur_preconditioner_type pairs.
      generic            :: assignment(=) => gw_mixed_schur_preconditioner_assign
+
   end type gw_mixed_schur_preconditioner_type
 
   ! Overload the default structure constructor
@@ -162,6 +164,7 @@ module gw_mixed_schur_preconditioner_alg_mod
   end interface
 
 contains
+
   !> @brief Construct a <code> gw_mixed_schur_preconditioner_type</code> object
   !>
   !> @details This constructs all required fields and builds operators such as
@@ -172,14 +175,14 @@ contains
   !> The matrix \f$\tilde{H}_b^{-1}\f$ is passed in as an argument since this
   !> matrix is already required for and constructed in the pressure operator.
   !>
-  !> @param [in] state Current state (passed as a field-vector)
-  !> @param [in] Hb_lumped_inv Lumped inverse \f$\tilde{H}_b^{-1}\f$
-  !> @param [in] pressure_solver Solver object for Helmholtz system
-  !> @return self the constructed preconditioner object
+  !> @param[in] state           Current state (passed as a field-vector)
+  !> @param[in] Hb_lumped_inv   Lumped inverse \f$\tilde{H}_b^{-1}\f$
+  !> @param[in] pressure_solver Solver object for Helmholtz system
+  !> @return self The constructed preconditioner object
   function gw_mixed_schur_preconditioner_constructor(state,           &
                                                      Hb_lumped_inv,   &
                                                      pressure_solver) &
-                                                       result(self)
+                                                     result(self)
 
     use function_space_mod,            only: function_space_type
     use finite_element_config_mod,     only: element_order
@@ -264,14 +267,15 @@ contains
 
   end function gw_mixed_schur_preconditioner_constructor
 
-  !> Performs a deep copy between gw_mixed_operator_type pairs.
-  !> (for overriding the "=" operator)
+  !> @brief Performs a deep copy between gw_mixed_operator_type pairs
+  !> (for overriding the "=" operator).
   !>
-  !> @param[out] dest   gw_mixed_schur_preconditioner_type lhs
   !> @param[in]  source gw_mixed_schur_preconditioner_type rhs
+  !> @param[out] dest   gw_mixed_schur_preconditioner_type lhs
   subroutine gw_mixed_schur_preconditioner_assign(dest, source)
 
     implicit none
+
     class(gw_mixed_schur_preconditioner_type), intent(in)  :: source
     class(gw_mixed_schur_preconditioner_type), intent(out) :: dest
 
@@ -291,29 +295,32 @@ contains
     call source%Mb_lumped_inv%copy_field(dest%Mb_lumped_inv)
     call source%Hb_lumped_inv%copy_field(dest%Hb_lumped_inv)
     dest%gw_pressure_solver => source%gw_pressure_solver
+
   end subroutine gw_mixed_schur_preconditioner_assign
 
 
-  !>@brief Apply the preconditioner to calculate \f$y = P.x\f$ for the
+  !> @brief Apply the preconditioner to calculate \f$y = P.x\f$ for the
   !> mixed system in velocity, pressure and buoyancy
   !>
-  !>@details Apply the preconditioner in three steps, as described above:
+  !> @details Apply the preconditioner in three steps, as described above:
   !> 1. Construct right-hand side for Helmholtz system
   !> 2. Approximately solve Helmholtz-system
   !> 3. Reconstruct velocity and buoyancy from pressure
   !>
-  !>@param[inout] self instance of type gw_mixed_schur_preconditioner_type
-  !>@param[inout] x field-vector containing the residuals
-  !>              \f$(\textbf{R}_u,R_p,r_b)\f$
-  !>@param[inout] y field-vector containing the solution
-  !>              \f$(\textbf{U},P,B)\f$ to be calculated
+  !> @param[in,out] self Instance of type gw_mixed_schur_preconditioner_type
+  !> @param[in]     x    Field-vector containing the residuals
+  !>                     \f$(\textbf{R}_u,R_p,r_b)\f$
+  !> @param[in,out] y    Field-vector containing the solution
+  !>                     \f$(\textbf{U},P,B)\f$ to be calculated
   subroutine apply_gw_mixed_schur_preconditioner(self, x, y)
+
     implicit none
+
     class(gw_mixed_schur_preconditioner_type), intent(inout) :: self
     class(abstract_vector_type),               intent(in)    :: x
     class(abstract_vector_type),               intent(inout) :: y
 
-    if ( subroutine_timers ) call timer('gw_mixed_schur_preconditioner_alg')
+    if ( subroutine_timers ) call timer('gw_mixed_schur_precon_alg')
     select type(x)
     type is(field_vector_type)
        select type(y)
@@ -351,25 +358,27 @@ contains
        call log_event(log_scratch_space, LOG_LEVEL_ERROR)
     end select
 
-    if ( subroutine_timers ) call timer('gw_mixed_schur_preconditioner_alg')
+    if ( subroutine_timers ) call timer('gw_mixed_schur_precon_alg')
 
   end subroutine apply_gw_mixed_schur_preconditioner
 
-  !>@brief Compute the right-hand-side for the Helmholtz-equation
+  !> @brief Compute the right-hand-side for the Helmholtz-equation
   !>
-  !>@details Given the right-hand side \f$(\textbf{R}_u,R_p,R_b)\f$ for the
+  !> @details Given the right-hand side \f$(\textbf{R}_u,R_p,R_b)\f$ for the
   !> mixed system, build the right hand side \f$R^*_p\f$ for the Helmholtz
   !> equation.
   !>
-  !>@param[inout] self Instance of type gw_mixed_schur_preconditioner_type
-  !>@param[in]    rhs0 Initial residuals \f$(\textbf{R}_u,R_p,R_b)\f$ of the
-  !>                   mixed system.
+  !> @param[in,out] self Instance of type gw_mixed_schur_preconditioner_type
+  !> @param[in]     rhs0 Initial residuals \f$(\textbf{R}_u,R_p,R_b)\f$ of the
+  !>                     mixed system.
   subroutine build_pressure_rhs(self,rhs0)
+
     use matrix_vector_kernel_mod,    only: matrix_vector_kernel_type
     use dg_matrix_vector_kernel_mod, only: dg_matrix_vector_kernel_type
     use enforce_bc_kernel_mod,       only: enforce_bc_kernel_type
 
     implicit none
+
     class(gw_mixed_schur_preconditioner_type), intent(inout) :: self
     type(field_vector_type),                   intent(in)    :: rhs0
 
@@ -401,14 +410,14 @@ contains
 
   end subroutine build_pressure_rhs
 
-  !>@brief Reconstruct velocity and buoyancy from pressure
+  !> @brief Reconstruct velocity and buoyancy from pressure
   !>
-  !>@details Given the pressure \f$P\f$ from the solution of the Helmholtz
+  !> @details Given the pressure \f$P\f$ from the solution of the Helmholtz
   !> equation, reconstruct the velocity \f$\textbf{U}\f$ and buoyancy \f$B\f$.
   !>
-  !>@param[inout] self instance of type gw_mixed_schur_preconditioner_type
-  !>@param[inout] state Solution \f$(\textbf{U},P,B)\f$ of the mixed system
-  !>@param[in]    rhs Initial right hand side \f$(\textbf{R}_u,R_p,R_b)\f$
+  !> @param[in,out] self  Instance of type gw_mixed_schur_preconditioner_type
+  !> @param[in,out] state Solution \f$(\textbf{U},P,B)\f$ of the mixed system
+  !> @param[in]     rhs   Initial right hand side \f$(\textbf{R}_u,R_p,R_b)\f$
   subroutine back_substitute(self, state, rhs)
 
     use transpose_matrix_vector_kernel_mod, &
@@ -416,6 +425,7 @@ contains
     use enforce_bc_kernel_mod,    only: enforce_bc_kernel_type
 
     implicit none
+
     class(gw_mixed_schur_preconditioner_type), intent(inout) :: self
     type(field_vector_type),                   intent(inout) :: state
     type(field_vector_type),                   intent(in)    :: rhs
@@ -455,13 +465,14 @@ contains
 
   end subroutine back_substitute
 
-  !>@brief Destructor
-  !>@param[inout] self Instance of type to be destroyed
+  !> @brief Destructor
+  !> @param[in,out] self Instance of type to be destroyed
   subroutine destroy_gw_mixed_schur_preconditioner(self)
+
     implicit none
+
     type(gw_mixed_schur_preconditioner_type), intent(inout) :: self
 
   end subroutine destroy_gw_mixed_schur_preconditioner
 
-end module gw_mixed_schur_preconditioner_alg_mod
-
+end module gw_mixed_schur_precon_alg_mod

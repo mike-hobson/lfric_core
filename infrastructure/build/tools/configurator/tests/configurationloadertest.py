@@ -8,7 +8,7 @@
 
 from __future__ import absolute_import
 import unittest
-import StringIO
+import io
 
 import configurator.configurationloader as loader
 
@@ -232,7 +232,7 @@ contains
 end module empty_mod
         '''.strip()
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
         uut = loader.ConfigurationLoader('empty_mod')
         uut.write_module(output_file)
 
@@ -473,7 +473,7 @@ contains
 end module content_mod
         '''.strip()
 
-        output_file = StringIO.StringIO()
+        output_file = io.StringIO()
         uut = loader.ConfigurationLoader('content_mod')
         uut.add_namelist('foo')
         uut.write_module(output_file)

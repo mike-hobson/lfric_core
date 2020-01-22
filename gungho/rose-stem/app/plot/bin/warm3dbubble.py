@@ -125,7 +125,7 @@ def make_figure(plotpath, nx, ny, field, component, timestep, small):
 
     dz = np.zeros([nx, len(levels)])
     for i in range(nx):
-        dz[i, :] = zi[ny/2, i, :] - background
+        dz[i, :] = zi[ny//2, i, :] - background
 
     matplotlib.rcParams['contour.negative_linestyle'] = 'solid'
     cf = ax1.contourf(x_i * r2d, y_i * r2d, np.round(dz, 10),
@@ -142,7 +142,7 @@ def make_figure(plotpath, nx, ny, field, component, timestep, small):
 
     # Plot one-dimensional slice
     slice_1d_fig = plt.figure(figsize=(10, 10))
-    plt.plot(np.round(dz[nx/2, :], 10), y_i[nx/2, :] * r2d, 'k', linewidth=4)
+    plt.plot(np.round(dz[nx//2, :], 10), y_i[nx//2, :] * r2d, 'k', linewidth=4)
     plt.ylim([0, 1000])
     plt.ylabel("z (m)", fontsize=24)
     plt.xlabel(r"$\Delta \theta$ (K)", fontsize=24)

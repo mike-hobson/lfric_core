@@ -104,7 +104,7 @@ def make_figure(plotpath, nx, ny, field, component, timestep):
                      extend='min')
 
     # -1K contour (x,z) coordinates
-    minusonek_cont = cl.collections[15].get_paths()[0]
+    minusonek_cont = cl.collections[3].get_paths()[0]
     # Front position, i.e. first intersection (negative x!) with x=0
     fp = minusonek_cont.vertices[0, 0]
     plt.axes().set_aspect(.8)
@@ -114,6 +114,7 @@ def make_figure(plotpath, nx, ny, field, component, timestep):
     cb = plt.colorbar(cf,  cmap=c_map, fraction=0.011, pad=0.04)
     cb.ax.tick_params(labelsize=24)
     plt.xticks(np.arange(0, 18, 2))
+    plt.yticks(np.arange(0, 6, 1))
     plt.tick_params(axis='both', labelsize=28)
 
     # Front position is symmetrized

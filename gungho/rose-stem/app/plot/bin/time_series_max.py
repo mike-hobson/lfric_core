@@ -59,7 +59,7 @@ if __name__ == "__main__":
                                                       + str(n) + ".m")),
                                axis=1)
 
-    JJ = len(data_u)/3  # Number of time steps
+    JJ = len(data_u)//3  # Number of time steps
 
     zvel_min = data_u[::3, -1]
     zvel_max = data_u[::3, -2]

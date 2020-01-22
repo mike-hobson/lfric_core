@@ -352,11 +352,11 @@ class LFRicIndexer(Indexer):
           compilerNode = document.getroot().find( './/span[@id=\'compiler\']' )
           if compilerNode is not None:
             compiler = compilerNode.text
-            hasher.update( compiler )
+            hasher.update( compiler.encode("utf-8") )
           contextNode  = document.getroot().find( './/span[@id=\'context\']' )
           if contextNode is not None:
             context = contextNode.text
-            hasher.update( context )
+            hasher.update( context.encode("utf-8") )
           timestampNode = document.getroot().find( './/span[@id=\'timestamp\']' )
           if timestampNode is not None:
             timestamp = datetime.datetime.strptime( timestampNode.text,
@@ -366,7 +366,7 @@ class LFRicIndexer(Indexer):
             for eventNode in eventNodes:
               for node in eventNode:
                 if node.text and node.text.strip() != '':
-                  hasher.update( node.text.strip() )
+                  hasher.update( node.text.strip().encode("utf-8") )
         except et.ParseError as ex:
           message = 'Unable to parse file "{filename}": {exception}'
           usefulname = os.path.join( relativePath, filename )

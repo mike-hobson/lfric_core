@@ -2521,8 +2521,8 @@ end subroutine invoke_calc_deppts
     field_res_proxy = field_res%get_proxy()
 
     !sanity check
-    undf = field_proxy%vspace%get_last_dof_owned()
-    if(undf /= field_res_proxy%vspace%get_last_dof_owned() ) then
+    undf = field_proxy%vspace%get_last_dof_annexed()
+    if(undf /= field_res_proxy%vspace%get_last_dof_annexed() ) then
       ! they are not on the same function space
       call log_event("Psy:sign:field and result_field live on different w-spaces" &
                     , LOG_LEVEL_ERROR)

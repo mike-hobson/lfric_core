@@ -165,9 +165,10 @@ class FortranAnalyser(Analyser):
       preprocessCommand.append( sourceFilename )
 
       start_time = time()
-      preprocessor = subprocess.Popen(preprocessCommand, \
-                                      stdout=subprocess.PIPE, \
-                                      stderr=subprocess.PIPE)
+      preprocessor = subprocess.Popen(preprocessCommand,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE,
+                                      encoding="utf-8")
       processed_source, errors = preprocessor.communicate()
       message = 'Time to preprocess Fortran source: {0}'
       logging.getLogger(__name__).debug(message.format(time() - start_time))

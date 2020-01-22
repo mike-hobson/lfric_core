@@ -490,35 +490,12 @@ class NamelistConfigDescription(object):
     def __init__(self):
         pass
 
-    def decode_unicode(self, namelist_config):
-
-        if isinstance(namelist_config, dict):
-            new_dict = {}
-            for key, value in namelist_config.items():
-                if isinstance(key, six.text_type):
-                    key = key.encode('ascii')
-                if isinstance(value, dict):
-                    value = self.decode_unicode(value)
-                else:
-                    value = value.encode('ascii')
-
-                new_dict[key] = value
-
-            result = new_dict
-        else:
-            message = 'Supplied namelist configuration ' + \
-                      'object is not a dictionary'
-            raise NamelistDescriptionException(message)
-
-        return result
-
     def process_config(self, nml_config_file, fix_enum=False):
 
         # Process json
         with open(nml_config_file) as config_file:
             namelist_config = json.load(config_file)
 
-        namelist_config = self.decode_unicode(namelist_config)
         result = []
 
         for listname in namelist_config.keys():

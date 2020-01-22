@@ -4,8 +4,8 @@
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
 
-!>@brief A two time-level iterative time-discretisation of the linear
-!>       gravity wave equations
+!> @brief A two time-level iterative time-discretisation of the linear
+!>        gravity wave equations
 module gravity_wave_alg_mod
 
   use constants_mod,                  only: i_def,r_def
@@ -33,15 +33,13 @@ module gravity_wave_alg_mod
 
   ! Algorithms
   use gw_mixed_operator_alg_mod,      only: gw_mixed_operator_type
-  use gw_mixed_schur_preconditioner_alg_mod, &
-                                      only: gw_mixed_schur_preconditioner_type
-  use gw_mixed_diag_preconditioner_alg_mod, &
-                                      only: gw_mixed_diag_preconditioner_type
+  use gw_mixed_schur_precon_alg_mod,  only: gw_mixed_schur_preconditioner_type
+  use gw_mixed_diag_precon_alg_mod,   only: gw_mixed_diag_preconditioner_type
   use gw_pressure_operator_alg_mod,   only: gw_pressure_operator_type
   use gw_pressure_precon_alg_mod,     only: gw_pressure_preconditioner_type
   use null_preconditioner_alg_mod,    only: null_preconditioner_type
 
-  ! preconditioner and solver
+  ! Preconditioner and solver
   use preconditioner_mod,             only: abstract_preconditioner_type
   use iterative_solver_mod,           only: abstract_iterative_solver_type, &
                                             bicgstab_type,                  &
@@ -88,14 +86,17 @@ module gravity_wave_alg_mod
   public :: gravity_wave_alg_step
 
 contains
+
 !=============================================================================!
+
   !> @details Initialisation procedure for the timestepping algorithm
   !>          Initialises various internal fields from the prognostic fields
-  !> @param[in]    mesh_id ID of mesh object on which the model runs
-  !> @param[in] wind  The 3D wind field
+  !> @param[in] mesh_id  ID of mesh object on which the model runs
+  !> @param[in] wind     The 3D wind field
   !> @param[in] pressure The pressure field
   !> @param[in] buoyancy The buoyancy field
   subroutine gravity_wave_alg_init( mesh_id, wind, pressure, buoyancy)
+
     use quadrature_xyoz_mod,           only: quadrature_xyoz_type
     use quadrature_rule_gaussian_mod,  only: quadrature_rule_gaussian_type
     use compute_q_operator_kernel_mod, only: compute_q_operator_type, &
@@ -376,10 +377,11 @@ contains
 
   end subroutine gravity_wave_alg_init
 
-  !@brief Tidy up gravity wave algorithm module
+  !> @brief Tidy up gravity wave algorithm module
   !>
-  !@details Deallocate memory
+  !> @details Deallocate memory
   subroutine gravity_wave_alg_final()
+
     implicit none
 
     ! Deallocate mixed preconditioner object
@@ -398,22 +400,23 @@ contains
     if (allocated(gw_pressure_solver)) then
        deallocate(gw_pressure_solver)
     end if
+
   end subroutine gravity_wave_alg_final
 
 !=============================================================================!
 
-  !> @details An algorithm for timestepping the 3D linear  gravity wave
-  !>   equations using a centred implicit method
+  !> @details An algorithm for timestepping the 3D linear gravity wave
+  !>          equations using a centred implicit method
   !>
-  !> @param[inout] wind  The 3D wind field
-  !> @param[inout] pressure The pressure field
-  !> @param[inout] buoyancy The buoyancy field
+  !> @param[in,out] wind     The 3D wind field
+  !> @param[in,out] pressure The pressure field
+  !> @param[in,out] buoyancy The buoyancy field
   subroutine gravity_wave_alg_step(wind, pressure, buoyancy)
 
-  use matrix_vector_kernel_mod,           only: matrix_vector_kernel_type
-  use dg_matrix_vector_kernel_mod,        only: dg_matrix_vector_kernel_type
-  use transpose_matrix_vector_kernel_mod, only: transpose_matrix_vector_kernel_type
-  use enforce_bc_kernel_mod,              only: enforce_bc_kernel_type
+    use matrix_vector_kernel_mod,           only: matrix_vector_kernel_type
+    use dg_matrix_vector_kernel_mod,        only: dg_matrix_vector_kernel_type
+    use transpose_matrix_vector_kernel_mod, only: transpose_matrix_vector_kernel_type
+    use enforce_bc_kernel_mod,              only: enforce_bc_kernel_type
 
     implicit none
 

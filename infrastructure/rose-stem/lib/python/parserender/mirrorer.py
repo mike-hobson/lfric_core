@@ -22,7 +22,7 @@ import netrc
 import pwd
 import shutil
 import stat
-import StringIO
+import io
 import six.moves.urllib.parse
 import xml.etree.ElementTree as ET
 import six
@@ -229,7 +229,7 @@ class UploaderFile(Uploader):
     with open( absoluteFilename, 'wb' ) as destination:
       while True:
         block = fileObject.read( 1024 )
-        if block == '':
+        if block == b'':
           break
         destination.write( block )
     os.chmod( absoluteFilename, \
@@ -359,7 +359,7 @@ class Mirrorer:
 
     for transformation in self._treeTransforms:
       for filename, content in transformation.newFiles().items():
-        fakeFile = StringIO.StringIO()
+        fakeFile = io.StringIO()
         print( content, file=fakeFile )
         fakeFile.seek( 0, os.SEEK_SET )
         transformedStream = self._transformFile( filename , fakeFile )
@@ -375,10 +375,10 @@ class Mirrorer:
       xmlParser = ET.XMLParser()
       # In the absence of a comprehensive list to just lift up and use we
       # include only those actually appearing in our documents.
-      xmlParser.entity['nbsp']  = unichr(160)
-      xmlParser.entity['sect']  = unichr(167)
-      xmlParser.entity['ndash'] = unichr(2013)
-      xmlParser.entity['mdash'] = unichr(2014)
+      xmlParser.entity['nbsp']  = chr(160)
+      xmlParser.entity['sect']  = chr(167)
+      xmlParser.entity['ndash'] = chr(2013)
+      xmlParser.entity['mdash'] = chr(2014)
       try:
         tree = ET.parse( stream, xmlParser )
       except ET.ParseError as ex:
@@ -389,9 +389,13 @@ class Mirrorer:
       for transformation in self._fileTransforms:
         transformation.transform( treeRoot )
 
-      content = StringIO.StringIO()
-      tree.write( content, method='html' )
+      content = io.StringIO()
+      tree.write( content, encoding="unicode", method="html" )
       content.seek( 0, os.SEEK_SET )
+
+      # Transform string to file-like 'bytes' object
+      stream = content.read().encode("utf-8")
+      return io.BytesIO(stream)
 
       return content
     else:

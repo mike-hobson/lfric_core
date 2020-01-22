@@ -17,7 +17,7 @@ from psyclone.transformations import Dynamo0p3ColourTrans, \
                                      OMPParallelTrans, \
                                      Dynamo0p3RedundantComputationTrans
 
-from psyclone.dynamo0p3 import DISCONTINUOUS_FUNCTION_SPACES
+from psyclone.dynamo0p3 import VALID_DISCONTINUOUS_FUNCTION_SPACE_NAMES
 
 
 def trans(psy):
@@ -41,27 +41,27 @@ def trans(psy):
         # is in its own loop.
         for loop in schedule.loops():
             if loop.iteration_space == "dofs":
-                if len(loop.calls()) != 1:
+                if len(loop.kernels()) != 1:
                     raise Exception(
                         "Expecting loop to contain 1 call but found '{0}'".
-                        format(len(loop.calls())))
-                if loop.calls()[0].name in ["setval_c", "setval_x"]:
+                        format(len(loop.kernels())))
+                if loop.kernels()[0].name in ["setval_c", "setval_x"]:
                     setval_count += 1
-                    schedule, _ = rtrans.apply(loop, depth=1)
+                    schedule, _ = rtrans.apply(loop, options={"depth": 1})
 
         # Colour loops over cells unless they are on discontinuous
-        # spaces (W3, WTHETA and W2V) or over dofs
+        # spaces or over dofs
         for loop in schedule.loops():
             if loop.iteration_space == "cells" \
                 and loop.field_space.orig_name \
-                    not in DISCONTINUOUS_FUNCTION_SPACES:
+                    not in VALID_DISCONTINUOUS_FUNCTION_SPACE_NAMES:
                 schedule, _ = ctrans.apply(loop)
 
         # Add OpenMP to loops unless they are over colours
         for loop in schedule.loops():
             if loop.loop_type != "colours":
                 schedule, _ = oregtrans.apply(loop)
-                schedule, _ = otrans.apply(loop, reprod=True)
+                schedule, _ = otrans.apply(loop, options={"reprod": True})
 
         # Take a look at what we've done
         print("Found {0} setval calls".format(setval_count))

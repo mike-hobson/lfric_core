@@ -57,7 +57,8 @@ class AbstractTest(six.with_metaclass(ABCMeta, object)):
     process = subprocess.Popen( self._executable,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE )
+                                stderr=subprocess.PIPE,
+                                encoding="utf-8")
     out, err = process.communicate()
     self.post_execution( process.returncode )
     return self.test( process.returncode,

@@ -101,26 +101,26 @@ def make_figure(plotpath, field, component, timestep, plotlevel_x,
     if(case == 'schar3d'):
         # Hard-coded for vertical-slice-like runs
         if(field == 'u' and (component == '1' or component == '2')):
-            nx = len(data.loc[data['level'] == min_lev])/400
+            nx = len(data.loc[data['level'] == min_lev])//400
             ny = 400
         else:
-            nx = len(data.loc[data['level'] == min_lev])/200
+            nx = len(data.loc[data['level'] == min_lev])//200
             ny = 200
     elif(case == 'bell'):
         # Hard-coded for vertical-slice-like runs
         if(field == 'u' and (component == '1' or component == '2')):
-            nx = len(data.loc[data['level'] == min_lev])/600
+            nx = len(data.loc[data['level'] == min_lev])//600
             ny = 600
         else:
-            nx = len(data.loc[data['level'] == min_lev])/200
+            nx = len(data.loc[data['level'] == min_lev])//200
             ny = 200
     else:
         # Hard-coded for vertical-slice-like runs
         if(field == 'u' and (component == '1' or component == '2')):
-            nx = len(data.loc[data['level'] == min_lev])/8
+            nx = len(data.loc[data['level'] == min_lev])//8
             ny = 8
         else:
-            nx = len(data.loc[data['level'] == min_lev])/4
+            nx = len(data.loc[data['level'] == min_lev])//4
             ny = 4
 
     nl = len(levels)

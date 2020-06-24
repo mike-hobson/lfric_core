@@ -6,18 +6,25 @@
 
 module init_ancils_mod
 
-  use constants_mod,                  only : i_def, l_def
+  use constants_mod,                  only : i_def, l_def, dp_xios, str_def, r_def
   use log_mod,                        only : log_event,         &
                                              log_scratch_space, &
-                                             LOG_LEVEL_INFO
+                                             LOG_LEVEL_INFO,    &
+                                             LOG_LEVEL_ERROR
   use init_tstar_analytic_alg_mod,    only : init_tstar_analytic_alg
   use update_tstar_alg_mod,           only : update_tstar_alg
   use field_mod,                      only : field_type
   use field_parent_mod,               only : read_interface, &
                                              write_interface
   use io_config_mod,                  only : use_xios_io
+  use initialization_config_mod,      only : ancil_option,            &
+                                             ancil_option_basic_gagl, &
+                                             ancil_option_prototype_gagl
+  use linked_list_mod,                only : linked_list_type
   use read_methods_mod,               only : read_field_face, &
-                                             read_field_single_face
+                                             read_field_single_face, &
+                                             read_field_time_var, &
+                                             read_time_data
   use write_methods_mod,              only : write_field_face, &
                                              write_field_single_face
   use field_collection_mod,           only : field_collection_type, &
@@ -26,14 +33,14 @@ module init_ancils_mod
   use function_space_collection_mod,  only : function_space_collection
   use fs_continuity_mod,              only : W3
   use pure_abstract_field_mod,        only : pure_abstract_field_type
+  use time_axis_mod,                  only : time_axis_type, update_interface
 
   implicit none
 
   private  :: setup_ancil_field
   public   :: init_analytic_ancils,     &
               init_aquaplanet_ancils,   &
-              create_fd_ancils,         &
-              test_ancil_output
+              create_fd_ancils
 
 contains
 
@@ -102,7 +109,8 @@ contains
   !> @param[out] ancil_fields Collection for ancillary fields
   !> @param[in] mesh_id The identifier given to the current 3d mesh
   !> @param[in] twod_mesh_id The identifier given to the current 2d mesh
-  subroutine create_fd_ancils(depository, ancil_fields, mesh_id, twod_mesh_id)
+  subroutine create_fd_ancils( depository, ancil_fields, mesh_id, &
+                               twod_mesh_id, ancil_times_list )
 
     implicit none
 
@@ -110,6 +118,21 @@ contains
     type( field_collection_type ), intent( out )   :: ancil_fields
     integer(i_def), intent(in) :: mesh_id
     integer(i_def), intent(in) :: twod_mesh_id
+    type(linked_list_type), intent(out) :: ancil_times_list
+
+    ! Pointer to time-axis update procedure
+    procedure(update_interface), pointer :: tmp_update_ptr => null()
+
+    ! Time axis objects for different ancil groups - must be saved to be
+    ! available after function call
+    type(time_axis_type), save :: sea_time_axis
+    type(time_axis_type), save :: sea_ice_time_axis
+    type(time_axis_type), save :: aerosol_time_axis
+    type(time_axis_type), save :: albedo_vis_time_axis
+    type(time_axis_type), save :: albedo_nir_time_axis
+
+    ! Set pointer to time axis read behaviour
+    tmp_update_ptr => read_field_time_var
 
     ! Set up ancil_fields collection
     write(log_scratch_space,'(A,A)') "Create ancil fields: "// &
@@ -117,69 +140,158 @@ contains
     call log_event(log_scratch_space, LOG_LEVEL_INFO)
     ancil_fields = field_collection_type(name='ancil_fields')
 
-    ! For fields that are not already created, we create them here then call the subroutine
-    ! to set up the read behaviour and field collection
-    write(log_scratch_space,'(A,A)') "Create ancil fields: "// &
-          "Creating test - land area fraction & soil surface fields."
-    call log_event(log_scratch_space, LOG_LEVEL_INFO)
+    ! Here ancil fields are set up with a call to setup_ancil_field. For ancils
+    ! that are time-varying, the time-axis (set up with a call to
+    ! init_time_axis) is passed to the setup_ancil_field subroutine.
 
-    !=====  SURFACE ANCILS  =====
-    call setup_ancil_field("land_area_fraction", depository, ancil_fields, mesh_id, twod_mesh_id, twod=.true.)
+    ! We populate the ancil fields collection based on the model configuration
 
-    ! Psuedo-level ancils to be read onto multi-data fields
-    call setup_ancil_field("tile_fraction_data", depository, ancil_fields, mesh_id, twod_mesh_id, twod=.true., ndata=9)
+    ! Set up ancils for the basic GA/GL configuration (proto GA/GL also
+    ! includes these):
+    if ( ancil_option == ancil_option_basic_gagl .or. &
+         ancil_option == ancil_option_prototype_gagl ) then
 
-    !=====  SOIL ANCILS  =====
-    call setup_ancil_field("soil_albedo", depository, ancil_fields, mesh_id, twod_mesh_id, twod=.true.)
-    call setup_ancil_field("soil_carbon_content", depository, ancil_fields, mesh_id, twod_mesh_id, twod=.true.)
-    call setup_ancil_field("soil_thermal_cond", depository, ancil_fields, mesh_id, twod_mesh_id, twod=.true.)
+      !=====  SURFACE ANCILS  =====
+      call setup_ancil_field("land_area_fraction", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
+      call setup_ancil_field("tile_fraction_data", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true., ndata=9)
 
-    !=====  OROGRAPHY ANCILS  =====
-    call setup_ancil_field("sd_orog", depository, ancil_fields, mesh_id, twod_mesh_id, twod=.true.)
-    call setup_ancil_field("grad_xx_orog", depository, ancil_fields, mesh_id, twod_mesh_id, twod=.true.)
-    call setup_ancil_field("grad_xy_orog", depository, ancil_fields, mesh_id, twod_mesh_id, twod=.true.)
-    call setup_ancil_field("grad_yy_orog", depository, ancil_fields, mesh_id, twod_mesh_id, twod=.true.)
-    call setup_ancil_field("peak_to_trough_orog", depository, ancil_fields, mesh_id, twod_mesh_id, twod=.true.)
-    call setup_ancil_field("silhouette_area_orog", depository, ancil_fields, mesh_id, twod_mesh_id, twod=.true.)
+      call init_time_axis("sea_time", sea_time_axis)
+      call setup_ancil_field("chloro_sea", depository, ancil_fields, mesh_id, &
+                              twod_mesh_id, twod=.true., time_axis=sea_time_axis)
+      call sea_time_axis%set_update_behaviour(tmp_update_ptr)
 
-    ! Now the field collection is set up, we will read all the fields in the collection
-    ! in gungho_model_data_mod
+      !=====  RADIATION ANCILS  =====
+      call init_time_axis("albedo_vis_time", albedo_vis_time_axis)
+      call setup_ancil_field("albedo_obs_vis", depository, ancil_fields, mesh_id, &
+                        twod_mesh_id, twod=.true., time_axis=albedo_vis_time_axis)
+      call albedo_vis_time_axis%set_update_behaviour(tmp_update_ptr)
+
+      call init_time_axis("albedo_nir_time", albedo_nir_time_axis)
+      call setup_ancil_field("albedo_obs_nir", depository, ancil_fields, mesh_id, &
+                        twod_mesh_id, twod=.true., time_axis=albedo_nir_time_axis)
+      call albedo_nir_time_axis%set_update_behaviour(tmp_update_ptr)
+
+      !=====  SOIL ANCILS  =====
+      call setup_ancil_field("soil_albedo", depository, ancil_fields, mesh_id, &
+                              twod_mesh_id, twod=.true.)
+      call setup_ancil_field("soil_carbon_content", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
+      call setup_ancil_field("soil_thermal_cond", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
+      call setup_ancil_field("mean_topog_index", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
+
+      !=====  OROGRAPHY ANCILS  =====
+      call setup_ancil_field("sd_orog", depository, ancil_fields, mesh_id, &
+                              twod_mesh_id, twod=.true.)
+      call setup_ancil_field("grad_xx_orog", depository, ancil_fields, mesh_id, &
+                              twod_mesh_id, twod=.true.)
+      call setup_ancil_field("grad_xy_orog", depository, ancil_fields, mesh_id, &
+                              twod_mesh_id, twod=.true.)
+      call setup_ancil_field("grad_yy_orog", depository, ancil_fields, mesh_id, &
+                              twod_mesh_id, twod=.true.)
+      call setup_ancil_field("peak_to_trough_orog", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
+      call setup_ancil_field("silhouette_area_orog", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
+    end if
+
+    ! Set up ancils for the prototype GA/GL configuration:
+    if ( ancil_option == ancil_option_prototype_gagl ) then
+      !=====  AEROSOL ANCILS  =====
+      call init_time_axis("aerosols_time", aerosol_time_axis)
+      call setup_ancil_field("acc_sol_bc", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("acc_sol_oc", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("acc_sol_su", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("acc_sol_ss", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("nd_acc_sol", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("ait_sol_bc", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("ait_sol_oc", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("ait_sol_su", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("nd_ait_sol", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("ait_ins_bc", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("ait_ins_oc", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("nd_ait_ins", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("cor_sol_bc", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("cor_sol_oc", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("cor_sol_su", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("cor_sol_ss", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call setup_ancil_field("nd_cor_sol", depository, ancil_fields, mesh_id, &
+                             twod_mesh_id, time_axis=aerosol_time_axis)
+      call aerosol_time_axis%set_update_behaviour(tmp_update_ptr)
+
+      !=====  SEA ICE ANCILS  =====
+      call init_time_axis("sea_ice_time", sea_ice_time_axis)
+      call setup_ancil_field("sea_ice_thickness", depository, ancil_fields, &
+                mesh_id, twod_mesh_id, twod=.true., time_axis=sea_ice_time_axis)
+      call sea_ice_time_axis%set_update_behaviour(tmp_update_ptr)
+
+      ! Insert the created time axis objects into a list
+      call ancil_times_list%insert_item(sea_time_axis)
+      call ancil_times_list%insert_item(sea_ice_time_axis)
+      call ancil_times_list%insert_item(aerosol_time_axis)
+      call ancil_times_list%insert_item(albedo_vis_time_axis)
+      call ancil_times_list%insert_item(albedo_nir_time_axis)
+    end if
+
+    ! Now the field collection is set up, the fields will be initialised in
+    ! gungho_model_data_mod
 
   end subroutine create_fd_ancils
 
-  !> @details Creates fields to be read into from ancillary files -
-  !           only used if field is not already created elsewhere
+  !> @details Adds fields to the ancil collection, sets up their read and write
+  !>      behaviour and creates them in the depository if they do not yet exist
   !> @param[in] name The field name
-  !> @param[in,out] depository The depository field collection
-  !> @param[in,out] ancil_fields Collection for ancillary fields
+  !> @param[in, out] depository The depository field collection
+  !> @param[in, out] ancil_fields The ancil field collection
   !> @param[in] mesh_id The identifier given to the current 3d mesh
-  !> @param[in] twod_mesh_id The identifier given to the current 2d mesh
-  !> @param[in] twod Flag to determine if field is on 2D mesh or regular
+  !> @param[in, optional] twod_mesh_id The identifier given to the current 2d mesh
+  !> @param[in, optional] ndata Number of non-spatial dimensions for multi-data field
+  !> @param[in, out, optional] time_axis Time axis associated with ancil field
   subroutine setup_ancil_field( name, depository, ancil_fields, mesh_id, &
-                                twod_mesh_id, twod, ndata )
+                                twod_mesh_id, twod, ndata, time_axis )
 
     implicit none
 
-    character(*), intent(in)                   :: name
-    type(field_collection_type), intent(inout) :: depository
-    type(field_collection_type), intent(inout) :: ancil_fields
-    integer(i_def), intent(in)                 :: mesh_id
-    integer(i_def), intent(in)                 :: twod_mesh_id
-    logical(l_def), optional, intent(in)       :: twod
-    integer(i_def), optional, intent(in)       :: ndata
+    character(*),                   intent(in)    :: name
+    type( field_collection_type ),  intent(inout) :: depository
+    type( field_collection_type ),  intent(inout) :: ancil_fields
+    integer(i_def),                 intent(in)    :: mesh_id
+    integer(i_def),                 intent(in)    :: twod_mesh_id
+    logical(l_def),       optional, intent(in)    :: twod
+    integer(i_def),       optional, intent(in)    :: ndata
+    type(time_axis_type), optional, intent(inout) :: time_axis
 
     ! Local variables
-    type(field_type)           :: new_field
-    integer(i_def)             :: ndat = 1
-    integer(i_def), parameter  :: fs_order = 0
+    type(field_type)          :: new_field
+    integer(i_def)            :: ndat = 1
+    integer(i_def), parameter :: fs_order = 0
 
     ! Pointers
-    type(function_space_type),       pointer  :: w3_space => null()
-    type(function_space_type),       pointer  :: twod_space => null()
-    procedure(read_interface),       pointer  :: tmp_read_ptr => null()
-    procedure(write_interface),      pointer  :: tmp_write_ptr => null()
-    type(field_type),                pointer  :: tgt_ptr => null()
-    class(pure_abstract_field_type), pointer  :: tmp_ptr => null()
+    type(function_space_type),       pointer :: w3_space => null()
+    type(function_space_type),       pointer :: twod_space => null()
+    procedure(read_interface),       pointer :: tmp_read_ptr => null()
+    procedure(write_interface),      pointer :: tmp_write_ptr => null()
+    class(field_type),               pointer :: fld_ptr => null()
+    class(pure_abstract_field_type), pointer :: abs_fld_ptr => null()
 
     ! Set field ndata if argument is present, else leave as default value
     if (present(ndata)) then
@@ -203,65 +315,84 @@ contains
       call depository%add_field(new_field)
     end if
 
-    ! Get a field pointer from the depository
-    tgt_ptr => depository%get_field(name)
-
-    ! Set up field read behaviour for 2D and 3D fields
-    if (present(twod)) then
-      tmp_read_ptr => read_field_single_face
-      tmp_write_ptr => write_field_single_face
-    else
-      tmp_read_ptr => read_field_face
-      tmp_write_ptr => write_field_face
+    ! If field is time-varying, also create field storing raw data to be
+    ! interpolated
+    if (present(time_axis)) then
+      if (present(twod)) then
+        call new_field%initialise( twod_space, name=trim(name) )
+        call time_axis%add_field(new_field)
+      else
+        call new_field%initialise( w3_space, name=trim(name) )
+        call time_axis%add_field(new_field)
+      end if
     end if
 
-    ! Set field read behaviour for target field
-    call tgt_ptr%set_read_behaviour(tmp_read_ptr)
-    call tgt_ptr%set_write_behaviour(tmp_write_ptr)
+    ! Get a field pointer from the depository
+    fld_ptr => depository%get_field(name)
+    ! Set up field read behaviour for 2D and 3D fields
+    if (present(twod)) then
+      tmp_write_ptr => write_field_single_face
+    else
+      tmp_write_ptr => write_field_face
+    end if
+    ! Set field write behaviour for target field
+    call fld_ptr%set_write_behaviour(tmp_write_ptr)
 
-    ! Add the field pointer to the ancil_fields collection
-    tmp_ptr => depository%get_field(name)
-    call ancil_fields%add_reference_to_field( tmp_ptr )
+
+    if (.not. present(time_axis)) then
+      !Set up field read behaviour for 2D and 3D fields
+      if (present(twod))then
+        tmp_read_ptr => read_field_single_face
+      else
+        tmp_read_ptr => read_field_face
+      end if
+
+      ! Set field read behaviour for target field
+      call fld_ptr%set_read_behaviour(tmp_read_ptr)
+    end if
+
+    ! Add the field pointer to the target field collection
+    abs_fld_ptr => depository%get_field(name)
+    call ancil_fields%add_reference_to_field(abs_fld_ptr)
 
     ! Nullify pointers
     nullify(w3_space)
     nullify(twod_space)
     nullify(tmp_read_ptr)
     nullify(tmp_write_ptr)
-    nullify(tgt_ptr)
-    nullify(tmp_ptr)
+    nullify(fld_ptr)
+    nullify(abs_fld_ptr)
 
   end subroutine setup_ancil_field
 
-  !> @details Writes ancils to file so that they can be checked
-  !> @param[in] fld_collection The field collection used for ancils
-  subroutine test_ancil_output(fld_collection)
+  !> @details Initialises a time_axis object for a group of time-varying ancils
+  !> @param[in] time_id The name of the time axis (also the XIOS id of the time
+  !>                    data)
+  !> @param[out] time_axis The resulting time_axis object
+  subroutine init_time_axis(time_id, time_axis)
 
     implicit none
 
-    type( field_collection_type ), intent(inout) :: fld_collection
+    character(len=*),     intent(in)  :: time_id
+    type(time_axis_type), intent(out) :: time_axis
 
-    type( field_collection_real_iterator_type) :: iter
-    type( field_type ), pointer :: fld => null()
+    ! Local/derived variables for time axis initialisation
+    real(r_def),    allocatable :: time_data(:)
+    integer(i_def), allocatable :: axis_indices(:)
 
-    iter=fld_collection%get_real_iterator()
-    do
-      if(.not.iter%has_next())exit
-      fld=>iter%next()
-      if (fld%can_write()) then
-        write(log_scratch_space,'(3A,I6)') &
-            "Writing ", trim(adjustl(fld%get_name()))//'_out'
-        call log_event(log_scratch_space,LOG_LEVEL_INFO)
-        call fld%write_field( trim(adjustl(fld%get_name()))//'_out' )
-      else
-        call log_event( 'Write method for '// trim(adjustl(fld%get_name())) // &
-                        ' not set up', LOG_LEVEL_INFO )
-      end if
+    ! Other local variables for XIOS interface
+    integer(i_def) :: i
 
-    end do
+    ! Read time data from ancil file
+    call read_time_data(time_id, time_data)
 
-    nullify(fld)
+    ! Set up axis index array
+    allocate(axis_indices(size(time_data)))
+    axis_indices = (/ (i, i=1,size(time_data),1) /)
 
-  end subroutine test_ancil_output
+    ! Initialise time axis
+    call time_axis%initialise( time_data, axis_indices, time_id )
+
+  end subroutine init_time_axis
 
 end module init_ancils_mod

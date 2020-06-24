@@ -11,7 +11,7 @@
    <axis_definition>
     <axis id="vert_axis_half_levels" name="half_levels"/>
     <axis id="vert_axis_full_levels" name="full_levels"/>
-    <axis id="veg_pseudo_levels" name="veg_pseudo_levels" n_glo="9"/>
+    <axis id="monthly_axis" name="monthly_axis" n_glo="12"/>
    </axis_definition>
 
    <domain_definition>
@@ -48,6 +48,11 @@
     <grid id="half_level_edge_grid">
       <domain domain_ref="edge_half_levels"/>
       <axis axis_ref="vert_axis_half_levels"/>
+    </grid>
+    <grid id="3D_monthly_grid">
+      <domain domain_ref="face_half_levels"/>
+      <axis axis_ref="vert_axis_half_levels"/>
+      <axis axis_ref="monthly_axis"/>
     </grid>
    </grid_definition>
 
@@ -1213,6 +1218,8 @@
        <field id="read_tstar" name="tstar" long_name="surface_temperature" standard_name="surface_temperature" unit="K" domain_ref="face_half_levels" operation="instant" />
       </file>
 
+      <!-- ANCIL FILES -->
+
       <file id="orography_ancil" name="orography_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="true" enabled=".FALSE.">
        <field id="surface_altitude" name="surface_altitude" long_name="Surface altitude" unit="m" operation="once" domain_ref="face_half_levels"/>
        <field id="sd_orog" name="m01s00i034" long_name="Standard deviation of orography" unit="1" operation="once" domain_ref="face_half_levels"/>
@@ -1227,6 +1234,30 @@
        <field id="land_area_fraction" name="land_area_fraction" long_name="Land area fraction" unit="1" operation="once" domain_ref="face_half_levels"/>
       </file>
 
+      <file id="sea_ancil" name="sea_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="true" enabled=".FALSE.">
+       <field id="sea_time" name="time" unit="hours" operation="once" axis_ref="monthly_axis"/>
+       <field id="chloro_sea_data" name="mass_concentration_of_chlorophyll_a_in_sea_water" long_name="Mass concentration of chlorophyll A in sea water" unit="kg m-3" operation="instant" domain_ref="face_half_levels" axis_ref="monthly_axis"/>
+      </file>
+
+      <file id="sea_ice_ancil" name="sea_ice_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="true" enabled=".FALSE.">
+       <field id="sea_ice_time" name="time" unit="hours" operation="once" axis_ref="monthly_axis"/>
+       <field id="sea_ice_thickness_data" name="sea_ice_thickness" long_name="Sea ice thickness" unit="m" operation="instant" domain_ref="face_half_levels" axis_ref="monthly_axis"/>
+      </file>
+
+      <file id="albedo_vis_ancil" name="albedo_vis_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="true" enabled=".FALSE.">
+       <field id="albedo_vis_time" name="time" unit="hours" operation="once" axis_ref="monthly_axis"/>
+       <field id="albedo_obs_vis_data" name="surface_diffuse_albedo_of_photosynthetically_active_radiation_assuming_no_snow" long_name="surface_diffuse_albedo_of_photosynthetically_active_radiation_assuming_no_snow" unit="1" operation="instant" domain_ref="face_half_levels" axis_ref="monthly_axis"/>
+      </file>
+
+      <file id="albedo_nir_ancil" name="albedo_nir_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="true" enabled=".FALSE.">
+       <field id="albedo_nir_time" name="time" unit="hours" operation="once" axis_ref="monthly_axis"/>
+       <field id="albedo_obs_nir_data" name="surface_diffuse_albedo_of_near_infra_red_radiation_assuming_no_snow" long_name="surface_diffuse_albedo_of_near_infra_red_radiation_assuming_no_snow" unit="1" operation="instant" domain_ref="face_half_levels" axis_ref="monthly_axis"/>
+      </file>
+
+      <file id="hydtop_ancil" name="hydtop_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="true" enabled=".FALSE.">
+       <field id="mean_topog_index" name="m01s00i274" long_name="Mean topographic index" unit="1" operation="once" domain_ref="face_half_levels"/>
+      </file>
+
       <file id="soil_ancil" name="soil_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="true" enabled=".FALSE.">
        <field id="soil_albedo" name="soil_albedo" long_name="Soil albedo" unit="1" operation="once" domain_ref="face_half_levels"/>
        <field id="soil_carbon_content" name="soil_carbon_content" long_name="Soil carbon content" unit="kgC m-2" operation="once" domain_ref="face_half_levels"/>
@@ -1234,7 +1265,28 @@
       </file>
 
       <file id="surface_frac_ancil" name="surface_frac_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="true" enabled=".FALSE.">
-       <field id="tile_fraction_data" name="m01s00i216" long_name="Fractions of vegetation types" unit="1" operation="once" domain_ref="face_half_levels" axis_ref="veg_pseudo_levels"/>
+        <field id="tile_fraction_data" name="m01s00i216" long_name="Fractions of vegetation types" unit="1" operation="once" domain_ref="face_half_levels" axis_ref="veg_pseudo_levels"/>
+      </file>
+
+      <file id="aerosols_ancil" name="aerosols_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="true" enabled=".FALSE.">
+       <field id="aerosols_time" name="time" unit="days" operation="once" axis_ref="monthly_axis"/>
+       <field id="nd_ait_sol_data" name="AiSo___103" long_name="Aitken mode (soluble) number" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="ait_sol_su_data" name="AiSoSU_104" long_name="Aitken mode (soluble) SU MMR clim" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="ait_sol_bc_data" name="AiSoBC_105" long_name="Aitken mode (soluble) BC MMR clim" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="ait_sol_oc_data" name="AiSoOC_106" long_name="Aitken mode (soluble) OC MMR clim" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="nd_acc_sol_data" name="AcSo___107" long_name="Accumulation mode (soluble) number" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="acc_sol_su_data" name="AcSoSU_108" long_name="Accumulation mode (soluble) SU MMR clim" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="acc_sol_bc_data" name="AcSoBC_109" long_name="Accumulation mode (soluble) BC MMR clim" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="acc_sol_oc_data" name="AcSoOC_110" long_name="Accumulation mode (soluble) OC MMR clim" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="acc_sol_ss_data" name="AcSoSS_111" long_name="Accumulation mode (soluble) SS MMR clim" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="nd_cor_sol_data" name="CoSo___113" long_name="Coarse mode (soluble) number" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="cor_sol_su_data" name="CoSoSU_114" long_name="Coarse mode (soluble) SU MMR clim" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="cor_sol_bc_data" name="CoSoBC_115" long_name="Coarse mode (soluble) BC MMR clim" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="cor_sol_oc_data" name="CoSoOC_116" long_name="Coarse mode (soluble) OC MMR clim" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="cor_sol_ss_data" name="CoSoSS_117" long_name="Coarse mode (soluble) SS MMR clim" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="nd_ait_ins_data" name="AiIn___119" long_name="Aitken mode (insoluble) number" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="ait_ins_bc_data" name="AiInBC_120" long_name="Aitken mode (insoluble) BC MMR clim" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
+       <field id="ait_ins_oc_data" name="AiInOC_121" long_name="Aitken mode (insoluble) OC MMR clim" unit="1" operation="instant" grid_ref="3D_monthly_grid"/>
       </file>
 
     </file_definition>

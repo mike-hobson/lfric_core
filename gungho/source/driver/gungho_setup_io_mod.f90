@@ -19,6 +19,12 @@ module gungho_setup_io_mod
                                            checkpoint_stem_name,      &
                                            land_area_ancil_path,      &
                                            orography_ancil_path,      &
+                                           aerosols_ancil_path,       &
+                                           albedo_nir_ancil_path,     &
+                                           albedo_vis_ancil_path,     &
+                                           hydtop_ancil_path,         &
+                                           sea_ancil_path,            &
+                                           sea_ice_ancil_path,        &
                                            soil_ancil_path,           &
                                            surface_frac_ancil_path,   &
                                            start_dump_filename,       &
@@ -105,6 +111,42 @@ module gungho_setup_io_mod
       write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
                                trim(soil_ancil_path)
       call tmp_file%init_xios_file("soil_ancil", path=ancil_fname)
+      call files_list%insert_item(tmp_file)
+
+      ! Set aerosol ancil filename from namelist
+      write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
+                               trim(aerosols_ancil_path)
+      call tmp_file%init_xios_file("aerosols_ancil", path=ancil_fname)
+      call files_list%insert_item(tmp_file)
+
+      ! Set sea ancil filename from namelist
+      write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
+                               trim(sea_ancil_path)
+      call tmp_file%init_xios_file("sea_ancil", path=ancil_fname)
+      call files_list%insert_item(tmp_file)
+
+      ! Set sea ice ancil filename from namelist
+      write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
+                               trim(sea_ice_ancil_path)
+      call tmp_file%init_xios_file("sea_ice_ancil", path=ancil_fname)
+      call files_list%insert_item(tmp_file)
+
+      ! Set albedo_vis ancil filename from namelist
+      write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
+                               trim(albedo_vis_ancil_path)
+      call tmp_file%init_xios_file("albedo_vis_ancil", path=ancil_fname)
+      call files_list%insert_item(tmp_file)
+
+      ! Set albedo_nir ancil filename from namelist
+      write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
+                               trim(albedo_nir_ancil_path)
+      call tmp_file%init_xios_file("albedo_nir_ancil", path=ancil_fname)
+      call files_list%insert_item(tmp_file)
+
+      ! Set hydtop filename from namelist
+      write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
+                               trim(hydtop_ancil_path)
+      call tmp_file%init_xios_file("hydtop_ancil", path=ancil_fname)
       call files_list%insert_item(tmp_file)
 
       ! Set surface fraction ancil filename from namelist

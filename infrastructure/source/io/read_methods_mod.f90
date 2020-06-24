@@ -34,7 +34,9 @@ module read_methods_mod
             read_field_single_face,  &
             read_state,              &
             read_checkpoint,         &
-            dump_read_xios
+            dump_read_xios,          &
+            read_field_time_var,     &
+            read_time_data
 
 contains
 
@@ -239,15 +241,15 @@ subroutine read_state(state, prefix, suffix)
   class( field_parent_type ), pointer :: fld => null()
 
   iter = state%get_iterator()
+
   do
     if ( .not.iter%has_next() ) exit
     fld => iter%next()
     select type(fld)
       type is (field_type)
         if ( fld%can_read() ) then
-          call log_event( &
-            'Reading '//trim(adjustl(fld%get_name())), &
-            LOG_LEVEL_INFO)
+          call log_event( 'Reading '//trim(adjustl(fld%get_name())), &
+                          LOG_LEVEL_INFO )
 
           ! Construct the XIOS field ID from the LFRic field name and optional arguments
           xios_field_id = trim(adjustl(fld%get_name()))
@@ -256,8 +258,8 @@ subroutine read_state(state, prefix, suffix)
 
           call fld%read_field(xios_field_id)
         else
-          call log_event( 'Read method for  '// trim(adjustl(fld%get_name())) // &
-                          ' not set up', LOG_LEVEL_INFO )
+          call log_event('Read method for  '//trim(adjustl(fld%get_name()))// &
+                         ' not set up', LOG_LEVEL_INFO )
         end if
       type is (integer_field_type)
         if ( fld%can_read() ) then
@@ -350,5 +352,124 @@ subroutine dump_read_xios(xios_field_name, field_proxy)
   end select
 
 end subroutine dump_read_xios
+
+!> @brief   Read a time-varying field in UGRID format using XIOS
+!>@param[in]    xios_field_name XIOS identifier for the field
+!>@param[inout] field_proxy A field proxy to be read into
+!>@param[in]    time_index The indices of the time 'columns' to be read in
+subroutine read_field_time_var(xios_field_name, field_proxy, time_indices)
+
+  implicit none
+
+  character(len=*),       intent(in)    :: xios_field_name
+  type(field_proxy_type), intent(inout) :: field_proxy
+  integer(i_def),         intent(in)    :: time_indices(:)
+
+  integer(i_def) :: undf, fs_id, i, nlayers, time_index
+  integer(i_def) :: domain_size, vert_axis_size, time_axis_size
+  real(dp_xios), allocatable :: recv_field(:)
+  real(dp_xios), allocatable :: recv_field_twod(:)
+
+  ! Get the number of layers to distiniguish between 2D and 3D fields
+  nlayers = field_proxy%vspace%get_nlayers()
+
+  ! Get the size of undf as we only read in up to last owned
+  undf = field_proxy%vspace%get_last_dof_owned()
+  fs_id = field_proxy%vspace%which()
+
+  ! get the horizontal / vertical / time domain sizes
+  if ( fs_id == W3 ) then
+    call xios_get_domain_attr( 'face_half_levels', ni=domain_size )
+    call xios_get_axis_attr( 'vert_axis_half_levels', n_glo=vert_axis_size )
+    call xios_get_axis_attr( "monthly_axis", n_glo=time_axis_size )
+  else
+    call log_event( 'Time varying fields only readable for W3 function space', &
+                     LOG_LEVEL_ERROR )
+  end if
+
+  ! Size the array to be what is expected
+  if ( nlayers == 1 ) then
+    allocate( recv_field( domain_size * time_axis_size ) )
+  else
+    allocate( recv_field( domain_size * vert_axis_size * time_axis_size ) )
+    allocate( recv_field_twod( domain_size * vert_axis_size ) )
+  end if
+
+  ! Read the data into a temporary array - this should be in the correct order
+  ! as long as we set up the horizontal domain using the global index
+  call xios_recv_field( trim(xios_field_name)//"_data", recv_field )
+
+  ! We need to reshape and select a subset of the the incoming data to get the
+  ! correct time entries for the LFRic field
+  ! Currently we read the first time entry and do no interpolation
+  ! Indices must be zero-based for read purposes
+  time_index = time_indices(1) - 1
+
+  ! Here we give the field proxy the data for the corresponding time entry
+  if ( nlayers == 1 ) then
+    field_proxy%data( 1 : undf ) = recv_field( time_index * ( domain_size ) + 1 : &
+                                        time_index * ( domain_size ) + domain_size )
+
+  else
+    ! Set up a temporary array for the 3D time entry before reshaping the data
+    ! for the field
+    recv_field_twod = recv_field( ( time_index - 1) * ( domain_size * vert_axis_size ) + 1 : &
+                                  ( time_index ) * ( domain_size * vert_axis_size ) )
+
+    do i = 0, vert_axis_size - 1
+      field_proxy%data( i + 1 : undf : vert_axis_size ) = &
+             recv_field_twod( i * ( domain_size ) + 1 : ( i * ( domain_size ) ) + domain_size )
+    end do
+  end if
+
+  ! Set halos dirty here as for parallel read we only read in data for owned
+  ! dofs and the halos will not be set
+  call field_proxy%set_dirty()
+
+  deallocate( recv_field )
+  if ( .not. nlayers==1 ) deallocate( recv_field_twod )
+
+end subroutine read_field_time_var
+
+!> @brief Read time data using XIOS
+!>@param[in]  time_id   The XIOS ID for the time data
+!>@param[out] time_data The array of time data
+subroutine read_time_data(time_id, time_data)
+
+  implicit none
+
+  character(len=*),           intent(in)  :: time_id
+  real(dp_xios), allocatable, intent(out) :: time_data(:)
+
+  ! Local variables for XIOS interface
+  type(xios_field)   :: time_hdl
+  integer(i_def)     :: time_axis_size
+  character(str_def) :: axis_id, time_units
+
+  ! Set up axis size and units from XIOS configuration
+  call xios_get_handle( time_id, time_hdl )
+  call xios_get_attr( time_hdl, unit=time_units, axis_ref=axis_id )
+
+  call xios_get_axis_attr( axis_id, n_glo=time_axis_size )
+  allocate( time_data( time_axis_size ) )
+
+  ! Read the time data from the ancil file
+  call xios_recv_field( time_id, time_data )
+
+  ! Set time units to seconds across a single year - the calendar type needs to
+  ! be integrated into this eventually
+  if ( time_units == 'days' ) then
+    time_data = mod( time_data, 365.0_dp_xios )
+    time_data = time_data * 3600.0_dp_xios * 24.0_dp_xios
+  else if ( time_units == 'hours' ) then
+    time_data = mod( time_data, 365.0_dp_xios * 24.0_dp_xios )
+    time_data = time_data * 3600.0_dp_xios
+  else
+    write( log_scratch_space,'(A,A)' ) "Invalid units for time axis: "// &
+                                      trim( time_units )
+    call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+  end if
+
+end subroutine read_time_data
 
 end module read_methods_mod

@@ -32,6 +32,8 @@ module gungho_driver_mod
   use log_mod,                    only : log_event,         &
                                          log_scratch_space, &
                                          LOG_LEVEL_ALWAYS
+  use variable_fields_mod,        only : update_variable_fields
+
 
   implicit none
 
@@ -114,6 +116,10 @@ contains
 
       ! Update the calendar if required
       call gungho_update_calendar( clock )
+
+      ! Update time-varying fields
+      call update_variable_fields( model_data%ancil_times_list, &
+                                   clock, model_data%ancil_fields )
 
       ! Perform a timestep
       call gungho_step( mesh_id,      &

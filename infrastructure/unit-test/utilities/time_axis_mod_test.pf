@@ -10,7 +10,6 @@ module time_axis_mod_test
   use pFUnit_Mod
 
   use constants_mod,                  only : i_def, r_def, str_def
-  use field_collection_mod,           only : field_collection_type
   use time_axis_mod,                  only : time_axis_type
 
   implicit none
@@ -60,8 +59,6 @@ contains
     real(r_def),    dimension(6) :: test_data
     integer(i_def), dimension(6) :: test_data_index
     character(str_def)           :: test_name
-    type(field_collection_type)  :: test_fields
-    type(field_collection_type)  :: out_fields
     character(str_def)           :: test_units
 
     ! Set up test  variables
@@ -74,14 +71,11 @@ contains
     test_data = (/ 15.0, 75.0, 135.0, 195.0, 255.0, 315.0 /)
     test_data_index = (/ 1, 2, 3, 4, 5, 6 /)
     test_name = "test_time_axis_name"
-    test_fields = field_collection_type(name='test_fields')
     test_units = "hours"
 
     ! Initialise object
     call this%test_t_ax%initialise( test_data, test_data_index, &
-                                    trim(test_name), test_fields, test_units )
-
-    @assertTrue( this%test_t_ax%is_cyclic() )
+                                    trim(test_name), test_units )
 
     ! Test name and time units getter
     unit_output = this%test_t_ax%get_units()

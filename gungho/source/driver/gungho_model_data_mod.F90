@@ -32,7 +32,8 @@ module gungho_model_data_mod
                                                ancil_option_none,           &
                                                ancil_option_analytic,       &
                                                ancil_option_aquaplanet,     &
-                                               ancil_option_basic_gagl
+                                               ancil_option_basic_gagl,     &
+                                               ancil_option_prototype_gagl
   use io_config_mod,                    only : checkpoint_read,  &
                                                checkpoint_write, &
                                                write_dump
@@ -54,6 +55,8 @@ module gungho_model_data_mod
   use init_ancils_mod,                  only : init_analytic_ancils,    &
                                                init_aquaplanet_ancils,  &
                                                create_fd_ancils
+  use linked_list_mod,                  only : linked_list_type
+  use variable_fields_mod,              only : init_variable_fields
 
   implicit none
 
@@ -110,6 +113,9 @@ module gungho_model_data_mod
 
     !> Fields used to store data read in from ancillary files
     type( field_collection_type ), public   :: ancil_fields
+    !> Linked list of time axis objects used to update time-varying ancils
+    type( linked_list_type ),      public   :: ancil_times_list
+
 
   end type model_data_type
 
@@ -196,12 +202,11 @@ contains
         if (use_physics) call create_fd_prognostics(mesh_id, model_data%fd_fields)
     end select
 
-    select case ( ancil_choice )
-      case ( ancil_option_basic_gagl )
-        if (use_physics) call create_fd_ancils( model_data%depository,   &
-                                                model_data%ancil_fields, &
-                                                mesh_id, twod_mesh_id )
-    end select
+    ! Create and populate collection of fields to be read from ancillary files
+    if (use_physics) call create_fd_ancils( model_data%depository,   &
+                                            model_data%ancil_fields, &
+                                            mesh_id, twod_mesh_id ,  &
+                                            model_data%ancil_times_list )
 
   end subroutine create_model_data
 
@@ -302,8 +307,13 @@ contains
           call log_event( "Gungho: Setting ancillaries from analytic representation ", LOG_LEVEL_INFO )
           call init_analytic_ancils( model_data%surface_fields )
         case ( ancil_option_basic_gagl )
-          call log_event( "Gungho: Reading ancillaries from disk ", LOG_LEVEL_INFO )
+          call log_event( "Gungho: Reading basic GA/GL ancils ", LOG_LEVEL_INFO )
           call read_state( model_data%ancil_fields )
+        case ( ancil_option_prototype_gagl )
+          call log_event( "Gungho: Reading prototype GA/GL ancils ", LOG_LEVEL_INFO )
+          call read_state( model_data%ancil_fields )
+          call init_variable_fields( model_data%ancil_times_list, &
+                                     clock, model_data%ancil_fields )
         case default
           ! No valid ancil option selected
           call log_event("Gungho: No valid ancillary initialisation option selected, "// &

@@ -38,8 +38,7 @@ module rk_alg_timestep_mod
   use mixing_config_mod,         only: viscosity
 
   ! PsyKAl-lite kernels
-  use psykal_lite_mod,                   only: invoke_pressure_gradient_bd_kernel,     &
-                                               invoke_tracer_viscosity, &
+  use psykal_lite_mod,                   only: invoke_tracer_viscosity, &
                                                invoke_momentum_viscosity
 
   use field_bundle_mod,                  only: clone_bundle, &
@@ -51,6 +50,7 @@ module rk_alg_timestep_mod
 
   ! PsyKAl PSYClone kernels
   use enforce_bc_kernel_mod,               only: enforce_bc_kernel_type
+  use pressure_gradient_bd_kernel_mod,     only: pressure_gradient_bd_kernel_type
   use hydrostatic_kernel_mod,              only: hydrostatic_kernel_type
   use kinetic_energy_gradient_kernel_mod,  only: kinetic_energy_gradient_kernel_type
   use project_pressure_kernel_mod,         only: project_pressure_kernel_type
@@ -200,7 +200,7 @@ contains
 
     type(quadrature_rule_gaussian_type) :: gaussian_quadrature
 
-    integer(i_def) :: st, stage
+    integer(kind=i_def)            :: st, stage
 
     if ( subroutine_timers ) call timer('rk_alg')
     qr = get_qr()
@@ -242,15 +242,16 @@ contains
                                                         state(igh_u), vorticity,     &
                                                         chi, qr) )
       end if
-      call invoke_pressure_gradient_bd_kernel( rhs_prediction(igh_u, stage),   &
-                                               state(igh_p), state(igh_t),     &
-                                               moist_dyn, qrf )
-      call invoke( name = "Compute new rhs",                                   &
-                   hydrostatic_kernel_type( rhs_prediction(igh_u,stage),       &
-                                            state(igh_p), state(igh_t),        &
-                                            moist_dyn, geopotential, qr ),     &
-                   kinetic_energy_gradient_kernel_type(                        &
-                        rhs_prediction(igh_u,stage), state(igh_u), chi, qr ),  &
+
+      call invoke( name = "Compute new rhs",                                        &
+                   pressure_gradient_bd_kernel_type( rhs_prediction(igh_u, stage),  &
+                                                     state(igh_p), 1, state(igh_t), &
+                                                     moist_dyn, qrf ),              &
+                   hydrostatic_kernel_type( rhs_prediction(igh_u,stage),            &
+                                            state(igh_p), state(igh_t),             &
+                                            moist_dyn, geopotential, qr ),          &
+                   kinetic_energy_gradient_kernel_type(                             &
+                        rhs_prediction(igh_u,stage), state(igh_u), chi, qr ),       &
                    enforce_bc_kernel_type( rhs_prediction(1,stage) ) )
       call set_bundle_scalar(0.0_r_def, rhs, bundle_size)
 

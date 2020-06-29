@@ -140,7 +140,7 @@ contains
     integer(i_def), allocatable :: adjacent_face(:,:)
 
     integer(i_def), allocatable :: map_w2(:,:)
-    integer(i_def), allocatable :: map_wt(:,:)
+    integer(i_def), allocatable :: map_wtheta(:,:)
     integer(i_def), allocatable :: map_w3(:,:)
 
     real(r_def), allocatable  :: outward_normals_to_horizontal_faces(:,:)
@@ -185,7 +185,7 @@ contains
 
     ! Get dofmaps
     call get_w2_m3x3_dofmap(map_w2)
-    call get_wtheta_m3x3_dofmap(map_wt)
+    call get_wtheta_m3x3_dofmap(map_wtheta)
     call get_w3_m3x3_dofmap(map_w3)
 
     ! The W3 field uses a cross stencil
@@ -217,26 +217,26 @@ contains
     cell = 1
 
     ! Call the kernel
-    call pressure_gradient_bd_code( nlayers,                        &
-                                    ndf_w2, undf_w2,                &
-                                    map_w2(:,cell),                 &
-                                    ndf_w3, undf_w3,                &
-                                    cross_stencil_w3_map(:,:,cell), &
-                                    cross_stencil_w3_size,          &
-                                    ndf_wtheta, undf_wtheta,        &
-                                    map_wt(:,cell),                 &
-                                    r_u_bd_data,                    &
-                                    exner_data,                     &
-                                    theta_data,                     &
-                                    moist_dyn_data(:,1),            &
-                                    moist_dyn_data(:,2),            &
-                                    moist_dyn_data(:,3),            &
-                                    nfaces_qr, nqp_f, wqp_f,        &
-                                    basis_w2_face, basis_w3_face,   &
-                                    basis_wtheta_face,              &
-                                    nfaces_re_h,                    &
-                                    adjacent_face(:,cell),          &
-                                    outward_normals_to_horizontal_faces )
+    call pressure_gradient_bd_code( nlayers,                             &
+                                    r_u_bd_data,                         &
+                                    exner_data,                          &
+                                    cross_stencil_w3_size,               &
+                                    cross_stencil_w3_map(:,:,cell),      &
+                                    theta_data,                          &
+                                    moist_dyn_data(:,1),                 &
+                                    moist_dyn_data(:,2),                 &
+                                    moist_dyn_data(:,3),                 &
+                                    ndf_w2, undf_w2, map_w2(:,cell),     &
+                                    basis_w2_face,                       &
+                                    ndf_w3, undf_w3, map_w3(:,cell),     &
+                                    basis_w3_face,                       &
+                                    ndf_wtheta, undf_wtheta,             &
+                                    map_wtheta(:,cell),                  &
+                                    basis_wtheta_face,                   &
+                                    nfaces_re_h,                         &
+                                    outward_normals_to_horizontal_faces, &
+                                    adjacent_face(:,cell),               &
+                                    nfaces_qr, nqp_f, wqp_f )
 
     ! Test only on level 1
     k=1
@@ -255,7 +255,7 @@ contains
     deallocate(r_u_bd_data)
     deallocate(moist_dyn_data)
     deallocate(map_w2)
-    deallocate(map_wt)
+    deallocate(map_wtheta)
     deallocate(map_w3)
     deallocate(cross_stencil_w3_map)
     deallocate(wqp_f)

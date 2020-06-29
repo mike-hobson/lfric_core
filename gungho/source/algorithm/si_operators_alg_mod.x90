@@ -270,21 +270,19 @@ contains
   !>@param[in] ref_state Bundle of reference states used to create linear operators
   subroutine compute_si_operators(ref_state)
     use quadrature_xyoz_mod,             only: quadrature_xyoz_type
-    use quadrature_face_mod,             only: quadrature_face_type
-    use quadrature_rule_gaussian_mod,    only: quadrature_rule_gaussian_type
-    use eos_operators_kernel_mod,        only: eos_operators_kernel_type
-    use weighted_div_kernel_mod,         only: weighted_div_kernel_type
-    use weighted_proj_2theta_kernel_mod, only: weighted_proj_2theta_kernel_type
-    use weighted_proj_theta2_kernel_mod, only: weighted_proj_theta2_kernel_type
-    use weighted_proj_theta2_vert_kernel_mod, &
-                                         only: weighted_proj_theta2_vert_kernel_type
-    use compound_operator_kernel_mod,    only: compound_operator_kernel_type
-    use mg_flux_kernel_mod,              only: mg_flux_kernel_type
-    use sample_flux_kernel_mod,          only: sample_flux_kernel_type
-    use psykal_lite_mod,                 only: invoke_weighted_div_bd_kernel_type,         &
-                                               invoke_weighted_div_bd_kernel_type,         &
-                                               invoke_weighted_proj_2theta_bd_kernel_type, &
-                                               invoke_weighted_proj_theta2_bd_kernel_type
+    use quadrature_face_mod,                  only: quadrature_face_type
+    use quadrature_rule_gaussian_mod,         only: quadrature_rule_gaussian_type
+    use eos_operators_kernel_mod,             only: eos_operators_kernel_type
+    use weighted_div_kernel_mod,              only: weighted_div_kernel_type
+    use weighted_proj_2theta_kernel_mod,      only: weighted_proj_2theta_kernel_type
+    use weighted_proj_theta2_kernel_mod,      only: weighted_proj_theta2_kernel_type
+    use weighted_proj_theta2_vert_kernel_mod, only: weighted_proj_theta2_vert_kernel_type
+    use weighted_div_bd_kernel_mod,           only: weighted_div_bd_kernel_type
+    use weighted_proj_2theta_bd_kernel_mod,   only: weighted_proj_2theta_bd_kernel_type
+    use weighted_proj_theta2_bd_kernel_mod,   only: weighted_proj_theta2_bd_kernel_type
+    use compound_operator_kernel_mod,         only: compound_operator_kernel_type
+    use mg_flux_kernel_mod,                   only: mg_flux_kernel_type
+    use sample_flux_kernel_mod,               only: sample_flux_kernel_type
     use finite_element_config_mod,       only: element_order, &
                                                nqp_exact
     use function_space_mod,              only: function_space_type
@@ -321,16 +319,16 @@ contains
     type(function_space_type),     pointer :: w3_fs => null()
     type(function_space_type),     pointer :: w2_fs => null()
     type(function_space_type),     pointer :: wt_fs => null()
-    real(r_def)                            :: const1, const2
-    integer(i_def), parameter              :: imone = -1_i_def
-    real(r_def), parameter                 :: one   = 1_r_def
+    real(kind=r_def)                       :: const1, const2
+    integer(kind=i_def), parameter         :: imone = -1_i_def
+    real(kind=r_def),    parameter         :: one   = 1_r_def
     class(reference_element_type), pointer :: reference_element =>null()
     type(mesh_type),               pointer :: mesh => null()
     type(operator_type),           pointer :: m2 => null()
     type(field_type),              pointer :: u_normalisation => null(), &
                                               t_normalisation => null()
     type(field_type)                       :: m2_u, theta_adv_term
-    integer(kind=i_def) :: level
+    integer(kind=i_def)                    :: level
 
     if ( subroutine_timers ) call timer('si_operators_alg:compute')
     call log_event( "Gungho: computing si_operators", LOG_LEVEL_INFO )
@@ -344,7 +342,7 @@ contains
     wt_fs => ref_state(igh_t)%get_function_space()
 
     ! Set the function space chains to the finest levels.
-    if(l_multigrid) then
+    if (l_multigrid) then
        call multigrid_function_space_chain%set_current(w3_fs%get_id())
        call w2_multigrid_function_space_chain%set_current(w2_fs%get_id())
        call wtheta_multigrid_function_space_chain%set_current(wt_fs%get_id())
@@ -378,20 +376,19 @@ contains
        ! Cell kernels
        const1 = tau_u*dt*cp
        const2 = tau_t*dt
-       call invoke( weighted_div_kernel_type(div_star(level), theta, const1, qr), &
-            weighted_proj_2theta_kernel_type(p2theta(level), exner, const1, qr),  &
-            weighted_proj_theta2_vert_kernel_type(ptheta2v(level), theta, const2, &
-            qr),                      &
-            weighted_proj_theta2_kernel_type(ptheta2(level), theta, const2, qr) )
-
+       call invoke( name = "Cell and boundary kernels",                                 &
+            weighted_div_kernel_type(div_star(level), theta, const1, qr),               &
+            weighted_proj_2theta_kernel_type(p2theta(level), exner, const1, qr),        &
+            weighted_proj_theta2_vert_kernel_type(ptheta2v(level), theta, const2, qr),  &
+            weighted_proj_theta2_kernel_type(ptheta2(level), theta, const2, qr),        &
        ! Boundary kernels
-       call invoke_weighted_div_bd_kernel_type(div_star(level), theta, const1, qrf)
-       call invoke_weighted_proj_theta2_bd_kernel_type(ptheta2(level), theta, const2, qrf)
-       call invoke_weighted_proj_2theta_bd_kernel_type(p2theta(level), exner, const1, qrf)
+            weighted_div_bd_kernel_type(div_star(level), theta, 1, const1, qrf),        &
+            weighted_proj_theta2_bd_kernel_type(ptheta2(level), theta, 1, const2, qrf), &
+            weighted_proj_2theta_bd_kernel_type(p2theta(level), exner, 1, const1, qrf) )
 
        ! Compute rho^ref at u nodal points
 
-       if(l_multigrid) then
+       if (l_multigrid) then
           ! rmultiplicity is a half at lowest order, at higher order, MG has to do
           ! something different anyway
           call invoke(setval_c(rho_at_u(level), 0.0_r_def), &

@@ -213,23 +213,22 @@ contains
 
     ! Call the kernel
     call exner_gradient_bd_code( nlayers,                             &
-                                 ndf_w2, undf_w2,                     &
-                                 map_w2(:,cell),                      &
-                                 ndf_w3, undf_w3,                     &
-                                 cross_stencil_w3_map(:,:,cell),      &
-                                 cross_stencil_w3_size,               &
-                                 ndf_wtheta, undf_wtheta,             &
-                                 map_wtheta(:,cell),                  &
                                  r_u_bd_data,                         &
                                  exner_data,                          &
+                                 cross_stencil_w3_size,               &
+                                 cross_stencil_w3_map(:,:,cell),      &
                                  theta_data,                          &
-                                 nfaces_qr, nqp_f, wqp_f,             &
+                                 ndf_w2, undf_w2, map_w2(:,cell),     &
                                  basis_w2_face,                       &
+                                 ndf_w3, undf_w3, map_w3(:,cell),     &
                                  basis_w3_face,                       &
+                                 ndf_wtheta, undf_wtheta,             &
+                                 map_wtheta(:,cell),                  &
                                  basis_wtheta_face,                   &
                                  nfaces_re_h,                         &
+                                 outward_normals_to_horizontal_faces, &
                                  adjacent_face(:,cell),               &
-                                 outward_normals_to_horizontal_faces )
+                                 nfaces_qr, nqp_f, wqp_f )
 
     ! Test there is no contribution on the horizontal faces
     k = 1

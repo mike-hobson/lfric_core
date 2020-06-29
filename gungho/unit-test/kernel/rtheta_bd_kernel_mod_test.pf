@@ -183,23 +183,24 @@ contains
     cell = 5
 
     ! Call the kernel
-    call rtheta_bd_code( nlayers,                            &
-                         ndf_w2, undf_w2,                    &
-                         cross_stencil_w2_map(:,:,cell),     &
-                         cross_stencil_w2_size,              &
-                         ndf_wtheta, undf_wtheta,            &
-                         cross_stencil_wtheta_map(:,:,cell), &
-                         cross_stencil_wtheta_size,          &
-                         r_theta_bd_data,                    &
-                         theta_data,                         &
-                         u_data,                             &
-                         nfaces_qr, nqp_f, wqp_f,            &
-                         basis_w2_face,                      &
-                         basis_wtheta_face,                  &
-                         nfaces_re_h,                        &
-                         adjacent_face(:,cell),              &
-                         normals_to_horizontal_faces,        &
-                         outward_normals_to_horizontal_faces )
+    call rtheta_bd_code( nlayers,                             &
+                         r_theta_bd_data,                     &
+                         theta_data,                          &
+                         cross_stencil_wtheta_size,           &
+                         cross_stencil_wtheta_map(:,:,cell),  &
+                         u_data,                              &
+                         cross_stencil_w2_size,               &
+                         cross_stencil_w2_map(:,:,cell),      &
+                         ndf_wtheta, undf_wtheta,             &
+                         map_wtheta(:,cell),                  &
+                         basis_wtheta_face,                   &
+                         ndf_w2, undf_w2, map_w2(:,cell),     &
+                         basis_w2_face,                       &
+                         nfaces_re_h,                         &
+                         normals_to_horizontal_faces,         &
+                         outward_normals_to_horizontal_faces, &
+                         adjacent_face(:,cell),               &
+                         nfaces_qr, nqp_f, wqp_f )
 
     ! Simple test, check that when theta=constant, the code inputs no increment
     @assertEqual( answer, r_theta_bd_data(:), tol )

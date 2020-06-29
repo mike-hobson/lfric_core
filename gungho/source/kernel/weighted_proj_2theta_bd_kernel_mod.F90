@@ -14,13 +14,14 @@
 !>
 module weighted_proj_2theta_bd_kernel_mod
 
-  use argument_mod,      only: arg_type, func_type, mesh_data_type, &
-                               reference_element_data_type,         &
-                               GH_OPERATOR, GH_FIELD, GH_REAL,      &
-                               GH_READ, GH_READWRITE,               &
-                               GH_BASIS, GH_DIFF_BASIS,             &
-                               CELLS, GH_QUADRATURE_face,           &
-                               adjacent_face,                       &
+  use argument_mod,      only: arg_type, func_type,            &
+                               mesh_data_type,                 &
+                               reference_element_data_type,    &
+                               GH_OPERATOR, GH_FIELD, GH_REAL, &
+                               GH_READ, GH_READWRITE,          &
+                               STENCIL, CROSS, GH_BASIS,       &
+                               CELLS, GH_QUADRATURE_face,      &
+                               adjacent_face,                  &
                                outward_normals_to_horizontal_faces
   use constants_mod,     only: r_def, i_def
   use fs_continuity_mod, only: W2, W3, Wtheta
@@ -39,7 +40,7 @@ module weighted_proj_2theta_bd_kernel_mod
     private
     type(arg_type) :: meta_args(3) = (/                                     &
          arg_type(GH_OPERATOR, GH_READWRITE, W2, Wtheta),                   &
-         arg_type(GH_FIELD,    GH_READ,      W3),                           &
+         arg_type(GH_FIELD,    GH_READ,      W3, STENCIL(CROSS)),           &
          arg_type(GH_REAL,     GH_READ)                                     &
          /)
     type(func_type) :: meta_funcs(3) = (/                                   &
@@ -69,51 +70,48 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Computes the weighted projection from Wtheta to W2.
   !>
-  !! @param[in] cell Cell number
-  !! @param[in] nlayers Number of layers
-  !! @param[in] ncell_3d ncell*ndf
-  !! @param[in,out] projection Projection operator to compute
-  !! @param[in] exner Exner presssure
-  !! @param[in] scalar Real to scale matrix by
-  !! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
-  !! @param[in] ndf_wtheta Number of degrees of freedom per cell for wtheta
-  !! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
-  !! @param[in] undf_w3 Number of unique degrees of freedom for w3
-  !! @param[in] stencil_w3_map W3 dofmaps for the stencil
-  !! @param[in] stencil_w3_size Size of the W3 stencil (number of cells)
-  !! @param[in] nfaces_qr Number of faces in the quadrature rule
-  !! @param[in] nqp_f Number of quadrature points on horizontal faces
-  !! @param[in] wqp_f Quadrature weights on horizontal faces
-  !! @param[in] w2_basis_face  Basis functions evaluated at gaussian
-  !!                           quadrature points on horizontal faces
-  !! @param[in] w3_basis_face  Basis functions evaluated at gaussian
-  !!                           quadrature points on horizontal faces
-  !! @param[in] wtheta_basis_face  Basis functions evaluated at gaussian
-  !!                               quadrature points on horizontal faces
-  !! @param[in] nfaces_re_h Number of reference element faces bisected by a
+  !> @param[in] cell Cell number
+  !> @param[in] nlayers Number of layers
+  !> @param[in] ncell_3d ncell*ndf
+  !> @param[in,out] projection Projection operator to compute
+  !> @param[in] exner Exner presssure
+  !> @param[in] stencil_w3_size Size of the W3 stencil (number of cells)
+  !> @param[in] stencil_w3_map W3 dofmaps for the stencil
+  !> @param[in] scalar Real to scale matrix by
+  !> @param[in] ndf_w2 Number of degrees of freedom per cell for W2
+  !> @param[in] w2_basis_face W2 basis functions evaluated at Gaussian
+  !!                          quadrature points on horizontal faces
+  !> @param[in] ndf_wtheta Number of degrees of freedom per cell for Wtheta
+  !> @param[in] wtheta_basis_face Wtheta basis functions evaluated at Gaussian
+  !!                              quadrature points on horizontal faces
+  !> @param[in] ndf_w3 Number of degrees of freedom per cell for W3
+  !> @param[in] undf_w3 Number of unique degrees of freedom for W3
+  !> @param[in] map_w3 Dofmap for the cell at the base of the column for W3
+  !> @param[in] w3_basis_face W3 basis functions evaluated at Gaussian
+  !!                          quadrature points on horizontal faces
+  !> @param[in] nfaces_re_h Number of reference element faces bisected by a
   !!                        horizontal plane
-  !! @param[in] adjacent_face  Vector containing information on neighbouring
-  !!                           face index for the current cell
-  !! @param[in] outward_normals_to_horizontal_faces Vector of normals to the
+  !> @param[in] outward_normals_to_horizontal_faces Vector of normals to the
   !!                                                reference element horizontal
   !!                                                "outward faces"
-  !!
-  subroutine weighted_proj_2theta_bd_code( cell, nlayers, ncell_3d, &
-                                           projection,              &
-                                           exner,                   &
-                                           scalar,                  &
-                                           ndf_w2,                  &
-                                           ndf_wtheta,              &
-                                           ndf_w3, undf_w3,         &
-                                           stencil_w3_map,          &
-                                           stencil_w3_size,         &
-                                           nfaces_qr, nqp_f, wqp_f, &
-                                           w2_basis_face,           &
-                                           w3_basis_face,           &
-                                           wtheta_basis_face,       &
-                                           nfaces_re_h,             &
-                                           adjacent_face,           &
-                                           outward_normals_to_horizontal_faces )
+  !> @param[in] adjacent_face Vector containing information on neighbouring
+  !!                          face index for the current cell
+  !> @param[in] nfaces_qr Number of faces in the quadrature rule
+  !> @param[in] nqp_f Number of quadrature points on horizontal faces
+  !> @param[in] wqp_f Quadrature weights on horizontal faces
+  !>
+  subroutine weighted_proj_2theta_bd_code( cell, nlayers, ncell_3d,             &
+                                           projection, exner,                   &
+                                           stencil_w3_size, stencil_w3_map,     &
+                                           scalar,                              &
+                                           ndf_w2, w2_basis_face,               &
+                                           ndf_wtheta, wtheta_basis_face,       &
+                                           ndf_w3, undf_w3, map_w3,             &
+                                           w3_basis_face,                       &
+                                           nfaces_re_h,                         &
+                                           outward_normals_to_horizontal_faces, &
+                                           adjacent_face,                       &
+                                           nfaces_qr, nqp_f, wqp_f )
 
     use calc_exner_pointwise_mod, only: calc_exner_pointwise
 
@@ -129,6 +127,8 @@ contains
 
     integer(kind=i_def), intent(in) :: stencil_w3_size
     integer(kind=i_def), dimension(ndf_w3, stencil_w3_size), intent(in) :: stencil_w3_map
+
+    integer(kind=i_def), dimension(ndf_w3), intent(in) :: map_w3
 
     real(kind=r_def), dimension(3,ndf_w2,nqp_f,nfaces_qr),     intent(in) :: w2_basis_face
     real(kind=r_def), dimension(1,ndf_w3,nqp_f,nfaces_qr),     intent(in) :: w3_basis_face

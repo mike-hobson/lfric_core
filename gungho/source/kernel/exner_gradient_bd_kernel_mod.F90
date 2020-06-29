@@ -15,13 +15,14 @@
 !>
 module exner_gradient_bd_kernel_mod
 
-  use argument_mod,            only : arg_type, func_type, mesh_data_type, &
-                                      reference_element_data_type,         &
-                                      GH_FIELD, GH_READ, GH_INC,           &
-                                      GH_BASIS,                            &
-                                      GH_DIFF_BASIS, CELLS,                &
-                                      GH_QUADRATURE_face,                  &
-                                      adjacent_face,                       &
+  use argument_mod,            only : arg_type, func_type,         &
+                                      mesh_data_type,              &
+                                      reference_element_data_type, &
+                                      GH_FIELD, GH_READ, GH_INC,   &
+                                      STENCIL, CROSS,              &
+                                      GH_BASIS, GH_DIFF_BASIS,     &
+                                      CELLS, GH_QUADRATURE_face,   &
+                                      adjacent_face,               &
                                       outward_normals_to_horizontal_faces
   use constants_mod,           only : r_def, i_def
   use cross_product_mod,       only : cross_product
@@ -41,12 +42,12 @@ module exner_gradient_bd_kernel_mod
     private
     type(arg_type) :: meta_args(3) = (/                                     &
          arg_type(GH_FIELD,   GH_INC,  W2),                                 &
-         arg_type(GH_FIELD,   GH_READ, W3),                                 &
+         arg_type(GH_FIELD,   GH_READ, W3, STENCIL(CROSS)),                 &
          arg_type(GH_FIELD,   GH_READ, Wtheta)                              &
          /)
     type(func_type) :: meta_funcs(3) = (/                                   &
-         func_type(W2, GH_BASIS, GH_DIFF_BASIS),                            &
-         func_type(W3, GH_BASIS),                                           &
+         func_type(W2,     GH_BASIS),                                       &
+         func_type(W3,     GH_BASIS),                                       &
          func_type(Wtheta, GH_BASIS)                                        &
          /)
     type(mesh_data_type) :: meta_mesh(1) = (/                               &
@@ -71,88 +72,88 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Computes the boundary integral terms in the pressure gradient.
   !>
-  !! @param[in] nlayers Number of layers
-  !! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
-  !! @param[in] undf_w2 Number of unique degrees of freedom for w2
-  !! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
-  !! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
-  !! @param[in] undf_w3 Number of unique degrees of freedom for w3
-  !! @param[in] stencil_w3_map W3 dofmaps for the stencil
-  !! @param[in] stencil_w3_size Size of the W3 stencil (number of cells)
-  !! @param[in] ndf_wtheta Number of degrees of freedom per cell for wtheta
-  !! @param[in] undf_wtheta Number of unique degrees of freedom for wtheta
-  !! @param[in] map_wtheta Dofmap for the cell at the base of the column for
-  !!            wtheta
-  !! @param[in,out] r_u_bd Right hand side of the momentum equation
-  !! @param[in] exner The Exner pressure
-  !! @param[in] theta Potential temperature
-  !! @param[in] nfaces_qr Number of faces in the quadrature rule
-  !! @param[in] nqp_f Number of quadrature points on horizontal faces
-  !! @param[in] wqp_f Quadrature weights on horizontal faces
-  !! @param[in] w2_basis_face Basis functions evaluated at gaussian quadrature
-  !!                          points on horizontal faces
-  !! @param[in] w3_basis_face Basis functions evaluated at gaussian quadrature
-  !!                          points on horizontal faces
-  !! @param[in] wtheta_basis_face Basis functions evaluated at gaussian
+  !> @param[in] nlayers Number of layers
+  !> @param[in,out] r_u_bd Right-hand side of the momentum equation
+  !> @param[in] exner Exner pressure
+  !> @param[in] stencil_w3_size Size of the W3 stencil (number of cells)
+  !> @param[in] stencil_w3_map W3 dofmaps for the stencil
+  !> @param[in] theta Potential temperature
+  !> @param[in] ndf_w2 Number of degrees of freedom per cell for W2
+  !> @param[in] undf_w2 Number of unique degrees of freedom for W2
+  !> @param[in] map_w2 Dofmap for the cell at the base of the column for W2
+  !> @param[in] w2_basis_face W2 basis functions evaluated at Gaussian
+  !!                          quadrature points on horizontal faces
+  !> @param[in] ndf_w3 Number of degrees of freedom per cell for W3
+  !> @param[in] undf_w3 Number of unique degrees of freedom for W3
+  !> @param[in] map_w3 Dofmap for the cell at the base of the column for W3
+  !> @param[in] w3_basis_face W3 basis functions evaluated at Gaussian
+  !!                          quadrature points on horizontal faces
+  !> @param[in] ndf_wtheta Number of degrees of freedom per cell for Wtheta
+  !> @param[in] undf_wtheta Number of unique degrees of freedom for Wtheta
+  !> @param[in] map_wtheta Dofmap for the cell at the base of the column for
+  !!                       Wtheta
+  !> @param[in] wtheta_basis_face Wtheta basis functions evaluated at Gaussian
   !!                              quadrature points on horizontal faces
-  !! @param[in] nfaces_re_h Number of reference element faces bisected by a
+  !> @param[in] nfaces_re_h Number of reference element faces bisected by a
   !!                        horizontal plane
-  !! @param[in] adjacent_face Vector containing information on neighbouring
-  !!                          face index for the current cell
-  !! @param[in] outward_normals_to_horizontal_faces Vector of normals to the
+  !> @param[in] outward_normals_to_horizontal_faces Vector of normals to the
   !!                                                reference element horizontal
   !!                                                "outward faces"
-  !!
-  subroutine exner_gradient_bd_code( nlayers,                      &
-                                     ndf_w2, undf_w2,              &
-                                     map_w2,                       &
-                                     ndf_w3, undf_w3,              &
-                                     stencil_w3_map,               &
-                                     stencil_w3_size,              &
-                                     ndf_wtheta, undf_wtheta,      &
-                                     map_wtheta,                   &
-                                     r_u_bd,                       &
-                                     exner, theta,                 &
-                                     nfaces_qr, nqp_f, wqp_f,      &
-                                     w2_basis_face, w3_basis_face, &
-                                     wtheta_basis_face,            &
-                                     nfaces_re_h,                  &
-                                     adjacent_face,                &
-                                     outward_normals_to_horizontal_faces )
+  !> @param[in] adjacent_face Vector containing information on neighbouring
+  !!                          face index for the current cell
+  !> @param[in] nfaces_qr Number of faces in the quadrature rule
+  !> @param[in] nqp_f Number of quadrature points on horizontal faces
+  !> @param[in] wqp_f Quadrature weights on horizontal faces
+  !>
+  subroutine exner_gradient_bd_code( nlayers,                             &
+                                     r_u_bd, exner,                       &
+                                     stencil_w3_size, stencil_w3_map,     &
+                                     theta,                               &
+                                     ndf_w2, undf_w2, map_w2,             &
+                                     w2_basis_face,                       &
+                                     ndf_w3, undf_w3, map_w3,             &
+                                     w3_basis_face,                       &
+                                     ndf_wtheta, undf_wtheta, map_wtheta, &
+                                     wtheta_basis_face,                   &
+                                     nfaces_re_h,                         &
+                                     outward_normals_to_horizontal_faces, &
+                                     adjacent_face,                       &
+                                     nfaces_qr, nqp_f, wqp_f )
 
     implicit none
 
     ! Arguments
-    integer(kind=i_def), intent(in)    :: nlayers
-    integer(kind=i_def), intent(in)    :: nfaces_qr, nqp_f
-    integer(kind=i_def), intent(in)    :: ndf_wtheta
-    integer(kind=i_def), intent(in)    :: undf_wtheta
-    integer(kind=i_def), intent(in)    :: ndf_w2
-    integer(kind=i_def), intent(in)    :: undf_w2
-    integer(kind=i_def), intent(in)    :: ndf_w3
-    integer(kind=i_def), intent(in)    :: undf_w3
-    integer(kind=i_def), intent(in)    :: nfaces_re_h
+    integer(kind=i_def), intent(in) :: nlayers
+    integer(kind=i_def), intent(in) :: nfaces_qr, nqp_f
+    integer(kind=i_def), intent(in) :: ndf_wtheta
+    integer(kind=i_def), intent(in) :: undf_wtheta
+    integer(kind=i_def), intent(in) :: ndf_w2
+    integer(kind=i_def), intent(in) :: undf_w2
+    integer(kind=i_def), intent(in) :: ndf_w3
+    integer(kind=i_def), intent(in) :: undf_w3
+    integer(kind=i_def), intent(in) :: nfaces_re_h
 
     ! These two arguments must be defined out of declaration order so as to
     ! avoid type conflicts.
-    integer(kind=i_def), intent(in)    :: stencil_w3_size
-    integer(kind=i_def), intent(in)    :: stencil_w3_map(ndf_w3,stencil_w3_size)
+    integer(kind=i_def), intent(in) :: stencil_w3_size
+    integer(kind=i_def), dimension(ndf_w3,stencil_w3_size), intent(in) :: stencil_w3_map
 
-    integer(kind=i_def), intent(in)    :: map_w2(ndf_w2)
-    integer(kind=i_def), intent(in)    :: map_wtheta(ndf_wtheta)
+    integer(kind=i_def), dimension(ndf_w2),     intent(in) :: map_w2
+    integer(kind=i_def), dimension(ndf_w3),     intent(in) :: map_w3
+    integer(kind=i_def), dimension(ndf_wtheta), intent(in) :: map_wtheta
 
-    real(kind=r_def),    intent(inout) :: r_u_bd(undf_w2)
-    real(kind=r_def),    intent(in)    :: exner(undf_w3)
-    real(kind=r_def),    intent(in)    :: theta(undf_wtheta)
+    real(kind=r_def), dimension(undf_w2),     intent(inout) :: r_u_bd
+    real(kind=r_def), dimension(undf_w3),     intent(in)    :: exner
+    real(kind=r_def), dimension(undf_wtheta), intent(in)    :: theta
 
-    real(kind=r_def),    intent(in)    :: w2_basis_face(3,ndf_w2,nqp_f,nfaces_qr)
-    real(kind=r_def),    intent(in)    :: w3_basis_face(1,ndf_w3,nqp_f,nfaces_qr)
-    real(kind=r_def),    intent(in)    :: wtheta_basis_face(1,ndf_wtheta,nqp_f,nfaces_qr)
-    real(kind=r_def),    intent(in)    :: wqp_f(nqp_f,nfaces_qr)
+    real(kind=r_def), dimension(3,ndf_w2,nqp_f,nfaces_qr),     intent(in) :: w2_basis_face
+    real(kind=r_def), dimension(1,ndf_w3,nqp_f,nfaces_qr),     intent(in) :: w3_basis_face
+    real(kind=r_def), dimension(1,ndf_wtheta,nqp_f,nfaces_qr), intent(in) :: wtheta_basis_face
+    real(kind=r_def), dimension(nqp_f,nfaces_qr),              intent(in) :: wqp_f
 
-    integer(kind=i_def), intent(in)    :: adjacent_face(:)
+    integer(kind=i_def), intent(in) :: adjacent_face(:)
 
-    real(kind=r_def),    intent(in)    :: outward_normals_to_horizontal_faces(:,:)
+    real(kind=r_def),    intent(in) :: outward_normals_to_horizontal_faces(:,:)
 
     ! Internal variables
     integer(kind=i_def) :: df, k, face, face_next

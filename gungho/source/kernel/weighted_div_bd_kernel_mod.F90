@@ -18,13 +18,14 @@
 !>
 module weighted_div_bd_kernel_mod
 
-  use argument_mod,      only : arg_type, func_type, mesh_data_type, &
-                                reference_element_data_type,         &
-                                GH_OPERATOR, GH_FIELD, GH_REAL,      &
-                                GH_READ, GH_READWRITE,               &
-                                GH_BASIS,                            &
-                                CELLS, GH_QUADRATURE_face,           &
-                                adjacent_face,                       &
+  use argument_mod,      only : arg_type, func_type,            &
+                                mesh_data_type,                 &
+                                reference_element_data_type,    &
+                                GH_OPERATOR, GH_FIELD, GH_REAL, &
+                                GH_READ, GH_READWRITE,          &
+                                STENCIL, CROSS, GH_BASIS,       &
+                                CELLS, GH_QUADRATURE_face,      &
+                                adjacent_face,                  &
                                 outward_normals_to_horizontal_faces
   use constants_mod,     only : r_def, i_def
   use fs_continuity_mod, only : W2, W3, Wtheta
@@ -43,7 +44,7 @@ module weighted_div_bd_kernel_mod
     private
     type(arg_type) :: meta_args(3) = (/                                     &
          arg_type(GH_OPERATOR, GH_READWRITE, W2, W3),                       &
-         arg_type(GH_FIELD,    GH_READ,      Wtheta),                       &
+         arg_type(GH_FIELD,    GH_READ,      Wtheta, STENCIL(CROSS)),       &
          arg_type(GH_REAL,     GH_READ)                                     &
          /)
     type(func_type) :: meta_funcs(3) = (/                                   &
@@ -74,48 +75,50 @@ contains
   !> @brief Computes the boundary terms in the weighted divergence for the
   !!        Helmholtz lhs.
   !>
-  !! @param[in] cell Cell number
-  !! @param[in] nlayers Number of layers
-  !! @param[in] ncell_3d ncell*ndf
-  !! @param[in,out] div Local stencil of the div operator
-  !! @param[in] theta Potential temperature
-  !! @param[in] scalar Real to scale matrix by
-  !! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
-  !! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
-  !! @param[in] ndf_wtheta Number of degrees of freedom per cell for wtheta
-  !! @param[in] undf_wtheta Number of unique degrees of freedom for wtheta
-  !! @param[in] stencil_wtheta_map W2 dofmaps for the stencil
-  !! @param[in] stencil_wtheta_size Size of the W2 stencil (number of cells)
-  !! @param[in] nfaces_qr Number of faces in the quadrature rule
-  !! @param[in] nqp_f Number of quadrature points on horizontal faces
-  !! @param[in] wqp_f Quadrature weights on horizontal faces
-  !! @param[in] w2_basis_face  Basis functions evaluated at gaussian
-  !!                           quadrature points on horizontal faces
-  !! @param[in] w3_basis_face  Basis functions evaluated at gaussian
-  !!                           quadrature points on horizontal faces
-  !! @param[in] wtheta_basis_face  Basis functions evaluated at gaussian
-  !!                               quadrature points on horizontal faces
-  !! @param[in] nfaces_re_h Number of reference element faces bisected by a
-  !!                        horizontal plane
-  !! @param[in] adjacent_face  Vector containing information on neighbouring
-  !!                           face index for the current cell
-  !! @param[in] outward_normals_to_horizontal_faces Vector of normals to the
+  !> @param[in] cell Cell number
+  !> @param[in] nlayers Number of layers
+  !> @param[in] ncell_3d ncell*ndf
+  !> @param[in,out] div Local stencil of the div operator
+  !> @param[in] theta Potential temperature
+  !> @param[in] stencil_wtheta_size Size of the Wtheta stencil (number of cells)
+  !> @param[in] stencil_wtheta_map Wtheta dofmaps for the stencil
+  !> @param[in] scalar Real to scale matrix by
+  !> @param[in] ndf_w2 Number of degrees of freedom per cell for W2
+  !> @param[in] w2_basis_face W2 basis functions evaluated at Gaussian
+  !!                          quadrature points on horizontal faces
+  !> @param[in] ndf_w3 Number of degrees of freedom per cell for W3
+  !> @param[in] w3_basis_face W3 basis functions evaluated at Gaussian
+  !!                          quadrature points on horizontal faces
+  !> @param[in] ndf_wtheta Number of degrees of freedom per cell for Wtheta
+  !> @param[in] undf_wtheta Number of unique degrees of freedom for Wtheta
+  !> @param[in] map_wtheta Dofmap for the cell at the base of the column for
+  !!                       Wtheta
+  !> @param[in] wtheta_basis_face Wtheta basis functions evaluated at Gaussian
+  !!                              quadrature points on horizontal faces
+  !> @param[in] outward_normals_to_horizontal_faces Vector of normals to the
   !!                                                reference element horizontal
   !!                                                "outward faces"
-  !!
-  subroutine weighted_div_bd_code( cell, nlayers, ncell_3d, &
-                                   div, theta, scalar,      &
-                                   ndf_w2, ndf_w3,          &
-                                   ndf_wtheta, undf_wtheta, &
-                                   stencil_wtheta_map,      &
-                                   stencil_wtheta_size,     &
-                                   nfaces_qr, nqp_f, wqp_f, &
-                                   w2_basis_face,           &
-                                   w3_basis_face,           &
-                                   wtheta_basis_face,       &
-                                   nfaces_re_h,             &
-                                   adjacent_face,           &
-                                   outward_normals_to_horizontal_faces)
+  !> @param[in] nfaces_re_h Number of reference element faces bisected by a
+  !!                        horizontal plane
+  !> @param[in] adjacent_face Vector containing information on neighbouring
+  !!                          face index for the current cell
+  !> @param[in] nfaces_qr Number of faces in the quadrature rule
+  !> @param[in] nqp_f Number of quadrature points on horizontal faces
+  !> @param[in] wqp_f Quadrature weights on horizontal faces
+  !>
+  subroutine weighted_div_bd_code( cell, nlayers, ncell_3d,             &
+                                   div, theta,                          &
+                                   stencil_wtheta_size,                 &
+                                   stencil_wtheta_map,                  &
+                                   scalar,                              &
+                                   ndf_w2, w2_basis_face,               &
+                                   ndf_w3, w3_basis_face,               &
+                                   ndf_wtheta, undf_wtheta, map_wtheta, &
+                                   wtheta_basis_face,                   &
+                                   nfaces_re_h,                         &
+                                   outward_normals_to_horizontal_faces, &
+                                   adjacent_face,                       &
+                                   nfaces_qr, nqp_f, wqp_f )
 
     implicit none
 
@@ -129,6 +132,8 @@ contains
 
     integer(kind=i_def), intent(in) :: stencil_wtheta_size
     integer(kind=i_def), dimension(ndf_wtheta,stencil_wtheta_size), intent(in) :: stencil_wtheta_map
+
+    integer(kind=i_def), dimension(ndf_wtheta), intent(in) :: map_wtheta
 
     real(kind=r_def), dimension(3,ndf_w2,nqp_f,nfaces_qr),     intent(in) :: w2_basis_face
     real(kind=r_def), dimension(1,ndf_w3,nqp_f,nfaces_qr),     intent(in) :: w3_basis_face

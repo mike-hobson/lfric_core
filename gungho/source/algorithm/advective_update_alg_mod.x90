@@ -17,7 +17,6 @@ module advective_update_alg_mod
   use finite_element_config_mod,      only: element_order, &
                                             nqp_exact
   use function_space_mod,             only: function_space_type
-  use psykal_lite_mod,                only: invoke_rtheta_bd_kernel
   use psykal_lite_mol_mod,            only: psykal_lite_mol_adv_init,       &
                                             psykal_lite_mol_adv_final,      &
                                             invoke_poly1d_adv_recon,        &
@@ -33,6 +32,7 @@ module advective_update_alg_mod
   use quadrature_face_mod,            only: quadrature_face_type
   use quadrature_edge_mod,            only: quadrature_edge_type
   use rtheta_kernel_mod,              only: rtheta_kernel_type
+  use rtheta_bd_kernel_mod,           only: rtheta_bd_kernel_type
   use transport_config_mod,           only: operators,            &
                                             fv_advective_order,   &
                                             operators_fv,         &
@@ -252,7 +252,7 @@ contains
 
     type(field_type), intent(in)           :: adv_field, wind
     type(field_type), intent(inout)        :: rhs
-    real(r_def),      intent(in)           :: dt
+    real(kind=r_def), intent(in)           :: dt
     type(quadrature_xyoz_type)             :: qr
     type(quadrature_face_type)             :: qrf
     type(quadrature_rule_gaussian_type)    :: quadrature_rule
@@ -260,7 +260,7 @@ contains
     type(field_type), pointer              :: mt_lumped_inv => null()
     class(reference_element_type), pointer :: reference_element =>null()
     type(mesh_type),               pointer :: mesh => null()
-    integer(i_def)                         :: mono_stencil
+    integer(kind=i_def)                    :: mono_stencil
     type(field_type)                       :: consistent_wind, u_grad_f
 
     mt_lumped_inv => get_inverse_lumped_mass_matrix(wt_id)
@@ -315,12 +315,13 @@ contains
       ! Quadrature rule on lateral faces only
       qrf = quadrature_face_type(nqp_exact, .true., .false., &
                                  reference_element, quadrature_rule)
-      call invoke( setval_c(u_grad_f, 0.0_r_def),                    &
-                   rtheta_kernel_type (u_grad_f, adv_field, wind, qr) )
-      call invoke_rtheta_bd_kernel(u_grad_f, adv_field, wind, qrf)
+      call invoke( setval_c(u_grad_f, 0.0_r_def),                     &
+                   rtheta_kernel_type(u_grad_f, adv_field, wind, qr), &
+                   rtheta_bd_kernel_type(u_grad_f, adv_field,         &
+                                         1, wind, 1, qrf) )
     end select
 
-    ! Apply monotonicity (as if this a full timestep)
+    ! Apply monotonicity (as if this is a full timestep)
     if ( enforce_monotonicity ) then
       if ( operators == operators_fem ) then
         mono_stencil = 1

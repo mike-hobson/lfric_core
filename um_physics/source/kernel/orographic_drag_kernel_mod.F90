@@ -123,6 +123,7 @@ contains
     use gw_block_mod, only: gw_block
     use gw_setup_mod, only: gw_setup
     use gw_wave_mod,  only: gw_wave
+    use tuning_segments_mod, only: gw_seg_size
 
     implicit none
 
@@ -153,6 +154,8 @@ contains
     ! Local variables for input to the kernel
     !----------------------------------------------------------------------
     integer(i_um), parameter :: seg_len = 1
+    ! At present, only seg_len = 1 is permitted. This kernel will require work in
+    ! order to make this generalisable to seg_len > 1.
 
     real(r_um), dimension(seg_len, nlayers) :: &
                     u_on_p, v_on_p,            & ! u and v at p points
@@ -295,7 +298,7 @@ contains
     l_smooth     = vertical_smoothing
 
     ! Call routine to setup orographic drag fields
-    call gw_setup(nlayers, seg_len,                                  &
+    call gw_setup(nlayers, seg_len, gw_seg_size,                     &
                   ! Inputs
                   u_on_p, v_on_p,  wetrho, theta,                    &
                   ! Inputs to calculate moist buoyancy frequency
@@ -315,28 +318,28 @@ contains
                   v_s_d, v_s_d_on, seg_len)
 
     ! Call routine to compute orographic blocking depth and drag
-    call gw_block(nlayers,seg_len,timestep,u_on_p,v_on_p,wetrho, &
-                  nsq,ulow, vlow,rholow, psilow,modu,            &
-                  z_rho_levels,z_theta_levels,mt_high,           &
-                  sd,slope,anis,mtdir,zb,banis,canis,            &
-                  du_dt_blk,dv_dt_blk,                           &
-                  dtemp_dt_blk,fbcd,gwd_frc,drag,                &
-                  l_fb_heating,                                  &
+    call gw_block(nlayers,seg_len,gw_seg_size,timestep,u_on_p,v_on_p,    &
+                  wetrho,nsq,ulow, vlow,rholow, psilow,modu,             &
+                  z_rho_levels,z_theta_levels,mt_high,                   &
+                  sd,slope,anis,mtdir,zb,banis,canis,                    &
+                  du_dt_blk,dv_dt_blk,                                   &
+                  dtemp_dt_blk,fbcd,gwd_frc,drag,                        &
+                  l_fb_heating,                                          &
                   ! diagnostics (not used)
-                  du_dt_diag, seg_len,du_dt_diag_on,             &
-                  dv_dt_diag, seg_len,dv_dt_diag_on,             &
-                  stress_u, stress_u_on,seg_len,stress_u_on,     &
-                  stress_v, stress_v_on,seg_len,                 &
-                  stress_u, seg_len, stress_u_on,                &
-                  stress_v, seg_len, stress_v_on,                &
-                  fr_d,fr_d_on, seg_len,                         &
-                  bld_d,bld_d_on, seg_len,                       &
-                  bldt_d,bldt_d_on, seg_len,                     &
-                  tausx_d,tausx_d_on, seg_len,                   &
+                  du_dt_diag, seg_len,du_dt_diag_on,                     &
+                  dv_dt_diag, seg_len,dv_dt_diag_on,                     &
+                  stress_u, stress_u_on,seg_len,stress_u_on,             &
+                  stress_v, stress_v_on,seg_len,                         &
+                  stress_u, seg_len, stress_u_on,                        &
+                  stress_v, seg_len, stress_v_on,                        &
+                  fr_d,fr_d_on, seg_len,                                 &
+                  bld_d,bld_d_on, seg_len,                               &
+                  bldt_d,bldt_d_on, seg_len,                             &
+                  tausx_d,tausx_d_on, seg_len,                           &
                   tausy_d,tausy_d_on, seg_len)
 
     ! Call routine to compute orographic gravity wave drag
-    call gw_wave(nlayers,seg_len,u_on_p,v_on_p,wetrho,               &
+    call gw_wave(nlayers,seg_len,gw_seg_size,u_on_p,v_on_p,wetrho,   &
                  nsq_dry, nsq_unsat, nsq_sat, dzcond, l_lapse, kbot, &
                  ulow,vlow,rholow,psi1,psilow,nlow,modu,ktop,        &
                  z_rho_levels,z_theta_levels,delta_lambda,delta_phi, &

@@ -649,7 +649,7 @@ contains
     real(r_um), dimension(row_length,rows,nlayers) ::                        &
          p_rho_levels, rho_wet_rsq, rho_wet, rho_dry, z_rho, z_theta,        &
          bulk_cloud_fraction, rho_wet_tq, exner_rho_levels, u_p, u_px,       &
-         v_p, v_px
+         v_p, v_px, zeros
 
     ! profile field on boundary layer levels
     real(r_um), dimension(row_length,rows,bl_levels) ::                      &
@@ -803,6 +803,8 @@ contains
       flux_h(:,:)=fixed_flux_h
     end if
     l_spec_z0=.false.
+
+    zeros=0.0_r_um
 
     !-----------------------------------------------------------------------
     ! Mapping of LFRic fields into UM variables
@@ -1256,7 +1258,7 @@ contains
         u_s_std_surft, kent, we_lim, t_frac, zrzi,                      &
         kent_dsc, we_lim_dsc, t_frac_dsc, zrzi_dsc, zhsc,               &
       ! OUT fields
-        nbdsc,ntdsc,wstar,wthvs,uw0,vw0,taux_p,tauy_p,rhcpt             &
+        nbdsc,ntdsc,wstar,wthvs,uw0,vw0,taux_p,tauy_p,rhcpt,zeros       &
      )
 
     rhokm_surf(map_surf(1)) = rhokm_land(1,1)
@@ -1422,6 +1424,7 @@ contains
     ! deallocate diagnostics deallocated in atmos_physics2
     call dealloc_bl_expl(bl_diag)
     call dealloc_sf_expl(sf_diag)
+    deallocate(BL_diag%elm3d)
     deallocate(BL_diag%tke)
 
     ! set this back to 1 before exit

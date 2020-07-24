@@ -507,7 +507,7 @@ contains
          bulk_cloud_fraction, rhcpt, t_latest, q_latest, qcl_latest,         &
          qcf_latest, cca_3d, area_cloud_fraction,                            &
          cloud_fraction_liquid, cloud_fraction_frozen, rho_wet_tq,           &
-         cf_latest, cfl_latest, cff_latest
+         cf_latest, cfl_latest, cff_latest, zeros
 
     ! profile field on boundary layer levels
     real(r_um), dimension(row_length,rows,bl_levels) :: fqw, ftl, rhokh,     &
@@ -643,6 +643,8 @@ contains
     !-----------------------------------------------------------------------
     error_code=0
 
+    zeros=0.0_r_um
+
     call alloc_sf_expl(sf_diag, outer == outer_iterations)
     call alloc_bl_expl(bl_diag, outer == outer_iterations)
 
@@ -655,6 +657,17 @@ contains
     else
       allocate(bl_diag%tke(1,1,1))
     end if
+
+    if (bl_diag%l_elm3d) then
+      allocate(bl_diag%elm3d(pdims%i_start:pdims%i_end,                 &
+                           pdims%j_start:pdims%j_end,bl_levels))
+      do k = 1, bl_levels
+        bl_diag%elm3d(:,:,k) = 0.0
+      end do
+    else
+      allocate(bl_diag%elm3d(1,1,1))
+    end if
+
 
     ! Needed to stop crash in tr_mix - will ultimately need passing from
     ! bl_exp_kernel to here, but science is currently unused
@@ -1096,6 +1109,8 @@ contains
           , cf_latest, cfl_latest, cff_latest                           &
           , R_u, R_v, R_w, cloud_fraction_liquid, cloud_fraction_frozen &
           , sum_eng_fluxes,sum_moist_flux, rhcpt                        &
+    ! Dummy arguments for bimodal scheme compliance
+          , zeros,zeros,zeros,zeros,zeros                               &
     ! INOUT tracer fields
           , aerosol, free_tracers,  resist_b,  resist_b_surft           &
           , dust_div1,dust_div2,dust_div3,dust_div4,dust_div5,dust_div6 &
@@ -1145,6 +1160,16 @@ contains
       end do
     else
       allocate(bl_diag%tke(1,1,1))
+    end if
+
+    if (bl_diag%l_elm3d) then
+      allocate(bl_diag%elm3d(pdims%i_start:pdims%i_end,                &
+                           pdims%j_start:pdims%j_end,bl_levels))
+      do k = 1, bl_levels
+        bl_diag%elm3d(:,:,k) = 0.0
+      end do
+    else
+      allocate(bl_diag%elm3d(1,1,1))
     end if
 
     ! Land tile temperatures
@@ -1322,6 +1347,8 @@ contains
           , cf_latest, cfl_latest, cff_latest                           &
           , R_u, R_v, R_w, cloud_fraction_liquid, cloud_fraction_frozen &
           , sum_eng_fluxes,sum_moist_flux, rhcpt                        &
+    ! Dummy arguments for bimodal scheme compliance
+          , zeros,zeros,zeros,zeros,zeros                               &
     ! INOUT tracer fields
           , aerosol, free_tracers,  resist_b,  resist_b_surft           &
           , dust_div1,dust_div2,dust_div3,dust_div4,dust_div5,dust_div6 &

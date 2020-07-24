@@ -137,14 +137,16 @@ contains
          blend_allpoints, ng_stress, lem_std, interactive_fluxes,          &
          specified_fluxes_only, DynDiag_ZL_corrn, except_disc_inv,         &
          ntml_level_corrn, free_trop_layers, sharpest, sg_shear_enh_lambda,&
-         l_new_kcloudtop, buoy_integ, l_reset_dec_thres, DynDiag_ZL_CuOnly
+         l_new_kcloudtop, buoy_integ, l_reset_dec_thres, DynDiag_ZL_CuOnly,&
+         var_diags_opt, i_interp_local, i_interp_local_gradients,          &
+         original_vars
     use cloud_inputs_mod, only: i_cld_vn, forced_cu, i_rhcpt, i_cld_area,  &
          rhcrit, ice_fraction_method,falliceshear_method, cff_spread_rate, &
          l_subgrid_qv, ice_width, min_liq_overlap, i_eacf, not_mixph,      &
          i_pc2_checks_cld_frac_method, l_ensure_min_in_cloud_qcf,          &
          l_simplify_pc2_init_logic, dbsdtbs_turb_0,                        &
-         i_pc2_erosion_method, check_run_cloud, forced_cu_fac,             &
-         i_pc2_conv_coupling, allicetdegc, starticetkelvin
+         i_pc2_erosion_method, i_pc2_init_method, check_run_cloud,         &
+         forced_cu_fac, i_pc2_conv_coupling, allicetdegc, starticetkelvin
     use cv_run_mod, only: icvdiag, cvdiag_inv, cvdiag_sh_wtest,            &
          limit_pert_opt, tv1_sd_opt, iconv_congestus, iconv_deep,          &
          ent_fac_dp, cldbase_opt_dp, cldbase_opt_sh, w_cape_limit,         &
@@ -189,14 +191,14 @@ contains
     use pc2_constants_mod, only: i_cld_off, i_cld_smith, i_cld_pc2,        &
          rhcpt_off, acf_off, real_shear, rhcpt_tke_based,                  &
          pc2eros_exp_rh,pc2eros_hybrid_allfaces,pc2eros_hybrid_sidesonly,  &
-         original_but_wrong, acf_cusack, cbl_and_cu
+         original_but_wrong, acf_cusack, cbl_and_cu, pc2init_smith
     use rad_input_mod, only: two_d_fsd_factor
-    use science_fixes_mod, only: l_fix_mphys_diags_iter, l_fix_drop_settle, &
+    use science_fixes_mod, only: l_fix_drop_settle,                         &
          l_pc2_homog_turb_q_neg, l_fix_ccb_cct, l_fix_conv_precip_evap,     &
          l_fix_dyndiag, l_fix_pc2_cnv_mix_phase, l_fix_riming,              &
          l_fix_tidy_rainfracs, l_fix_zh
     use tuning_segments_mod, only: bl_segment_size, precip_segment_size, &
-         ussp_seg_size
+         ussp_seg_size, gw_seg_size
     use turb_diff_ctl_mod, only: visc_m, visc_h, max_diff, delta_smag,   &
          rneutml_sq
     use turb_diff_mod, only: l_subfilter_horiz, l_subfilter_vert,        &
@@ -281,6 +283,10 @@ contains
           idyndiag = DynDiag_Ribased
       end select
 
+      ! Interpolate the vertical gradients of sl,qw and calculate 
+      ! stability dbdz and Kh on theta-levels
+      i_interp_local = i_interp_local_gradients
+
       select case (reduce_fa_mix)
         case(reduce_fa_mix_inv_and_cu_lcl)
           keep_ri_fa = on
@@ -333,6 +339,8 @@ contains
       ! Not GA7 - should be 6km - I think we'll leave like this for now
       ! as it should help stability - reducing it is just for optimisation
       nl_bl_levels    = bl_levels
+      ! Switch for alternative TKE and variance diagnostics
+      var_diags_opt = original_vars
       zhloc_depth_fac = real(zhloc_depth_fac_in, r_um)
 
     end if
@@ -527,6 +535,7 @@ contains
         i_pc2_checks_cld_frac_method = 2
         i_pc2_conv_coupling          = 3
         i_pc2_erosion_method         = pc2eros_hybrid_sidesonly
+        i_pc2_init_method            = pc2init_smith
         l_ensure_min_in_cloud_qcf    = .false.
         l_simplify_pc2_init_logic    = .false.
         starticetkelvin              = 263.15_r_um
@@ -640,7 +649,6 @@ contains
     ! Temporary logicals used to fix bugs in the UM - contained in science_fixes
     ! ----------------------------------------------------------------
     l_fix_drop_settle      = .true.
-    l_fix_mphys_diags_iter = .true.
     l_pc2_homog_turb_q_neg = .true.
     ! The following aren't strictly GA7, but seem sensible to include
     l_fix_ccb_cct           = .true.
@@ -659,6 +667,7 @@ contains
     ! these values will need to be set depending on how many columns
     ! a kernel is passed.
     bl_segment_size     = 1
+    gw_seg_size         = 1
     precip_segment_size = 1
     ussp_seg_size       = 1
 

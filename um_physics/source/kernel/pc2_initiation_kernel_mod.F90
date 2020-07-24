@@ -331,6 +331,12 @@ subroutine pc2_initiation_code( nlayers,                           &
                             i_dummy,                       &
                             l_cumulus,                     &
                             rhcpt,                         &
+                            zeros,                         &
+                            zeros,                         &
+                            zeros,                         &
+                            zeros,                         &
+                            zeros,                         &
+                            zeros,                         &
                             calculate_increments,          &
                             ! Output increments
                             t_incr,                        &
@@ -339,7 +345,10 @@ subroutine pc2_initiation_code( nlayers,                           &
                             qcf_incr,                      &
                             bcf_incr,                      &
                             cfl_incr,                      &
-                            cff_incr                       )
+                            cff_incr,                      &
+                            zeros,                         &
+                            zeros,                         &
+                            zeros)
 
     ! Recast back to LFRic space
     do k = 1, model_levels

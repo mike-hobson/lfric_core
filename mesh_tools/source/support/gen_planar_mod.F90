@@ -15,7 +15,9 @@ module gen_planar_mod
 
   use calc_global_cell_map_mod,       only: calc_global_cell_map
   use constants_mod,                  only: r_def, i_def, l_def, str_def, &
-                                            str_long, imdi
+                                            str_long, imdi, rmdi,         &
+                                            radians_to_degrees,           &
+                                            degrees_to_radians
   use global_mesh_map_collection_mod, only: global_mesh_map_collection_type
   use global_mesh_map_mod,            only: generate_global_mesh_map_id
   use log_mod,                        only: log_event, log_scratch_space, &
@@ -32,6 +34,9 @@ module gen_planar_mod
 
   public :: gen_planar_type
   public :: NON_PERIODIC_ID
+
+  ! set Cartesian axis for north
+  real(r_def), parameter    :: TRUE_NORTH(3) = (/0._r_def, 0._r_def, 1._r_def/)
 
   ! Mesh Vertex directions: local aliases for reference_element_mod values
   integer(i_def), parameter :: NW = NWB
@@ -71,11 +76,18 @@ module gen_planar_mod
     integer(i_def)      :: npanels
     integer(i_def)      :: nmaps
 
+    real(r_def)         :: pole_lat      = rmdi
+    real(r_def)         :: pole_lon      = rmdi
+    real(r_def)         :: first_lat     = rmdi
+    real(r_def)         :: first_lon     = rmdi
+    logical             :: do_rotate     = .false.
+
     integer(i_def)      :: n_nodes
     integer(i_def)      :: n_edges
     integer(i_def)      :: n_faces
     logical(l_def)      :: periodic_x
     logical(l_def)      :: periodic_y
+    logical(l_def)      :: cartesian
 
     integer(i_def), allocatable :: north_cells(:)
     integer(i_def), allocatable :: east_cells(:)
@@ -110,6 +122,8 @@ module gen_planar_mod
     procedure :: get_connectivity
     procedure :: get_global_mesh_maps
     procedure :: write_mesh
+    procedure :: rotate_mesh
+    procedure :: latlon_to_eq
 
     procedure :: clear
 
@@ -151,31 +165,54 @@ contains
 !> @param[in] periodic_y      Logical for specifying periodicity in y-axis
 !> @param[in] domain_x        Domain size in x-axis
 !> @param[in] domain_y        Domain size in y-axis
-!> @param[in] target_mesh_names [optional]
+!> @param[in] cartesian       Logical for specifying either Cartesian or Lat-Lon
+!> @param[in, optional] target_mesh_names
 !>                            Names of mesh(es) to map to
-!> @param[in] target_edge_cells_x [optional]
+!> @param[in, optional] target_edge_cells_x
 !>                            Number of cells in x axis of
 !>                            target mesh(es) to map to
-!> @param[in] target_edge_cells_y [optional]
+!> @param[in, optional] target_edge_cells_y
 !>                            Number of cells in y axis of
 !>                            target mesh(es) to map to
+!> @param[in, optional] do_rotate
+!>                            Logical to indicate whether to rotate the pole.
+!> @param[in, optional] pole_lat
+!>                            The latitude of the new rotated pole.
+!> @param[in, optional] pole_lon
+!>                            The longitude of the new rotated pole.
+!> @param[in, optional] first_lat
+!>                            The latitude of the bottom left corner node.
+!> @param[in, optional] first_lon
+!>                            The longitude of the bottom left corner node.
 !-------------------------------------------------------------------------------
 function gen_planar_constructor( reference_element,          &
                                  mesh_name,                  &
                                  edge_cells_x, edge_cells_y, &
                                  periodic_x, periodic_y,     &
                                  domain_x, domain_y,         &
+                                 cartesian,                  &
                                  target_mesh_names,          &
                                  target_edge_cells_x,        &
-                                 target_edge_cells_y )       &
-                            result( self )
+                                 target_edge_cells_y,        &
+                                 do_rotate,                  &
+                                 pole_lat,                   &
+                                 pole_lon,                   &
+                                 first_lat,                  &
+                                 first_lon )                 &
+                                 result( self )
 
   implicit none
 
   character(str_def), intent(in) :: mesh_name
   integer(i_def),     intent(in) :: edge_cells_x, edge_cells_y
-  logical(l_def),     intent(in) :: periodic_x, periodic_y
+  logical(l_def),     intent(in) :: periodic_x, periodic_y, cartesian
   real(r_def),        intent(in) :: domain_x, domain_y
+
+  logical,            optional, intent(in) :: do_rotate
+  real(r_def),        optional, intent(in) :: pole_lat
+  real(r_def),        optional, intent(in) :: pole_lon
+  real(r_def),        optional, intent(in) :: first_lat
+  real(r_def),        optional, intent(in) :: first_lon
 
   character(str_def), optional, intent(in) :: target_mesh_names(:)
   integer(i_def),     optional, intent(in) :: target_edge_cells_x(:)
@@ -188,10 +225,21 @@ function gen_planar_constructor( reference_element,          &
   character(str_long) :: target_mesh_names_str
   character(str_long) :: target_edge_cells_x_str
   character(str_long) :: target_edge_cells_y_str
-  character(str_def)  :: rchar1
-  character(str_def)  :: rchar2
-  character(str_def)  :: lchar1
-  character(str_def)  :: lchar2
+  character(str_long) :: do_rotate_str
+  character(str_long) :: pole_lat_str
+  character(str_long) :: pole_lon_str
+  character(str_long) :: first_lat_str
+  character(str_long) :: first_lon_str
+  character(str_def)  :: rchar_domain_x
+  character(str_def)  :: rchar_domain_y
+  character(str_def)  :: rchar_first_lon
+  character(str_def)  :: rchar_first_lat
+  character(str_def)  :: rchar_pole_lon
+  character(str_def)  :: rchar_pole_lat
+  character(str_def)  :: lchar_periodic_x
+  character(str_def)  :: lchar_periodic_y
+  character(str_def)  :: lchar_cartesian
+  character(str_def)  :: lchar_do_rotate
   integer(i_def)      :: nodes_x
   integer(i_def)      :: nodes_y
   integer(i_def)      :: i
@@ -239,6 +287,7 @@ function gen_planar_constructor( reference_element,          &
   self%nmaps        = 0_i_def
   self%periodic_x   = periodic_x
   self%periodic_y   = periodic_y
+  self%cartesian    = cartesian
 
   if (domain_x <= 0.0_r_def)                                       &
       call log_event( PREFIX//" x-domain argument must be > 0.0",  &
@@ -248,20 +297,70 @@ function gen_planar_constructor( reference_element,          &
       call log_event( PREFIX//" y-domain argument must be > 0.0.", &
                       LOG_LEVEL_ERROR )
 
-  self%dx = domain_x / self%edge_cells_x
-  self%dy = domain_y / self%edge_cells_y
+  if (self%cartesian) then
+    self%dx = domain_x / self%edge_cells_x
+    self%dy = domain_y / self%edge_cells_y
+  else
+    ! The namelist inputs were in degrees, so convert
+    ! and store them as radians.
+    self%dx = domain_x * degrees_to_radians / self%edge_cells_x
+    self%dy = domain_y * degrees_to_radians / self%edge_cells_y
+    self%first_lat     = first_lat   * degrees_to_radians
+    self%first_lon     = first_lon   * degrees_to_radians
 
-  write(lchar1,'(L8)') periodic_x
-  write(lchar2,'(L8)') periodic_y
-  write(rchar1,'(F10.2)') domain_x
-  write(rchar2,'(F10.2)') domain_y
+    self%do_rotate = do_rotate
+    if ( self%do_rotate ) then
+      self%pole_lat      = pole_lat    * degrees_to_radians
+      self%pole_lon      = pole_lon    * degrees_to_radians
+      ! Rotate first_lat and first_lon from rotated mesh to equator mesh.
+      call latlon_to_eq(self)
+    end if
+  end if
+
+  write(lchar_periodic_x,'(L8)')    periodic_x
+  write(lchar_periodic_y,'(L8)')    periodic_y
+  write(lchar_cartesian, '(L8)')    cartesian
+  write(rchar_domain_x,  '(F10.2)') domain_x
+  write(rchar_domain_y,  '(F10.2)') domain_y
+
   write(self%constructor_inputs,'(2(A,I0),(A))')   &
-      'edge_cells_x=', self%edge_cells_x,    ';'// &
-      'edge_cells_y=', self%edge_cells_y,    ';'// &
-      'periodic_x='//trim(adjustl(lchar1))// ';'// &
-      'periodic_y='//trim(adjustl(lchar2))// ';'// &
-      'domain_x='//trim(adjustl(rchar1))//   ';'// &
-      'domain_y='//trim(adjustl(rchar2))
+    'edge_cells_x=', self%edge_cells_x,    ';'// &
+    'edge_cells_y=', self%edge_cells_y,    ';'// &
+    'periodic_x='//trim(adjustl(lchar_periodic_x))// ';'// &
+    'periodic_y='//trim(adjustl(lchar_periodic_y))// ';'// &
+    'domain_x='//trim(adjustl(rchar_domain_x))// ';'//     &
+    'domain_y='//trim(adjustl(rchar_domain_y))// ';'//     &
+    'cartesian='//trim(adjustl(lchar_cartesian))
+
+  if (.not. self%cartesian) then
+    write(rchar_first_lon,'(F10.2)') first_lon
+    write(rchar_first_lat,'(F10.2)') first_lat
+    write(lchar_do_rotate,'(L8)')    do_rotate
+    write(do_rotate_str,'(A)')    &
+      'do_rotate='//trim(adjustl(lchar_do_rotate))
+    write(first_lon_str,'(A)')    &
+      'first_lon='//trim(adjustl(rchar_first_lon))
+    write(first_lat_str,'(A)')    &
+      'first_lat='//trim(adjustl(rchar_first_lat))
+    write(self%constructor_inputs,'(A)')        &
+      trim(self%constructor_inputs) // ';' // &
+      trim(first_lon_str)   // ';' // &
+      trim(first_lat_str)   // ';' // &
+      trim(do_rotate_str)
+
+    if (self%do_rotate) then
+      write(rchar_pole_lon,'(F10.2)') pole_lon
+      write(rchar_pole_lat,'(F10.2)') pole_lat
+      write(pole_lon_str,'(A)')    &
+        'pole_lon='//trim(adjustl(rchar_pole_lon))
+      write(pole_lat_str,'(A)')    &
+        'pole_lat='//trim(adjustl(rchar_pole_lat))
+      write(self%constructor_inputs,'(A)')        &
+        trim(self%constructor_inputs) // ';' // &
+        trim(pole_lon_str)   // ';' // &
+        trim(pole_lat_str)
+    endif
+  end if
 
   ! Initialise as a plane with cyclic boundaries
   nodes_x = self%edge_cells_x
@@ -1187,18 +1286,26 @@ subroutine calc_coords(self)
                     LOG_LEVEL_ERROR )
   end if
 
-  ! Origin (0,0) is centre of mesh. Cell 1 is in top left of mesh panel.
-  ! Top NW node will be present in both periodic and non-periodic meshs
-  offset_x = (-1.0_r_def*self%dx*self%edge_cells_x)/2_r_def
-  offset_y = (self%dy*self%edge_cells_y)/2_r_def
+  if (self%cartesian) then
+    ! Origin (0,0) is centre of mesh. Cell 1 is in top left of mesh panel.
+    ! Top NW node will be present in both periodic and non-periodic meshes.
+    offset_x = (-1.0_r_def*self%dx*self%edge_cells_x)/2_r_def
+    offset_y = (self%dy*self%edge_cells_y)/2_r_def
 
-  if (mod( self%edge_cells_x, 2 ) == 1) then
-    offset_x = offset_x + self%dx/2_r_def
-  end if
+    if (mod( self%edge_cells_x, 2 ) == 1) then
+      offset_x = offset_x + self%dx/2_r_def
+    end if
 
-  if (mod( self%edge_cells_y, 2 ) == 1) then
-    offset_y = offset_y + self%dy/2_r_def
-  end if
+    if (mod( self%edge_cells_y, 2 ) == 1) then
+      offset_y = offset_y + self%dy/2_r_def
+    end if
+  else
+    ! Use first_lat and first_lon to determine the offset, to be consistent
+    ! with ENDGame. Move the NW node from (0,0) to (offset_x, offset_y) to give
+    ! the SW node at (first_lon, first_lat).
+    offset_x = self%first_lon
+    offset_y = self%first_lat + (self%dy*self%edge_cells_y)
+  endif
 
   ! The cells begin numbering in rows from NW corner of panel
   cell=1
@@ -1241,14 +1348,183 @@ subroutine calc_coords(self)
   vert_coords(1,:) =  vert_coords(1,:) + offset_x
   vert_coords(2,:) =  vert_coords(2,:) + offset_y
 
-  self%coord_units_x = 'm'
-  self%coord_units_y = 'm'
+  if (self%cartesian) then
+    self%coord_units_x = 'm'
+    self%coord_units_y = 'm'
+  else
+    self%coord_units_x = 'radians'
+    self%coord_units_y = 'radians'
+  end if
 
   call move_alloc(vert_coords, self%vert_coords)
 
   return
 end subroutine calc_coords
 
+!-----------------------------------------------------------------------------
+!> @brief   Find the first lat and lon for an unrotated mesh
+!> @details Given the latitude and longitude of the bottom left node
+!>          on the rotated mesh, find the latitude and longitude of
+!>          bottom left node on the unrotated mesh - i.e. centered on equator.
+!>          This uses the reverse procedure of rotate_mesh.
+!>
+!> @param[in]   self         The gen_planar_type instance reference.
+!-----------------------------------------------------------------------------
+subroutine latlon_to_eq(self)
+  use coord_transform_mod, only: xyz2ll, ll2xyz, rodrigues_rotation
+  use cross_product_mod,   only: cross_product
+
+  implicit none
+
+  class(gen_planar_type),   intent(inout)  :: self
+
+  real(r_def)    :: x_vec(3)     ! Cartesian vector of points
+  real(r_def)    :: rot_vec(3)   ! Cartesian axis of rotation
+  real(r_def)    :: new_pole(3)  ! Cartesian vector for new pole
+  real(r_def)    :: alpha_rot    ! Angle of rotation about rot_vec
+  real(r_def)    :: rotate_angle
+
+  logical        :: do_newnorth  ! To determine if we want a new north
+  logical        :: do_rotate    ! To determine if we want to rotate about north
+
+  ! First set up axis of rotation
+  call ll2xyz(self%pole_lon, &
+              self%pole_lat, &
+              new_pole(1),   &
+              new_pole(2),   &
+              new_pole(3))
+
+  ! Rotate from the new pole back to new north.
+  rot_vec   = cross_product(new_pole, true_north)
+
+  alpha_rot = acos(dot_product(true_north, new_pole) /                 &
+              sqrt(dot_product(new_pole,   new_pole) *                 &
+                   dot_product(true_north, true_north)))
+
+  ! If angle is less than ~ 0.0001 degrees (i.e. norm2(rot_vec) < 1.e-6)
+  ! then don't change the axis.
+  do_newnorth = .true.
+  if (norm2(rot_vec) < 1.e-6) do_newnorth = .false.
+
+  ! The rotate_angle is from pole_lon back to zero.
+  rotate_angle = -1.0_r_def * self%pole_lon
+
+  ! If rotate_angle < 0.0001 degrees, then don't rotate.
+  do_rotate   = .true.
+  if (abs(rotate_angle) < 0.0001) do_rotate = .false.
+
+  if (do_newnorth .or. do_rotate) then
+
+    call ll2xyz(self%first_lon, &
+                self%first_lat, &
+                x_vec(1),       &
+                x_vec(2),       &
+                x_vec(3))
+
+    ! First rotate pole to True north
+    if (do_newnorth) x_vec = rodrigues_rotation(x_vec, rot_vec, &
+                                                alpha_rot )
+
+    ! Then rotate about true north by rotate_angle, back to 0deg longitude.
+    if (do_rotate) x_vec = rodrigues_rotation(x_vec, true_north,           &
+                                              rotate_angle )
+
+    ! Convert back to lat, lon and send back to first_lat and first_lon.
+    call xyz2ll(x_vec(1),       &
+                x_vec(2),       &
+                x_vec(3),       &
+                self%first_lon, &
+                self%first_lat)
+
+  end if
+
+end subroutine latlon_to_eq
+
+!-------------------------------------------------------------------------------
+!> @brief   Rotates LAM mesh coordinates
+!> @details Rotates the coordinates to give a new pole.
+!>          This routine updates self%vert_coords
+!>
+!> The rotation is achieved by rotating about the vector rot_vec and
+!> by an angle alpha_vec.
+!>
+!> @param[in]   self         The gen_planar_type instance reference.
+!-------------------------------------------------------------------------------
+subroutine rotate_mesh(self)
+
+  use coord_transform_mod, only: xyz2ll, ll2xyz, rodrigues_rotation
+  use cross_product_mod,   only: cross_product
+
+  implicit none
+
+  class(gen_planar_type),   intent(inout)  :: self
+
+  real(r_def)    :: x_vec(3)     ! Cartesian vector of points
+  real(r_def)    :: rot_vec(3)   ! Cartesian axis of rotation
+  real(r_def)    :: new_pole(3)  ! Cartesian vector for new pole
+  real(r_def)    :: alpha_rot    ! Angle of rotation about rot_vec
+  integer(i_def) :: icell, nverts
+  real(r_def)    :: rotate_angle
+
+  logical        :: do_newnorth  ! To determine if we want a new north
+  logical        :: do_rotate    ! To determine if we want to rotate about north
+
+  ! Set up axis of rotation.
+  call ll2xyz(self%pole_lon, &
+              self%pole_lat, &
+              new_pole(1),   &
+              new_pole(2),   &
+              new_pole(3))
+
+  ! Rotate from true north to the new pole.
+  rot_vec   = cross_product(true_north, new_pole)
+
+  alpha_rot = acos(dot_product(true_north, new_pole) /                &
+              sqrt(dot_product(new_pole,   new_pole) *                &
+                   dot_product(true_north, true_north)))
+
+  ! If angle is less than ~ 0.0001 degrees (i.e. norm2(rot_vec) < 1.e-6)
+  ! then don't change the axis.
+  do_newnorth = .true.
+  if (norm2(rot_vec) < 1.e-6) do_newnorth = .false.
+
+  ! The rotate_angle is from 0 degrees to pole_lon.
+  rotate_angle = self%pole_lon
+
+  ! If rotate_angle < 0.0001 degrees, then don't rotate.
+  do_rotate   = .true.
+  if (abs(self%pole_lon) < 0.0001) do_rotate = .false.
+
+  if (do_newnorth .or. do_rotate) then
+
+    nverts = size( self%vert_coords, dim=2 )
+
+    do icell = 1, nverts
+
+      call ll2xyz(self%vert_coords(1,icell),     &
+                  self%vert_coords(2,icell),     &
+                  x_vec(1), x_vec(2), x_vec(3))
+
+      ! First rotate pole to a new longitude - rotate around true_north by an
+      ! rotate_angle.
+      if (do_rotate) x_vec = rodrigues_rotation(x_vec, true_north,        &
+                                                rotate_angle)
+
+      ! Next rotate pole to a new latitude - keep the pole longitude fixed -
+      ! rotate about rot_vec by the angle alpha_rot.
+      if (do_newnorth) x_vec = rodrigues_rotation(x_vec, rot_vec,         &
+                                                  alpha_rot)
+
+      ! Convert back to lat, lon and send back to vert_coords.
+      call xyz2ll(x_vec(1), x_vec(2), x_vec(3), &
+                  self%vert_coords(1,icell),    &
+                  self%vert_coords(2,icell))
+
+    end do
+
+  end if
+
+end subroutine rotate_mesh
 
 !-------------------------------------------------------------------------------
 !> @brief   Calculates the mesh cell centres.(private subroutine)
@@ -1413,7 +1689,21 @@ subroutine generate(self)
   call calc_edges(self)
   if (self%nmaps > 0) call calc_global_mesh_maps(self)
   call calc_coords(self)
+  if (self%do_rotate) call rotate_mesh(self)
   call calc_cell_centres(self)
+
+  ! Convert coordinate units to degrees to be CF compliant
+  if (trim(self%coord_units_x) == 'radians') then
+    self%vert_coords(1,:) = self%vert_coords(1,:) * radians_to_degrees
+    self%cell_coords(1,:) = self%cell_coords(1,:) * radians_to_degrees
+    self%coord_units_x = 'degrees_east'
+  end if
+
+  if (trim(self%coord_units_y) == 'radians') then
+    self%vert_coords(2,:) = self%vert_coords(2,:) * radians_to_degrees
+    self%cell_coords(2,:) = self%cell_coords(2,:) * radians_to_degrees
+    self%coord_units_y = 'degrees_north'
+  end if
 
   if (DEBUG) call write_mesh(self)
 

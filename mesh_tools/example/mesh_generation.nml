@@ -71,6 +71,7 @@
 !       be a factor of the other.
 
 &planar_mesh
+  cartesian     = .true.
   edge_cells_x  = 48, 24,  8, 4, 2
   edge_cells_y  = 24, 24, 12, 4, 2
   domain_x      = 1600.0

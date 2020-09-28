@@ -27,5 +27,5 @@
                       'planar_biperiodic',
                       'planar_non_periodic',
                       'planar_trench_x',
-                      'planar_trench_y'
-                     ] %}
+                      'planar_trench_y',
+                      'lam'] %}

@@ -19,8 +19,11 @@ program planar_mesh_generator
   use planar_mesh_config_mod,                              &
                          only: edge_cells_x, edge_cells_y, &
                                periodic_x, periodic_y,     &
-                               domain_x, domain_y
-
+                               domain_x, domain_y,         &
+                               cartesian,                  &
+                               do_rotate,                  &
+                               pole_lat, pole_lon,         &
+                               first_lat, first_lon
   use configuration_mod, only: read_configuration, final_configuration
   use cli_mod,           only: get_initial_filename
   use constants_mod,     only: i_def, str_def, str_long, l_def, imdi, cmdi
@@ -250,7 +253,8 @@ program planar_mesh_generator
   call log_event( log_scratch_space, LOG_LEVEL_INFO )
   write(log_scratch_space, '(A,L1)') '  Periodic in y-axis: ', periodic_y
   call log_event( log_scratch_space, LOG_LEVEL_INFO )
-
+  write(log_scratch_space, '(A,L1)') '  Cartesian grid: ', cartesian
+  call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
   ! 6.1 Generate objects which know how to generate each requested
   !     unique mesh.
@@ -265,6 +269,25 @@ program planar_mesh_generator
     allocate( target_mesh_names_tmp(n_mesh_maps*2) )
     allocate( target_edge_cells_x_tmp(n_mesh_maps*2) )
     allocate( target_edge_cells_y_tmp(n_mesh_maps*2) )
+  end if
+
+  if (do_rotate) then
+    write(log_scratch_space, '(A)') &
+       '  Rotation of mesh requested with: '
+    call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
+    write(log_scratch_space, '(A,F6.1)') &
+       '  New Pole lat: ', pole_lat
+    call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
+    write(log_scratch_space, '(A,F6.1)') &
+       '  New Pole lon: ', pole_lon
+    call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
+    write(log_scratch_space, '(A,F6.1)') &
+       '  First lat: ', first_lat
+    call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
+    write(log_scratch_space, '(A,F6.1)') &
+       '  First lon: ', first_lon
+    call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
+
   end if
 
   do i=1, n_meshes
@@ -304,15 +327,21 @@ program planar_mesh_generator
     ! 6.4 Call generation strategy
     if (n_targets == 0 .or. n_meshes == 1 ) then
 
-        mesh_gen(i) = gen_planar_type(                    &
-                          reference_element=cube_element, &
-                          mesh_name=mesh_names(i),        &
-                          edge_cells_x=edge_cells_x(i),   &
-                          edge_cells_y=edge_cells_y(i),   &
-                          domain_x=domain_x,              &
-                          domain_y=domain_y,              &
-                          periodic_x=periodic_x,          &
-                          periodic_y=periodic_y )
+        mesh_gen(i) = gen_planar_type(                           &
+                          reference_element = cube_element,      &
+                          mesh_name         = mesh_names(i),     &
+                          edge_cells_x      = edge_cells_x(i),   &
+                          edge_cells_y      = edge_cells_y(i),   &
+                          domain_x          = domain_x,          &
+                          domain_y          = domain_y,          &
+                          periodic_x        = periodic_x,        &
+                          periodic_y        = periodic_y,        &
+                          cartesian         = cartesian,         &
+                          do_rotate         = do_rotate,         &
+                          pole_lat          = pole_lat,          &
+                          pole_lon          = pole_lon,          &
+                          first_lat         = first_lat,         &
+                          first_lon         = first_lon )
     else if (n_meshes > 1) then
 
         if (allocated(target_mesh_names))   deallocate(target_mesh_names)
@@ -337,18 +366,24 @@ program planar_mesh_generator
 
         call log_event( trim(log_scratch_space), LOG_LEVEL_INFO)
 
-        mesh_gen(i) = gen_planar_type(                             &
-                          reference_element=cube_element,          &
-                          mesh_name=mesh_names(i),                 &
-                          edge_cells_x=edge_cells_x(i),            &
-                          edge_cells_y=edge_cells_y(i),            &
-                          domain_x=domain_x,                       &
-                          domain_y=domain_y,                       &
-                          periodic_x=periodic_x,                   &
-                          periodic_y=periodic_y,                   &
-                          target_mesh_names=target_mesh_names,     &
-                          target_edge_cells_x=target_edge_cells_x, &
-                          target_edge_cells_y=target_edge_cells_y )
+        mesh_gen(i) = gen_planar_type(                               &
+                          reference_element   = cube_element,        &
+                          mesh_name           = mesh_names(i),       &
+                          edge_cells_x        = edge_cells_x(i),     &
+                          edge_cells_y        = edge_cells_y(i),     &
+                          domain_x            = domain_x,            &
+                          domain_y            = domain_y,            &
+                          periodic_x          = periodic_x,          &
+                          periodic_y          = periodic_y,          &
+                          cartesian           = cartesian,           &
+                          target_mesh_names   = target_mesh_names,   &
+                          target_edge_cells_x = target_edge_cells_x, &
+                          target_edge_cells_y = target_edge_cells_y, &
+                          do_rotate           = do_rotate,           &
+                          pole_lat            = pole_lat,            &
+                          pole_lon            = pole_lon,            &
+                          first_lat           = first_lat,           &
+                          first_lon           = first_lon )
       else
         write(log_scratch_space, "(A,I0,A)") &
            '  Number of meshes is negative [', n_meshes,']'

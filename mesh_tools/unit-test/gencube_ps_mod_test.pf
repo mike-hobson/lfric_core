@@ -395,9 +395,9 @@ contains
     integer(i_def), parameter :: nmaps = 1
 
     ! Initial locations for points used:
-    ! (1,1)  = 315,  (2,1)  = acos(1/sqrt(2/3)  ! -45
-    ! (1,10) =  45,  (2,10) = acos(1/sqrt(2/3)  !  45
-    ! (1,53) = 135,  (2,53) = acos(1/sqrt(2/3)  ! 135
+    ! (1,1)  = -45,  (2,1)  =   acos(1/sqrt(2/3) =  35
+    ! (1,10) =  45,  (2,10) =   acos(1/sqrt(2/3) =  35
+    ! (1,53) = 135,  (2,53) = - acos(1/sqrt(2/3) = -35
 
     character(str_def), parameter :: target_mesh_names(nmaps) = ['unit_test_target']
     integer(i_def),     parameter :: target_edge_cells(nmaps) = [6]
@@ -436,7 +436,7 @@ contains
     ! (1,10) should go from lon =  45              -> acos(sqrt(2/3))
     ! (2,10) should go from lat =  acos(sqrt(2/3)  -> 0
     ! (1,53) should go from lon =  135             -> 180 - acos(sqrt(2/3))
-    ! (2,53) should go from lat =  acos(sqrt(2/3)  -> 0
+    ! (2,53) should go from lat = -acos(sqrt(2/3)  -> 0
 
     @assertTrue(abs(coords_rot(1,1)  + 35.264389683_r_def) < eps, "Incorrect rotated mesh coordinates.")
     @assertTrue(abs(coords_rot(2,1)  - 0_r_def) < eps, "Incorrect rotated mesh coordinates.")
@@ -475,7 +475,7 @@ contains
     ! (1,10) should go from lon =45              -> 90
     ! (2,10) should go from lat =acos(sqrt(2/3)) -> acos(sqrt(2/3))
     ! (1,53) should go from lon =135             -> 180
-    ! (2,53) should go from lat =acos(sqrt(2/3)) -> -acos(sqrt(2/3))
+    ! (2,53) should go from lat =-acos(sqrt(2/3))-> -acos(sqrt(2/3))
 
     @assertTrue(abs(coords_rot(1,1) -  0.0_r_def) < eps, "Incorrect rotated mesh coordinates.")
     @assertTrue(abs(coords_rot(2,1) -  35.2643896827546_r_def) < eps, "Incorrect rotated mesh coordinates.")
@@ -515,7 +515,7 @@ contains
     ! (1,10) should go from lon =45              -> -45
     ! (2,10) should go from lat =acos(sqrt(2/3)) -> -acos(sqrt(2/3))
     ! (1,53) should go from lon =135             -> 135
-    ! (2,53) should go from lat =acos(sqrt(2/3)) -> -acos(sqrt(2/3))
+    ! (2,53) should go from lat =-acos(sqrt(2/3))-> -acos(sqrt(2/3))
 
     @assertTrue(abs(coords_rot(1,1)  + 45.0_r_def) < eps, "Incorrect rotated mesh coordinates.")
     @assertTrue(abs(coords_rot(2,1)  - 35.2643896827546_r_def) < eps, "Incorrect rotated mesh coordinates.")

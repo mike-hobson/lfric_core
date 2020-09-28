@@ -191,7 +191,8 @@ contains
                              periodic_x   = .true.,                 &
                              periodic_y   = .true.,                 &
                              domain_x     = this%domain_x,          &
-                             domain_y     = this%domain_y )
+                             domain_y     = this%domain_y,          &
+                             cartesian    = .true. )
 
     mesh_name = 'fine_plane_bi'
     this%fine_plane_bi = gen_planar_type                            &
@@ -202,7 +203,8 @@ contains
                              periodic_x   = .true.,                 &
                              periodic_y   = .true.,                 &
                              domain_x     = this%domain_x,          &
-                             domain_y     = this%domain_y )
+                             domain_y     = this%domain_y,          &
+                             cartesian    = .true. )
 
 
     mesh_name = 'coarse_plane_periodic_x'
@@ -214,7 +216,8 @@ contains
                              periodic_x   = .true.,                 &
                              periodic_y   = .false.,                &
                              domain_x     = this%domain_x,          &
-                             domain_y     = this%domain_y )
+                             domain_y     = this%domain_y,          &
+                             cartesian    = .true. )
 
     mesh_name = 'fine_plane_periodic_x'
     this%fine_plane_periodic_x = gen_planar_type                    &
@@ -225,7 +228,8 @@ contains
                              periodic_x   = .true.,                 &
                              periodic_y   = .false.,                &
                              domain_x     = this%domain_x,          &
-                             domain_y     = this%domain_y )
+                             domain_y     = this%domain_y,          &
+                             cartesian    = .true. )
 
 
     mesh_name = 'coarse_plane_periodic_y'
@@ -237,7 +241,8 @@ contains
                                periodic_x   = .false.,              &
                                periodic_y   = .true.,               &
                                domain_x     = this%domain_x,        &
-                               domain_y     = this%domain_y )
+                               domain_y     = this%domain_y,        &
+                               cartesian    = .true. )
 
     mesh_name = 'fine_plane_periodic_y'
     this%fine_plane_periodic_y = gen_planar_type                    &
@@ -248,7 +253,8 @@ contains
                                periodic_x   = .false.,              &
                                periodic_y   = .true.,               &
                                domain_x     = this%domain_x,        &
-                               domain_y     = this%domain_y )
+                               domain_y     = this%domain_y,        &
+                               cartesian    = .true. )
 
 
 

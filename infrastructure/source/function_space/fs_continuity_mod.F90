@@ -11,17 +11,17 @@
 
 module fs_continuity_mod
 
-use constants_mod, only: i_native, str_short
-use log_mod,       only: log_event, log_scratch_space, log_level_error
+  use constants_mod, only : i_native, str_short
+  use log_mod, only : log_event, log_scratch_space, log_level_error
 
-implicit none
+  implicit none
 
-private
-public :: name_from_functionspace
+  private
+  public :: name_from_functionspace, functionspace_from_name
 
-character(*), private, parameter :: module_name = 'fs_continuity_mod'
+  character(*), private, parameter :: module_name = 'fs_continuity_mod'
 
-!-------------------------------------------------------------------------------
+  !-------------------------------------------------------------------------------
 ! Module parameters
 !-------------------------------------------------------------------------------
 integer(i_native), public, parameter :: W0        = 173
@@ -97,5 +97,34 @@ contains
     end do
 
   end function name_from_functionspace
+
+  !> Gets the function space identifier corresponding to a particular name.
+  !>
+  !> @param[in] name String holding the function space name.
+  !>
+  !> @return One of the function space enumerations.
+  !>
+  function functionspace_from_name(name)
+
+    implicit none
+
+    character(*), intent(in) :: name
+    integer(i_native)        :: functionspace_from_name
+    integer(i_native)        :: fs_index
+
+    fs_index = 1
+    do
+      if (fs_name(fs_index) == name) then
+        functionspace_from_name = fs_enumerator(fs_index)
+        return
+      end if
+
+      fs_index = fs_index + 1
+      if (fs_index > ubound(fs_name, 1)) then
+        call log_event("Unknown function space " // name, log_level_error)
+      end if
+    end do
+
+  end function functionspace_from_name
 
 end module fs_continuity_mod

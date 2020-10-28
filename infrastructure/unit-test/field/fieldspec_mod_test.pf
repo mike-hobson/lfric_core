@@ -10,7 +10,8 @@ module fieldspec_mod_test
 
     use fieldspec_mod,       only : fieldspec_type
     use fs_continuity_mod,   only : W3
-
+    use field_type_enum_mod, only : integer_type
+    use io_driver_enum_mod,  only : WRITE_FIELD_FACE
     use pFUnit_Mod
 
     implicit none
@@ -18,7 +19,7 @@ module fieldspec_mod_test
     private
     public :: test_assignment
 
-    @TestCase
+    !@TestCase
     type, extends(TestCase), public :: fieldspec_test_type
         private
     contains
@@ -50,7 +51,7 @@ contains
 
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    @test
+    !@test
     subroutine test_assignment(self)
 
         implicit none
@@ -60,15 +61,16 @@ contains
 
         test_fieldspec1 = fieldspec_type( "foo", & ! unique_id
                                           11, & ! mesh_id
-                                          2, & ! domain
-                                          W3, & ! order
+                                          W3, & ! function_space
+                                          2, & ! order
                                           1, & ! field_kind
-                                          1 & ! field_type
+                                          integer_type, & ! field_type
+                                          WRITE_FIELD_FACE &  ! io_driver
                                         )
 
         @assertEqual("foo",test_fieldspec1%get_unique_id())
         @assertEqual(11,test_fieldspec1%get_mesh_id())
-        @assertEqual(2,test_fieldspec1%get_domain())
+        @assertEqual(2,test_fieldspec1%get_function_space())
         @assertEqual(W3,test_fieldspec1%get_order())
         @assertEqual(1,test_fieldspec1%get_kind())
         @assertEqual(1,test_fieldspec1%get_type())

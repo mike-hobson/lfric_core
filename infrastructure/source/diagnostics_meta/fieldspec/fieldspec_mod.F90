@@ -26,10 +26,11 @@ module fieldspec_mod
     character(str_def) :: unique_id
     !> Other information used to create a field
     integer(i_def)     :: mesh_id
-    integer(i_def)     :: domain
+    integer(i_def)     :: function_space
     integer(i_def)     :: order
     integer(i_def)     :: field_kind
     integer(i_def)     :: field_type
+    integer(i_def)     :: io_driver
 
   contains
 
@@ -39,8 +40,8 @@ module fieldspec_mod
     !> Getter to return the mesh_id
     procedure, public :: get_mesh_id
 
-    !> Getter to return the domain
-    procedure, public :: get_domain
+    !> Getter to return the function_space
+    procedure, public :: get_function_space
 
     !> Getter to return the order
     procedure, public :: get_order
@@ -51,6 +52,8 @@ module fieldspec_mod
     !> Getter to return the type
     procedure, public :: get_type
 
+    !> Getter to return the io_driver
+     procedure, public :: get_io_driver
 
   end type fieldspec_type
 
@@ -66,15 +69,16 @@ contains
   !>
   !> @param [in] unique_id A unique identifer for the field
   !> @param [in] mesh_id The mesh to create field with
-  !> @param [in] domain The domain (function space) to create field with
+  !> @param [in] function_space The function space to create field with
   !> @param [in] order The order of the field
   !> @param [in] field_kind The kind of the field
   !> @param [in] field_type The type of the field
   !> @return self the fieldspec object
   !>
   function fieldspec_constructor( unique_id, mesh_id,     &
-                                  domain, order,          &
-                                  field_kind, field_type ) &
+                                  function_space, order,          &
+                                  field_kind, field_type, &
+                                  io_driver ) &
                                  result(self)
 
     use log_mod,         only : log_event, &
@@ -83,19 +87,21 @@ contains
 
     character(*),               intent(in)    :: unique_id
     integer(i_def),             intent(in)    :: mesh_id
-    integer(i_def),             intent(in)    :: domain
+    integer(i_def),             intent(in)    :: function_space
     integer(i_def),             intent(in)    :: order
     integer(i_def),             intent(in)    :: field_kind
     integer(i_def),             intent(in)    :: field_type
+    integer(i_def),             intent(in)    :: io_driver
 
     type(fieldspec_type), target :: self
 
-    self%unique_id  = trim(unique_id)
-    self%mesh_id    = mesh_id
-    self%domain     = domain
-    self%order      = order
-    self%field_kind = field_kind
-    self%field_type = field_type
+    self%unique_id      = trim(unique_id)
+    self%mesh_id        = mesh_id
+    self%function_space = function_space
+    self%order          = order
+    self%field_kind     = field_kind
+    self%field_type     = field_type
+    self%io_driver      = io_driver
 
   end function fieldspec_constructor
 
@@ -129,19 +135,19 @@ contains
 
   end function get_mesh_id
 
-  !> Getter for domain
+  !> Getter for function_space
   !> @param[in]  self  fieldspec_type
-  !> @return domain
-  function get_domain(self) result(domain)
+  !> @return function_space
+  function get_function_space(self) result(function_space)
 
     implicit none
 
     class(fieldspec_type), intent(in) :: self
-    integer(i_def) :: domain
+    integer(i_def) :: function_space
 
-    domain = self%domain
+    function_space = self%function_space
 
-  end function get_domain
+  end function get_function_space
 
   !> Getter for order
   !> @param[in]  self  fieldspec_type
@@ -184,6 +190,20 @@ contains
     field_type = self%field_type
 
   end function get_type
+
+  !> Getter for io_driver
+  !> @param[in]  self  fieldspec_type
+  !> @return io_driver
+  function get_io_driver(self) result(io_driver)
+
+    implicit none
+
+    class(fieldspec_type), intent(in) :: self
+    integer(i_def) :: io_driver
+
+    io_driver = self%io_driver
+
+  end function get_io_driver
 
 
 end module fieldspec_mod

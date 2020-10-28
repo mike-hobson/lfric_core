@@ -1,5 +1,5 @@
 !-----------------------------------------------------------------------------
-! (C) Crown copyright 2019 Met Office. All rights reserved.
+! (C) Crown copyright 2020 Met Office. All rights reserved.
 ! The file LICENCE, distributed with this code, contains details of the terms
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
@@ -12,12 +12,11 @@
 
 module fieldspec_collection_mod
 
-  use constants_mod,             only: i_def, str_def
-  use fs_continuity_mod,         only: Wtheta
+  use constants_mod,             only: i_def
   use fieldspec_mod,             only: fieldspec_type
   use linked_list_mod,           only: linked_list_type, linked_list_item_type
   use log_mod,                   only: log_event, log_scratch_space, &
-                                       LOG_LEVEL_ERROR, LOG_LEVEL_INFO
+                                       LOG_LEVEL_ERROR
 
   implicit none
 
@@ -31,11 +30,13 @@ module fieldspec_collection_mod
     type(linked_list_type) :: fieldspec_list
 
   contains
-    procedure, public  :: add_fieldspec
-    procedure, public  :: get_fieldspec
-!    procedure, public  :: populate
-    procedure, public  :: clear
-    final              :: fieldspec_collection_destructor
+    procedure :: check_unique_id_in_use
+    procedure :: generate_and_add_fieldspec
+    procedure :: add_fieldspec
+    procedure :: get_fieldspec
+    procedure :: get_length
+    procedure :: clear
+    final     :: fieldspec_collection_destructor
 
   end type fieldspec_collection_type
 
@@ -45,32 +46,34 @@ module fieldspec_collection_mod
 
   !> @brief Singleton instance of a fieldspec_collection_type object.
   !>
-  type(fieldspec_collection_type), public, allocatable :: &
+  type(fieldspec_collection_type), public, allocatable, target :: &
       fieldspec_collection
 
 contains
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !===========================================================================
   !> @brief Constructs an empty fieldspec collection object.
   !> @return The constructed fieldspec collection object.
   !>
-  function fieldspec_collection_constructor() result(self)
+  function fieldspec_collection_constructor() result( self )
 
     implicit none
 
-    type(fieldspec_collection_type) :: self
+    type(fieldspec_collection_type), pointer :: self
 
-    self%fieldspec_list = linked_list_type()
+    if(.not. allocated(fieldspec_collection)) then
+      allocate(fieldspec_collection)
+      fieldspec_collection%fieldspec_list = linked_list_type()
+    end if
 
+    self => fieldspec_collection
 
   end function fieldspec_collection_constructor
 
   !===========================================================================
-  !> @brief Destructor tears down object prior to being freed.
-  !>
+  !> @brief Tears down object prior to being freed.
   subroutine fieldspec_collection_destructor( self )
 
-    ! Object finalizer
     implicit none
 
     type (fieldspec_collection_type), intent(inout) :: self
@@ -80,82 +83,95 @@ contains
     return
   end subroutine fieldspec_collection_destructor
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> @brief Creates a new fieldspec object and adds to the collection
-  !>        Checks that the fieldspec unique id is not already in use
+
+  !===========================================================================
+  !> @brief Throws an error if the given unique_id is already used by a
+  !>        fieldspec in the collection
+  !> @param [in] unique_id The unique_id to check
   !>
-  subroutine add_fieldspec( self, unique_id, mesh_id, domain, &
-                            order, field_kind, field_type )
+  subroutine check_unique_id_in_use( self, unique_id )
 
     implicit none
 
-    class(fieldspec_collection_type), intent(inout) :: self
-    character(*),                     intent(in)    :: unique_id
-    integer(i_def),                   intent(in)    :: mesh_id
-    integer(i_def),                   intent(in)    :: domain
-    integer(i_def),                   intent(in)    :: order
-    integer(i_def),                   intent(in)    :: field_kind
-    integer(i_def),                   intent(in)    :: field_type
-
-    type(fieldspec_type) :: fieldspec_to_add
-
-    ! Check this unique id is not already used and if it is, abort
-    ! with error
+    class(fieldspec_collection_type),   intent(inout) :: self
+    character(len=*),                   intent(in)    :: unique_id
 
     if ( associated( self%get_fieldspec( trim(unique_id) ) ) ) then
 
       write(log_scratch_space, '(3A)') &
-            'The fieldspec unique id "', trim(unique_id), &
+            'The field unique id "', trim(unique_id), &
             '" is already in use'
 
       call log_event( log_scratch_space, LOG_LEVEL_ERROR)
 
     end if
 
+    return
+  end subroutine check_unique_id_in_use
+
+  !===========================================================================
+  !> @brief Creates a new fieldspec object and adds to the collection
+  !> @param[in] unique_id The unique id of the field
+  !> @param[in] mesh_id The mesh id of the field
+  !> @param[in] function_space The function space to create the field with
+  !> @param[in] order The element element order of the function space
+  !> @param[in] field_kind The kind of the field
+  !> @param[in] field_type The data type of the field
+  !> @param[in] io_driver The io driver used for the field
+  !>
+  subroutine generate_and_add_fieldspec( self, unique_id, mesh_id, function_space, &
+                            order, field_kind, field_type, io_driver )
+
+    implicit none
+
+    class(fieldspec_collection_type), intent(inout) :: self
+    character(*),                     intent(in)    :: unique_id
+    integer(i_def),                   intent(in)    :: mesh_id
+    integer(i_def),                   intent(in)    :: function_space
+    integer(i_def),                   intent(in)    :: order
+    integer(i_def),                   intent(in)    :: field_kind
+    integer(i_def),                   intent(in)    :: field_type
+    integer(i_def),                   intent(in)    :: io_driver
+
+    type(fieldspec_type) :: new_fieldspec
+
     ! Create new fieldspec object
+    new_fieldspec = fieldspec_type( unique_id,       &
+                                    mesh_id,         &
+                                    function_space,  &
+                                    order,           &
+                                    field_kind,      &
+                                    field_type,      &
+                                    io_driver )
 
-    fieldspec_to_add = fieldspec_type( unique_id,       &
-                                       mesh_id,         &
-                                       domain,          &
-                                       order,           &
-                                       field_kind,      &
-                                       field_type)
+    call self%add_fieldspec( new_fieldspec )
+
+    return
+  end subroutine generate_and_add_fieldspec
+
+  !===========================================================================
+  !> @brief Adds the given fieldspec object to the collection
+  !> @param[in] fieldspec The fieldspec to be added to the collection
+  !>
+  subroutine add_fieldspec( self, fieldspec )
+
+    implicit none
+
+    class(fieldspec_collection_type), intent(inout) :: self
+    type(fieldspec_type),             intent(in)    :: fieldspec
+
+    call self%check_unique_id_in_use( fieldspec%get_unique_id() )
+
     ! Add it to the list
-    call self%fieldspec_list%insert_item( fieldspec_to_add )
-
+    call self%fieldspec_list%insert_item( fieldspec )
 
     return
   end subroutine add_fieldspec
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> @brief Populates the fieldspec collection
-  !> this will be enabled and populated on a subsequent task (#2014)
-  !>
-!  subroutine populate( self )
-!
-!    implicit none
-!
-!    class(fieldspec_collection_type), intent(inout) :: self
-!
-!
-!    call log_event( 'Populating the fieldspec collection', LOG_LEVEL_INFO )
-!
-!    ! Hardcode all the prognostic fields we want to create
-!
-!    ! Eventually this will be read in from the iodef.xml
-!
-!    ! #ToDo: load from xml...
-!
-!    call self%add_fieldspec( "theta", 1_i_def, wtheta, 0_i_def, 0_i_def, 0_i_def )
-!
-!    return
-!  end subroutine populate
-
-
   !===========================================================================
   !> @brief Requests a fieldspec object by unique id
   !>
-  !> @param[in] unique_id of fieldspec object
+  !> @param[in] unique_id The unique_id of fieldspec object
   !>
   !> @return A pointer to the fieldspec object
   !>
@@ -169,7 +185,7 @@ contains
     type(fieldspec_type), pointer :: fieldspec
 
     ! Pointer to linked list - used for looping through the list
-    type(linked_list_item_type),pointer :: loop => null()
+    type(linked_list_item_type), pointer :: loop => null()
 
     ! nullify this here as you can't do it on the declaration because it's also on the function def
     fieldspec => null()
@@ -211,6 +227,21 @@ contains
     nullify(loop)
 
   end function get_fieldspec
+
+  !===========================================================================
+  !> @brief Returns the number of fieldspec objects stored in this collection
+  !> @return The number of fieldspec objects stored in this collection
+  !>
+  function get_length( self ) result( count )
+
+    implicit none
+
+    class(fieldspec_collection_type)    :: self
+    integer(i_def)                      :: count
+
+    count = self%fieldspec_list%get_length()
+
+  end function get_length
 
   !===========================================================================
   !> @brief Forced clear of all the fieldspec objects in the collection.

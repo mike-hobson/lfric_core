@@ -1,5 +1,5 @@
 !-----------------------------------------------------------------------------
-! (C) Crown copyright 2019 Met Office. All rights reserved.
+! (C) Crown copyright 2020 Met Office. All rights reserved.
 ! The file LICENCE, distributed with this code, contains details of the terms
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
@@ -8,73 +8,75 @@
 !>
 module fieldspec_collection_mod_test
 
-    use constants_mod, only : i_def, r_def
-    use fs_continuity_mod, only: W3
+  use constants_mod,              only: i_def
+  use fieldspec_mod,              only: fieldspec_type
+  use fieldspec_collection_mod,   only: fieldspec_collection_type
+  use fs_continuity_mod,          only: W3
+  use io_driver_enum_mod,         only: WRITE_FIELD_FACE
+  use pFUnit_Mod
 
-    use fieldspec_mod, only : fieldspec_type
-    use fieldspec_collection_mod, only : fieldspec_collection_type
-    use pFUnit_Mod
+  implicit none
 
-    implicit none
+  private
+  public :: test_assignment
 
+  @TestCase
+  type, extends(TestCase), public :: fieldspec_collection_test_type
     private
-    public :: test_assignment
-
-    @TestCase
-    type, extends(TestCase), public :: fieldspec_collection_test_type
-        private
-    contains
-        procedure setUp
-        procedure tearDown
-        procedure test_assignment
-    end type fieldspec_collection_test_type
+  contains
+    procedure setUp
+    procedure tearDown
+    procedure test_assignment
+  end type fieldspec_collection_test_type
 
 contains
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    subroutine setUp(this)
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine setUp( this )
 
-        implicit none
+    implicit none
 
-        class(fieldspec_collection_test_type), intent(inout) :: this
+    class(fieldspec_collection_test_type), intent(inout) :: this
 
-    end subroutine setUp
+  end subroutine setUp
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    subroutine tearDown(this)
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine tearDown( this )
 
-        implicit none
+    implicit none
 
-        class(fieldspec_collection_test_type), intent(inout) :: this
+    class(fieldspec_collection_test_type), intent(inout) :: this
 
-    end subroutine tearDown
+  end subroutine tearDown
 
+  !> Test that fieldspec objects are correctly added to the collection and are retrievable
+  !>
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @test
+  subroutine test_assignment( self )
 
+    implicit none
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    @test
-    subroutine test_assignment(self)
+    class(fieldspec_collection_test_type), intent(inout) :: self
+    type(fieldspec_type)                                 :: test_fieldspec1
+    type(fieldspec_type),                  pointer       :: returned_fieldspec => null()
+    type(fieldspec_collection_type)                      :: f_collection
 
-        implicit none
+    f_collection = fieldspec_collection_type()
 
-        class(fieldspec_collection_test_type), intent(inout) :: self
-        type(fieldspec_type) :: test_fieldspec1
-        type(fieldspec_type), pointer :: returned_fieldspec => null()
-        type(fieldspec_collection_type) :: f_collection
+    call f_collection%generate_and_add_fieldspec( "foo", 1_i_def, W3, 0_i_def, &
+                                       0_i_def, 0_i_def, WRITE_FIELD_FACE )
+    call f_collection%generate_and_add_fieldspec("bar", 1_i_def, W3, 0_i_def, &
+                                        0_i_def, 0_i_def, WRITE_FIELD_FACE)
 
-        f_collection = fieldspec_collection_type()
+    returned_fieldspec => f_collection%get_fieldspec("absent")
+    @assertNotAssociated(returned_fieldspec)
+    returned_fieldspec => f_collection%get_fieldspec("foo")
+    @assertAssociated(returned_fieldspec)
+    @assertEqual("foo", returned_fieldspec%get_unique_id())
+    returned_fieldspec => f_collection%get_fieldspec("bar")
+    @assertEqual("bar", returned_fieldspec%get_unique_id())
 
-        call f_collection%add_fieldspec( "foo", 1_i_def, W3, 0_i_def, 0_i_def, 0_i_def )
-        call f_collection%add_fieldspec( "bar", 1_i_def, W3, 0_i_def, 0_i_def, 0_i_def )
-
-        returned_fieldspec => f_collection%get_fieldspec("absent")
-        @assertNotAssociated(returned_fieldspec)
-        returned_fieldspec => f_collection%get_fieldspec("foo")
-        @assertAssociated(returned_fieldspec)
-        @assertEqual("foo",returned_fieldspec%get_unique_id())
-        returned_fieldspec => f_collection%get_fieldspec("bar")
-        @assertEqual("bar",returned_fieldspec%get_unique_id())
-
-    end subroutine test_assignment
+  end subroutine test_assignment
 
 end module fieldspec_collection_mod_test

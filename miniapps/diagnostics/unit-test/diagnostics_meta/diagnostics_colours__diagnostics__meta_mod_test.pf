@@ -1,0 +1,35 @@
+!-----------------------------------------------------------------------------
+! (c) Crown copyright 2020 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+!> Tests that the diagnostics miniapp diagnostic fields can be compiled and
+!> that their unique ids are correct
+!-------------------------------------------------------------------------------
+module diagnostics_colours__diagnostics__meta_mod_test
+
+    use pFUnit_Mod
+
+    implicit none
+
+contains
+
+    !> Tests the diagnostic field metadata compiles and returns the correct
+    !> unique_id
+    @test
+    subroutine test_diagnostics()
+
+        use diagnostics_colours__diagnostics__meta_mod, only : &
+                diagnostics_colours__diagnostics__meta_type
+
+        implicit none
+
+        type(diagnostics_colours__diagnostics__meta_type) :: diagnostics
+
+        diagnostics = diagnostics_colours__diagnostics__meta_type()
+
+        @assertEqual("diagnostics__hex", diagnostics%hex%get_unique_id())
+
+    end subroutine test_diagnostics
+
+end module diagnostics_colours__diagnostics__meta_mod_test

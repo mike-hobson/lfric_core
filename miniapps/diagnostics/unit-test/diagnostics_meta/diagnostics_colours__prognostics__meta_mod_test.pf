@@ -1,0 +1,37 @@
+!-----------------------------------------------------------------------------
+! (c) Crown copyright 2020 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+!> Test that the diagnostics miniapp prognostic fields can be compiled and
+!> that their unique ids are correct
+!-------------------------------------------------------------------------------
+module diagnostics_colours__prognostics__meta_mod_test
+
+    use pFUnit_Mod
+
+    implicit none
+
+contains
+
+    !> Tests the prognostic field metadata compiles and returns the correct
+    !> unique_ids
+    @test
+    subroutine test_prognostics()
+
+        use diagnostics_colours__prognostics__meta_mod, only : &
+                diagnostics_colours__prognostics__meta_type
+
+        implicit none
+
+        type(diagnostics_colours__prognostics__meta_type) :: prognostics
+
+        prognostics = diagnostics_colours__prognostics__meta_type()
+
+        @assertEqual("prognostics__red", prognostics%red%get_unique_id())
+        @assertEqual("prognostics__green", prognostics%green%get_unique_id())
+        @assertEqual("prognostics__blue", prognostics%blue%get_unique_id())
+
+    end subroutine test_prognostics
+
+end module diagnostics_colours__prognostics__meta_mod_test

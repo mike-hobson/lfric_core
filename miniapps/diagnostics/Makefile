@@ -143,6 +143,8 @@ build: ALWAYS
 	$(call MESSAGE,==============================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
 	          SOURCE_DIR=source
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+	          SOURCE_DIR=$(ROOT_DIR)/um_physics/source/diagnostics_meta/meta_types
 	$(call MESSAGE,==============================)
 	$(call MESSAGE,Psycloning $(PROJECT_NAME))
 	$(call MESSAGE,==============================)
@@ -165,7 +167,8 @@ build: ALWAYS
 #
 .PHONY: unit-tests
 unit-tests: export ADDITIONAL_EXTRACTION = "$(ROOT_DIR)/infrastructure/source \
-                                            $(ROOT_DIR)/gungho/source"
+                                            $(ROOT_DIR)/gungho/source \
+                                            $(ROOT_DIR)/um_physics/source/diagnostics_meta/meta_types"
 unit-tests: export BIN_DIR ?= $(PROJECT_DIR)/test
 unit-tests: export EXTERNAL_STATIC_LIBRARIES += pfunit
 unit-tests: export FFLAG_GROUPS = DEBUG NO_OPTIMISATION INIT UNIT_WARNINGS

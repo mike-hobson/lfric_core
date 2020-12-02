@@ -138,7 +138,8 @@ subroutine pc2_checks_code( nlayers,                   &
     real(r_um), dimension(row_length,rows,model_levels) :: &
                   qv_work, qcl_work, qcf_work,             &
                   cfl_work, cff_work, bcf_work,            &
-                  t_work, theta_work, pressure
+                  t_work, theta_work, pressure,            &
+                  zeros
 
     integer(i_um) :: k
 
@@ -167,13 +168,16 @@ subroutine pc2_checks_code( nlayers,                   &
       bcf_work(1,1,k) = bcf_wth(map_wth(1) + k)
       cfl_work(1,1,k) = cfl_wth(map_wth(1) + k)
       cff_work(1,1,k) = cff_wth(map_wth(1) + k)
+
+      ! Dummy zeros in place of qcf2 in pc2_checks
+      zeros(1,1,k)    = 0.0_r_um
     end do
 
     call pc2_checks( pressure,                                 &
                      t_work, bcf_work, cfl_work, cff_work,     &
                      qv_work, qcl_work, qcf_work, l_mr_physics,&
                      row_length, rows, model_levels,           &
-                     0_i_um, 0_i_um, 0_i_um, 0_i_um)
+                     0_i_um, 0_i_um, 0_i_um, 0_i_um, zeros)
 
     ! Recast back to LFRic space
     do k = 1, model_levels

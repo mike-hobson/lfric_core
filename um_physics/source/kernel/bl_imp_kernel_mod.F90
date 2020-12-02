@@ -530,7 +530,7 @@ contains
     real(r_um), dimension(row_length,rows,nlayers) ::                        &
          p_rho_levels, rho_wet_rsq, rho_wet, z_rho, z_theta,                 &
          bulk_cloud_fraction, rhcpt, t_latest, q_latest, qcl_latest,         &
-         qcf_latest, cca_3d, area_cloud_fraction,                            &
+         qcf_latest, qcf2_latest, cca_3d, area_cloud_fraction,               &
          cloud_fraction_liquid, cloud_fraction_frozen, rho_wet_tq,           &
          cf_latest, cfl_latest, cff_latest, zeros
 
@@ -617,8 +617,9 @@ contains
 
     real(r_um), dimension(row_length,rows,nlayers) :: cca0
 
-    real(r_um), dimension(row_length,rows,bl_levels) :: taux_fd_u, tauy_fd_v,&
-         rhogamu_u, rhogamv_v
+    real(r_um), dimension(row_length,rows,bl_levels) :: taux_fd_u, tauy_fd_v
+
+    real(r_um), dimension(row_length,rows,2:bl_levels) :: rhogamu_u, rhogamv_v
 
     real(r_um), dimension(row_length,rows,0:nlayers) ::                      &
          aerosol, dust_div1, dust_div2, dust_div3, dust_div4, dust_div5,     &
@@ -1089,6 +1090,8 @@ contains
       q_latest(1,1,k)   = m_v(map_wth(1) + k)
       qcl_latest(1,1,k) = m_cl(map_wth(1) + k)
       qcf_latest(1,1,k) = m_ci(map_wth(1) + k)
+      ! Set qcf2_latest to zero for now, until needed by CASIM coupling.
+      qcf2_latest(1,1,k) = 0.0_r_um
     end do
     r_w(1,1,0) = u_physics_star(map_w2(5) + 0) - u_physics(map_w2(5) + 0)
 
@@ -1154,7 +1157,7 @@ contains
           , cca0, fqw, ftl, taux, tauy, rhokh                           &
           , fqw_ice,ftl_ice,dtstar_surft,dtstar_sea,dtstar_sice,ti_sice_ncat &
           , area_cloud_fraction, bulk_cloud_fraction                    &
-          , t_latest, q_latest, qcl_latest, qcf_latest                  &
+          , t_latest, q_latest, qcl_latest, qcf_latest, qcf2_latest     &
           , cf_latest, cfl_latest, cff_latest                           &
           , R_u, R_v, R_w, cloud_fraction_liquid, cloud_fraction_frozen &
           , sum_eng_fluxes,sum_moist_flux, rhcpt                        &
@@ -1339,6 +1342,8 @@ contains
       q_latest(1,1,k)   = m_v(map_wth(1) + k)
       qcl_latest(1,1,k) = m_cl(map_wth(1) + k)
       qcf_latest(1,1,k) = m_ci(map_wth(1) + k)
+      ! Set qcf2_latest to zero for now, until needed by CASIM coupling.
+      qcf2_latest(1,1,k) = 0.0_r_um
     end do
     r_w(1,1,0) = u_physics_star(map_w2(5) + 0) - u_physics(map_w2(5) + 0)
 
@@ -1404,7 +1409,7 @@ contains
           , cca0, fqw, ftl, taux, tauy, rhokh                           &
           , fqw_ice,ftl_ice,dtstar_surft,dtstar_sea,dtstar_sice,ti_sice_ncat &
           , area_cloud_fraction, bulk_cloud_fraction                    &
-          , t_latest, q_latest, qcl_latest, qcf_latest                  &
+          , t_latest, q_latest, qcl_latest, qcf_latest, qcf2_latest     &
           , cf_latest, cfl_latest, cff_latest                           &
           , R_u, R_v, R_w, cloud_fraction_liquid, cloud_fraction_frozen &
           , sum_eng_fluxes,sum_moist_flux, rhcpt                        &

@@ -177,12 +177,10 @@ subroutine glomap_aerosol_code( nlayers,                                       &
   integer(i_um) :: k
 
   ! pressure on theta levels
-  ! note - UM field may have a redundant zeroth level
-  real(r_um), dimension(row_length,rows,tdims%k_start:tdims%k_end) ::          &
-                                                                p_theta_levels
+  real(r_um), dimension(nlayers) :: p_theta_levels_1d
 
   ! temperature on theta levels
-  real(r_um), dimension(row_length,rows,nlayers) :: t_theta_levels
+  real(r_um), dimension(nlayers) :: t_theta_levels_1d
 
   ! note - UM fields may have a redundant zeroth level
   real(r_um), dimension(row_length,rows,tdims%k_start:tdims%k_end) ::          &
@@ -214,16 +212,13 @@ subroutine glomap_aerosol_code( nlayers,                                       &
   !-----------------------------------------------------------------------
 
   do k = 1, nlayers
-    ! pressure on theta levels
-    ! note - zeroth level is redundant for this field in UM
-    p_theta_levels(1,1,k) = p_zero *                                           &
-                             ( exner_in_wth(map_wth(1) + k) )**(1.0_r_um/kappa)
+    p_theta_levels_1d(k) = p_zero *                                            &
+                            ( exner_in_wth(map_wth(1) + k) )**(1.0_r_um/kappa)
   end do
 
   do k = 1, nlayers
-    ! temperature on theta levels
-    t_theta_levels(1,1,k) = exner_in_wth(map_wth(1) + k) *                     &
-                            theta_in_wth(map_wth(1) + k)
+    t_theta_levels_1d(k) = exner_in_wth(map_wth(1) + k) *                      &
+                           theta_in_wth(map_wth(1) + k)
   end do
 
   ! note - zeroth level is redundant for these fields in UM
@@ -255,16 +250,17 @@ subroutine glomap_aerosol_code( nlayers,                                       &
   !-----------------------------------------------------------------------
 
   ! output fields (drydp & nd) are required to calculate CDNC
-  CALL glomap_clim_drydp_nd_out( p_theta_levels, t_theta_levels,               &
-                                 nd_nuc_sol_um, nuc_sol_su_um, nuc_sol_oc_um,  &
+  CALL glomap_clim_drydp_nd_out( nd_nuc_sol_um, nuc_sol_su_um, nuc_sol_oc_um,  &
                                  nd_ait_sol_um, ait_sol_su_um, ait_sol_bc_um,  &
                                  ait_sol_oc_um,                                &
                                  nd_acc_sol_um, acc_sol_su_um, acc_sol_bc_um,  &
                                  acc_sol_oc_um, acc_sol_ss_um,                 &
                                  nd_cor_sol_um, cor_sol_su_um, cor_sol_bc_um,  &
-                                 cor_sol_oc_um, cor_sol_ss_um, nd_ait_ins_um,  &
-                                 ait_ins_bc_um, ait_ins_oc_um,                 &
-                                 nlayers, drydp, nd )
+                                 cor_sol_oc_um, cor_sol_ss_um,                 &
+                                 nd_ait_ins_um, ait_ins_bc_um, ait_ins_oc_um,  &
+                                 nlayers,                                      &
+                                 p_theta_levels_1d, t_theta_levels_1d,         &
+                                 drydp, nd )
 
   ! obtain CDNC field (cdnc_1d)
   CALL ukca_cdnc_jones(nlayers,act_radius,drydp,nd,ccn_1d,cdnc_1d)

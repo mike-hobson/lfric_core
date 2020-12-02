@@ -358,7 +358,9 @@ subroutine pc2_initiation_code( nlayers,                           &
                             cff_incr,                      &
                             zeros,                         &
                             zeros,                         &
-                            zeros)
+                            zeros,                         &
+                            zeros,                         &
+                            zeros )
 
     ! Recast back to LFRic space
     do k = 1, model_levels

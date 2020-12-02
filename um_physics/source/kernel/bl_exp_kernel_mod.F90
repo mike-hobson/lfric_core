@@ -770,10 +770,10 @@ contains
     real(r_um), dimension(row_length,rows,nlayers) :: bl_w_var, rhcpt
 
     real(r_um), dimension(row_length,rows,bl_levels) ::                      &
-         e_trb, tsq_trb, qsq_trb, cov_trb, tau_fd_x, tau_fd_y, rhogamu,      &
-         rhogamv, dtrdz_v
+         e_trb, tsq_trb, qsq_trb, cov_trb, tau_fd_x, tau_fd_y, dtrdz_v
 
-    real(r_um), dimension(row_length,rows,2:bl_levels) :: rdz_v
+    real(r_um), dimension(row_length,rows,2:bl_levels) ::                    &
+         rdz_v, rhogamu, rhogamv
 
     real(r_um), dimension(row_length,rows,0:bl_levels-1) :: taux_p, tauy_p
 

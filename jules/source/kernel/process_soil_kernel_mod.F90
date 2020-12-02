@@ -81,6 +81,7 @@ contains
 
     use ancil_info, only: soil_pts
     use calc_fsat_mod, only: calc_fsat
+    use calc_fit_fsat_mod, only: calc_fit_fsat
     use jules_soil_mod, only: dzsoil
     use nlsizes_namelist_mod, only: sm_levels
 
@@ -146,7 +147,6 @@ contains
 
       ! Then calculate the fitting parameters (a_fsat, a_fwet, c_fsat, c_fwet)
       fexp = decrease_sath_cond
-      ! DEPENDS ON: calc_fit_fsat
       call calc_fit_fsat(soil_pts, soil_index, soil_pts, fexp, ti_mean, &
                          ti_sig, gamtot, zdepth, a_fsat, c_fsat,        &
                          a_fwet, c_fwet)

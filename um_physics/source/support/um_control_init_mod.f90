@@ -95,8 +95,7 @@ contains
     ! Currently set to zero as we don't pass a stencil into the kernels
     ! but may change if we ever do.
     call atm_fields_bounds_init( 0_i_um, 0_i_um, 0_i_um, &
-                                 0_i_um, row_length, rows, rows, &
-                                 bl_levels_opt = bl_levels )
+                                 0_i_um, row_length, rows, rows)
 
     ! Timestep used in UM code - contained in UM timestep_mod.
     ! Set from LFRic input timestep.

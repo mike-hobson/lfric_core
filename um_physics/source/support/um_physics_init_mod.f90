@@ -168,8 +168,8 @@ contains
          llcs_cloud_precip, llcs_opt_all_rain, llcs_rhcrit, llcs_timescale,&
          check_run_convection, l_fcape, cape_ts_min, cape_ts_max,          &
          cpress_term, pr_melt_frz_opt, llcs_opt_crit_condens,              &
-         llcs_detrain_coef
-    use cv_param_mod, only: mtrig_ntmlplus2
+         llcs_detrain_coef, l_prog_pert, md_pert_opt
+    use cv_param_mod, only: mtrig_ntmlplus2, md_pert_orig
     use cv_stash_flg_mod, only: set_convection_output_flags
     use cv_set_dependent_switches_mod, only: cv_set_dependent_switches
     use dust_parameters_mod, only: i_dust, i_dust_off,                     &
@@ -193,7 +193,7 @@ contains
          pc2eros_exp_rh,pc2eros_hybrid_allfaces,pc2eros_hybrid_sidesonly,  &
          original_but_wrong, acf_cusack, cbl_and_cu, pc2init_smith
     use rad_input_mod, only: two_d_fsd_factor
-    use science_fixes_mod, only: l_fix_drop_settle,                         &
+    use science_fixes_mod, only:  i_fix_mphys_drop_settle, second_fix,      &
          l_pc2_homog_turb_q_neg, l_fix_ccb_cct, l_fix_conv_precip_evap,     &
          l_fix_dyndiag, l_fix_pc2_cnv_mix_phase, l_fix_riming,              &
          l_fix_tidy_rainfracs, l_fix_zh
@@ -431,7 +431,9 @@ contains
         l_cv_conserve_check = .true.
         l_fcape             = .false.
         l_mom               = .true.
+        l_prog_pert         = .false.
         l_safe_conv         = .true.
+        md_pert_opt         = md_pert_orig
         mdet_opt_dp         = 1
         mid_cmt_opt         = 0
         mid_cnv_pmin        = 10000.00_r_um
@@ -649,8 +651,9 @@ contains
     ! ----------------------------------------------------------------
     ! Temporary logicals used to fix bugs in the UM - contained in science_fixes
     ! ----------------------------------------------------------------
-    l_fix_drop_settle      = .true.
-    l_pc2_homog_turb_q_neg = .true.
+    i_fix_mphys_drop_settle = second_fix ! This is a better fix than the
+                                         ! original one.
+    l_pc2_homog_turb_q_neg  = .true.
     ! The following aren't strictly GA7, but seem sensible to include
     l_fix_ccb_cct           = .true.
     l_fix_conv_precip_evap  = .true.

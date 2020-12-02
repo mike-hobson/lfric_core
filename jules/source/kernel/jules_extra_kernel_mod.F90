@@ -365,13 +365,13 @@ contains
     real(r_um), dimension(row_length, rows) :: ls_rain_ij, con_rain_ij,       &
          ls_snow_ij, con_snow_ij, pstar_ij, ls_graup_ij, tl_1_ij,             &
          lw_down_ij, qw_1_ij, u_1_ij, v_1_ij, cca_2d, soil_clay_ij,           &
-         flash_rate_ancil, pop_den_ancil, flandg
+         flash_rate_ancil, pop_den_ancil, flandg, rho_star
 
     ! State
     real(r_um), dimension(land_pts, ntiles) :: tstar_surft,                   &
     ! Fluxes
          ei_surft, surf_htf_surft, ecan_surft, tile_frac, sw_surft,           &
-         fqw_surft
+         fqw_surft, u_s_std_surft
 
     real(r_um), dimension(land_pts, nsoilt, sm_levels) :: ext_soilt
 
@@ -390,6 +390,13 @@ contains
     real(r_um), dimension(river_row_length, river_rows) :: trivdir, trivseq
     real(r_um), dimension(row_length, rows) :: r_area, slope, flowobs1,       &
          r_inext, r_jnext, r_land
+
+    ! Lakes
+    real(r_um), dimension(land_pts) :: lake_albedo_gb
+    real(r_um), dimension(land_pts) :: lake_t_sfc_gb
+    real(r_um), dimension(land_pts) :: lake_h_snow_gb
+    real(r_um), dimension(land_pts) :: lake_t_snow_gb
+
 
     ! Integers (module intent = in out)
     integer(i_um) :: a_steps_since_riv, asteps_since_triffid
@@ -646,10 +653,13 @@ contains
     ei_surft, surf_htf_surft, ecan_surft, ext_soilt, sw_surft,                &
 
     !Misc INTENT(IN)
-    a_step, smlt, tile_frac, hcons_soilt,                                     &
+    a_step, smlt, tile_frac, hcons_soilt, rho_star,                           &
 
     !Fluxes INTENT(IN OUT)
     melt_surft,                                                               &
+
+    !Misc INTENT(INOUT)
+    lake_albedo_gb, lake_t_sfc_gb, lake_h_snow_gb, lake_t_snow_gb,            &
 
     !Fluxes INTENT(OUT)
     snomlt_surf_htf, snowmelt_ij, snomlt_sub_htf, sub_surf_roff, surf_roff,   &
@@ -665,8 +675,10 @@ contains
     cos_theta_latitude, aocpl_row_length, aocpl_p_rows, xpa, xua, xva, ypa,   &
     yua, yva, g_p_field, g_r_field, nproc, global_row_length, global_rows,    &
     global_river_row_length, global_river_rows, flandg, trivdir, trivseq,     &
-    r_area, slope, flowobs1, r_inext, r_jnext, r_land, frac_agr_gb,           &
-    soil_clay_ij, resp_s_soilt, npp_gb, z0m_soil_gb,                          &
+    r_area, slope, flowobs1, r_inext, r_jnext, r_land,                        &
+    smvcst_soilt, smvcwt_soilt,                                               &
+    frac_agr_gb,                                                              &
+    soil_clay_ij, resp_s_soilt, npp_gb, z0m_soil_gb, u_s_std_surft,           &
 
     !IN OUT
     a_steps_since_riv, t_soil_soilt, tsurf_elev_surft, rgrain_surft,          &

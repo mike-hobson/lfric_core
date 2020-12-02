@@ -78,6 +78,8 @@ coordinate_order=2,
 element_order=0,
 rehabilitate=.true.,
 vorticity_in_w1=.false.,
+spherical_coord_order  = 1
+spherical_coord_system = 'abh'
 /
 &formulation
 dlayer_on=.true.,

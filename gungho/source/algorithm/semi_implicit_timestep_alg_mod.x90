@@ -34,7 +34,7 @@ module semi_implicit_timestep_alg_mod
   use runtime_constants_mod,     only: get_qr, get_coordinates, get_height, &
                                        get_mass_matrix, get_da_at_w2,       &
                                        get_delta_at_wtheta,                 &
-                                       get_max_diff,                        &
+                                       get_max_diff, get_coordinates_xyz,   &
                                        theta_space_id, w2_id, dl_id, w2_id
   use fs_continuity_mod,         only: W3, Wtheta
 
@@ -299,7 +299,8 @@ contains
     ! Quadrature object
     type( quadrature_xyoz_type ) :: qr
     ! Coordinate fields
-    type( field_type ), pointer  :: chi(:) => null()
+    type( field_type ), pointer  :: chi_sph(:) => null()
+    type( field_type ), pointer  :: chi_xyz(:) => null()
 
     type( field_type ), pointer :: height_w3  => null()
     type( field_type ), pointer :: height_wth => null()
@@ -329,7 +330,8 @@ contains
 
     qr = get_qr()
 
-    chi           => get_coordinates()
+    chi_sph       => get_coordinates()
+    chi_xyz       => get_coordinates_xyz()
     height_w3     => get_height(W3)
     height_wth    => get_height(Wtheta)
     dA            => get_da_at_w2()
@@ -387,7 +389,7 @@ contains
       ! Calculate fields derived from dynamics fields for use in physics
       call map_physics_fields_alg(state_n(igh_u), state_n(igh_p),              &
                                   state_n(igh_d), state_n(igh_t),              &
-                                  mr_n, dA, height_wth, height_w3, chi,        &
+                                  mr_n, dA, height_wth, height_w3, chi_xyz,    &
                                   derived_fields)
       call slow_physics(du, dtheta, mr_after_slow, visc_m, visc_h,             &
                         state_n(igh_t), state_n(igh_d), state_n(igh_p),        &
@@ -395,8 +397,8 @@ contains
                         microphysics_fields, orography_fields,                 &
                         turbulence_fields, convection_fields, cloud_fields,    &
                         surface_fields, soil_fields, snow_fields,              &
-                        aerosol_fields, dA, height_w3, height_wth, chi, delta, &
-                        max_diff_smag, clock, twod_mesh_id )
+                        aerosol_fields, dA, height_w3, height_wth, chi_xyz,    &
+                        delta, max_diff_smag, clock, twod_mesh_id )
       call invoke(name="update_from_slow_physics",                             &
                   inc_X_plus_Y(state_after_slow(igh_t), dtheta),               &
                   inc_X_plus_Y(state_after_slow(igh_u), du)                    &
@@ -543,8 +545,8 @@ contains
     !--------------------------------------------------------------------
     ! Apply mixing
     !--------------------------------------------------------------------
-    call mixing_alg(mr, state(igh_t),                           &
-                    state(igh_u), visc_m, visc_h, chi,          &
+    call mixing_alg(mr, state(igh_t),                             &
+                    state(igh_u), visc_m, visc_h, chi_xyz,        &
                     height_wth, height_w3, delta, derived_fields, &
                     state(igh_d), clock%get_step(), dt)
 
@@ -574,7 +576,7 @@ contains
                  setval_X(rho,   state(igh_d)), &
                  setval_X(exner, state(igh_p)) )
 
-    nullify( m3_inv, chi, height_w3, height_wth, dA, delta, &
+    nullify( m3_inv, chi_xyz, chi_sph, height_w3, height_wth, dA, delta, &
              mm_wt, mm_vel, max_diff_smag )
 
     if ( subroutine_timers ) call timer('semi_implicit_timestep_alg')

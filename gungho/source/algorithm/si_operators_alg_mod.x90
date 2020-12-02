@@ -289,6 +289,7 @@ contains
                                                nqp_exact
     use function_space_mod,              only: function_space_type
     use runtime_constants_mod,           only: get_coordinates, &
+                                               get_panel_id, &
                                                get_div, &
                                                get_mass_matrix, &
                                                w2_id, w3inv_id, wt_id, dl_id, &
@@ -316,7 +317,8 @@ contains
     type(quadrature_xyoz_type)             :: qr
     type(quadrature_face_type)             :: qrf
     type(quadrature_rule_gaussian_type)    :: quadrature_rule
-    type(field_type),              pointer :: chi(:) => null()
+    type(field_type),              pointer :: chi_sph(:) => null()
+    type(field_type),              pointer :: panel_id => null()
     type(operator_type),           pointer :: m3_inv => null(), div => null()
     type(field_type)                       :: ones
     type(field_type),              pointer :: w2_rmultiplicity => null()
@@ -368,13 +370,14 @@ contains
        write(log_scratch_space,'(A,I0)') "si_ops: mg level=",level
        call log_event(log_scratch_space, LOG_LEVEL_INFO)
 
-       chi    => get_coordinates(level)
+       chi_sph  => get_coordinates(level)
+       panel_id =>  get_panel_id(level)
 
        ! Operators for the equation of state
        const1 = (1.0_r_def-kappa)/kappa
        call invoke( eos_operators_kernel_type(m3_exner_star(level), m3_rho_star(level), &
                     p3theta(level), &
-                    exner, rho, theta, chi, const1, qr) )
+                    exner, rho, theta, chi_sph, panel_id, const1, qr) )
 
        ! The rest of the operators are topological and so do not need as high
        ! quadrature order
@@ -513,7 +516,7 @@ contains
 
     end do ! end of multigrid levels loop
 
-    nullify( chi, m3_inv, div, w2_rmultiplicity, &
+    nullify( chi_sph, panel_id, m3_inv, div, w2_rmultiplicity, &
              mesh, reference_element, m2, u_normalisation, t_normalisation )
 
     if ( subroutine_timers ) call timer('si_operators_alg:compute')

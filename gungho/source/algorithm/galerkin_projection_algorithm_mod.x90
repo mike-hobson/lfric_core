@@ -20,7 +20,7 @@ module galerkin_projection_algorithm_mod
   use operator_mod,                    only: operator_type
   use quadrature_xyoz_mod,             only: quadrature_xyoz_type
   use mass_matrix_solver_alg_mod,      only: mass_matrix_solver_alg
-  use runtime_constants_mod,           only: get_coordinates
+  use runtime_constants_mod,           only: get_coordinates, get_panel_id
 
   implicit none
 
@@ -58,14 +58,16 @@ contains
     integer( i_def ),   intent(in)           :: mesh
     type( quadrature_xyoz_type ), intent(in) :: qr
 ! Coordinate fields
-    type( field_type ), pointer :: chi(:) => null()
+    type( field_type ), pointer :: chi_sph(:) => null()
+    type( field_type ), pointer :: panel_id => null()
 
     integer                          :: out_fs
     type( field_type )               :: rhs(space_dimension)
     type( field_type )               :: w2_field
     integer                          :: dir
 
-    chi => get_coordinates()
+    chi_sph => get_coordinates()
+    panel_id => get_panel_id()
 
 
 ! Create continuous fields to project data into
@@ -86,7 +88,7 @@ contains
        if ( space_dimension == 1 ) then
           write( log_scratch_space, '(A)' ) '    scalar field ... '
           call log_event( log_scratch_space, LOG_LEVEL_INFO )
-          call invoke( gp_rhs_kernel_type(rhs(1), f_in, chi, qr) )
+          call invoke( gp_rhs_kernel_type(rhs(1), f_in, chi_sph, panel_id, qr) )
        else
           write( log_scratch_space, '(A)' ) '    vector field ... '
           call log_event( log_scratch_space, LOG_LEVEL_INFO )
@@ -95,14 +97,15 @@ contains
           call w2_field%initialise( vector_space =  &
                               function_space_collection%get_fs(mesh, element_order, W2) )
 
-          call invoke( gp_vector_rhs_kernel_type(rhs, f_in, chi, w2_field, qr) )
+          call invoke( gp_vector_rhs_kernel_type(rhs, f_in, chi_sph, &
+                                                 panel_id, w2_field, qr) )
        end if
        do dir = 1,space_dimension
          call mass_matrix_solver_alg( f_out(dir), rhs(dir) )
        end do
     end if
 
-    nullify(chi)
+    nullify(chi_sph, panel_id)
 
   end subroutine galerkin_projection_algorithm
 

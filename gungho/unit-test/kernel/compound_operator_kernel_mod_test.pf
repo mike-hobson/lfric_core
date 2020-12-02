@@ -37,7 +37,8 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use finite_element_config_mod, only : cellshape_quadrilateral
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
     use feign_config_mod,          only : feign_finite_element_config
     use mesh_mod,                  only : PLANE_BI_PERIODIC
 
@@ -47,12 +48,14 @@ contains
 
     ! Initialise YAXT
     call xt_initialize(this%getMpiCommunicator())
-    !Store the MPI communicator for later use
+    ! Store the MPI communicator for later use
     call store_comm(this%getMpiCommunicator())
 
     call feign_finite_element_config(      &
       cellshape=cellshape_quadrilateral,   &
       coordinate_order=0, element_order=1, &
+      spherical_coord_order=0,             &
+      spherical_coord_system=spherical_coord_system_xyz, &
       rehabilitate=.true., vorticity_in_w1=.false. )
 
   end subroutine setUp

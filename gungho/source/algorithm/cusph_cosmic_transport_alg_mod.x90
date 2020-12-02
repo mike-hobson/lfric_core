@@ -19,7 +19,9 @@ module cusph_cosmic_transport_alg_mod
                                                log_scratch_space, &
                                                LOG_LEVEL_INFO,    &
                                                LOG_LEVEL_TRACE
-  use runtime_constants_mod,             only: get_coordinates, &
+  use runtime_constants_mod,             only: get_coordinates_xyz, &
+                                               get_coordinates, &
+                                               get_panel_id, &
                                                get_cell_orientation
   use cusph_split_transport_alg_mod,     only: cusph_split_transport_alg
   use cusph_fv_density_update_alg_mod,   only: cusph_fv_density_update_alg
@@ -65,8 +67,10 @@ contains
     type( quadrature_xyoz_type )          :: qr
     type( quadrature_rule_gaussian_type ) :: quadrature_rule
 
-    type(field_type),          pointer :: chi(:) => null()
-    real(r_def)                        :: time
+    type( field_type ), pointer           :: chi_xyz(:) => null()
+    type( field_type ), pointer           :: chi_sph(:) => null()
+    type( field_type ), pointer           :: panel_id => null()
+    real(r_def)                           :: time
 
     w2_fs   => function_space_collection%get_fs( mesh_id, element_order, W2 )
     w3_fs   => function_space_collection%get_fs( mesh_id, element_order, W3 )
@@ -76,8 +80,9 @@ contains
     call r_u%initialise( vector_space = w2_fs )
 
     qr = quadrature_xyoz_type(element_order+2, quadrature_rule)
-    chi => get_coordinates()
-
+    chi_xyz => get_coordinates_xyz()
+    chi_sph => get_coordinates()
+    panel_id => get_panel_id()
 
     time = dt*real(timestep,r_def)
 
@@ -90,7 +95,7 @@ contains
       call invoke( name = "Initialise U",                     &
                    setval_c(u,   0.0_r_def),                  &
                    setval_c(r_u, 0.0_r_def),                  &
-                   initial_u_kernel_type(r_u, chi, time, qr), &
+                   initial_u_kernel_type(r_u, chi_sph, panel_id, time, qr), &
                    enforce_bc_kernel_type( r_u ) )
       call mass_matrix_solver_alg(u, r_u)
     end if
@@ -98,7 +103,7 @@ contains
     call invoke( setval_X(u_n, u), &
                  setval_X(u_np1, u) )
 
-    nullify(w2_fs, w3_fs, chi)
+    nullify(w2_fs, w3_fs, chi_xyz, chi_sph, panel_id)
 
   end subroutine set_winds
 

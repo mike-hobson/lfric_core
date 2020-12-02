@@ -82,8 +82,6 @@ subroutine held_suarez_fv_code(nlayers,                     &
                                ndf_chi, undf_chi, map_chi   &
                                )
 
-  use coordinate_jacobian_mod,  only: coordinate_jacobian
-
   implicit none
 
   ! Arguments

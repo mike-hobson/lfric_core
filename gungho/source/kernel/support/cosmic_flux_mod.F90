@@ -282,7 +282,7 @@ contains
           stencil_order_out(ii) = stencil_order_out(ii+1)+1
         end do
 
-      elseif  (orientation == 3 .or. orientation == 4) then
+      else if  (orientation == 3 .or. orientation == 4) then
 
         do ii = n+1, stencil_length
           stencil_order_out(ii) = ii - (n-1)
@@ -293,7 +293,7 @@ contains
         end do
 
       end if
-    elseif (direction == y_direction ) then
+    else if (direction == y_direction ) then
       if (orientation == 1 .or. orientation == 4) then
 
         do ii = n+1, stencil_length
@@ -304,7 +304,7 @@ contains
           stencil_order_out(ii) = stencil_order_out(ii+1)+1
         end do
 
-      elseif  (orientation == 2 .or. orientation == 3) then
+      else if  (orientation == 2 .or. orientation == 3) then
 
         do ii = n+1, stencil_length
           stencil_order_out(ii) = ii - (n-1)

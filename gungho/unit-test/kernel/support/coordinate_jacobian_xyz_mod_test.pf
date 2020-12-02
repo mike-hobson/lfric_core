@@ -5,31 +5,94 @@
 !-----------------------------------------------------------------------------
 !
 !-------------------------------------------------------------------------------
-module coordinate_jacobian_mod_test
+module coordinate_jacobian_xyz_mod_test
+
+  use pFUnit_Mod
+  use yaxt,          only : xt_initialize, xt_finalize
+  use mpi_mod,       only : store_comm, clear_comm
+  use constants_mod, only : r_def, i_def
+
   implicit none
+
+  public :: jacobian_xyz_test_type, test_all
+
+  @TestCase
+  type, extends(MPITestCase) :: jacobian_xyz_test_type
+    private
+  contains
+    procedure setUp
+    procedure tearDown
+    procedure test_all
+  end type jacobian_xyz_test_type
 
 contains
 
-  @test
-  subroutine test_of_jacobian()
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine setUp( this )
 
-    use constants_mod,           only : r_def
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
+    use feign_config_mod,          only : feign_finite_element_config
+
+    implicit none
+
+    class(jacobian_xyz_test_type), intent(inout) :: this
+
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    ! Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
+    call feign_finite_element_config(           &
+             cellshape=cellshape_quadrilateral, &
+             coordinate_order=0_i_def,          &
+             element_order=0_i_def,             &
+             rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+             vorticity_in_w1=.false. )
+
+  end subroutine setUp
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine tearDown( this )
+
+    use configuration_mod,        only: final_configuration
+
+    implicit none
+
+    class(jacobian_xyz_test_type), intent(inout) :: this
+
+    call final_configuration()
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
+  end subroutine tearDown
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @Test( npes=[1] )
+  subroutine test_all( this )
+
     use coordinate_jacobian_mod, only : coordinate_jacobian,                   &
                                         coordinate_jacobian_inverse,           &
                                         pointwise_coordinate_jacobian,         &
                                         pointwise_coordinate_jacobian_inverse
 
-    use pFUnit_Mod
-
     implicit none
+
+    class(jacobian_xyz_test_type), intent(inout) :: this
 
     real(kind=r_def) :: tol, zero, one, two, eight
 
     integer :: ndf = 8
     integer :: ngp = 1
+    integer :: ipanel = 1
     integer :: df
 
-    real(kind=r_def) :: x(8), y(8), z(8), diff_basis(3,8,1,1)
+    real(kind=r_def) :: x(8), y(8), z(8), diff_basis(3,8,1,1), basis(1,8,1,1)
     real(kind=r_def) :: jac(3,3), dj(1,1), jac_inv(3,3), identity(3,3), err
 
     x(:) = (/ 0.0_r_def, 2.0_r_def, 2.0_r_def, 0.0_r_def, 0.0_r_def, 2.0_r_def, 2.0_r_def, 0.0_r_def /)
@@ -47,7 +110,9 @@ contains
       if ( z(df) < 1.0_r_def ) diff_basis(3,df,:,:) = -0.25_r_def
     end do
 
-    call coordinate_jacobian(ndf, ngp, ngp, x, y, z, diff_basis, jac, dj)
+    basis(:,:,:,:) = 0.125_r_def
+
+    call coordinate_jacobian(ndf, ngp, ngp, x, y, z, ipanel, basis, diff_basis, jac, dj)
     call coordinate_jacobian_inverse(ngp,ngp, jac, dj, jac_inv)
 
     err = maxval( abs( matmul( jac_inv,jac)-identity(:,:) ) )
@@ -73,7 +138,7 @@ contains
     @assertEqual( zero, err, tol)
 
     ! test the pointwise compuations
-    call pointwise_coordinate_jacobian(ndf, x, y, z, diff_basis, jac, dj(1,1))
+    call pointwise_coordinate_jacobian(ndf, x, y, z, ipanel, basis, diff_basis, jac, dj(1,1))
     jac_inv =  pointwise_coordinate_jacobian_inverse(jac, dj(1,1))
     err = maxval( abs( matmul( jac_inv,jac)-identity(:,:) ) )
     @assertEqual( zero, err, tol)
@@ -88,6 +153,6 @@ contains
     @assertEqual( zero, jac(3,1), tol )
     @assertEqual( zero, jac(3,2), tol )
 
-  end subroutine test_of_jacobian
+  end subroutine test_all
 
-end module coordinate_jacobian_mod_test
+end module coordinate_jacobian_xyz_mod_test

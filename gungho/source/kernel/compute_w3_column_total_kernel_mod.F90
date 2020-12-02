@@ -52,7 +52,7 @@ contains
 !!                          will be the column totals
 !! @param[in] mass A field in W3 space to be summed up
 !! @param[in] ndf_w3 The number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 The number unique of degrees of freedom  for w3
+!! @param[in] undf_w3 The number of unique degrees of freedom  for w3
 !! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
 subroutine compute_w3_column_total_code(                                    &
                                          nlayers,                           &

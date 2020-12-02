@@ -42,7 +42,7 @@ contains
 !> @brief Compute the multiplicity of a field (number of cells each dof is shared by)
 !! @param[in] nlayers Number of layers
 !! @param[in] ndf Number of degrees of freedom per cell for the function space
-!! @param[in] undf Number unique of degrees of freedom  for the function space
+!! @param[in] undf Number of unique degrees of freedom  for the function space
 !! @param[in] map Dofmap for the cell at the base of the column for the function space
 !! @param[inout] field Input/output field
 

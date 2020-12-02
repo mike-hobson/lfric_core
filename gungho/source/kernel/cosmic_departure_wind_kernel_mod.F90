@@ -39,7 +39,7 @@ module cosmic_departure_wind_kernel_mod
     integer :: iterates_over = CELLS
     integer :: gh_shape = GH_EVALUATOR
   contains
-    procedure, nopass ::cosmic_departure_wind_code
+    procedure, nopass :: cosmic_departure_wind_code
   end type
 
   !---------------------------------------------------------------------------
@@ -68,8 +68,6 @@ contains
                                         direction                                 &
                                         )
 
-    use coordinate_jacobian_mod, only: coordinate_jacobian
-
     implicit none
 
     ! Arguments
@@ -89,7 +87,7 @@ contains
     ! direction update
     if (direction == x_direction ) then
       mult_factor = 1.0_r_def
-    elseif (direction == y_direction ) then
+    else if (direction == y_direction ) then
       mult_factor = -1.0_r_def
     end if
 

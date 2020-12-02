@@ -17,7 +17,7 @@ module vert_sl_theta_alg_mod
   use field_mod,                         only: field_type
   use calc_departure_wind_kernel_mod,    only: calc_departure_wind_kernel_type
   use vertical_sl_theta_kernel_mod,      only: vertical_sl_theta_kernel_type
-  use runtime_constants_mod,             only: get_coordinates
+  use runtime_constants_mod,             only: get_coordinates, get_panel_id
 
   implicit none
 
@@ -43,21 +43,24 @@ contains
     real(kind=r_def), intent(in)      :: dts
 
     type( field_type ) :: departure_wind
-    type( field_type ), pointer :: chi(:) => null()
+    type( field_type ), pointer :: chi_sph(:) => null()
+    type( field_type ), pointer :: panel_id => null()
 
-    chi  => get_coordinates()
+    chi_sph  => get_coordinates()
+    panel_id => get_panel_id()
     call departure_wind%initialise( vector_space = wind_adv%get_function_space())
 
     if ( subroutine_timers ) call timer( 'vert_sl_theta' )
 
     ! set up the wind and compute SL advection (vertical only) of theta
 
-    call invoke( name = "Calculate dept and interpolate",                        &
+    call invoke( name = "calculate_dept_and_interpolate",                        &
                  setval_c( departure_wind, 0.0_r_def ),                          &
-                 calc_departure_wind_kernel_type(departure_wind, wind_adv, chi), &
+                 calc_departure_wind_kernel_type(departure_wind, wind_adv,       &
+                                                 chi_sph, panel_id),             &
                  vertical_sl_theta_kernel_type( departure_wind, theta, dts)      )
 
-    nullify( chi )
+    nullify( chi_sph, panel_id )
 
     if ( subroutine_timers ) call timer( 'vert_sl_theta' )
 

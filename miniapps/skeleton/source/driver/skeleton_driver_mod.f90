@@ -61,7 +61,9 @@ module skeleton_driver_mod
   type( field_type ) :: field_1
 
   ! Coordinate field
-  type(field_type), target, dimension(3) :: chi
+  type(field_type), target, dimension(3) :: chi_xyz
+  type(field_type), target, dimension(3) :: chi_sph
+  type(field_type), target               :: panel_id
 
   integer(i_def) :: mesh_id
   integer(i_def) :: twod_mesh_id
@@ -146,7 +148,7 @@ contains
                     twod_mesh_id = twod_mesh_id )
 
     ! Create FEM specifics (function spaces and chi field)
-    call init_fem( mesh_id, chi )
+    call init_fem( mesh_id, chi_xyz, chi_sph, panel_id )
 
     ! Full global meshes no longer required, so reclaim
     ! the memory from global_mesh_collection
@@ -168,7 +170,7 @@ contains
                             clock,              &
                             mesh_id,            &
                             twod_mesh_id,       &
-                            chi )
+                            chi_xyz )
 
       ! Make sure XIOS calendar is set to timestep 1 as it starts there
       ! not timestep 0.
@@ -177,7 +179,7 @@ contains
     end if
 
     ! Create and initialise prognostic fields
-    call init_skeleton(mesh_id, twod_mesh_id, chi, field_1)
+    call init_skeleton(mesh_id, twod_mesh_id, chi_xyz, chi_sph, panel_id, field_1)
 
   end subroutine initialise
 

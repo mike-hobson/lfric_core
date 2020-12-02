@@ -16,6 +16,7 @@ module w2_normalisation_kernel_mod
   use argument_mod,      only : arg_type, func_type,       &
                                 GH_FIELD, GH_INC, GH_READ, &
                                 ANY_SPACE_9,               &
+                                ANY_DISCONTINUOUS_SPACE_3, &
                                 GH_BASIS, GH_DIFF_BASIS,   &
                                 CELLS, GH_EVALUATOR
   use constants_mod,     only : r_def, i_def
@@ -32,13 +33,14 @@ module w2_normalisation_kernel_mod
   !>
   type, public, extends(kernel_type) :: w2_normalisation_kernel_type
     private
-    type(arg_type) :: meta_args(2) = (/            &
-        arg_type(GH_FIELD,   GH_INC,  W2),         &
-        ARG_TYPE(GH_FIELD*3, GH_READ, ANY_SPACE_9) &
+    type(arg_type) :: meta_args(3) = (/                          &
+        arg_type(GH_FIELD,   GH_INC,  W2),                       &
+        ARG_TYPE(GH_FIELD*3, GH_READ, ANY_SPACE_9),              &
+        ARG_TYPE(GH_FIELD,   GH_READ, ANY_DISCONTINUOUS_SPACE_3) &
         /)
-    type(func_type) :: meta_funcs(2) = (/     &
-        func_type(W2,          GH_BASIS),     &
-        func_type(ANY_SPACE_9, GH_DIFF_BASIS) &
+    type(func_type) :: meta_funcs(2) = (/                        &
+        func_type(W2,          GH_BASIS),                        &
+        func_type(ANY_SPACE_9, GH_DIFF_BASIS, GH_BASIS)          &
         /)
     integer :: iterates_over = CELLS
     integer :: gh_shape = GH_EVALUATOR
@@ -56,9 +58,10 @@ contains
 !> @brief Compute the normalisation factor for W2 fields as vJv
 !! @param[in] nlayers Number of layers
 !! @param[inout] normalisation Normalisation field to compute
-!! @param[in] chi_1 X component of the coordinate field
-!! @param[in] chi_2 Y component of the coordinate field
-!! @param[in] chi_3 Z component of the coordinate field
+!! @param[in] chi_1 1st (spherical) coordinate field in Wchi
+!! @param[in] chi_2 2nd (spherical) coordinate field in Wchi
+!! @param[in] chi_3 3rd (spherical) coordinate field in Wchi
+!! @param[in] panel_id Field giving the ID for mesh panels.
 !! @param[in] ndf Number of degrees of freedom per cell
 !! @param[in] undf Total number of degrees of freedom
 !! @param[in] map Dofmap for the cell at the base of the column
@@ -66,14 +69,23 @@ contains
 !! @param[in] ndf_chi Number of dofs per cell for the coordinate field
 !! @param[in] undf_chi Total number of degrees of freedom
 !! @param[in] map_chi Dofmap for the coordinate field
-!! @param[in] chi_diff_basis Wchi basis functions evaluated at W2 nodal points
-subroutine w2_normalisation_code(nlayers,                &
-                                 normalisation,          &
-                                 chi_1, chi_2, chi_3,    &
-                                 ndf, undf,              &
-                                 map, basis,             &
-                                 ndf_chi, undf_chi,      &
-                                 map_chi, chi_diff_basis &
+!! @param[in] chi_basis Wchi basis functions evaluated at W2 nodal points
+!! @param[in] chi_diff_basis Wchi diff basis functions evaluated at W2 nodal points
+!! @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
+!! @param[in] undf_pid Number of unique degrees of freedom for panel_id
+!! @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
+subroutine w2_normalisation_code(nlayers,                 &
+                                 normalisation,           &
+                                 chi_1, chi_2, chi_3,     &
+                                 panel_id,                &
+                                 ndf, undf,               &
+                                 map, basis,              &
+                                 ndf_chi, undf_chi,       &
+                                 map_chi,                 &
+                                 chi_basis,               &
+                                 chi_diff_basis,          &
+                                 ndf_pid, undf_pid,       &
+                                 map_pid                  &
                                  )
 
   use coordinate_jacobian_mod,    only : coordinate_jacobian
@@ -83,23 +95,31 @@ subroutine w2_normalisation_code(nlayers,                &
   ! Arguments
   integer(kind=i_def), intent(in) :: nlayers, ndf, ndf_chi
   integer(kind=i_def), intent(in) :: undf, undf_chi
+  integer(kind=i_def), intent(in) :: ndf_pid, undf_pid
 
   integer(kind=i_def), dimension(ndf),     intent(in) :: map
   integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
+  integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
 
   real(kind=r_def), intent(in), dimension(3,ndf_chi,ndf) :: chi_diff_basis
+  real(kind=r_def), intent(in), dimension(1,ndf_chi,ndf) :: chi_basis
   real(kind=r_def), intent(in), dimension(3,ndf,ndf)     :: basis
 
   real(kind=r_def), dimension(undf),     intent(inout) :: normalisation
   real(kind=r_def), dimension(undf_chi), intent(in)    :: chi_1, chi_2, chi_3
+  real(kind=r_def), dimension(undf_pid), intent(in)    :: panel_id
 
   ! Internal variables
   integer(kind=i_def)                    :: df, k
+  integer(kind=i_def)                    :: ipanel
   real(kind=r_def), dimension(ndf,1)     :: dj
   real(kind=r_def), dimension(3,3,ndf,1) :: jacobian
   real(kind=r_def), dimension(ndf_chi)   :: chi_1_cell, chi_2_cell, chi_3_cell
   real(kind=r_def), dimension(3)         :: Jv
   real(kind=r_def), dimension(3,3)       :: JTJ
+
+
+  ipanel = int(panel_id(map_pid(1)), i_def)
 
   do k = 0, nlayers-1
     do df = 1, ndf_chi
@@ -113,6 +133,8 @@ subroutine w2_normalisation_code(nlayers,                &
                              chi_1_cell, &
                              chi_2_cell, &
                              chi_3_cell, &
+                             ipanel,     &
+                             chi_basis,  &
                              chi_diff_basis, &
                              jacobian, &
                              dj)

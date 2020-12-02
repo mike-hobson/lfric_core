@@ -7,8 +7,14 @@
 !> Test the projection of scalar advective updates into the W2 vector field
 module project_advective_update_kernel_mod_test
 
-  use constants_mod, only : i_def, r_def
+  use constants_mod,             only : i_def, r_def
   use pFUnit_Mod
+  use yaxt,                      only : xt_initialize, xt_finalize
+  use mpi_mod,                   only : store_comm, clear_comm
+  use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                        spherical_coord_system_xyz
+  use feign_config_mod,          only : feign_finite_element_config
+
 
   implicit none
 
@@ -16,15 +22,64 @@ module project_advective_update_kernel_mod_test
   public :: test_all
 
   @TestCase
-  type, extends(TestCase), public :: project_advective_update_test_type
+  type, extends(MPITestCase), public :: project_advective_update_test_type
     private
   contains
+    procedure setUp
+    procedure tearDown
     procedure test_all
   end type project_advective_update_test_type
 
 contains
 
-  @test
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine setUp( this )
+
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
+    use feign_config_mod,          only : feign_finite_element_config
+
+    implicit none
+
+    class(project_advective_update_test_type), intent(inout) :: this
+
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    ! Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
+    call feign_finite_element_config(           &
+             cellshape=cellshape_quadrilateral, &
+             coordinate_order=0_i_def,          &
+             element_order=0_i_def,             &
+             rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+             vorticity_in_w1=.false. )
+
+  end subroutine setUp
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine tearDown( this )
+
+    use configuration_mod,        only: final_configuration
+
+    implicit none
+
+    class(project_advective_update_test_type), intent(inout) :: this
+
+    call final_configuration()
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
+  end subroutine tearDown
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  @Test( npes=[1] )
   subroutine test_all( this )
 
     use project_advective_update_kernel_mod, only : project_advective_update_code
@@ -58,9 +113,12 @@ contains
     integer(kind=i_def), parameter          :: undf_wx = ndf_wx*nlayers
     integer(kind=i_def), dimension(ndf_wx)  :: map_wx
     real(kind=r_def),    dimension(undf_wx) :: x, y, z
+    ! W3
+    real(kind=r_def), dimension(undf_ws)    :: panel_id
     ! Basis function arrays
     real(kind=r_def),    dimension(3,ndf_ws,nqp_h,nqp_v) :: basis_ws
     real(kind=r_def),    dimension(3,ndf_wv,nqp_h,nqp_v) :: basis_wv
+    real(kind=r_def),    dimension(1,ndf_wx,nqp_h,nqp_v) :: basis_wx
     real(kind=r_def),    dimension(3,ndf_wx,nqp_h,nqp_v) :: diff_basis_wx
 
     real(kind=r_def), parameter              :: dx = 10.0_r_def
@@ -108,6 +166,8 @@ contains
       end do
     end do
 
+    panel_id(:) = 1.0_r_def
+
     ! Quadrature rule
     wqp_h(1) = 1.0_r_def
     wqp_v(1) = 1.0_r_def
@@ -152,6 +212,8 @@ contains
     diff_basis_wx(2,8,1,1) =  f2(1)*f2(3)
     diff_basis_wx(3,8,1,1) =  f2(1)*f2(2)
 
+    basis_wx(1,:,1,1) = 0.125_r_def ! 0.5 ** 3
+
     basis_ws(1,1,1,1) = 1.0_r_def
 
     basis_wv(:,:,:,:) =  0.0_r_def
@@ -176,13 +238,14 @@ contains
     call project_advective_update_code(nlayers,                    &
                                        u_grad_u,                   &
                                        Au, Av, Aw,                 &
-                                       x, y, z,                    &
+                                       x, y, z, panel_id,          &
                                        ndf_wv, undf_wv, map_wv,    &
                                        basis_wv,                   &
                                        ndf_ws, undf_ws, map_ws,    &
                                        basis_ws,                   &
                                        ndf_wx, undf_wx, map_wx,    &
-                                       diff_basis_wx,              &
+                                       basis_wx, diff_basis_wx,    &
+                                       ndf_ws, undf_ws, map_ws,    &
                                        nqp_h, nqp_v, wqp_h, wqp_v  &
                                        )
     do k = 0,nlayers-1

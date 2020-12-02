@@ -10,6 +10,8 @@ module vorticity_advection_kernel_mod_test
 
   use constants_mod, only: i_def, r_def
   use pFUnit_Mod
+  use yaxt,          only : xt_initialize, xt_finalize
+  use mpi_mod,       only : store_comm, clear_comm
 
   implicit none
 
@@ -17,7 +19,7 @@ module vorticity_advection_kernel_mod_test
   public :: vorticity_advection_test_type, test_all
 
   @TestCase
-  type, extends(TestCase) :: vorticity_advection_test_type
+  type, extends(MPITestCase) :: vorticity_advection_test_type
     private
   contains
     procedure setUp
@@ -30,38 +32,68 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
+    use feign_config_mod,          only : feign_finite_element_config
+
     implicit none
 
     class(vorticity_advection_test_type), intent(inout) :: this
+
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    ! Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
+    call feign_finite_element_config(           &
+             cellshape=cellshape_quadrilateral, &
+             coordinate_order=0_i_def,          &
+             element_order=0_i_def,             &
+             rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+             vorticity_in_w1=.false. )
 
   end subroutine setUp
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
+    use configuration_mod,        only: final_configuration
+
     implicit none
 
     class(vorticity_advection_test_type), intent(inout) :: this
 
+    call final_configuration()
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
   end subroutine tearDown
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  @Test( npes=[1] )
   subroutine test_all( this )
 
     use vorticity_advection_kernel_mod, only: vorticity_advection_code
 
     use get_unit_test_m3x3_dofmap_mod, only: get_w0_m3x3_dofmap, &
                                              get_w1_m3x3_dofmap, &
-                                             get_w2_m3x3_dofmap
+                                             get_w2_m3x3_dofmap, &
+                                             get_w3_m3x3_dofmap
 
     use get_unit_test_m3x3_q3x3x3_sizes_mod, only: get_w0_m3x3_q3x3x3_size, &
                                                    get_w1_m3x3_q3x3x3_size, &
-                                                   get_w2_m3x3_q3x3x3_size
+                                                   get_w2_m3x3_q3x3x3_size, &
+                                                   get_w3_m3x3_q3x3x3_size
 
     use get_unit_test_q3x3x3_basis_mod, only: get_w0_q3x3x3_diff_basis, &
                                               get_w1_q3x3x3_basis,      &
-                                              get_w2_q3x3x3_basis
+                                              get_w2_q3x3x3_basis,      &
+                                              get_w0_q3x3x3_basis
 
     use get_unit_test_q3x3x3_quadrature_mod, only:     &
             get_gaussian_q3x3x3_quadrature_weights_xy, &
@@ -85,6 +117,7 @@ contains
 
     real(r_def), allocatable :: basis_r_u(:,:,:,:)
     real(r_def), allocatable :: basis_xi(:,:,:,:)
+    real(r_def), allocatable :: basis_chi(:,:,:,:)
     real(r_def), allocatable :: diff_basis_chi(:,:,:,:)
 
     integer(i_def), allocatable :: map_chi(:,:)
@@ -104,18 +137,22 @@ contains
     real(r_def), allocatable :: wv(:)
 
     real(r_def), allocatable :: chi_data(:,:)
+    real(r_def), allocatable :: panel_id(:)
 
     real(r_def), allocatable :: basis_w1(:,:,:,:)
     real(r_def), allocatable :: basis_w2(:,:,:,:)
+    real(r_def), allocatable :: basis_w0(:,:,:,:)
     real(r_def), allocatable :: diff_basis_w0(:,:,:,:)
 
     integer(i_def), allocatable :: map_w0(:,:)
     integer(i_def), allocatable :: map_w1(:,:)
     integer(i_def), allocatable :: map_w2(:,:)
+    integer(i_def), allocatable :: map_pid(:,:)
 
     integer(i_def) :: ndf_w0, undf_w0
     integer(i_def) :: ndf_w1, undf_w1
     integer(i_def) :: ndf_w2, undf_w2
+    integer(i_def) :: ndf_pid, undf_pid
 
     integer(i_def) :: i, j, k, cell
 
@@ -129,6 +166,7 @@ contains
                                   nqp_h, nqp_v, nlayers )
 
     call get_w0_m3x3_dofmap( map_w0 )
+    call get_w0_q3x3x3_diff_basis( basis_w0 )
     call get_w0_q3x3x3_diff_basis( diff_basis_w0 )
 
     ! Get w1
@@ -145,13 +183,21 @@ contains
     call get_w2_m3x3_dofmap( map_w2 )
     call get_w2_q3x3x3_basis( basis_w2 )
 
+    ! Get panel_id function space entities
+    call get_w3_m3x3_q3x3x3_size( ndf_pid, undf_pid, ncells,   &
+                                  dim_space, dim_space_diff, &
+                                  nqp_h, nqp_v, 1 )
+    call get_w3_m3x3_dofmap( map_pid, 1 )
+
     ! Get weights
     call get_gaussian_q3x3x3_quadrature_weights_xy(wh)
     call get_gaussian_q3x3x3_quadrature_weights_z(wv)
 
     ! Compute coordinates
     allocate(chi_data(3,undf_w0))
+    allocate(panel_id(undf_pid))
 
+    panel_id(:) = 1.0_r_def
     call get_w0_3x3x3_field(chi_data(1,:), chi_data(2,:), chi_data(3,:), &
                             dx, dy, dz, map_w0, nlayers)
 
@@ -162,6 +208,7 @@ contains
     ndf_chi  = ndf_w0
     undf_chi = undf_w0
     allocate( map_chi,        source=map_w0 )
+    allocate( basis_chi, source=diff_basis_w0 )
     allocate( diff_basis_chi, source=diff_basis_w0 )
 
     ! Assign r_u
@@ -195,13 +242,17 @@ contains
                                    chi_data(1,:),              &
                                    chi_data(2,:),              &
                                    chi_data(3,:),              &
+                                   panel_id,                   &
                                    ndf_r_u, undf_r_u,          &
                                    map_r_u(:,cell), basis_r_u, &
                                    ndf_xi, undf_xi,            &
                                    map_xi(:,cell),  basis_xi,  &
                                    ndf_chi, undf_chi,          &
                                    map_chi(:,cell),            &
+                                   basis_chi,                  &
                                    diff_basis_chi,             &
+                                   ndf_pid, undf_pid,            &
+                                   map_pid(:,cell),             &
                                    nqp_h, nqp_v,               &
                                    wh, wv )
 
@@ -216,6 +267,7 @@ contains
     deallocate( map_chi )
     deallocate( map_r_u )
     deallocate( map_xi )
+    deallocate( map_pid )
     deallocate( basis_r_u )
     deallocate( basis_xi )
     deallocate( diff_basis_chi )

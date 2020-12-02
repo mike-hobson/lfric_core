@@ -47,16 +47,16 @@ contains
   !> @param[in,out] u              3D wind field
   !> @param[in,out] visc_m         Smag diffusion coef for momentum
   !> @param[in,out] visc_h         Smag diffusion coef for heat
-  !> @param[in]     chi            Coordinate array
+  !> @param[in]     chi_xyz        (X,Y,Z) Coordinate array
   !> @param[in]     height_wth     Height of wth space
   !> @param[in]     height_w3      Height of w3 space
   !> @param[in]     delta          Edge length on wtheta points
   !> @param[in]     derived_fields Group of derived fields
   !> @param[in]     rho            Density
   !> @param[in]     step           Model timestep
-  subroutine smagorinsky_alg(mr, theta, u, visc_m,         &
-                             visc_h, chi, height_wth, height_w3, delta,&
-                             derived_fields, rho, step)
+  subroutine smagorinsky_alg(mr, theta, u, visc_m,                   &
+                             visc_h, chi_xyz, height_wth, height_w3, &
+                             delta, derived_fields, rho, step )
 
     implicit none
 
@@ -70,7 +70,7 @@ contains
 
     ! Coordinate fields
     type( field_type ), intent( in )    :: height_w3, height_wth, delta
-    type( field_type ), intent( in )    :: chi(3)
+    type( field_type ), intent( in )    :: chi_xyz(3)
 
     integer( i_def ),   intent(in) :: step
     type( field_type ), intent(in) :: rho
@@ -104,7 +104,7 @@ contains
                                                         theta,                &
                                                         smag_stencil_depth,   &
                                                         visc_h,               &
-                                                        chi  ) )
+                                                        chi_xyz ) )
       if ( use_moisture ) then
         ! Water vapour and cloud liquid:
         call dtheta%copy_field_properties(dmr_v)
@@ -113,12 +113,12 @@ contains
                                                           mr(imr_v),          &
                                                           smag_stencil_depth, &
                                                           visc_h,             &
-                                                          chi  ),             &
+                                                          chi_xyz ),          &
                      tracer_smagorinsky_diff_kernel_type( dmr_cl,             &
                                                           mr(imr_cl),         &
                                                           smag_stencil_depth, &
                                                           visc_h,             &
-                                                          chi  ) )
+                                                          chi_xyz ) )
       end if
 
       ! Momentum:
@@ -130,7 +130,7 @@ contains
                                                      height_wth,           &
                                                      smag_stencil_depth,   &
                                                      visc_m,               &
-                                                     chi  ) )
+                                                     chi_xyz ) )
 
     else ! Without UM BL scheme
 
@@ -146,7 +146,7 @@ contains
                                                         theta,                &
                                                         smag_stencil_depth,   &
                                                         visc_h,               &
-                                                        chi  ) )
+                                                        chi_xyz ) )
       if (use_moisture) then
         ! Water vapour and cloud liquid:
         call dtheta%copy_field_properties(dmr_v)
@@ -155,12 +155,12 @@ contains
                                                           mr(imr_v),          &
                                                           smag_stencil_depth, &
                                                           visc_h,             &
-                                                          chi  ),             &
+                                                          chi_xyz ),          &
                      tracer_smagorinsky_diff_kernel_type( dmr_cl,             &
                                                           mr(imr_cl),         &
                                                           smag_stencil_depth, &
                                                           visc_h,             &
-                                                          chi  ) )
+                                                          chi_xyz ) )
       end if
 
       ! Momentum:
@@ -175,7 +175,7 @@ contains
                                                      height_wth,              &
                                                      smag_stencil_depth,      &
                                                      visc_m,                  &
-                                                     chi  ) )
+                                                     chi_xyz ) )
 
     end if ! With or without BL scheme
 

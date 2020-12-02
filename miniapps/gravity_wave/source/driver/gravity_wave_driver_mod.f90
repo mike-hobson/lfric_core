@@ -75,7 +75,9 @@ module gravity_wave_driver_mod
   type( field_collection_type ) :: prognostic_fields
 
   ! Coordinate field
-  type(field_type), target, dimension(3) :: chi
+  type(field_type), target, dimension(3) :: chi_xyz
+  type(field_type), target, dimension(3) :: chi_sph
+  type(field_type), target               :: panel_id
 
   integer(i_def) :: mesh_id
   integer(i_def) :: twod_mesh_id
@@ -131,21 +133,21 @@ contains
   multigrid_function_space_chain = function_space_chain_type()
 
   ! Initialise aspects of the grid
-  call initialise_grid(mesh_id, twod_mesh_id, chi, &
-                       multigrid_function_space_chain)
+  call initialise_grid(mesh_id, twod_mesh_id, chi_xyz, chi_sph, &
+                       panel_id, multigrid_function_space_chain)
 
-  !Initialise aspects of output
+  ! Initialise aspects of output
   call initialise_io( model_communicator, &
                       clock,              &
                       mesh_id,            &
                       twod_mesh_id,       &
-                      chi,                &
+                      chi_xyz,            &
                       xios_ctx )
 
   ! Create runtime_constants object. This in turn creates various things
   ! needed by the timestepping algorithms such as mass matrix operators, mass
   ! matrix diagonal fields and the geopotential field and limited area masks.
-  call create_runtime_constants(mesh_id, twod_mesh_id, chi)
+  call create_runtime_constants(mesh_id, twod_mesh_id, chi_xyz, chi_sph, panel_id)
 
   ! Create the depository and prognostics field collections.
   ! Actually, here they will have the same contents (prognostics points to all

@@ -12,7 +12,11 @@
 module create_fem_mod
 
   use constants_mod,                  only : i_def, i_native, l_def
-  use finite_element_config_mod,      only : element_order, coordinate_order
+  use base_mesh_config_mod,           only : geometry, geometry_planar
+  use finite_element_config_mod,      only : element_order, coordinate_order, &
+                                             spherical_coord_order,           &
+                                             spherical_coord_system,          &
+                                             spherical_coord_system_xyz
   use halo_routing_collection_mod,    only : halo_routing_collection_type, &
                                              halo_routing_collection
   use field_mod,                      only : field_type
@@ -27,8 +31,10 @@ module create_fem_mod
                                              W2_multigrid_function_space_chain, &
                                              wtheta_multigrid_function_space_chain
   use assign_coordinate_field_mod,    only : assign_coordinate_field
-  use log_mod,                        only : log_event, log_scratch_space, &
-                                             LOG_LEVEL_INFO
+  use log_mod,                        only : log_event,         &
+                                             LOG_LEVEL_INFO,    &
+                                             LOG_LEVEL_ERROR,   &
+                                             log_scratch_space
 
   implicit none
 
@@ -39,29 +45,38 @@ module create_fem_mod
     !==================================================================================
     !> @brief Initialises the coordinate fields (chi) and FEM components
     !> @param[in]     mesh_id               Mesh id used for chi field
-    !> @param[in,out] chi                   Coordinate field
+    !> @param[in,out] chi_xyz               XYZ Coordinate field
+    !> @param[in,out] chi_sph               Spherically-based Coordinate field
+    !> @param[in,out] panel_id              Field giving the ID of the mesh panels
     !> @param[in]     shifted_mesh_id       Optional, mesh id used for shifted chi field
-    !> @param[in,out] shifted_chi           Optional, spatial coordinates of vertically shifted mesh
+    !> @param[in,out] shifted_chi_xyz       Optional, XYZ spatial coordinates of vertically shifted mesh
+    !> @param[in,out] shifted_chi_sph       Optional, Spherically-based coordinates of vertically shifted mesh
     !> @param[in]     double_level_mesh_id  Optional, mesh id used for double-level chi field
-    !> @param[in,out] double_level_chi      Optional, spatial coordinates of double level mesh
+    !> @param[in,out] double_level_chi_xyz  Optional, XYZ spatial coordinates of double level mesh
+    !> @param[in,out] double_level_chi_sph  Optional, Spherically-based coordinates of double level mesh
     !> @param[in]     multigrid_mesh_ids    Optional, mesh id array for multigrid function spaces chain
     !> @param[in]     multigrid_2d_mesh_ids Optional, 2d-mesh id array for multigrid function spaces chain
     !==================================================================================
-    subroutine init_fem( mesh_id, chi,                           &
-                         shifted_mesh_id, shifted_chi,           &
-                         double_level_mesh_id, double_level_chi, &
-                         multigrid_mesh_ids, multigrid_2D_mesh_ids)
+    subroutine init_fem( mesh_id, chi_xyz, chi_sph, panel_id,               &
+                         shifted_mesh_id, shifted_chi_xyz, shifted_chi_sph, &
+                         double_level_mesh_id, double_level_chi_xyz,        &
+                         double_level_chi_sph,                              &
+                         multigrid_mesh_ids, multigrid_2D_mesh_ids          )
 
     implicit none
 
     ! Coordinate field
     integer(i_def),   intent(in)    :: mesh_id
-    type(field_type), intent(inout) :: chi(:)
+    type(field_type), intent(inout) :: chi_xyz(:)
+    type(field_type), intent(inout) :: chi_sph(:)
+    type(field_type), intent(inout) :: panel_id
 
     integer(i_def),   optional, intent(in)    :: shifted_mesh_id
-    type(field_type), optional, intent(inout) :: shifted_chi(:)
+    type(field_type), optional, intent(inout) :: shifted_chi_xyz(:)
+    type(field_type), optional, intent(inout) :: shifted_chi_sph(:)
     integer(i_def),   optional, intent(in)    :: double_level_mesh_id
-    type(field_type), optional, intent(inout) :: double_level_chi(:)
+    type(field_type), optional, intent(inout) :: double_level_chi_xyz(:)
+    type(field_type), optional, intent(inout) :: double_level_chi_sph(:)
     integer(i_def),   optional, intent(in)    :: multigrid_mesh_ids(:)
     integer(i_def),   optional, intent(in)    :: multigrid_2d_mesh_ids(:)
 
@@ -77,7 +92,8 @@ module create_fem_mod
 
     integer(i_native) :: fs_index
 
-    integer(i_def) :: chi_space
+    integer(i_def) :: chi_xyz_space
+    integer(i_def) :: chi_sph_space
     integer(i_def) :: coord
     integer(i_def) :: mesh_ctr
 
@@ -88,10 +104,10 @@ module create_fem_mod
          present(multigrid_2d_mesh_ids) ) create_multigrid_fs_chain = .true.
 
     if ( present(shifted_mesh_id) .and. &
-         present(shifted_chi) ) create_shifted_chi = .true.
+         present(shifted_chi_xyz) ) create_shifted_chi = .true.
 
     if ( present(double_level_mesh_id) .and. &
-         present(double_level_chi) ) create_double_level_chi = .true.
+         present(double_level_chi_xyz) ) create_double_level_chi = .true.
 
 
     ! Create a collection for holding FEM info that is specific to a field
@@ -115,54 +131,99 @@ module create_fem_mod
     ! Create model coordinate field
     ! =========================================
     if ( coordinate_order == 0 ) then
-      chi_space = W0
-      call log_event( "FEM specifics: Computing W0 coordinate fields", LOG_LEVEL_INFO )
+      chi_xyz_space = W0
+      call log_event( "FEM specifics: Computing W0 xyz coordinate fields", LOG_LEVEL_INFO )
     else
-      chi_space = Wchi
-      call log_event( "FEM specifics: Computing Wchi coordinate fields", LOG_LEVEL_INFO )
+      chi_xyz_space = Wchi
+      call log_event( "FEM specifics: Computing Wchi xyz coordinate fields", LOG_LEVEL_INFO )
     end if
 
-    fs => function_space_collection%get_fs(mesh_id, coordinate_order, chi_space)
+    fs => function_space_collection%get_fs(mesh_id, coordinate_order, chi_xyz_space)
 
-    do coord = 1, size(chi)
-      call chi(coord)%initialise(vector_space = fs )
+    do coord = 1, size(chi_xyz)
+      call chi_xyz(coord)%initialise(vector_space = fs )
     end do
 
-    call assign_coordinate_field(chi, mesh_id)
+    fs => function_space_collection%get_fs(mesh_id, 0, W3)
+    call panel_id%initialise(vector_space = fs )
 
+    call assign_coordinate_field(chi_xyz, panel_id, mesh_id, spherical_coords=.false.)
+
+    if ( spherical_coord_order < 1 ) then
+      call log_event( "Error: Spherical coordinate order is less than 1", LOG_LEVEL_ERROR )
+    else
+      chi_sph_space = Wchi
+      call log_event( "FEM specifics: Computing Wchi sph coordinate fields", LOG_LEVEL_INFO )
+    end if
+    fs => function_space_collection%get_fs(mesh_id, spherical_coord_order, chi_sph_space)
+
+    ! Check that the geometry is compatible with the coordinate system
+    if ( (geometry == geometry_planar) .and. &
+         (spherical_coord_system /= spherical_coord_system_xyz) ) then
+        call log_event( "Error: For planar geometry must use spherical_coord_system = xyz", LOG_LEVEL_ERROR )
+    end if
+
+    do coord = 1, size(chi_sph)
+      call chi_sph(coord)%initialise(vector_space = fs )
+    end do
+
+    call assign_coordinate_field(chi_sph, panel_id, mesh_id, spherical_coords=.true.)
 
     ! Create shifted mesh coordinate field.
     ! =========================================
     if ( create_shifted_chi ) then
-      call log_event( "FEM specifics: Making shifted level mesh spaces", &
+      call log_event( "FEM specifics: Making shifted level mesh spaces",     &
                       LOG_LEVEL_INFO )
-      shifted_fs => function_space_collection%get_fs( shifted_mesh_id,  &
-                                                      coordinate_order, &
-                                                      chi_space )
-      do coord = 1, size(chi)
-        call shifted_chi(coord)%initialise(vector_space = shifted_fs)
+      shifted_fs => function_space_collection%get_fs( shifted_mesh_id,       &
+                                                      coordinate_order,      &
+                                                      chi_xyz_space )
+      do coord = 1, size(chi_xyz)
+        call shifted_chi_xyz(coord)%initialise(vector_space = shifted_fs)
       end do
 
-      call assign_coordinate_field(shifted_chi, shifted_mesh_id)
+      shifted_fs => function_space_collection%get_fs( shifted_mesh_id,       &
+                                                      spherical_coord_order, &
+                                                      chi_sph_space )
+      do coord = 1, size(chi_sph)
+        call shifted_chi_sph(coord)%initialise(vector_space = shifted_fs)
+      end do
 
-      nullify( shifted_fs )
+      call assign_coordinate_field(shifted_chi_xyz, panel_id,                &
+                                   shifted_mesh_id, spherical_coords=.false.)
+
+      call assign_coordinate_field(shifted_chi_sph, panel_id, &
+                                   shifted_mesh_id, spherical_coords=.true.)
+
+      nullify(shifted_fs)
     end if
 
     ! Create double level coordinate field.
     ! =========================================
-    if ( create_double_level_chi) then
+    if ( create_double_level_chi ) then
       call log_event( "FEM specifics: Making double level mesh spaces", &
                       LOG_LEVEL_INFO )
 
-      double_level_fs =>                                          &
-          function_space_collection%get_fs( double_level_mesh_id, &
-                                            coordinate_order,     &
-                                            chi_space )
-      do coord = 1, size(chi)
-        call double_level_chi(coord)%initialise(vector_space = double_level_fs)
+      double_level_fs =>                                                &
+          function_space_collection%get_fs( double_level_mesh_id,       &
+                                            coordinate_order,           &
+                                            chi_xyz_space )
+      do coord = 1, size(chi_xyz)
+        call double_level_chi_xyz(coord)%initialise(vector_space = double_level_fs)
       end do
 
-      call assign_coordinate_field(double_level_chi, double_level_mesh_id)
+      double_level_fs =>                                                &
+          function_space_collection%get_fs( double_level_mesh_id,       &
+                                            spherical_coord_order,      &
+                                            chi_sph_space )
+      do coord = 1, size(chi_sph)
+        call double_level_chi_sph(coord)%initialise(vector_space = double_level_fs)
+      end do
+
+      call assign_coordinate_field(double_level_chi_xyz, panel_id,      &
+                                   double_level_mesh_id, spherical_coords=.false.)
+
+      call assign_coordinate_field(double_level_chi_sph, panel_id,      &
+                                   double_level_mesh_id, spherical_coords=.true.)
 
       nullify( double_level_fs )
     end if

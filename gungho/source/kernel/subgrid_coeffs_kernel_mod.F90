@@ -63,7 +63,7 @@ contains
 !! @param[in] nlayers Number of layers
 !! @param[in] subgridrho_option Option for which approximation to use
 !! @param[in] ndf_w3 Number of degrees of freedom for W3 per cell
-!! @param[in] undf_w3 Number unique of degrees of freedom for W3
+!! @param[in] undf_w3 Number of unique degrees of freedom for W3
 !! @param[in] rho Density
 !! @param[in] rho Orientation of cell
 !! @param[in] stencil_length Local length of a stencil (5 for PPM)

@@ -24,10 +24,10 @@
 !>
 module mr_to_sh_mass_ints_kernel_mod
 
-  use argument_mod,      only : arg_type, func_type,                  &
-                                GH_FIELD, GH_WRITE, GH_READ,          &
-                                ANY_SPACE_9,             &
-                                GH_BASIS, GH_DIFF_BASIS,              &
+  use argument_mod,      only : arg_type, func_type,                    &
+                                GH_FIELD, GH_WRITE, GH_READ,            &
+                                ANY_SPACE_9, ANY_DISCONTINUOUS_SPACE_3, &
+                                GH_BASIS, GH_DIFF_BASIS,                &
                                 CELLS, GH_QUADRATURE_XYoZ
   use constants_mod,     only : r_def, i_def
   use fs_continuity_mod, only : W3, Wtheta
@@ -45,14 +45,15 @@ module mr_to_sh_mass_ints_kernel_mod
   !>
   type, public, extends(kernel_type) :: mr_to_sh_mass_ints_kernel_type
     private
-    type(arg_type) :: meta_args(3) = (/                 &
-         arg_type(GH_FIELD*4, GH_WRITE, W3),            &
-         arg_type(GH_FIELD*3, GH_READ,  ANY_SPACE_9),   &
-         arg_type(GH_FIELD,   GH_READ,  Wtheta)         &
+    type(arg_type) :: meta_args(4) = (/                             &
+         arg_type(GH_FIELD*4, GH_WRITE, W3),                        &
+         arg_type(GH_FIELD*3, GH_READ,  ANY_SPACE_9),               &
+         arg_type(GH_FIELD,   GH_READ,  ANY_DISCONTINUOUS_SPACE_3), &
+         arg_type(GH_FIELD,   GH_READ,  Wtheta)                     &
          /)
-    type(func_type) :: meta_funcs(2) = (/               &
-         func_type(ANY_SPACE_9, GH_DIFF_BASIS),         &
-         func_type(Wtheta, GH_BASIS)                    &
+    type(func_type) :: meta_funcs(2) = (/                           &
+         func_type(ANY_SPACE_9, GH_BASIS, GH_DIFF_BASIS),           &
+         func_type(Wtheta, GH_BASIS)                                &
          /)
     integer :: iterates_over = CELLS
     integer :: gh_shape = GH_QUADRATURE_XYoZ
@@ -76,9 +77,10 @@ contains
 !! the upper half of the original mesh. Is a W3 field.
 !! @param[out] I_upper_i_im1 The integral of the (i-1)-th Wtheta basis function on
 !! the upper half of the original mesh. Is a W3 field.
-!! @param[in] chi_dl_1 The physical x coordinate in chi for double level mesh
-!! @param[in] chi_dl_2 The physical y coordinate in chi for double level mesh
-!! @param[in] chi_dl_3 The physical z coordinate in chi for double level mesh
+!! @param[in] chi_dl_1 The 1st spherical coordinate field in Wchi for double level mesh.
+!! @param[in] chi_dl_2 The 2nd spherical coordinate field in Wchi for double level mesh.
+!! @param[in] chi_dl_3 The 3rd spherical coordinate field in Wchi for double level mesh.
+!! @param[in] panel_id A field giving the ID for the mesh panels.
 !! @param[in] dummy_theta An unused dummy variable in Wtheta.
 !! @param[in] ndf_w3 The number of degrees of freedom per cell for w3
 !! @param[in] undf_w3 The number of unique degrees of freedom for w3
@@ -86,8 +88,13 @@ contains
 !! @param[in] ndf_chi_dl The number of degrees of freedom per cell for chi
 !! @param[in] undf_chi_dl The number of unique degrees of freedom for chi
 !! @param[in] map_chi_dl Dofmap for the cell at the base of the column for chi
+!! @param[in] chi_dl_basis 4-dim array for holding the WChi basis functions
+!!                         evaluated at quadrature points.
 !! @param[in] chi_diff_basis 4-dim array holding differential of the basis
 !!                           functions evaluated at gaussian quadrature points
+!! @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
+!! @param[in] undf_pid Number of unique degrees of freedom for panel_id
+!! @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
 !! @param[in] ndf_wtheta The number of degrees of freedom per cell for wtheta
 !! @param[in] undf_wtheta The number of unique degrees of freedom for wtheta
 !! @param[in] map_wtheta Dofmap for the cell at the base of the column for wtheta
@@ -104,10 +111,13 @@ subroutine mr_to_sh_mass_ints_code(                                      &
                                     I_upper_i_i,                         &
                                     I_upper_i_im1,                       &
                                     chi_dl_1, chi_dl_2, chi_dl_3,        &
+                                    panel_id,                            &
                                     dummy_theta,                         &
                                     ndf_w3, undf_w3, map_w3,             &
                                     ndf_chi_dl, undf_chi_dl, map_chi_dl, &
+                                    chi_dl_basis,                        &
                                     chi_dl_diff_basis,                   &
+                                    ndf_pid, undf_pid, map_pid,          &
                                     ndf_wtheta, undf_wtheta,             &
                                     map_wtheta, wtheta_basis,            &
                                     nqp_h, nqp_v, wqp_h, wqp_v           &
@@ -119,19 +129,22 @@ subroutine mr_to_sh_mass_ints_code(                                      &
 
   ! Arguments
   integer(kind=i_def), intent(in) :: nlayers, nqp_h, nqp_v
-  integer(kind=i_def), intent(in) :: ndf_w3, ndf_wtheta, ndf_chi_dl
-  integer(kind=i_def), intent(in) :: undf_w3, undf_wtheta, undf_chi_dl
-  integer(kind=i_def), dimension(ndf_w3), intent(in)     :: map_w3
+  integer(kind=i_def), intent(in) :: ndf_w3, ndf_wtheta, ndf_chi_dl, ndf_pid
+  integer(kind=i_def), intent(in) :: undf_w3, undf_wtheta, undf_chi_dl, undf_pid
+  integer(kind=i_def), dimension(ndf_w3),     intent(in) :: map_w3
   integer(kind=i_def), dimension(ndf_wtheta), intent(in) :: map_wtheta
   integer(kind=i_def), dimension(ndf_chi_dl), intent(in) :: map_chi_dl
+  integer(kind=i_def), dimension(ndf_pid),    intent(in) :: map_pid
 
   real(kind=r_def), dimension(1,ndf_wtheta,nqp_h,nqp_v), intent(in) :: wtheta_basis
   real(kind=r_def), dimension(3,ndf_chi_dl,nqp_h,nqp_v), intent(in) :: chi_dl_diff_basis
+  real(kind=r_def), dimension(1,ndf_chi_dl,nqp_h,nqp_v), intent(in) :: chi_dl_basis
 
   real(kind=r_def), dimension(undf_w3),     intent(out)  :: I_lower_i_ip1
   real(kind=r_def), dimension(undf_w3),     intent(out)  :: I_lower_i_i
   real(kind=r_def), dimension(undf_w3),     intent(out)  :: I_upper_i_i
   real(kind=r_def), dimension(undf_w3),     intent(out)  :: I_upper_i_im1
+  real(kind=r_def), dimension(undf_pid),    intent(in)   :: panel_id
   real(kind=r_def), dimension(undf_wtheta), intent(in)   :: dummy_theta
   real(kind=r_def), dimension(undf_chi_dl), intent(in)   :: chi_dl_1, chi_dl_2, chi_dl_3
   real(kind=r_def), dimension(nqp_h), intent(in)         :: wqp_h
@@ -153,6 +166,10 @@ subroutine mr_to_sh_mass_ints_code(                                      &
                                                             I_upper_i_i_e, &
                                                             I_upper_i_im1_e
 
+  integer(kind=i_def) :: ipanel
+
+  ipanel = int(panel_id(map_pid(1)), i_def)
+
 
   do k = 0, nlayers-1
     ! Extract coordinates for lower and upper half cells
@@ -168,9 +185,11 @@ subroutine mr_to_sh_mass_ints_code(                                      &
 
     ! Get detj for lower and upper half cells
     call coordinate_jacobian(ndf_chi_dl, nqp_h, nqp_v, lower_chi_1_e, lower_chi_2_e, &
-                             lower_chi_3_e, chi_dl_diff_basis, lower_jac, lower_dj)
+                             lower_chi_3_e, ipanel, chi_dl_basis, chi_dl_diff_basis, &
+                             lower_jac, lower_dj)
     call coordinate_jacobian(ndf_chi_dl, nqp_h, nqp_v, upper_chi_1_e, upper_chi_2_e, &
-                             upper_chi_3_e, chi_dl_diff_basis, upper_jac, upper_dj)
+                             upper_chi_3_e, ipanel, chi_dl_basis, chi_dl_diff_basis, &
+                             upper_jac, upper_dj)
 
     ! Initialise values to zero
     do df = 1, ndf_w3

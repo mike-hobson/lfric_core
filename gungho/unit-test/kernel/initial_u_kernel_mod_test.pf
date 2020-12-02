@@ -9,10 +9,12 @@ module initial_u_kernel_mod_test
   use constants_mod,                 only : i_def, r_def
 
   use get_unit_test_m3x3_q3x3x3_sizes_mod, only : get_w0_m3x3_q3x3x3_size, &
-                                                  get_w2_m3x3_q3x3x3_size
+                                                  get_w2_m3x3_q3x3x3_size, &
+                                                  get_w3_m3x3_q3x3x3_size
 
   use get_unit_test_m3x3_dofmap_mod,       only : get_w0_m3x3_dofmap, &
-                                                  get_w2_m3x3_dofmap
+                                                  get_w2_m3x3_dofmap, &
+                                                  get_w3_m3x3_dofmap
 
   use get_unit_test_q3x3x3_quadrature_mod, &
      only : get_gaussian_q3x3x3_quadrature_weights_xy, &
@@ -60,7 +62,10 @@ contains
 
     use base_mesh_config_mod,      only : geometry_planar, &
                                           partitioner_planar
-    use feign_config_mod,          only : feign_base_mesh_config, &
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
+    use feign_config_mod,          only : feign_finite_element_config, &
+                                          feign_base_mesh_config, &
                                           feign_initial_wind_config
     use initial_wind_config_mod,   only : profile_none
 
@@ -70,7 +75,7 @@ contains
 
     ! Initialise YAXT
     call xt_initialize(this%getMpiCommunicator())
-    !Store the MPI communicator for later use
+    ! Store the MPI communicator for later use
     call store_comm(this%getMpiCommunicator())
 
     call feign_base_mesh_config( filename='foo',                      &
@@ -78,6 +83,15 @@ contains
                                  geometry=geometry_planar,            &
                                  partitioner=partitioner_planar,      &
                                  fplane=.false., f_lat_deg=0.0_r_def )
+
+    call feign_finite_element_config(           &
+             cellshape=cellshape_quadrilateral, &
+             coordinate_order=0_i_def,          &
+             element_order=0_i_def,             &
+             rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+             vorticity_in_w1=.false. )
 
     call feign_initial_wind_config(       &
              nl_constant=nl_constant,     &
@@ -127,20 +141,21 @@ contains
 
     ! Fields
     real(r_def), allocatable :: r_u(:)
-    real(r_def), allocatable :: chi1(:), chi2(:), chi3(:)
+    real(r_def), allocatable :: chi1(:), chi2(:), chi3(:), panel_id(:)
 
     real(kind=r_def) :: answer
 
     integer :: i, j, k, cell
 
     integer(i_def)              :: nlayers, ncells, nqp_h, nqp_v
-    integer(i_def)              :: ndf_w0, ndf_w2
+    integer(i_def)              :: ndf_w0, ndf_w2, ndf_w3
     integer(i_def)              :: dim_space, dim_space_diff
-    integer(i_def)              :: undf_w0, undf_w2
+    integer(i_def)              :: undf_w0, undf_w2, undf_w3
 
     ! Dofmaps
     integer(i_def), allocatable :: map_w0(:,:)
     integer(i_def), allocatable :: map_w2(:,:)
+    integer(i_def), allocatable :: map_w3(:,:)
 
     ! Basis functions
     real(r_def),    allocatable :: basis_w0(:,:,:,:)
@@ -160,9 +175,14 @@ contains
                                   dim_space, dim_space_diff, &
                                   nqp_h, nqp_v,              &
                                   nlayers )
+    call get_w3_m3x3_q3x3x3_size( ndf_w3, undf_w3, ncells,   &
+                                  dim_space, dim_space_diff, &
+                                  nqp_h, nqp_v,              &
+                                  nlayers )
 
     call get_w0_m3x3_dofmap(map_w0)
     call get_w2_m3x3_dofmap(map_w2)
+    call get_w3_m3x3_dofmap(map_w3)
 
     call get_gaussian_q3x3x3_quadrature_weights_xy( wh )
     call get_gaussian_q3x3x3_quadrature_weights_z( wv )
@@ -176,7 +196,9 @@ contains
     allocate(chi1(undf_w0))
     allocate(chi2(undf_w0))
     allocate(chi3(undf_w0))
+    allocate(panel_id(undf_w3))
 
+    panel_id(:) = 1.0_r_def
     call get_w0_3x3x3_field(chi1, chi2, chi3, dx, dy, dz, &
                             map_w0, nlayers)
     cell = 1
@@ -190,12 +212,14 @@ contains
                          chi1,                            &
                          chi2,                            &
                          chi3,                            &
+                         panel_id,                        &
                          initial_time,                    &
                          ndf_w2, undf_w2,                 &
                          map_w2(:, cell), basis_w2,       &
                          ndf_w0, undf_w0,                 &
                          map_w0(:, cell),                 &
                          basis_w0, diff_basis_w0,         &
+                         ndf_w3, undf_w3, map_w3,         &
                          nqp_h, nqp_v, wh, wv             &
                          )
 
@@ -210,8 +234,10 @@ contains
     deallocate( chi1 )
     deallocate( chi2 )
     deallocate( chi3 )
+    deallocate( panel_id )
     deallocate( map_w0 )
     deallocate( map_w2 )
+    deallocate( map_w3 )
     deallocate( basis_w0 )
     deallocate( basis_w2 )
     deallocate( diff_basis_w0 )

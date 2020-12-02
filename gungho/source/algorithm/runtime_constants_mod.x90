@@ -23,7 +23,7 @@ module runtime_constants_mod
                                                f_lat
   use finite_element_config_mod,         only: element_order,    &
                                                nqp_exact,        &
-                                               coordinate_order, &
+                                               spherical_coord_order, &
                                                rehabilitate
   use formulation_config_mod,            only: dlayer_on,  &
                                                rotating,   &
@@ -71,8 +71,8 @@ module runtime_constants_mod
   ! PsyKAl PSYClone kernels
   use restrict_kernel_mod,                   only: restrict_kernel_type
   use compute_latlon_kernel_mod,             only: compute_latlon_kernel_type
-  use compute_derahm_matrices_kernel_mod,    only: compute_derahm_matrices_kernel_type
-  use mg_derahm_mat_kernel_mod,              only: mg_derahm_mat_kernel_type
+  use compute_derham_matrices_kernel_mod,    only: compute_derham_matrices_kernel_type
+  use mg_derham_mat_kernel_mod,              only: mg_derham_mat_kernel_type
   use compute_mass_matrix_kernel_w2_mod,     only: compute_mass_matrix_kernel_w2_type
   use compute_div_operator_kernel_mod,       only: compute_div_operator_kernel_type
   use compute_dl_matrix_kernel_mod,          only: compute_dl_matrix_kernel_type
@@ -140,6 +140,9 @@ module runtime_constants_mod
   type(field_type), allocatable, dimension(:), target    :: w2_normalisation
   type(operator_type), target                            :: coriolis
   type(field_type), allocatable, dimension(:,:), target  :: chi_mg
+  type(field_type), allocatable, dimension(:), target    :: chi_xyz
+  type(field_type), allocatable, dimension(:), target    :: panel_id_mg
+
   type(field_type), allocatable, dimension(:), target    :: surface_altitude_mg
 
   ! Limited-area masks
@@ -155,7 +158,7 @@ module runtime_constants_mod
   type(field_type), target              :: wthetablend_mask
 
   ! 2D fields
-  type(field_type), target                               :: latitude_W3, longitude_W3
+  type(field_type), target                               :: lat_w3, long_w3
 
   ! Shifted mesh features
   type(field_type), target                               :: mm_w3_shifted_diag
@@ -176,12 +179,14 @@ module runtime_constants_mod
   type(operator_type), target                            :: grad_shifted
   type(operator_type), target                            :: curl_shifted
   type(operator_type), target                            :: broken_div_shifted
-  type(field_type), target, dimension(:), allocatable    :: global_chi_shifted
+  type(field_type), target, dimension(:), allocatable    :: chi_sph_shifted
+  type(field_type), target, dimension(:), allocatable    :: chi_xyz_shifted
   integer(i_def), target                                 :: global_shifted_mesh_id
 
   ! Double level mesh features
   integer(i_def), target                                 :: global_double_level_mesh_id
-  type(field_type), target, dimension(:), allocatable    :: global_chi_double_level
+  type(field_type), target, dimension(:), allocatable    :: chi_sph_double_level
+  type(field_type), target, dimension(:), allocatable    :: chi_xyz_double_level
   type(field_type), target                               :: dA_at_w2_double_layer
   type(field_type), target, dimension(:), allocatable    :: mr_to_sh_mass_integrals
   type(field_type), target, dimension(:), allocatable    :: w3_to_sh_w3_integrals
@@ -208,6 +213,8 @@ module runtime_constants_mod
   public :: create_runtime_constants
   public :: final_runtime_constants
   public :: get_coordinates
+  public :: get_coordinates_xyz
+  public :: get_panel_id
   public :: get_geopotential
   public :: get_cell_orientation
   public :: get_detj_at_w2
@@ -235,11 +242,13 @@ module runtime_constants_mod
   public :: get_lbc_mask
   public :: get_blend_mask
   public :: get_coordinates_shifted
+  public :: get_coordinates_xyz_shifted
   public :: get_cell_orientation_shifted
   public :: get_detj_at_w2_shifted
   public :: get_dA_at_w2_shifted
   public :: get_div_shifted
   public :: get_shifted_mesh_id
+  public :: get_coordinates_xyz_double_layer
   public :: get_coordinates_double_layer
   public :: get_dA_at_w2_double_layer
   public :: get_double_level_mesh_id
@@ -251,6 +260,10 @@ module runtime_constants_mod
   interface get_coordinates
      module procedure get_coordinates_fine, get_coordinates_mg
   end interface get_coordinates
+
+  interface get_panel_id
+     module procedure get_panel_id_fine, get_panel_id_mg
+  end interface get_panel_id
 
   interface get_div
      module procedure get_div_fine, get_div_mg
@@ -272,24 +285,36 @@ contains
   !>@brief Subroutine to create the runtime constants
   !> @param[in] mesh_id         Mesh_id
   !> @param[in] twod_mesh_id    Mesh_id for 2D domain
-  !> @param[in] chi             chi field
+  !> @param[in] chi_xyz_in      xyz chi field
+  !> @param[in] chi_sph         spherically-based chi field
+  !> @param[in] panel_id        panel id
   !> @param[in] shifted_mesh_id Mesh_id for vertically shifted field
   !> @param[in] shifted_chi     chi field for vertically shifted field
   !> @param[in] double_level_mesh_id Mesh_id for double level field
   !> @param[in] double_level_chi     chi field for double level field
   !> @param[in] surface_altitude     A 2D field describing the surface height
-  subroutine create_runtime_constants(mesh_id,twod_mesh_id, chi,              &
-                                      shifted_mesh_id, shifted_chi,           &
-                                      double_level_mesh_id, double_level_chi, &
+  subroutine create_runtime_constants(mesh_id, twod_mesh_id, &
+                                      chi_xyz_in, chi_sph,   &
+                                      panel_id,              &
+                                      shifted_mesh_id,       &
+                                      shifted_chi_xyz,       &
+                                      shifted_chi_sph,       &
+                                      double_level_mesh_id,  &
+                                      double_level_chi_xyz,  &
+                                      double_level_chi_sph,  &
                                       surface_altitude)
     implicit none
 
     integer(i_def),             intent(in) :: mesh_id, twod_mesh_id
-    type(field_type), target,   intent(in) :: chi(:)
+    type(field_type), target,   intent(in) :: chi_xyz_in(:)
+    type(field_type), target,   intent(in) :: chi_sph(:)
+    type(field_type), target,   intent(in) :: panel_id
     integer(i_def), optional,   intent(in) :: shifted_mesh_id
-    type(field_type), optional, intent(in) :: shifted_chi(:)
+    type(field_type), optional, intent(in) :: shifted_chi_xyz(:)
+    type(field_type), optional, intent(in) :: shifted_chi_sph(:)
     integer(i_def), optional,   intent(in) :: double_level_mesh_id
-    type(field_type), optional, intent(in) :: double_level_chi(:)
+    type(field_type), optional, intent(in) :: double_level_chi_xyz(:)
+    type(field_type), optional, intent(in) :: double_level_chi_sph(:)
     type(field_type), optional, intent(in) :: surface_altitude
 
     type(function_space_type), pointer :: w0_fs     => null()
@@ -351,17 +376,26 @@ contains
        multigrid_levels=1
     end if
 
+    ! make chi_sph and panel_id accessible
+    allocate(chi_xyz(3))
+    do i = 1, 3
+      call chi_xyz_in(i)%copy_field(chi_xyz(i))
+    end do
+
     ! make the multigrid chi field.
     allocate(chi_mg(3,multigrid_levels))
+    allocate(panel_id_mg(multigrid_levels))
     do i = 1, 3
-       call chi(i)%copy_field(chi_mg(i,1))
+       call chi_sph(i)%copy_field(chi_mg(i,1))
     end do
+    call panel_id%copy_field(panel_id_mg(1))
+
     if ( use_surface_altitude ) then
       allocate(surface_altitude_mg(multigrid_levels))
       call surface_altitude%copy_field(surface_altitude_mg(1))
     end if
      ! Compute coordinates
-    if ( coordinate_order == 0 ) then
+    if ( spherical_coord_order == 0 ) then
        chi_space = W0
        call log_event( "runtime_constants: Computing W0 coordinate fields for MG", LOG_LEVEL_INFO )
     else
@@ -403,13 +437,18 @@ contains
         do i = 1, 3
           call chi_mg( i,level )%initialise( vector_space = &
                   function_space_collection%get_fs(         &
-                  mg_mesh_id, coordinate_order, chi_space) )
+                  mg_mesh_id, spherical_coord_order, chi_space) )
         end do
-        call assign_coordinate_field( chi_mg( :, level ), mg_mesh_id )
 
-        if ( use_surface_altitude )then
-          call assign_orography_field( chi_mg(:,level), mg_mesh_id, &
-                                       surface_altitude_mg( level ) )
+        call panel_id_mg(level)%initialise(vector_space = w3_fs )
+
+        call assign_coordinate_field(chi_mg(:,level), panel_id_mg(level), &
+                                     mg_mesh_id, spherical_coords=.true.)
+
+        if ( use_surface_altitude ) then
+          call assign_orography_field(chi_mg(:,level), panel_id_mg(level),    &
+                                      mg_mesh_id, surface_altitude_mg(level), &
+                                      spherical_coords=.true. )
         end if
       end do
 
@@ -437,11 +476,12 @@ contains
 
     call geopotential%initialise( vector_space = w3_fs )
     if ( rehabilitate ) then
-      call invoke( compute_geopotential_kernel_type( geopotential, chi ) )
+      call invoke( compute_geopotential_kernel_type( geopotential, chi_sph ) )
     else
       call log_event( "Geopotential computation needs modifying for standard &
                        W3 mapping", LOG_LEVEL_ERROR )
     end if
+
     !=================== Create cell orientation field ========================!
 
     if (scheme /= scheme_method_of_lines    .or. &
@@ -481,9 +521,7 @@ contains
 
     end if
 
-
-
-    !=================== Create DeRahm cochain operators =========================!
+    !=================== Create de Rham cochain operators =====================!
 
    ! multigrid ops
     allocate(mm_w2(multigrid_levels), &
@@ -510,25 +548,32 @@ contains
     broken_div = operator_type( w3_fs, w2b_fs )
     div_v  = operator_type( w3_fs, w2v_fs )
     div_h  = operator_type( w3_fs, w2h_fs )
-    call invoke( name = "Create mass matrix operators",                              &
-                 compute_derahm_matrices_kernel_type(mm_w0, mm_w1,                   &
+    call invoke( name = "create_mass_matrix_operators",                              &
+                 compute_derham_matrices_kernel_type(mm_w0, mm_w1,                   &
                                                      mm_w2(level), mm_w2b,           &
                                                      mm_w3(level), mm_wtheta(level), &
                                                      grad, curl,                     &
                                                      div(level), broken_div,         &
-                                                     chi_mg(:,level), qr),           &
+                                                     chi_mg(:,level),                &
+                                                     panel_id_mg(level), qr),        &
                  invert_local_operator_kernel_type(mm_w3_inv(level), mm_w3(level)) )
+
     ! Construct vertical- and horizontal-only velocity mass matrices
-    call invoke( compute_mass_matrix_kernel_w2_type( mm_w2v, chi_mg(:,level), qr ) )
-    call invoke( compute_mass_matrix_kernel_w2_type( mm_w2h, chi_mg(:,level), qr ) )
+    call invoke( compute_mass_matrix_kernel_w2_type( mm_w2v, chi_mg(:,level), &
+                                                     panel_id_mg(level), qr ) )
+    call invoke( compute_mass_matrix_kernel_w2_type( mm_w2h, chi_mg(:,level), &
+                                                     panel_id_mg(level), qr ) )
     ! Construct vertical- and horizontal-only weak divergence operator
-    call invoke( compute_div_operator_kernel_type( div_v, chi_mg(:,level), qr ) )
-    call invoke( compute_div_operator_kernel_type( div_h, chi_mg(:,level), qr ) )
+    call invoke( compute_div_operator_kernel_type( div_v, chi_mg(:,level), &
+                                                     panel_id_mg(level), qr ) )
+    call invoke( compute_div_operator_kernel_type( div_h, chi_mg(:,level), &
+                                                     panel_id_mg(level), qr ) )
     ! Compute W2 mass matrix with damping layer
-    ! Eventually this may be absorbed into the DeRham complex computations
+    ! Eventually this may be absorbed into the de Rham complex computations
     ! but until the final form is settled upon it is left separate
     if (dlayer_on) call invoke( compute_dl_matrix_kernel_type( &
-                                    mm_dl(level), chi_mg(:,level), qr) )
+                                    mm_dl(level), chi_mg(:,level), &
+                                    panel_id_mg(level), qr) )
 
     !================= Create mass matrix diagonal fields =====================!
 
@@ -539,7 +584,7 @@ contains
     call mmtheta_diag%initialise( vector_space = wtheta_fs )
     call eye%initialise( vector_space = w3_fs )
     ! Initialise fields
-    call invoke( name = "Create mass matrix diagonal fields",      &
+    call invoke( name = "create_mass_matrix_diagonal_fields",      &
                  setval_c(mm0_diag,     0.0_r_def),                &
                  setval_c(mm1_diag,     0.0_r_def),                &
                  setval_c(mm2_diag,     0.0_r_def),                &
@@ -589,8 +634,8 @@ contains
     ! levels being -ve. This should be reviewed with ticket #562
     call height_w3%initialise( vector_space = w3_k0_fs )
     call height_wth%initialise( vector_space = wth_k0_fs )
-    call invoke( get_height_kernel_type(height_w3, chi) )
-    call invoke( get_height_kernel_type(height_wth, chi) )
+    call invoke( get_height_kernel_type(height_w3, chi_sph) )
+    call invoke( get_height_kernel_type(height_wth, chi_sph) )
 
     !=== Create multiplicity for horizontally continuous fields ===!
     ! NB most of the time we want 1/multiplicity
@@ -634,40 +679,40 @@ contains
                  X_divideby_Y(nodal_rmultiplicity_w0, ones, nodal_multiplicity_w0) )
 
     call w2_normalisation(level)%initialise( vector_space = w2_fs )
-    call invoke( setval_c(w2_normalisation(level), 0.0_r_def),                     &
-                 w2_normalisation_kernel_type(w2_normalisation(level), chi),       &
-                 inc_X_divideby_Y(w2_normalisation(level), nodal_multiplicity_w2), &
+    call invoke( setval_c(w2_normalisation(level), 0.0_r_def),                              &
+                 w2_normalisation_kernel_type(w2_normalisation(level), chi_sph, panel_id),  &
+                 inc_X_divideby_Y(w2_normalisation(level), nodal_multiplicity_w2),          &
                  inc_X_powint_n(w2_normalisation(level), i_minus_one) )
 
     ! Compute Coriolis operator
     if ( rotating ) then
       coriolis = operator_type( w2_fs, w2_fs )
-      call invoke( compute_coriolis_matrix_kernel_type(coriolis, chi, qr) )
+      call invoke( compute_coriolis_matrix_kernel_type(coriolis, chi_sph, panel_id, qr) )
     end if
 
     ! Compute latitude and longitude maps
-    call latitude_w3%initialise( vector_space = w3_k0_2d_fs )
-    call longitude_w3%initialise( vector_space = w3_k0_2d_fs )
+    call lat_w3%initialise( vector_space = w3_k0_2d_fs )
+    call long_w3%initialise( vector_space = w3_k0_2d_fs )
     if ( geometry == geometry_spherical ) then
-      call invoke( compute_latlon_kernel_type( latitude_w3, longitude_w3, chi) )
+      call invoke( compute_latlon_kernel_type( lat_w3, long_w3, chi_xyz) )
     else
-      call invoke( setval_c(latitude_w3, f_lat),  &
-                   setval_c(longitude_w3, 0_r_def) )
+      call invoke( setval_c(lat_w3, f_lat),  &
+                   setval_c(long_w3, 0_r_def) )
     end if
 
 
     !================ Create detj values at W2 dof locations ==================!
 
     call detj_at_w2%initialise( vector_space = w2_fs )
-    call invoke(setval_c(detj_at_w2,0.0_r_def),               &
-                calc_detj_at_w2_kernel_type(detj_at_w2,chi),  &
+    call invoke(setval_c(detj_at_w2,0.0_r_def),                              &
+                calc_detj_at_w2_kernel_type(detj_at_w2, chi_sph, panel_id),  &
                 inc_X_divideby_Y(detj_at_w2, nodal_multiplicity_w2) )
 
     !================ Create dA values at W2 dof locations ==================!
 
     call dA_at_w2%initialise( vector_space = w2_fs )
     call invoke( setval_c(dA_at_w2, 0.0_r_def),&
-                 calc_dA_at_w2_kernel_type(dA_at_w2, chi) )
+                 calc_dA_at_w2_kernel_type(dA_at_w2, chi_sph, panel_id) )
 
     !================ Create edge lengths and delta values ==================!
 
@@ -698,9 +743,14 @@ contains
       ! Make shifted mesh id globally available
       global_shifted_mesh_id = shifted_mesh_id
 
-      allocate(global_chi_shifted(3))
+      allocate(chi_xyz_shifted(3))
       do i = 1, 3
-        call shifted_chi(i)%copy_field(global_chi_shifted(i))
+        call shifted_chi_xyz(i)%copy_field(chi_xyz_shifted(i))
+      end do
+
+      allocate(chi_sph_shifted(3))
+      do i = 1, 3
+        call shifted_chi_sph(i)%copy_field(chi_sph_shifted(i))
       end do
 
       !========== Create shifted function spaces required for setup ==========!
@@ -726,13 +776,13 @@ contains
       curl_shifted       = operator_type( w2_shift_fs, w1_shift_fs )
       broken_div_shifted = operator_type( w3_shift_fs, w2b_shift_fs )
 
-      call invoke( name = "Create shifted mass matrix operators",                        &
-                   compute_derahm_matrices_kernel_type(mm_w0_shifted, mm_w1_shifted,     &
+      call invoke( name = "create_shifted_mass_matrix_operators",                        &
+                   compute_derham_matrices_kernel_type(mm_w0_shifted, mm_w1_shifted,     &
                                                        mm_w2_shifted, mm_w2b_shifted,    &
                                                        mm_w3_shifted, mm_wtheta_shifted, &
                                                        grad_shifted, curl_shifted,       &
                                                        div_shifted, broken_div_shifted,  &
-                                                       shifted_chi, qr) )
+                                                       chi_sph_shifted, panel_id, qr) )
       call invoke( invert_local_operator_kernel_type(mm_w3_inv_shifted, mm_w3_shifted) )
 
       call mm_w3_shifted_diag%initialise( vector_space = w3_shift_fs )
@@ -757,9 +807,11 @@ contains
       !================ Create detj values at W2 dof locations ================!
 
       call detj_at_w2_shifted%initialise( vector_space = w2_shift_fs )
-      call invoke(setval_c(detj_at_w2_shifted,0.0_r_def),                             &
-                  calc_detj_at_w2_kernel_type(detj_at_w2_shifted, shifted_chi),       &
-                  inc_X_divideby_Y(detj_at_w2_shifted, nodal_multiplicity_w2_shifted) )
+      call invoke(                                                                  &
+        setval_c(detj_at_w2_shifted,0.0_r_def),                                     &
+        calc_detj_at_w2_kernel_type(detj_at_w2_shifted, chi_sph_shifted, panel_id), &
+        inc_X_divideby_Y(detj_at_w2_shifted, nodal_multiplicity_w2_shifted)         &
+                  )
 
       !======================= Get areas on shifted mesh ======================
       call dA_at_w2_shifted%initialise( vector_space =                                   &
@@ -767,7 +819,7 @@ contains
                                                                      element_order, W2 ) )
 
       call invoke( setval_c(dA_at_w2_shifted, 0.0_r_def),                   &
-                   calc_dA_at_w2_kernel_type(dA_at_w2_shifted, shifted_chi) )
+                   calc_dA_at_w2_kernel_type(dA_at_w2_shifted, chi_sph_shifted, panel_id) )
 
 
       !============== Now create all double level mesh properties ==============!
@@ -776,9 +828,14 @@ contains
         ! Make shifted mesh id globally available
         global_double_level_mesh_id = double_level_mesh_id
 
-        allocate(global_chi_double_level(3))
+        allocate(chi_xyz_double_level(3))
         do i = 1, 3
-          call double_level_chi(i)%copy_field(global_chi_double_level(i))
+          call double_level_chi_xyz(i)%copy_field(chi_xyz_double_level(i))
+        end do
+
+        allocate(chi_sph_double_level(3))
+        do i = 1, 3
+          call double_level_chi_sph(i)%copy_field(chi_sph_double_level(i))
         end do
 
       !==================== Get areas on double layer mesh ====================!
@@ -787,7 +844,7 @@ contains
                                                element_order, W2 )   )
 
         call invoke( setval_c(dA_at_w2_double_layer, 0.0_r_def), &
-                     calc_dA_at_w2_kernel_type(dA_at_w2_double_layer, double_level_chi) )
+                     calc_dA_at_w2_kernel_type(dA_at_w2_double_layer, chi_sph_double_level, panel_id) )
 
       !======== Create transform matrix stuff for wtheta to shifted W3 ========!
         allocate(mr_to_sh_mass_integrals(4))
@@ -797,7 +854,8 @@ contains
         end do
         call dummy_theta%initialise( vector_space = wtheta_fs )
         call invoke( mr_to_sh_mass_ints_kernel_type( mr_to_sh_mass_integrals, &
-                                                     double_level_chi,        &
+                                                     chi_sph_double_level,    &
+                                                     panel_id,                &
                                                      dummy_theta,             &
                                                      qr                       &
                                                     ) )
@@ -810,7 +868,8 @@ contains
         call dummy_w3_shifted%initialise( vector_space = w3_shift_fs )
         call invoke( w3_to_sh_w3_ints_kernel_type( w3_to_sh_w3_integrals,     &
                                                    dummy_w3_shifted,          &
-                                                   double_level_chi,          &
+                                                   chi_sph_double_level,      &
+                                                   panel_id,                  &
                                                    qr                         &
                                                   ) )
 
@@ -834,9 +893,9 @@ contains
      call w2interior_mask%initialise( vector_space = w2_fs )
      call w2_mask%initialise( vector_space = w2_fs )
 
-     call create_boundary_mask( w2perp_mask, chi )
-     call create_parallel_boundary_mask ( w2parallel_mask, chi )
-     call create_limited_area_mask( w2interior_mask, chi )
+     call create_boundary_mask( w2perp_mask, chi_xyz )
+     call create_parallel_boundary_mask ( w2parallel_mask, chi_xyz )
+     call create_limited_area_mask( w2interior_mask, chi_xyz )
 
      call invoke( &
           ! Add the W2parallel and W2perp masks together
@@ -854,14 +913,14 @@ contains
      call w3blend_mask%initialise( vector_space = w3_fs )
      call wthetablend_mask%initialise( vector_space = wtheta_fs )
 
-     call create_limited_area_mask( w3_mask, chi )
-     call create_limited_area_mask( wtheta_mask, chi )
-     call create_lbc_mask( w2lbc_mask, chi )
-     call create_lbc_mask( w3lbc_mask, chi )
-     call create_lbc_mask( wthetalbc_mask, chi )
-     call create_blend_mask( w2blend_mask, chi )
-     call create_blend_mask( w3blend_mask, chi )
-     call create_blend_mask( wthetablend_mask, chi )
+     call create_limited_area_mask( w3_mask, chi_xyz )
+     call create_limited_area_mask( wtheta_mask, chi_xyz )
+     call create_lbc_mask( w2lbc_mask, chi_xyz )
+     call create_lbc_mask( w3lbc_mask, chi_xyz )
+     call create_lbc_mask( wthetalbc_mask, chi_xyz )
+     call create_blend_mask( w2blend_mask, chi_xyz )
+     call create_blend_mask( w3blend_mask, chi_xyz )
+     call create_blend_mask( wthetablend_mask, chi_xyz )
 
      ! Check that the W2 boundary mask has the correct number of dofs
      call check_w2b_mask( w2boundary_mask )
@@ -889,31 +948,36 @@ contains
          mm_w3_inv(level) = operator_type( w3_fs, w3_fs )
          div(level)       = operator_type( w3_fs, w2_fs )
 
-         call invoke(mg_derahm_mat_kernel_type( mm_w2(level), &
-              mm_w3(level), mm_wtheta(level), div(level), chi_mg(:,level), qr),&
-              invert_local_operator_kernel_type(mm_w3_inv(level), mm_w3(level)) )
+         call invoke(mg_derham_mat_kernel_type( mm_w2(level), mm_w3(level),   &
+                                                mm_wtheta(level), div(level), &
+                                                chi_mg(:,level),              &
+                                                panel_id_mg(level), qr ),     &
+                    invert_local_operator_kernel_type( mm_w3_inv(level),      &
+                                                       mm_w3(level) )         )
 
          ! Compute W2 mass matrix with damping layer
          ! Eventually this may be absorbed into the DeRham complex computations
          ! but until the final form is settled upon it is left separate
          if (dlayer_on) call invoke( compute_dl_matrix_kernel_type( &
-              mm_dl(level), chi_mg(:,level), qr) )
+              mm_dl(level), chi_mg(:,level), panel_id_mg(level), qr) )
 
          call ones%initialise( vector_space = wtheta_fs )
 
          call mt_lumped_inv(level)%initialise( vector_space = wtheta_fs )
          ! Create mt_lumped_inv
-         call invoke(  &
-              setval_c(ones,          1.0_r_def),                        &
-              setval_c(mt_lumped_inv(level), 0.0_r_def),                        &
+         call invoke(                                                                  &
+              setval_c(ones, 1.0_r_def),                                               &
+              setval_c(mt_lumped_inv(level), 0.0_r_def),                               &
               matrix_vector_kernel_type(mt_lumped_inv(level), ones, mm_wtheta(level)), &
               inc_X_powint_n(mt_lumped_inv(level), i_minus_one) )
 
          call w2_normalisation(level)%initialise( vector_space = w2_fs )
          call nodal_multiplicity_w2%initialise( vector_space = w2_fs )
-         call invoke( setval_c(w2_normalisation(level), 0.0_r_def),                 &
-              setval_c(nodal_multiplicity_w2, 2.0_r_def),                   &
-              w2_normalisation_kernel_type(w2_normalisation(level), chi_mg(:,level) ),       &
+         call invoke( setval_c(w2_normalisation(level), 0.0_r_def),             &
+              setval_c(nodal_multiplicity_w2, 2.0_r_def),                       &
+              w2_normalisation_kernel_type(w2_normalisation(level),             &
+                                           chi_mg(:,level),                     &
+                                           panel_id_mg(level) ),                &
               inc_X_divideby_Y(w2_normalisation(level), nodal_multiplicity_w2), &
               inc_X_powint_n(w2_normalisation(level), i_minus_one) )
 
@@ -938,6 +1002,33 @@ contains
     if ( subroutine_timers ) call timer('runtime_constants_alg')
 
   end subroutine create_runtime_constants
+
+
+  !> @brief Function to return a pointer to the spherically-based coordinate array
+  !> @return The coordinate field array
+  function get_coordinates_xyz() result(coords_ptr)
+    implicit none
+    type(field_type), pointer :: coords_ptr(:)
+    coords_ptr => chi_xyz
+
+  end function get_coordinates_xyz
+
+  !> @brief Function to return a pointer to the panel_id
+  !> @return The coordinate field array
+  function get_panel_id_fine() result(panel_id_ptr)
+    implicit none
+    type(field_type), pointer :: panel_id_ptr
+    panel_id_ptr => panel_id_mg(1)
+  end function get_panel_id_fine
+
+  !> @brief Function to return a pointer to the panel_id
+  !> @return The coordinate field array
+  function get_panel_id_mg(level) result(panel_id_ptr)
+    implicit none
+    integer, intent(in) :: level
+    type(field_type), pointer :: panel_id_ptr
+    panel_id_ptr => panel_id_mg(level)
+  end function get_panel_id_mg
 
   !> @brief  Returns pointer to the LBC mask
   !> @param[in] space The function space of the LBC mask
@@ -1051,7 +1142,7 @@ contains
   function get_latitude() result(lat_ptr)
     implicit none
     type(field_type), pointer :: lat_ptr
-    lat_ptr => latitude_w3
+    lat_ptr => lat_w3
   end function get_latitude
 
   !> @brief Returns a pointer to the longitude map
@@ -1059,7 +1150,7 @@ contains
   function get_longitude() result(long_ptr)
     implicit none
     type(field_type), pointer :: long_ptr
-    long_ptr => longitude_w3
+    long_ptr => long_w3
   end function get_longitude
 
   !> @brief Returns a pointer to a height field
@@ -1503,8 +1594,17 @@ contains
     implicit none
     type(field_type), pointer :: coords_ptr(:)
 
-    coords_ptr => global_chi_shifted(:)
+    coords_ptr => chi_sph_shifted(:)
   end function get_coordinates_shifted
+
+  !> @brief Function to return a pointer to the spherically-based coordinate array
+  !> @return The coordinate field array
+  function get_coordinates_xyz_shifted() result(coords_ptr)
+    implicit none
+    type(field_type), pointer :: coords_ptr(:)
+    coords_ptr => chi_xyz_shifted
+
+  end function get_coordinates_xyz_shifted
 
   !> @brief Returns the dA values at shifted W2 dof locations
   !> @return The shifted dA field
@@ -1540,8 +1640,17 @@ contains
     implicit none
     type(field_type), pointer :: coords_ptr(:)
 
-    coords_ptr => global_chi_double_level(:)
+    coords_ptr => chi_sph_double_level(:)
   end function get_coordinates_double_layer
+
+  !> @brief Function to return a pointer to the spherically-based coordinate array
+  !> @return The coordinate field array
+  function get_coordinates_xyz_double_layer() result(coords_ptr)
+    implicit none
+    type(field_type), pointer :: coords_ptr(:)
+    coords_ptr => chi_xyz_double_level
+
+  end function get_coordinates_xyz_double_layer
 
   !> @brief Returns the double level dA values at W2 dof locations
   !> @return The dA field on double level mesh
@@ -1642,8 +1751,11 @@ contains
     if(allocated(w2_normalisation)) then
        deallocate(w2_normalisation)
     end if
-    if (allocated(global_chi_shifted)) then
-      deallocate(global_chi_shifted)
+    if (allocated(chi_sph_shifted)) then
+      deallocate(chi_sph_shifted)
+    end if
+    if (allocated(chi_xyz_shifted)) then
+      deallocate(chi_xyz_shifted)
     end if
     call div_shifted%operator_final()
     call mm_w0_shifted%operator_final()
@@ -1658,7 +1770,8 @@ contains
     call mm_w3_shifted_diag%field_final()
     call mm_w3_shifted_inv_diag%field_final()
     call dA_at_w2_shifted%field_final()
-    if (allocated(global_chi_double_level)) deallocate(global_chi_double_level)
+    if (allocated(chi_sph_double_level)) deallocate(chi_sph_double_level)
+    if (allocated(chi_xyz_double_level)) deallocate(chi_xyz_double_level)
     call dA_at_w2_double_layer%field_final()
     if (allocated(mr_to_sh_mass_integrals)) deallocate(mr_to_sh_mass_integrals)
     if (allocated(w3_to_sh_w3_integrals)) deallocate(w3_to_sh_w3_integrals)

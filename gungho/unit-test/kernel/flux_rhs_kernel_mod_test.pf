@@ -42,9 +42,11 @@ module flux_rhs_kernel_mod_test
       type(field_type)                   :: chi1
       type(field_type)                   :: chi2
       type(field_type)                   :: chi3
+      type(field_type)                   :: panel_id
       type(field_type)                   :: f, rhs
       real(r_def), allocatable           :: basis_u(:,:,:,:), &
                                             basis_f(:,:,:,:), &
+                                            basis_chi(:,:,:,:), &
                                             diff_basis_chi(:,:,:,:)
   contains
     procedure setUp
@@ -59,21 +61,25 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use finite_element_config_mod, only : cellshape_quadrilateral
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
+    use feign_config_mod,          only : feign_finite_element_config, &
+                                          feign_formulation_config
     use mesh_mod,                  only : mesh_type, PLANE_BI_PERIODIC
 
     implicit none
 
     class(flux_rhs_test_type), intent(inout) :: this
 
-    type(field_proxy_type)    :: chi_p(3)
+    type(field_proxy_type)    :: chi_p(3), panel_id_p
     type(field_proxy_type)    :: f_p, rhs_p
     type( quadrature_rule_gaussian_type ) :: quadrature_rule
 
     integer(i_def) :: nqp_h, nqp_v
     integer(i_def) :: ndf_f, dim_f, &
                       ndf_u, dim_u, &
-                      ndf_chi, dim_diff_chi
+                      ndf_chi, dim_chi, &
+                      dim_diff_chi
 
     type(mesh_type) :: unit_test_mesh
     integer(i_def)  :: mesh_id
@@ -82,8 +88,17 @@ contains
 
     ! Initialise YAXT
     call xt_initialize(this%getMpiCommunicator())
-    !Store the MPI communicator for later use
+    ! Store the MPI communicator for later use
     call store_comm(this%getMpiCommunicator())
+
+    call feign_finite_element_config(           &
+             cellshape=cellshape_quadrilateral, &
+             coordinate_order=0_i_def,          &
+             element_order=0_i_def,             &
+             rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+             vorticity_in_w1=.false. )
 
     ! Create top level mesh collection
     mesh_collection = mesh_collection_type()
@@ -114,6 +129,7 @@ contains
     chi_p(3) = this%chi3%get_proxy()
 
     ndf_chi      = chi_p(1)%vspace%get_ndf( )
+    dim_chi = chi_p(1)%vspace%get_dim_space( )
     dim_diff_chi = chi_p(1)%vspace%get_dim_space_diff( )
 
     call this%rhs%initialise( vector_space = this%w2_fs )
@@ -126,8 +142,11 @@ contains
     ndf_f  = f_p%vspace%get_ndf( )
     dim_f  = f_p%vspace%get_dim_space( )
 
+    call this%panel_id%initialise( vector_space = this%w3_fs )
+
     allocate( this%basis_u(dim_u, ndf_u, nqp_h, nqp_v),           &
               this%basis_f(dim_f, ndf_f, nqp_h, nqp_v),           &
+              this%basis_chi(dim_chi, ndf_chi, nqp_h, nqp_v),     &
               this%diff_basis_chi(dim_diff_chi, ndf_chi, nqp_h, nqp_v) )
 
   end subroutine setUp
@@ -135,11 +154,15 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
+    use configuration_mod,        only: final_configuration
+
     implicit none
 
     class(flux_rhs_test_type), intent(inout) :: this
 
-    deallocate( this%basis_u, this%basis_f, this%diff_basis_chi )
+    call final_configuration()
+
+    deallocate( this%basis_u, this%basis_f, this%basis_chi, this%diff_basis_chi )
 
     call function_space_collection%clear()
     call mesh_collection%clear()
@@ -165,6 +188,7 @@ contains
     real(r_def), parameter :: tol = 1.0e-6_r_def
 
     type(field_proxy_type ) :: chi_p(3)
+    type(field_proxy_type ) :: panel_id_p
 
     real(kind=r_def) :: answer(3)
 
@@ -208,6 +232,9 @@ contains
       end do
     end do
 
+    panel_id_p = this%panel_id%get_proxy()
+    panel_id_p%data(:) = 1.0_r_def
+
     ! Test flux rhs
     call u%initialise( vector_space = this%w2_fs )
 
@@ -235,6 +262,8 @@ contains
          this%basis_u, ndf_u, nqp_h, nqp_v, xp, zp)
     call f_p%vspace%compute_basis_function( &
          this%basis_f, ndf_f, nqp_h, nqp_v, xp, zp)
+    call chi_p(1)%vspace%compute_basis_function( &
+         this%basis_chi, ndf_chi, nqp_h, nqp_v, xp, zp)
     call chi_p(1)%vspace%compute_diff_basis_function( &
          this%diff_basis_chi, ndf_chi, nqp_h, nqp_v, xp, zp)
 
@@ -261,6 +290,7 @@ contains
                         chi_p(1)%data, &
                         chi_p(2)%data, &
                         chi_p(3)%data, &
+                        panel_id_p%data, &
                         ndf_u, &
                         undf_u, &
                         map_u, &
@@ -272,7 +302,11 @@ contains
                         ndf_chi, &
                         undf_chi, &
                         map_chi, &
+                        this%basis_chi, &
                         this%diff_basis_chi, &
+                        ndf_f, &
+                        undf_f, &
+                        map_f, &
                         nqp_h, &
                         nqp_v, &
                         wh, &

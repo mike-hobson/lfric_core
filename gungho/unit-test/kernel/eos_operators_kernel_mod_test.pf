@@ -43,9 +43,11 @@ module eos_operators_kernel_mod_test
     type(field_type)                   :: chi1
     type(field_type)                   :: chi2
     type(field_type)                   :: chi3
+    type(field_type)                   :: panel_id
     type(field_type)                   :: rho, exner, theta
     type(operator_type)                :: m3exner, m3rho, p3theta
     real(r_def ), allocatable          :: diff_basis(:,:,:,:), &
+                                          basis_w0(:,:,:,:), &
                                           basis(:,:,:,:), &
                                           basis_wt(:,:,:,:)
   contains
@@ -61,7 +63,8 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use finite_element_config_mod, only : cellshape_quadrilateral
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
     use feign_config_mod,          only : feign_finite_element_config
     use mesh_mod,                  only : mesh_type, PLANE_BI_PERIODIC
 
@@ -69,11 +72,11 @@ contains
 
     class(eos_operators_test_type), intent(inout) :: this
 
-    type(field_proxy_type)    :: chi_p(3)
+    type(field_proxy_type)    :: chi_p(3), panel_id_p
     type(operator_proxy_type) :: mm_p
     type( quadrature_rule_gaussian_type ) :: quadrature_rule
 
-    integer(i_def) :: dim_mm, diff_dim
+    integer(i_def) :: dim_mm, diff_dim, dim_chi
     integer(i_def) :: nqp_h, nqp_v
     integer(i_def) :: ndf, ndf_chi
 
@@ -83,7 +86,7 @@ contains
 
     ! Initialise YAXT
     call xt_initialize(this%getMpiCommunicator())
-    !Store the MPI communicator for later use
+    ! Store the MPI communicator for later use
     call store_comm(this%getMpiCommunicator())
 
     call feign_finite_element_config(           &
@@ -91,6 +94,8 @@ contains
              coordinate_order=0,                &
              element_order=1,                   &
              rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
              vorticity_in_w1=.false. )
 
     ! Create top level function space collection
@@ -122,13 +127,18 @@ contains
     chi_p(2)    = this%chi2%get_proxy()
     chi_p(3)    = this%chi3%get_proxy()
 
+    call this%panel_id%initialise( vector_space = this%w3_fs )
+    panel_id_p  = this%panel_id%get_proxy()
+
     call this%rho%initialise( vector_space = this%w3_fs )
     call this%exner%initialise( vector_space = this%w3_fs )
     call this%theta%initialise( vector_space = this%wt_fs )
 
     diff_dim = chi_p(1)%vspace%get_dim_space_diff( )
+    dim_chi = chi_p(1)%vspace%get_dim_space( )
     ndf_chi  = chi_p(1)%vspace%get_ndf()
     allocate( this%diff_basis( diff_dim, ndf_chi, nqp_h, nqp_v ) )
+    allocate( this%basis_w0( dim_chi, ndf_chi, nqp_h, nqp_v ) )
 
     this%m3rho = operator_type( this%w3_fs, this%w3_fs )
     mm_p    = this%m3rho%get_proxy()
@@ -184,7 +194,7 @@ contains
     real(r_def), parameter :: dx = 6000.0_r_def, &
                               dy = 1000.0_r_def
 
-    type(field_proxy_type)   :: chi_p(3), rho_p, exner_p, theta_p
+    type(field_proxy_type)   :: chi_p(3), rho_p, exner_p, theta_p, panel_id_p
 
     real(kind=r_def) :: answer
 
@@ -202,6 +212,7 @@ contains
     integer(i_def), pointer :: map(:) => null(), &
                                map_t(:) => null(), &
                                map_chi(:) => null()
+
     type(operator_proxy_type) :: m3r_p, m3p_p, p3t_p
 
     real(kind=r_def), pointer :: xp(:,:) => null()
@@ -216,6 +227,7 @@ contains
     chi_p(1) = this%chi1%get_proxy()
     chi_p(2) = this%chi2%get_proxy()
     chi_p(3) = this%chi3%get_proxy()
+    panel_id_p = this%panel_id%get_proxy()
 
     ! Compute coordinates
     cell = 1
@@ -230,6 +242,8 @@ contains
         cell = cell + 1
       end do
     end do
+
+    panel_id_p%data(:) = 1.0_r_def
 
     ! Test mass matrix kernel
     m3r_p  = this%m3rho%get_proxy()
@@ -255,8 +269,11 @@ contains
     ndf_t  = p3t_p%fs_from%get_ndf()
     undf_t = theta_p%vspace%get_undf()
 
-    call chi_p(1)%vspace%compute_diff_basis_function(                    &
+    call chi_p(1)%vspace%compute_diff_basis_function(                     &
          this%diff_basis,ndf_chi, nqp_h, nqp_v, xp, zp )
+
+    call chi_p(1)%vspace%compute_basis_function(                          &
+         this%basis_w0,ndf_chi, nqp_h, nqp_v, xp, zp )
 
     call m3r_p%fs_from%compute_basis_function(                            &
          this%basis, ndf, nqp_h, nqp_v, xp, zp )
@@ -289,6 +306,7 @@ contains
                              chi_p(1)%data,                     &
                              chi_p(2)%data,                     &
                              chi_p(3)%data,                     &
+                             panel_id_p%data,                   &
                              0.5_r_def,                         &
                              ndf,                               &
                              undf,                              &
@@ -301,7 +319,11 @@ contains
                              ndf_chi,                           &
                              undf_chi,                          &
                              map_chi,                           &
+                             this%basis_w0,                     &
                              this%diff_basis,                   &
+                             ndf,                               &
+                             undf,                              &
+                             map,                               &
                              nqp_h,                             &
                              nqp_v,                             &
                              wh,                                &

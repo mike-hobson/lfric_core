@@ -13,8 +13,7 @@ module solver_miniapp_alg_mod
                                              log_scratch_space
   use field_mod,                      only : field_type
   use field_vector_mod,               only : field_vector_type
-  use finite_element_config_mod,      only : element_order, &
-                                             nqp_exact
+  use finite_element_config_mod,      only : nqp_exact
   use fs_continuity_mod,              only : W2
   use function_space_collection_mod,  only : function_space_collection
   use operator_mod,                   only : operator_type
@@ -55,13 +54,15 @@ contains
   !> @param[inout] op the linear operator object
   !> @param[inout] solver the solver object
   !> @param[inout] fv_1  A prognostic field vector object
-  !> @param [in] chi the coordinate field
-  subroutine init_solver( prec, op, solver, fv_1, chi )
+  !> @param[in] chi the coordinate field
+  !> @param[in] panel_id 2D field giving the panel ID for cubed sphere panels
+  subroutine init_solver( prec, op, solver, fv_1, chi, panel_id )
     implicit none
     class( abstract_preconditioner_type ),  allocatable, intent(inout) :: prec
     class( abstract_linear_operator_type ), allocatable, intent(inout) :: op
     class( abstract_iterative_solver_type), allocatable, intent(inout) :: solver
     type( field_type ),                    dimension(3), intent( in )  :: chi
+    type( field_type ),                                  intent( in )  :: panel_id
     type( field_vector_type ), intent(inout) :: fv_1
 
     ! locals
@@ -76,6 +77,10 @@ contains
 
     qr = quadrature_xyoz_type(nqp_exact, quadrature_rule)
 
+    call chi(1)%log_dofs( LOG_LEVEL_INFO, 'chi_1_trunk' )
+    call chi(2)%log_dofs( LOG_LEVEL_INFO, 'chi_2_trunk' )
+    call chi(3)%log_dofs( LOG_LEVEL_INFO, 'chi_3_trunk' )
+
     select case ( preconditioner )
     case ( preconditioner_diagonal )
        allocate( diagonal_preconditioner_type :: prec)
@@ -86,7 +91,7 @@ contains
        ! need to select type because the compiler doesn't know we have just assigned its type.
        select type( op )
        type is ( dense_operator_type)
-          op = dense_operator_type( fv_1, qr, chi )
+          op = dense_operator_type( fv_1, qr, chi, panel_id )
           ! don't forget to call the (copy) constructor on diag
           diag=fv_1
           call op%extract_diagonal(diag)
@@ -196,13 +201,14 @@ contains
 
   !> @details An algorithm for developing miniapps
   !> @param[inout] fv_1  A prognostic field vector object
-  subroutine solver_miniapp_alg(fv_1, chi)
+  subroutine solver_miniapp_alg(fv_1, chi, panel_id)
 
     implicit none
 
     ! Prognostic fields
     type( field_vector_type ),        intent( inout ) :: fv_1
     type( field_type ), dimension(3), intent( in )    :: chi
+    type( field_type ),               intent( in )    :: panel_id
 
     type( field_vector_type )   :: rhs, ans
 
@@ -211,7 +217,7 @@ contains
     class( abstract_iterative_solver_type), allocatable :: solver
 
     call log_event( "solver miniapp: running algorithm", LOG_LEVEL_INFO )
-    call init_solver( prec, op, solver, fv_1, chi )
+    call init_solver( prec, op, solver, fv_1, chi, panel_id )
 
     ! !choose a RHS use the copy constructor
     rhs = fv_1

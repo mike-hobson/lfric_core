@@ -63,15 +63,20 @@ module io_dev_model_mod
   !>                              (not XIOS' communicator)
   !> @param[in,out] mesh_id      The identifier given to the current 3d mesh
   !> @param[in,out] twod_mesh_id The identifier given to the current 2d mesh
-  !> @param[in,out] chi          A size 3 array of fields holding the
-  !>                              coordinates of the mesh
+  !> @param[in,out] chi_xyz      A size 3 array of fields holding the
+  !>                             (X,Y,Z) coordinates of the mesh
+  !> @param[in,out] chi_sph      A size 3 array of fields holding the
+  !>                             spherical coordinates of the mesh
+  !> @param[in,out] panel_id     A 2D field holding the cubed sphere panel id
   !> @param[out]    clock        Model time
   subroutine initialise_infrastructure( filename,        &
                                         program_name,    &
                                         communicator,    &
                                         mesh_id,         &
                                         twod_mesh_id,    &
-                                        chi,             &
+                                        chi_xyz,         &
+                                        chi_sph,         &
+                                        panel_id,        &
                                         clock )
 
     use logging_config_mod, only: run_log_level,          &
@@ -89,7 +94,9 @@ module io_dev_model_mod
     character(*),      intent(in)               :: program_name
     integer(i_native), intent(in)               :: communicator
     integer(i_def),    intent(inout)            :: mesh_id, twod_mesh_id
-    type(field_type),  intent(inout)            :: chi(3)
+    type(field_type),  intent(inout)            :: chi_xyz(3)
+    type(field_type),  intent(inout)            :: chi_sph(3)
+    type(field_type),  intent(inout)            :: panel_id
     class(clock_type), intent(out), allocatable :: clock
 
     ! Local variables
@@ -150,7 +157,7 @@ module io_dev_model_mod
                     twod_mesh_id=twod_mesh_id )
 
     ! Create FEM specifics (function spaces and chi field)
-    call init_fem( mesh_id, chi )
+    call init_fem( mesh_id, chi_xyz, chi_sph, panel_id )
 
 
     ! Full global meshes no longer required, so reclaim
@@ -168,7 +175,7 @@ module io_dev_model_mod
                           clock,           &
                           mesh_id,         &
                           twod_mesh_id,    &
-                          chi,             &
+                          chi_xyz,         &
                           files_list )
 
 

@@ -12,9 +12,10 @@ module compute_dl_matrix_kernel_mod_test
   use damping_layer_config_mod, only : dl_base, dl_str
   use extrusion_config_mod,     only : method, domain_top, number_of_layers
   use get_unit_test_m3x3_dofmap_mod, &
-    only : get_w0_m3x3_dofmap
+    only : get_w0_m3x3_dofmap, get_w3_m3x3_dofmap
   use get_unit_test_m3x3_q3x3x3_sizes_mod, &
-    only : get_w0_m3x3_q3x3x3_size, get_w2_m3x3_q3x3x3_size
+    only : get_w0_m3x3_q3x3x3_size, get_w2_m3x3_q3x3x3_size, &
+           get_w3_m3x3_q3x3x3_size
   use get_unit_test_q3x3x3_basis_mod, &
     only : get_w0_q3x3x3_basis, get_w0_q3x3x3_diff_basis, &
            get_w2_q3x3x3_basis
@@ -56,7 +57,8 @@ contains
     use timestepping_config_mod,   only: method_semi_implicit, &
                                          runge_kutta_method_ssp3
     use extrusion_config_mod,      only: method_uniform, stretching_method_linear
-    use finite_element_config_mod, only: cellshape_quadrilateral
+    use finite_element_config_mod, only: cellshape_quadrilateral, &
+                                         spherical_coord_system_xyz
 
     implicit none
 
@@ -89,6 +91,9 @@ contains
              coordinate_order=0_i_def,          &
              element_order=0_i_def,             &
              rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+
              vorticity_in_w1=.false. )
 
     call feign_planet_config( cp=1000.0_r_def,        &
@@ -141,17 +146,17 @@ contains
     ! Required for calling mass matrix kernel
 
     integer(i_def) :: ndf_w0, undf_w0
-    integer(i_def) :: ndf_w2
+    integer(i_def) :: ndf_w2, ndf_pid, undf_pid
     integer(i_def) :: ncells, ncell_3d
     integer(i_def) :: nqp_h, nqp_v
     integer(i_def) :: unused
 
-    integer(i_def), allocatable :: map_w0(:,:)
+    integer(i_def), allocatable :: map_w0(:,:), map_pid(:,:)
 
     real(r_def), allocatable :: basis_w0(:,:,:,:), diff_basis_w0(:,:,:,:)
     real(r_def), allocatable :: basis_w2(:,:,:,:)
     real(r_def), allocatable :: wh(:), wv(:)
-    real(r_def), allocatable :: chi1(:), chi2(:), chi3(:)
+    real(r_def), allocatable :: chi1(:), chi2(:), chi3(:), panel_id(:)
     real(r_def), allocatable :: local_stencil(:,:,:)
 
     real(r_def) :: answer(6,6)
@@ -166,6 +171,10 @@ contains
                                   unused, unused, &
                                   unused, unused, nlayers=nlayers)
     call get_w2_q3x3x3_basis( basis_w2 )
+    call get_w3_m3x3_q3x3x3_size( ndf_pid, undf_pid, ncells, &
+                                  unused, unused, &
+                                  nqp_h, nqp_v, nlayers=1)
+    call get_w3_m3x3_dofmap( map_pid, 1 )
     call get_gaussian_q3x3x3_quadrature_weights_xy( wh )
     call get_gaussian_q3x3x3_quadrature_weights_z( wv )
 
@@ -173,6 +182,9 @@ contains
     allocate(chi1(undf_w0))
     allocate(chi2(undf_w0))
     allocate(chi3(undf_w0))
+    allocate(panel_id(undf_pid))
+
+    panel_id(:) = 1.0_r_def
 
     call get_w0_3x3x3_field(chi1, chi2, chi3, dx, dy, dz, &
                             map_w0, nlayers)
@@ -189,6 +201,7 @@ contains
                                  chi1,            &
                                  chi2,            &
                                  chi3,            &
+                                 panel_id,        &
                                  ndf_w2,          &
                                  basis_w2,        &
                                  ndf_w0,          &
@@ -196,6 +209,9 @@ contains
                                  map_w0(:, cell), &
                                  basis_w0,        &
                                  diff_basis_w0,   &
+                                 ndf_pid,         &
+                                 undf_pid,        &
+                                 map_pid,         &
                                  nqp_h,           &
                                  nqp_v,           &
                                  wh,              &
@@ -212,11 +228,11 @@ contains
     @assertEqual( answer, local_stencil(:, :, 1 ), tol )
 
     deallocate( local_stencil )
-    deallocate( chi3, chi2, chi1 )
+    deallocate( chi3, chi2, chi1, panel_id )
     deallocate( wv, wh )
     deallocate( basis_w2 )
     deallocate( diff_basis_w0, basis_w0 )
-    deallocate( map_w0 )
+    deallocate( map_w0, map_pid )
 
   end subroutine test_all
 

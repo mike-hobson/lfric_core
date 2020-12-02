@@ -29,7 +29,9 @@ module calc_dep_pts_alg_mod
                                                invoke_extract_xy,              &
                                                invoke_cosmic_departure_wind,   &
                                                invoke_correct_cosmic_wind
-  use runtime_constants_mod,             only: get_cell_orientation
+  use runtime_constants_mod,             only: get_cell_orientation, &
+                                               get_coordinates,      &
+                                               get_panel_id
   use log_mod,                           only: log_event,                      &
                                                log_scratch_space,              &
                                                LOG_LEVEL_INFO
@@ -49,7 +51,6 @@ contains
   !> @param[in]     wind_n            Wind field at timestep n
   !> @param[in]     wind_np1          Wind field at timestep n+1
   !> @param[in]     detj_at_w2        Det(J) at W2 dofs
-  !> @param[in]     chi               Coordinate field
   !> @param[in]     cell_orientation  Orientation of halo cells
   subroutine calc_dep_pts( dep_pts_x,       &
                            dep_pts_y,       &
@@ -58,7 +59,6 @@ contains
                            wind_n,          &
                            wind_np1,        &
                            detj_at_w2,      &
-                           chi,             &
                            cell_orientation )
 
     implicit none
@@ -70,7 +70,6 @@ contains
     type( field_type ), intent(in)    :: wind_n
     type( field_type ), intent(in)    :: wind_np1
     type( field_type ), intent(in)    :: detj_at_w2
-    type( field_type ), intent(in)    :: chi(3)
     type( field_type ), intent(in)    :: cell_orientation
 
     type( field_type ) :: u_x_fem_n, u_y_fem_n, u_x_fem_np1, u_y_fem_np1
@@ -81,6 +80,9 @@ contains
     type( field_type ) :: corrected_dep_wind_x_np1, corrected_dep_wind_y_np1
     type( field_type ) :: divergence_x, divergence_y, divergence_z
 
+    type( field_type ), pointer :: chi_sph(:) => null()
+    type( field_type ), pointer :: panel_id => null()
+
     type( function_space_type ), pointer :: w2_fs => null()
     type( function_space_type ), pointer :: w3_fs => null()
 
@@ -89,6 +91,9 @@ contains
     w2_fs => dep_pts_x%get_function_space()
     mesh_id = wind_n%get_mesh_id()
     w3_fs   => function_space_collection%get_fs( mesh_id, element_order, W3 )
+
+    chi_sph => get_coordinates()
+    panel_id => get_panel_id()
 
     call u_x_fem_n%initialise( vector_space = w2_fs )
     call u_y_fem_n%initialise( vector_space = w2_fs )
@@ -116,21 +121,21 @@ contains
     ! points in the vertical.
     ! *_n and *_np1 denotes fields at timestep n and timestep n+1 with density known
     ! at timestep n.
-    call invoke( setval_c( dep_pts_x, LARGE_REAL_NEGATIVE ),                   &
-                 setval_c( dep_pts_y, LARGE_REAL_NEGATIVE ),                   &
-                 setval_c( dep_pts_z, LARGE_REAL_NEGATIVE ),                   &
-                 setval_c( departure_wind_n, LARGE_REAL_NEGATIVE ),            &
-                 setval_c( departure_wind_np1, LARGE_REAL_NEGATIVE ),          &
-                 setval_c( u_x_fem_n, LARGE_REAL_NEGATIVE ),                   &
-                 setval_c( u_y_fem_n, LARGE_REAL_NEGATIVE ),                   &
-                 setval_c( u_x_fem_np1, LARGE_REAL_NEGATIVE ),                 &
-                 setval_c( u_y_fem_np1, LARGE_REAL_NEGATIVE ),                 &
-                 calc_departure_wind_kernel_type( departure_wind_n, wind_n,    &
-                                                  chi ),      &
-                 calc_departure_wind_kernel_type( departure_wind_np1,          &
-                                                  wind_np1, chi ),             &
-                 vertical_trapezoidal_kernel_type( dep_pts_z,                  &
-                                                   departure_wind_n,           &
+    call invoke( setval_c( dep_pts_x, LARGE_REAL_NEGATIVE ),                    &
+                 setval_c( dep_pts_y, LARGE_REAL_NEGATIVE ),                    &
+                 setval_c( dep_pts_z, LARGE_REAL_NEGATIVE ),                    &
+                 setval_c( departure_wind_n, LARGE_REAL_NEGATIVE ),             &
+                 setval_c( departure_wind_np1, LARGE_REAL_NEGATIVE ),           &
+                 setval_c( u_x_fem_n, LARGE_REAL_NEGATIVE ),                    &
+                 setval_c( u_y_fem_n, LARGE_REAL_NEGATIVE ),                    &
+                 setval_c( u_x_fem_np1, LARGE_REAL_NEGATIVE ),                  &
+                 setval_c( u_y_fem_np1, LARGE_REAL_NEGATIVE ),                  &
+                 calc_departure_wind_kernel_type( departure_wind_n, wind_n,     &
+                                                  chi_sph, panel_id ),          &
+                 calc_departure_wind_kernel_type( departure_wind_np1, wind_np1, &
+                                                  chi_sph, panel_id ),          &
+                 vertical_trapezoidal_kernel_type( dep_pts_z,                   &
+                                                   departure_wind_n,            &
                                                    departure_wind_np1 )  )
 
     ! Calculate horizontal departure points.

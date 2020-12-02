@@ -20,9 +20,13 @@ module assign_orography_field_mod
                                              orog_init_option_none
   use base_mesh_config_mod,           only : geometry, &
                                              geometry_spherical
-  use finite_element_config_mod,      only : coordinate_order
+  use finite_element_config_mod,      only : coordinate_order,           &
+                                             spherical_coord_system,     &
+                                             spherical_coord_order,      &
+                                             spherical_coord_system_xyz, &
+                                             spherical_coord_system_abh
   use mesh_collection_mod,            only : mesh_collection
-  use coord_transform_mod,            only : xyz2llr, llr2xyz
+  use coord_transform_mod,            only : xyz2llr, llr2xyz, alphabetar2llr
   use orography_helper_functions_mod, only : z2eta_linear, &
                                              eta2z_linear, &
                                              eta2z_smooth
@@ -43,23 +47,28 @@ module assign_orography_field_mod
 
   public :: assign_orography_field
   ! These are made public only for unit-testing
-  public :: analytic_orography_spherical
+  public :: analytic_orography_spherical_xyz
+  public :: analytic_orography_spherical_abh
   public :: analytic_orography_cartesian
-  public :: ancil_orography_spherical
+  public :: ancil_orography_spherical_xyz
+  public :: ancil_orography_spherical_abh
   public :: ancil_orography_cartesian
 
   interface
 
-    subroutine analytic_orography_interface(nlayers, ndf, undf, map,    &
-                                            domain_surface, domain_top, &
-                                            chi_1, chi_2, chi_3)
+    subroutine analytic_orography_interface(nlayers,                     &
+                                            ndf_chi, undf_chi, map_chi,  &
+                                            ndf_pid, undf_pid, map_pid,  &
+                                            domain_surface, domain_top,  &
+                                            chi_1, chi_2, chi_3, panel_id)
       import :: r_def, i_def
       implicit none
-      integer(kind=i_def), intent(in) :: nlayers, undf
-      integer(kind=i_def), intent(in) :: ndf
-      integer(kind=i_def), intent(in) :: map(ndf)
-      real(kind=r_def), intent(in)    :: domain_surface, domain_top
-      real(kind=r_def), intent(inout) :: chi_1(undf), chi_2(undf), chi_3(undf)
+      integer(kind=i_def), intent(in) :: nlayers, undf_chi, undf_pid
+      integer(kind=i_def), intent(in) :: ndf_chi, ndf_pid
+      integer(kind=i_def), intent(in) :: map_chi(ndf_chi), map_pid(ndf_pid)
+      real(kind=r_def),    intent(in) :: domain_surface, domain_top
+      real(kind=r_def), intent(inout) :: chi_1(undf_chi), chi_2(undf_chi), chi_3(undf_chi)
+      real(kind=r_def),    intent(in) :: panel_id(undf_pid)
     end subroutine analytic_orography_interface
 
   end interface
@@ -68,21 +77,26 @@ module assign_orography_field_mod
 
     subroutine ancil_orography_interface(nlayers,                    &
                                          chi_1, chi_2, chi_3,        &
+                                         panel_id,                   &
                                          surface_altitude,           &
                                          domain_surface, domain_top, &
                                          ndf_chi, undf_chi,          &
                                          map_chi,                    &
+                                         ndf_pid, undf_pid,          &
+                                         map_pid,                    &
                                          ndf, undf,                  &
                                          map, basis                  &
                                          )
       import :: r_def, i_def
       implicit none
-      integer(kind=i_def), intent(in) :: nlayers, ndf, ndf_chi
-      integer(kind=i_def), intent(in) :: undf, undf_chi
+      integer(kind=i_def), intent(in) :: nlayers, ndf, ndf_chi, ndf_pid
+      integer(kind=i_def), intent(in) :: undf, undf_chi, undf_pid
       integer(kind=i_def), dimension(ndf),     intent(in)   :: map
       integer(kind=i_def), dimension(ndf_chi), intent(in)   :: map_chi
+      integer(kind=i_def), dimension(ndf_pid), intent(in)   :: map_pid
       real(kind=r_def), intent(in), dimension(ndf, ndf_chi) :: basis
       real(kind=r_def), dimension(undf_chi), intent(inout)  :: chi_1, chi_2, chi_3
+      real(kind=r_def), dimension(undf_pid), intent(in)     :: panel_id
       real(kind=r_def), dimension(undf),     intent(in)     :: surface_altitude
       real(kind=r_def), intent(in)                          :: domain_surface, domain_top
     end subroutine ancil_orography_interface
@@ -102,11 +116,15 @@ contains
   !> routines calculate analytic orography from horizontal coordinates or else
   !> use the surface_altitude field and then update the vertical coordinate.
   !>
-  !> @param[in,out] chi     Model coordinate array of size 3 (x,y,z) of fields
-  !> @param[in]     mesh_id Id of mesh on which this field is attached
+  !> @param[in,out] chi      Model coordinate array of size 3 (x,y,z) of fields
+  !> @param[in]     panel_id Field giving the ID of mesh panels
+  !> @param[in]     mesh_id  Id of mesh on which this field is attached
   !> @param[in]     surface_altitude Field containing the surface altitude
+  !> @param[in]     spherical_coords Logical labelling whether this is the
+  !>                                 spherical coordinate field
   !=============================================================================
-  subroutine assign_orography_field(chi, mesh_id, surface_altitude)
+  subroutine assign_orography_field(chi, panel_id, mesh_id,           &
+                                    surface_altitude, spherical_coords)
 
     use field_mod,                      only : field_type, field_proxy_type
     use mesh_mod,                       only : mesh_type
@@ -120,21 +138,28 @@ contains
     implicit none
 
     ! Arguments
-    type( field_type ), intent( inout ) :: chi(3)
-    integer(kind=i_def),intent(in)      :: mesh_id
+    type( field_type ),  intent( inout )   :: chi(3)
+    type( field_type ),  intent( in )      :: panel_id
+    integer(kind=i_def), intent( in )      :: mesh_id
     ! we keep the surface_altitude as an optional argument since it is
     ! not needed for miniapps that only want analytic orography
-    type( field_type ), intent( in ), optional    :: surface_altitude
+    type( field_type ),  intent( in ), optional :: surface_altitude
+    logical(kind=l_def), intent( in ), optional :: spherical_coords
+
     ! Local variables
     type( field_proxy_type )     :: chi_proxy(3)
+    type( field_proxy_type )     :: panel_id_proxy
     type( mesh_type), pointer    :: mesh => null()
     type( domain_size_type )     :: domain_size
     real(kind=r_def)             :: domain_top, domain_surface
     integer(kind=i_def)          :: cell
-    integer(kind=i_def)          :: undf, ndf, nlayers
+    integer(kind=i_def)          :: undf_chi, ndf_chi, nlayers
+    integer(kind=i_def)          :: undf_pid, ndf_pid
     integer(kind=i_def)          :: undf_sf, ndf_sf
-    integer(kind=i_def), pointer :: map(:) => null()
-    integer(kind=i_def), pointer :: map_sf(:) => null()
+    integer(kind=i_def), pointer :: map_chi(:,:) => null()
+    integer(kind=i_def), pointer :: map_pid(:,:) => null()
+    integer(kind=i_def), pointer :: map_sf(:,:) => null()
+    logical(kind=l_def)          :: spherical_coords_flag
 
     integer(kind=i_def) :: sf_mesh_id, surface_order
 
@@ -155,6 +180,10 @@ contains
          "Orography assignment is currently only available with coordinate_order > 0.", &
          LOG_LEVEL_ERROR )
     end if
+
+    ! Set spherical coordinates flag
+    spherical_coords_flag = .false.
+    if (present(spherical_coords)) spherical_coords_flag = spherical_coords
 
     ! Get mesh object
     mesh => mesh_collection%get_mesh(mesh_id)
@@ -177,50 +206,77 @@ contains
       call log_event( "assign_orography_field: "// &
          "Flat surface requested.", LOG_LEVEL_INFO )
 
-    elseif  (orog_init_option==orog_init_option_analytic)then
+    else if (orog_init_option==orog_init_option_analytic) then
 
       call log_event( "assign_orography_field: "// &
          "Assigning analytic orography.", LOG_LEVEL_INFO )
 
       ! Point to appropriate procedure to assign orography
       if ( geometry == geometry_spherical ) then
-        analytic_orography => analytic_orography_spherical
+        if ( (spherical_coord_system == spherical_coord_system_xyz) .or. &
+              ( .not. spherical_coords_flag ) ) then
+          analytic_orography => analytic_orography_spherical_xyz
+        else if ( spherical_coord_system == spherical_coord_system_abh ) then
+          analytic_orography => analytic_orography_spherical_abh
+        else
+          call log_event("Error: this spherical coordinate system " // &
+                         "is not implemented with analytic orography", &
+                         LOG_LEVEL_ERROR)
+        end if
       else
         analytic_orography => analytic_orography_cartesian
       end if
 
       ! Break encapsulation and get the proxy
-      chi_proxy(1) = chi(1)%get_proxy()
-      chi_proxy(2) = chi(2)%get_proxy()
-      chi_proxy(3) = chi(3)%get_proxy()
-      undf    = chi_proxy(1)%vspace%get_undf()
-      ndf     = chi_proxy(1)%vspace%get_ndf( )
-      nlayers = chi_proxy(1)%vspace%get_nlayers()
+      chi_proxy(1)   = chi(1)%get_proxy()
+      chi_proxy(2)   = chi(2)%get_proxy()
+      chi_proxy(3)   = chi(3)%get_proxy()
+      undf_chi       = chi_proxy(1)%vspace%get_undf()
+      ndf_chi        = chi_proxy(1)%vspace%get_ndf()
+      panel_id_proxy = panel_id%get_proxy()
+      undf_pid       = panel_id_proxy%vspace%get_undf()
+      ndf_pid        = panel_id_proxy%vspace%get_ndf()
+      nlayers        = chi_proxy(1)%vspace%get_nlayers()
+
+      map_chi => chi_proxy(1)%vspace%get_whole_dofmap()
+      map_pid => panel_id_proxy%vspace%get_whole_dofmap()
 
       ! Call column procedure
       do cell = 1,chi_proxy(1)%vspace%get_ncell()
-        map => chi_proxy(1)%vspace%get_cell_dofmap( cell )
 
-        call analytic_orography(nlayers,         &
-                              ndf,               &
-                              undf,              &
-                              map,               &
-                              domain_surface,    &
-                              domain_top,        &
-                              chi_proxy(1)%data, &
-                              chi_proxy(2)%data, &
-                              chi_proxy(3)%data )
+        call analytic_orography(nlayers,           &
+                                ndf_chi,           &
+                                undf_chi,          &
+                                map_chi(:,cell),   &
+                                ndf_pid,           &
+                                undf_pid,          &
+                                map_pid(:,cell),   &
+                                domain_surface,    &
+                                domain_top,        &
+                                chi_proxy(1)%data, &
+                                chi_proxy(2)%data, &
+                                chi_proxy(3)%data, &
+                                panel_id_proxy%data )
       end do
 
 
-    elseif  (orog_init_option==orog_init_option_ancil)then
+    else if  (orog_init_option==orog_init_option_ancil)then
 
       call log_event( "assign_orography_field: "// &
          "Assigning orography from surface_altitude field.", LOG_LEVEL_INFO )
 
       ! Point to appropriate procedure to assign orography
       if ( geometry == geometry_spherical ) then
-        ancil_orography => ancil_orography_spherical
+        if ( (spherical_coord_system == spherical_coord_system_xyz) .or. &
+              ( .not. spherical_coords_flag ) ) then
+          ancil_orography => ancil_orography_spherical_xyz
+        else if ( spherical_coord_system == spherical_coord_system_abh) then
+          ancil_orography => ancil_orography_spherical_abh
+        else
+          call log_event("Error: this spherical coordinate system " //  &
+                         "is not implemented with ancillary orography", &
+                         LOG_LEVEL_ERROR)
+        end if
       else
         ancil_orography => ancil_orography_cartesian
       end if
@@ -238,21 +294,28 @@ contains
       chi_proxy(1) = chi(1)%get_proxy()
       chi_proxy(2) = chi(2)%get_proxy()
       chi_proxy(3) = chi(3)%get_proxy()
+      panel_id_proxy = panel_id%get_proxy()
       sfc_alt_proxy = surface_altitude_w0%get_proxy()
 
-      undf    = chi_proxy(1)%vspace%get_undf()
-      ndf     = chi_proxy(1)%vspace%get_ndf( )
-      nlayers = chi_proxy(1)%vspace%get_nlayers()
-      undf_sf = sfc_alt_proxy%vspace%get_undf()
-      ndf_sf  = sfc_alt_proxy%vspace%get_ndf( )
+      undf_chi = chi_proxy(1)%vspace%get_undf()
+      ndf_chi  = chi_proxy(1)%vspace%get_ndf()
+      undf_pid = panel_id_proxy%vspace%get_undf()
+      ndf_pid  = panel_id_proxy%vspace%get_ndf()
+      nlayers  = chi_proxy(1)%vspace%get_nlayers()
+      undf_sf  = sfc_alt_proxy%vspace%get_undf()
+      ndf_sf   = sfc_alt_proxy%vspace%get_ndf()
+
+      map_chi => chi_proxy(1)%vspace%get_whole_dofmap()
+      map_sf => sfc_alt_proxy%vspace%get_whole_dofmap()
+      map_pid => panel_id_proxy%vspace%get_whole_dofmap()
 
       dim_sf = sfc_alt_proxy%vspace%get_dim_space()
       nodes => chi_proxy(1)%vspace%get_nodes()
-      allocate(basis_sf_on_chi(dim_sf, ndf_sf, ndf))
+      allocate(basis_sf_on_chi(dim_sf, ndf_sf, ndf_chi))
       !
       ! Compute basis/diff-basis arrays
       !
-      do df=1,ndf
+      do df=1,ndf_chi
         do df_sf=1,ndf_sf
           basis_sf_on_chi(:,df_sf,df) = &
              sfc_alt_proxy%vspace%call_function(BASIS,df_sf,nodes(:,df))
@@ -261,19 +324,21 @@ contains
 
       ! Call column procedure
       do cell = 1,chi_proxy(1)%vspace%get_ncell()
-        map => chi_proxy(1)%vspace%get_cell_dofmap( cell )
-        map_sf => sfc_alt_proxy%vspace%get_cell_dofmap( cell )
 
         call ancil_orography(nlayers,                    &
                              chi_proxy(1)%data,          &
                              chi_proxy(2)%data,          &
                              chi_proxy(3)%data,          &
+                             panel_id_proxy%data,        &
                              sfc_alt_proxy%data,         &
                              domain_surface, domain_top, &
-                             ndf, undf,                  &
-                             map,                        &
+                             ndf_chi, undf_chi,          &
+                             map_chi(:,cell),            &
+                             ndf_pid, undf_pid,          &
+                             map_pid(:,cell),            &
                              ndf_sf, undf_sf,            &
-                             map_sf, basis_sf_on_chi)
+                             map_sf(:,cell),             &
+                             basis_sf_on_chi)
       end do
 
       call surface_altitude%log_minmax(LOG_LEVEL_INFO, 'srf_alt')
@@ -298,47 +363,54 @@ contains
   !>          (x,y,z) form.
   !>
   !> @param[in]     nlayers        Number of vertical layers
-  !> @param[in]     ndf            Array size and loop bound for map
-  !> @param[in]     undf           Column coordinates' array size and loop bound
-  !> @param[in]     map            Indirection map
+  !> @param[in]     ndf_chi        Array size and loop bound for map_chi
+  !> @param[in]     undf_chi       Column coordinates' array size and loop bound
+  !> @param[in]     map_chi        Indirection map for coordinate field
+  !> @param[in]     ndf_pid        Array size and loop bound for map_pid
+  !> @param[in]     undf_pid       Panel ID array size and loop bound
+  !> @param[in]     map_pid        Indirection map for panel_id
   !> @param[in]     domain_surface Physical height of flat domain surface (m)
   !> @param[in]     domain_top     Physical height of domain top (m)
-  !> @param[in,out] chi_1          Size undf x coord
-  !> @param[in,out] chi_2          Size undf y coord
-  !> @param[in,out] chi_3          Size undf z coord
+  !> @param[in,out] chi_1          1st coordinate field in Wchi
+  !> @param[in,out] chi_2          2nd coordinate field in Wchi
+  !> @param[in,out] chi_3          3rd coordinate field in Wchi
+  !> @param[in]     panel_id       Field giving the ID for mesh panels
   !=============================================================================
-  subroutine analytic_orography_spherical(nlayers, ndf, undf, map,    &
-                                          domain_surface, domain_top, &
-                                          chi_1, chi_2, chi_3)
+  subroutine analytic_orography_spherical_xyz(nlayers, ndf_chi, undf_chi, map_chi, &
+                                              ndf_pid, undf_pid, map_pid,          &
+                                              domain_surface, domain_top,          &
+                                              chi_1, chi_2, chi_3, panel_id)
 
     implicit none
 
     ! Arguments
-    integer(kind=i_def), intent(in)    :: nlayers, undf
-    integer(kind=i_def), intent(in)    :: ndf
-    integer(kind=i_def), intent(in)    :: map(ndf)
+    integer(kind=i_def), intent(in)    :: nlayers, undf_chi, undf_pid
+    integer(kind=i_def), intent(in)    :: ndf_chi, ndf_pid
+    integer(kind=i_def), intent(in)    :: map_chi(ndf_chi)
+    integer(kind=i_def), intent(in)    :: map_pid(ndf_pid)
     real(kind=r_def),    intent(in)    :: domain_surface, domain_top
-    real(kind=r_def),    intent(inout) :: chi_1(undf), chi_2(undf), chi_3(undf)
+    real(kind=r_def),    intent(inout) :: chi_1(undf_chi), chi_2(undf_chi), chi_3(undf_chi)
+    real(kind=r_def),    intent(in)    :: panel_id(undf_pid)
     ! Internal variables
     integer(kind=i_def) :: k, df, dfk
     real(kind=r_def)    :: chi_3_r
-    real(kind=r_def)    :: chi_oro, surface_height, domain_depth
+    real(kind=r_def)    :: surface_height, domain_depth
     real(kind=r_def)    :: eta
     real(kind=r_def)    :: longitude, latitude, r
 
     domain_depth = domain_top - domain_surface
 
     ! Calculate orography and update chi_3
-    do df = 1, ndf
+    do df = 1, ndf_chi
       do k = 0, nlayers-1
-        dfk = map(df)+k
+        dfk = map_chi(df)+k
 
         ! Model coordinates for spherical domain are in (x,y,z) form so they need
         ! to be converted to (long,lat,r) first
         call xyz2llr(chi_1(dfk), chi_2(dfk), chi_3(dfk), longitude, latitude, r)
 
         ! Calculate surface height for each DoF using selected analytic orography
-        chi_oro = orography_profile%analytic_orography(longitude, latitude)
+        surface_height = orography_profile%analytic_orography(longitude, latitude)
 
         ! Calculate nondimensional coordinate from current height coordinate
         ! (chi_3) with flat domain_surface
@@ -346,7 +418,7 @@ contains
 
         select case(stretching_method)
         case(stretching_method_linear)
-          chi_3_r = eta2z_linear(eta, domain_surface + chi_oro, domain_top)
+          chi_3_r = eta2z_linear(eta, domain_surface + surface_height, domain_top)
         case default
           chi_3_r = domain_surface + &
              eta2z_smooth(eta, surface_height, domain_depth, stretching_height)
@@ -355,11 +427,90 @@ contains
         ! Convert spherical coordinates back to model (x,y,z) form
         call llr2xyz(longitude, latitude, chi_3_r, &
                      chi_1(dfk), chi_2(dfk), chi_3(dfk))
+
       end do
     end do
 
     return
-  end subroutine analytic_orography_spherical
+  end subroutine analytic_orography_spherical_xyz
+
+  !=============================================================================
+  !> @brief Updates spherical vertical coordinate for a single column using
+  !>        selected analytic orography.
+  !>
+  !> @details Calculates analytic orography from chi_1 and chi_2 horizontal
+  !>          coordinates and then updates chi_3. This works directly on the
+  !>          cubed sphere (alpha,beta,r) coordinates.
+  !>
+  !> @param[in]     nlayers        Number of vertical layers
+  !> @param[in]     ndf_chi        Array size and loop bound for map_chi
+  !> @param[in]     undf_chi       Column coordinates' array size and loop bound
+  !> @param[in]     map_chi        Indirection map for coordinate field
+  !> @param[in]     ndf_pid        Array size and loop bound for map_pid
+  !> @param[in]     undf_pid       Panel ID array size and loop bound
+  !> @param[in]     map_pid         Indirection map for panel_id
+  !> @param[in]     domain_surface Physical height of flat domain surface (m)
+  !> @param[in]     domain_top     Physical height of domain top (m)
+  !> @param[in,out] chi_1          1st coordinate field in Wchi
+  !> @param[in,out] chi_2          2nd coordinate field in Wchi
+  !> @param[in,out] chi_3          3rd coordinate field in Wchi
+  !> @param[in]     panel_id       Field giving the ID for mesh panels
+  !=============================================================================
+  subroutine analytic_orography_spherical_abh(nlayers, ndf_chi, undf_chi, map_chi, &
+                                              ndf_pid, undf_pid, map_pid,          &
+                                              domain_surface, domain_top,          &
+                                              chi_1, chi_2, chi_3, panel_id)
+
+    implicit none
+
+    ! Arguments
+    integer(kind=i_def), intent(in)    :: nlayers, undf_chi, undf_pid
+    integer(kind=i_def), intent(in)    :: ndf_chi, ndf_pid
+    integer(kind=i_def), intent(in)    :: map_chi(ndf_chi)
+    integer(kind=i_def), intent(in)    :: map_pid(ndf_pid)
+    real(kind=r_def),    intent(in)    :: domain_surface, domain_top
+    real(kind=r_def),    intent(inout) :: chi_1(undf_chi), chi_2(undf_chi), chi_3(undf_chi)
+    real(kind=r_def),    intent(in)    :: panel_id(undf_pid)
+    ! Internal variables
+    integer(kind=i_def) :: k, df, dfk, ipanel
+    real(kind=r_def)    :: surface_height, domain_depth
+    real(kind=r_def)    :: eta
+    real(kind=r_def)    :: longitude, latitude, radius
+
+    domain_depth = domain_top - domain_surface
+
+    ipanel = int(panel_id(map_pid(1)), i_def)
+
+    ! Calculate orography and update chi_3
+    do df = 1, ndf_chi
+      do k = 0, nlayers-1
+        dfk = map_chi(df)+k
+
+        ! Model coordinates for spherical domain are in (alpha,beta,r) form
+        ! They need to be converted to (long,lat,r) for reading analytic orog
+        radius = chi_3(dfk) + domain_surface
+        call alphabetar2llr(chi_1(dfk), chi_2(dfk), radius, &
+                            ipanel, longitude, latitude)
+
+        ! Calculate surface height for each DoF using selected analytic orography
+        surface_height = orography_profile%analytic_orography(longitude, latitude)
+
+        ! Calculate nondimensional coordinate from current height coordinate
+        ! (chi_3) with flat domain_surface
+        eta = z2eta_linear(chi_3(dfk), 0.0_r_def, domain_depth)
+
+        select case(stretching_method)
+        case(stretching_method_linear)
+          chi_3(dfk) = eta2z_linear(eta, surface_height, domain_depth)
+        case default
+          chi_3(dfk) = eta2z_smooth(eta, surface_height, domain_depth, stretching_height)
+        end select
+
+      end do
+    end do
+
+    return
+  end subroutine analytic_orography_spherical_abh
 
   !=============================================================================
   !> @brief Updates Cartesian vertical coordinate for a single column using
@@ -371,41 +522,49 @@ contains
   !>          coordinate.
   !>
   !> @param[in]     nlayers        Number of vertical layers
-  !> @param[in]     ndf            Array size and loop bound for map
-  !> @param[in]     undf           Column coordinates' array size and loop bound
-  !> @param[in]     map            Indirection map
+  !> @param[in]     ndf_chi        Array size and loop bound for map_chi
+  !> @param[in]     undf_chi       Column coordinates' array size and loop bound
+  !> @param[in]     map_chi        Indirection map for coordinate field
+  !> @param[in]     ndf_pid        Array size and loop bound for map_pid
+  !> @param[in]     undf_pid       Panel ID array size and loop bound
+  !> @param[in]     map_pid        Indirection map for panel_id
   !> @param[in]     domain_surface Physical height of flat domain surface (m)
   !> @param[in]     domain_top     Physical height of domain top (m)
-  !> @param[in,out] chi_1          Size undf x coord
-  !> @param[in,out] chi_2          Size undf y coord
-  !> @param[in,out] chi_3          Size undf z coord
+  !> @param[in,out] chi_1          1st coordinate field in Wchi
+  !> @param[in,out] chi_2          2nd coordinate field in Wchi
+  !> @param[in,out] chi_3          3rd coordinate field in Wchi
+  !> @param[in]     panel_id       Field giving the ID for mesh panels
   !=============================================================================
-  subroutine analytic_orography_cartesian(nlayers, ndf, undf, map,   &
-                                          domain_surface, domain_top, &
-                                          chi_1, chi_2, chi_3)
+  subroutine analytic_orography_cartesian(nlayers, ndf_chi, undf_chi, map_chi, &
+                                          ndf_pid, undf_pid, map_pid,          &
+                                          domain_surface, domain_top,          &
+                                          chi_1, chi_2, chi_3, panel_id)
 
     implicit none
 
     ! Arguments
-    integer(kind=i_def), intent(in)    :: nlayers, undf
-    integer(kind=i_def), intent(in)    :: ndf
-    integer(kind=i_def), intent(in)    :: map(ndf)
+    integer(kind=i_def), intent(in)    :: nlayers, undf_chi, undf_pid
+    integer(kind=i_def), intent(in)    :: ndf_chi, ndf_pid
+    integer(kind=i_def), intent(in)    :: map_chi(ndf_chi)
+    integer(kind=i_def), intent(in)    :: map_pid(ndf_pid)
     real(kind=r_def),    intent(in)    :: domain_surface, domain_top
-    real(kind=r_def),    intent(inout) :: chi_1(undf), chi_2(undf), chi_3(undf)
+    real(kind=r_def),    intent(inout) :: chi_1(undf_chi), chi_2(undf_chi), chi_3(undf_chi)
+    real(kind=r_def),    intent(in)    :: panel_id(undf_pid)
+
     ! Internal variables
     integer(kind=i_def) :: k, df, dfk
-    real(kind=r_def)    :: chi_oro, surface_height, domain_depth
+    real(kind=r_def)    :: surface_height, domain_depth
     real(kind=r_def)    :: eta
 
     domain_depth = domain_top - domain_surface
 
     ! Calculate orography and update chi_3
-    do df = 1, ndf
+    do df = 1, ndf_chi
       do k = 0, nlayers-1
-        dfk = map(df)+k
+        dfk = map_chi(df)+k
 
         ! Calculate surface height for each DoF using selected analytic orography
-        chi_oro = orography_profile%analytic_orography(chi_1(dfk), chi_2(dfk))
+        surface_height = orography_profile%analytic_orography(chi_1(dfk), chi_2(dfk))
 
         ! Calculate nondimensional coordinate from current height coordinate
         ! (chi_3) with flat domain_surface
@@ -413,7 +572,7 @@ contains
 
         select case(stretching_method)
         case(stretching_method_linear)
-          chi_3(dfk) = eta2z_linear(eta, domain_surface + chi_oro, domain_top)
+          chi_3(dfk) = eta2z_linear(eta, domain_surface + surface_height, domain_top)
         case default
           chi_3(dfk) = domain_surface + &
              eta2z_smooth(eta, surface_height, domain_depth, stretching_height)
@@ -425,47 +584,59 @@ contains
   end subroutine analytic_orography_cartesian
 
   !=============================================================================
-  !> @brief vertical coordinate for based on the input surface_altitude field
-  !>        For Spherical geometries.
+  !> @brief Modify vertical coordinate based on the input surface_altitude field.
+  !>        For spherical geometries with a Cartesian coordinate system.
   !> Note that this routine assumes the chi coordinates in a column are
   !> associated with a flat domain on input and then modified on output.
   !> Therefore it will not operate correctly with a horizontally continuous chi
   !> field.
   !>
   !> @param[in]     nlayers        Number of vertical layers
-  !> @param[in,out] chi_1          Size undf x coord
-  !> @param[in,out] chi_2          Size undf y coord
-  !> @param[in,out] chi_3          Size undf z coord
+  !> @param[in,out] chi_1          1st coordinate field in Wchi
+  !> @param[in,out] chi_2          2nd coordinate field in Wchi
+  !> @param[in,out] chi_3          3rd coordinate field in Wchi
+  !> @param[in]     panel_id       Field giving the ID for mesh panels
   !> @param[in]     surface_altitude Surface altitude field data
-  !> @param[in]     ndf            Array size and loop bound for map
-  !> @param[in]     undf           Column coordinates' array size and loop bound
-  !> @param[in]     map            Indirection map
   !> @param[in]     domain_surface Physical height of flat domain surface (m)
   !> @param[in]     domain_top     Physical height of domain top (m)
+  !> @param[in]     ndf_chi        Array size and loop bound for map_chi
+  !> @param[in]     undf_chi       Column coordinates' array size and loop bound
+  !> @param[in]     map_chi        Indirection map for coordinate field
+  !> @param[in]     ndf_pid        Array size and loop bound for map_pid
+  !> @param[in]     undf_pid       Panel ID array size and loop bound
+  !> @param[in]     map_pid        Indirection map for pid
+  !> @param[in]     ndf            Array size and loop bound for surface altitude field
+  !> @param[in]     undf           Total number of dofs for surface altitude field
+  !> @param[in]     map            Indirection map for surface altitude field
+  !> @param[in]     basis          Basis functions for surface altitude field
   !=============================================================================
-  subroutine ancil_orography_spherical(nlayers,                    &
-                                       chi_1, chi_2, chi_3,        &
-                                       surface_altitude,           &
-                                       domain_surface, domain_top, &
-                                       ndf_chi, undf_chi,          &
-                                       map_chi,                    &
-                                       ndf, undf,                  &
-                                       map, basis                  &
-                                       )
+  subroutine ancil_orography_spherical_xyz(nlayers,                    &
+                                           chi_1, chi_2, chi_3,        &
+                                           panel_id,                   &
+                                           surface_altitude,           &
+                                           domain_surface, domain_top, &
+                                           ndf_chi, undf_chi,          &
+                                           map_chi,                    &
+                                           ndf_pid, undf_pid,          &
+                                           map_pid,                    &
+                                           ndf, undf,                  &
+                                           map, basis                  &
+                                          )
 
   implicit none
 
   ! Arguments
-  integer(kind=i_def), intent(in) :: nlayers, ndf, ndf_chi
-  integer(kind=i_def), intent(in) :: undf, undf_chi
+  integer(kind=i_def), intent(in) :: nlayers, ndf, ndf_chi, ndf_pid
+  integer(kind=i_def), intent(in) :: undf, undf_chi, undf_pid
 
-  integer(kind=i_def), dimension(ndf),     intent(in) :: map
-  integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
+  integer(kind=i_def), dimension(ndf),      intent(in) :: map
+  integer(kind=i_def), dimension(ndf_chi),  intent(in) :: map_chi
+  integer(kind=i_def), dimension(ndf_pid),  intent(in) :: map_pid
 
   real(kind=r_def), intent(in), dimension(ndf, ndf_chi) :: basis
 
   real(kind=r_def), dimension(undf_chi), intent(inout) :: chi_1, chi_2, chi_3
-
+  real(kind=r_def), dimension(undf_pid), intent(in)    :: panel_id
   real(kind=r_def), dimension(undf),     intent(in)    :: surface_altitude
   real(kind=r_def), intent(in)                         :: domain_surface, domain_top
 
@@ -514,9 +685,101 @@ contains
     end do
   end do
 
-end subroutine ancil_orography_spherical
+  end subroutine ancil_orography_spherical_xyz
 
+  !=============================================================================
+  !> @brief Modify vertical coordinate based on the input surface_altitude field.
+  !>        For Spherical geometries with (alpha,beta,r) coordinate system.
+  !> Note that this routine assumes the chi coordinates in a column are
+  !> associated with a flat domain on input and then modified on output.
+  !> Therefore it will not operate correctly with a horizontally continuous chi
+  !> field.
+  !>
+  !> @param[in]     nlayers        Number of vertical layers
+  !> @param[in,out] chi_1          1st coordinate field in Wchi
+  !> @param[in,out] chi_2          2nd coordinate field in Wchi
+  !> @param[in,out] chi_3          3rd coordinate field in Wchi
+  !> @param[in]     panel_id       Field giving the ID for mesh panels
+  !> @param[in]     surface_altitude Surface altitude field data
+  !> @param[in]     domain_surface Physical height of flat domain surface (m)
+  !> @param[in]     domain_top     Physical height of domain top (m)
+  !> @param[in]     ndf_chi        Array size and loop bound for map_chi
+  !> @param[in]     undf_chi       Column coordinates' array size and loop bound
+  !> @param[in]     map_chi        Indirection map for coordinate field
+  !> @param[in]     ndf_pid        Array size and loop bound for map_pid
+  !> @param[in]     undf_pid       Panel ID array size and loop bound
+  !> @param[in]     map_pid        Indirection map for panel ID
+  !> @param[in]     ndf            Array size and loop bound for surface altitude field
+  !> @param[in]     undf           Total number of dofs for surface altitude field
+  !> @param[in]     map            Indirection map for surface altitude field
+  !> @param[in]     basis          Basis functions for surface altitude field
+  !=============================================================================
+  subroutine ancil_orography_spherical_abh(nlayers,                    &
+                                           chi_1, chi_2, chi_3,        &
+                                           panel_id,                   &
+                                           surface_altitude,           &
+                                           domain_surface, domain_top, &
+                                           ndf_chi, undf_chi,          &
+                                           map_chi,                    &
+                                           ndf_pid, undf_pid,          &
+                                           map_pid,                    &
+                                           ndf, undf,                  &
+                                           map, basis                  &
+                                          )
 
+  implicit none
+
+  ! Arguments
+  integer(kind=i_def), intent(in) :: nlayers, ndf, ndf_chi, ndf_pid
+  integer(kind=i_def), intent(in) :: undf, undf_chi, undf_pid
+
+  integer(kind=i_def), dimension(ndf),      intent(in) :: map
+  integer(kind=i_def), dimension(ndf_chi),  intent(in) :: map_chi
+  integer(kind=i_def), dimension(ndf_pid),  intent(in) :: map_pid
+
+  real(kind=r_def), intent(in), dimension(ndf, ndf_chi) :: basis
+
+  real(kind=r_def), dimension(undf_chi), intent(inout) :: chi_1, chi_2, chi_3
+  real(kind=r_def), dimension(undf_pid),  intent(in)   :: panel_id
+  real(kind=r_def), dimension(undf),     intent(in)    :: surface_altitude
+  real(kind=r_def), intent(in)                         :: domain_surface, domain_top
+
+  ! Internal variables
+  integer(kind=i_def) :: k, df, dfchi, dfk
+  real(kind=r_def)    :: eta
+  real(kind=r_def)    :: surface_height(ndf_chi), domain_depth
+
+  domain_depth = domain_top - domain_surface
+
+  ! Calculate new surface_height at each chi dof
+  surface_height(:) = 0.0_r_def
+  do dfchi = 1, ndf_chi
+    do df = 1, ndf
+      surface_height(dfchi) = surface_height(dfchi) + surface_altitude(map(df))*basis(df,dfchi)
+    end do
+  end do
+
+  ! Update chi
+  do df = 1, ndf_chi
+    do k = 0, nlayers-1
+      dfk = map_chi(df)+k
+
+      ! Calculate nondimensional coordinate from current flat height coordinate
+      ! (chi_3) with flat domain_surface
+      eta = z2eta_linear(chi_3(dfk), 0.0_r_def, domain_depth)
+
+      ! Calculate new height coordinate from its nondimensional coordinate
+      ! eta and surface_height
+      select case(stretching_method)
+      case(stretching_method_linear)
+        chi_3(dfk) = eta2z_linear(eta, surface_height(df), domain_depth)
+      case default
+        chi_3(dfk) = eta2z_smooth(eta, surface_height(df), domain_depth, stretching_height)
+      end select
+    end do
+  end do
+
+  end subroutine ancil_orography_spherical_abh
 
   !=============================================================================
   !> @brief Modify vertical coordinate based on the input surface_altitude field.
@@ -527,22 +790,33 @@ end subroutine ancil_orography_spherical
   !> field.
   !>
   !> @param[in]     nlayers        Number of vertical layers
-  !> @param[in,out] chi_1          Size undf x coord
-  !> @param[in,out] chi_2          Size undf y coord
-  !> @param[in,out] chi_3          Size undf z coord
+  !> @param[in,out] chi_1          1st coordinate field in Wchi
+  !> @param[in,out] chi_2          2nd coordinate field in Wchi
+  !> @param[in,out] chi_3          3rd coordinate field in Wchi
+  !> @param[in]     panel_id       Field giving the ID for mesh panels
   !> @param[in]     surface_altitude Surface altitude field data
-  !> @param[in]     ndf            Array size and loop bound for map
-  !> @param[in]     undf           Column coordinates' array size and loop bound
-  !> @param[in]     map            Indirection map
   !> @param[in]     domain_surface Physical height of flat domain surface (m)
   !> @param[in]     domain_top     Physical height of domain top (m)
+  !> @param[in]     ndf_chi        Array size and loop bound for map_chi
+  !> @param[in]     undf_chi       Column coordinates' array size and loop bound
+  !> @param[in]     map_chi        Indirection map for coordinate field
+  !> @param[in]     ndf_pid        Array size and loop bound for map_pid
+  !> @param[in]     undf_pid       Panel ID array size and loop bound
+  !> @param[in]     map_pid        Indirection map for panel_id
+  !> @param[in]     ndf            Array size and loop bound for surface altitude field
+  !> @param[in]     undf           Total number of dofs for surface altitude field
+  !> @param[in]     map            Indirection map for surface altitude field
+  !> @param[in]     basis          Basis functions for surface altitude field
   !=============================================================================
   subroutine ancil_orography_cartesian(nlayers,                    &
                                        chi_1, chi_2, chi_3,        &
+                                       panel_id,                   &
                                        surface_altitude,           &
                                        domain_surface, domain_top, &
                                        ndf_chi, undf_chi,          &
                                        map_chi,                    &
+                                       ndf_pid, undf_pid,          &
+                                       map_pid,                    &
                                        ndf, undf,                  &
                                        map, basis                  &
                                        )
@@ -550,16 +824,17 @@ end subroutine ancil_orography_spherical
   implicit none
 
   ! Arguments
-  integer(kind=i_def), intent(in) :: nlayers, ndf, ndf_chi
-  integer(kind=i_def), intent(in) :: undf, undf_chi
+  integer(kind=i_def), intent(in) :: nlayers, ndf, ndf_chi, ndf_pid
+  integer(kind=i_def), intent(in) :: undf, undf_chi, undf_pid
 
-  integer(kind=i_def), dimension(ndf),     intent(in) :: map
-  integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
+  integer(kind=i_def), dimension(ndf),      intent(in) :: map
+  integer(kind=i_def), dimension(ndf_chi),  intent(in) :: map_chi
+  integer(kind=i_def), dimension(ndf_pid),  intent(in) :: map_pid
 
   real(kind=r_def), intent(in), dimension(ndf, ndf_chi) :: basis
 
   real(kind=r_def), dimension(undf_chi), intent(inout) :: chi_1, chi_2, chi_3
-
+  real(kind=r_def), dimension(undf_pid),  intent(in)   :: panel_id
   real(kind=r_def), dimension(undf),     intent(in)    :: surface_altitude
   real(kind=r_def), intent(in)                         :: domain_surface, domain_top
 
@@ -591,7 +866,7 @@ end subroutine ancil_orography_spherical
       ! eta and surface_height
       select case(stretching_method)
       case(stretching_method_linear)
-        chi_3(dfk) = eta2z_linear(eta, domain_surface +surface_height(df), domain_top)
+        chi_3(dfk) = eta2z_linear(eta, domain_surface+surface_height(df), domain_top)
       case default
         chi_3(dfk) = domain_surface + &
            eta2z_smooth(eta, surface_height(df), domain_depth, stretching_height)

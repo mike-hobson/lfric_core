@@ -82,9 +82,9 @@ subroutine cosmic_halo_correct_y_code( nlayers,              &
 
     if (orientation == 1 .OR. orientation == 3 ) then
       rho_out(map_w3(1)+k) = rho_y_in(map_w3(1)+k)
-    elseif (orientation == 2 .OR. orientation == 4 ) then
+    else if (orientation == 2 .OR. orientation == 4 ) then
       rho_out(map_w3(1)+k) = rho_x_in(map_w3(1)+k)
-    endif
+    end if
 
   end do
 

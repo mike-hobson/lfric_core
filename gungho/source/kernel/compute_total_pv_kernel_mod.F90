@@ -13,8 +13,9 @@ module compute_total_pv_kernel_mod
                                 GH_FIELD, GH_WRITE, GH_READ, &
                                 ANY_SPACE_9,                 &
                                 GH_BASIS, GH_DIFF_BASIS,     &
-                                CELLS, GH_QUADRATURE_XYoZ
-  use constants_mod,     only : r_def
+                                CELLS, GH_QUADRATURE_XYoZ,   &
+                                ANY_DISCONTINUOUS_SPACE_3
+  use constants_mod,     only : r_def, i_def
   use fs_continuity_mod, only : W0, W1, W3
   use kernel_mod,        only : kernel_type
 
@@ -30,21 +31,22 @@ module compute_total_pv_kernel_mod
   !>
   type, public, extends(kernel_type) :: compute_total_pv_kernel_type
     private
-    type(arg_type) :: meta_args(4) = (/             &
-        arg_type(GH_FIELD,   GH_WRITE, W3),         &
-        arg_type(GH_FIELD,   GH_READ,  W1),         &
-        arg_type(GH_FIELD,   GH_READ,  W0),         &
-        arg_type(GH_FIELD*3, GH_READ,  ANY_SPACE_9) &
+    type(arg_type) :: meta_args(5) = (/                           &
+        arg_type(GH_FIELD,   GH_WRITE, W3),                       &
+        arg_type(GH_FIELD,   GH_READ,  W1),                       &
+        arg_type(GH_FIELD,   GH_READ,  W0),                       &
+        arg_type(GH_FIELD*3, GH_READ,  ANY_SPACE_9),              &
+        arg_type(GH_FIELD,   GH_READ,  ANY_DISCONTINUOUS_SPACE_3) &
         /)
-    type(func_type) :: meta_funcs(3) = (/      &
-        func_type(ANY_SPACE_9, GH_DIFF_BASIS), &
-        func_type(W0, GH_DIFF_BASIS),          &
-        func_type(W1, GH_BASIS)                &
+    type(func_type) :: meta_funcs(3) = (/                         &
+        func_type(ANY_SPACE_9, GH_BASIS, GH_DIFF_BASIS),          &
+        func_type(W0, GH_DIFF_BASIS),                             &
+        func_type(W1, GH_BASIS)                                   &
         /)
     integer :: iterates_over = CELLS
     integer :: gh_shape = GH_QUADRATURE_XYoZ
   contains
-    procedure, nopass ::compute_total_pv_code
+    procedure, nopass :: compute_total_pv_code
   end type
 
   !---------------------------------------------------------------------------
@@ -55,42 +57,49 @@ module compute_total_pv_kernel_mod
 contains
 
 !> @brief The kernel computes the cell integrated potential vorticity
-!! @param[in] nlayers Number of layers
-!! @param[out] pv Cell integrated potential vorticity
-!! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
-!! @param[in] undf_w3  Number of unique degrees of freedom  for w3
-!! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
-!! @param[in] ndf_w1 Number of degrees of freedom per cell for w1
-!! @param[in] undf_w1  Number of unique degrees of freedom  for w1
-!! @param[in] map_w1 Dofmap for the cell at the base of the column for w1
-!! @param[in] w1_basis Basis functions evaluated at gaussian quadrature points
-!! @param[in] xi Absolute vorticity
-!! @param[in] ndf_w0 Number of degrees of freedom per cell for w0
-!! @param[in] undf_w0 Number of unique degrees of freedom  for w0
-!! @param[in] map_w0 Dofmap for the cell at the base of the column for w0
+!! @param[in] nlayers   Number of layers
+!! @param[out] pv       Cell integrated potential vorticity
+!! @param[in]  xi       Absolute vorticity
+!! @param[in] theta     Potential temperature
+!! @param[in] chi1      1st (spherical) coordinate field in Wchi
+!! @param[in] chi2      2nd (spherical) coordinate field in Wchi
+!! @param[in] chi3      3rd (spherical) coordinate field in Wchi
+!! @param[in] panel_id  Field giving the ID for mesh panels.
+!! @param[in] ndf_w3    Number of degrees of freedom per cell for w3
+!! @param[in] undf_w3   Number of unique degrees of freedom  for w3
+!! @param[in] map_w3    Dofmap for the cell at the base of the column for w3
+!! @param[in] ndf_w1    Number of degrees of freedom per cell for w1
+!! @param[in] undf_w1   Number of unique degrees of freedom  for w1
+!! @param[in] map_w1    Dofmap for the cell at the base of the column for w1
+!! @param[in] w1_basis  Basis functions evaluated at gaussian quadrature points
+!! @param[in] ndf_w0    Number of degrees of freedom per cell for w0
+!! @param[in] undf_w0   Number of unique degrees of freedom  for w0
+!! @param[in] map_w0    Dofmap for the cell at the base of the column for w0
 !! @param[in] w0_diff_basis Differential basis functions evaluated at gaussian quadrature points
-!! @param[in] ndf_chi Number of degrees of freedom per cell for chi
-!! @param[in] undf_chi Number of unique degrees of freedom  for chi
-!! @param[in] map_chi Dofmap for the cell at the base of the column for chi
-!! @param[in] chi_diff_basis Differential basis functions evaluated at gaussian quadrature points
-!! @param[in] theta Potential temperature
-!! @param[in] chi1 First component of the coordinate field
-!! @param[in] chi2 Second component of the coordinate field
-!! @param[in] chi3 Third component of the coordinate field
-!! @param[in] nqp_h Number of horizontal quadrature points
-!! @param[in] nqp_v Number of vertical quadrature points
-!! @param[in] wqp_h Weights of the horizontal quadrature points
-!! @param[in] wqp_v Weights of the vertical quadrature points
+!! @param[in] ndf_chi   Number of degrees of freedom per cell for chi
+!! @param[in] undf_chi  Number of unique degrees of freedom  for chi
+!! @param[in] map_chi   Dofmap for the cell at the base of the column for chi
+!! @param[in] chi_basis Wchi basis functions evaluated at gaussian quadrature points.
+!! @param[in] chi_diff_basis Derivatives of Wchi basis functions
+!!                           evaluated at gaussian quadrature points
+!! @param[in] ndf_pid   Number of degrees of freedom per cell for panel_id
+!! @param[in] undf_pid  Number of unique degrees of freedom for panel_id
+!! @param[in] map_pid   Dofmap for the cell at the base of the column for panel_id
+!! @param[in] nqp_h     Number of horizontal quadrature points
+!! @param[in] nqp_v     Number of vertical quadrature points
+!! @param[in] wqp_h     Weights of the horizontal quadrature points
+!! @param[in] wqp_v     Weights of the vertical quadrature points
 subroutine compute_total_pv_code(                                                        &
                                  nlayers,                                                &
                                  pv,                                                     &
                                  xi,                                                     &
                                  theta,                                                  &
-                                 chi1, chi2, chi3,                                       &
+                                 chi1, chi2, chi3, panel_id,                             &
                                  ndf_w3, undf_w3, map_w3,                                &
                                  ndf_w1, undf_w1, map_w1, w1_basis,                      &
                                  ndf_w0, undf_w0, map_w0, w0_diff_basis,                 &
-                                 ndf_chi, undf_chi, map_chi, chi_diff_basis,             &
+                                 ndf_chi, undf_chi, map_chi, chi_basis, chi_diff_basis,  &
+                                 ndf_pid, undf_pid, map_pid,                             &
                                  nqp_h, nqp_v, wqp_h, wqp_v )
 
   use coordinate_jacobian_mod, only: coordinate_jacobian, &
@@ -98,30 +107,34 @@ subroutine compute_total_pv_code(                                               
 
   implicit none
 
-  !Arguments
-  integer, intent(in) :: nlayers, nqp_h, nqp_v
-  integer, intent(in) :: ndf_w0, ndf_w1, undf_w0, undf_w1, ndf_w3, undf_w3, ndf_chi, undf_chi
+  ! Arguments
+  integer(kind=i_def), intent(in) :: nlayers, nqp_h, nqp_v
+  integer(kind=i_def), intent(in) :: ndf_w0, ndf_w1, ndf_w3, ndf_chi, ndf_pid
+  integer(kind=i_def), intent(in) :: undf_w0, undf_w1, undf_w3, undf_chi, undf_pid
 
-  integer, dimension(ndf_w3), intent(in) :: map_w3
-  integer, dimension(ndf_w0), intent(in) :: map_w0
-  integer, dimension(ndf_w1), intent(in) :: map_w1
-  integer, dimension(ndf_chi), intent(in) :: map_chi
+  integer(kind=i_def), dimension(ndf_w3),  intent(in) :: map_w3
+  integer(kind=i_def), dimension(ndf_w0),  intent(in) :: map_w0
+  integer(kind=i_def), dimension(ndf_w1),  intent(in) :: map_w1
+  integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
+  integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
 
-  real(kind=r_def), dimension(3,ndf_w0,nqp_h,nqp_v), intent(in)  :: w0_diff_basis
+  real(kind=r_def), dimension(3,ndf_w0,nqp_h,nqp_v),  intent(in) :: w0_diff_basis
+  real(kind=r_def), dimension(1,ndf_chi,nqp_h,nqp_v), intent(in) :: chi_basis
   real(kind=r_def), dimension(3,ndf_chi,nqp_h,nqp_v), intent(in) :: chi_diff_basis
-  real(kind=r_def), dimension(3,ndf_w1,nqp_h,nqp_v), intent(in)  :: w1_basis
+  real(kind=r_def), dimension(3,ndf_w1,nqp_h,nqp_v),  intent(in) :: w1_basis
 
-  real(kind=r_def), dimension(undf_w3), intent(out)   :: pv
-  real(kind=r_def), dimension(undf_w0), intent(in)    :: theta
-  real(kind=r_def), dimension(undf_chi), intent(in)   :: chi1, chi2, chi3
-  real(kind=r_def), dimension(undf_w1), intent(in)    :: xi
+  real(kind=r_def), dimension(undf_w3), intent(out) :: pv
+  real(kind=r_def), dimension(undf_w0),  intent(in) :: theta
+  real(kind=r_def), dimension(undf_chi), intent(in) :: chi1, chi2, chi3
+  real(kind=r_def), dimension(undf_pid), intent(in) :: panel_id
+  real(kind=r_def), dimension(undf_w1),  intent(in) :: xi
 
-  real(kind=r_def), dimension(nqp_h), intent(in)      ::  wqp_h
-  real(kind=r_def), dimension(nqp_v), intent(in)      ::  wqp_v
+  real(kind=r_def), dimension(nqp_h),    intent(in) ::  wqp_h
+  real(kind=r_def), dimension(nqp_v),    intent(in) ::  wqp_v
 
-  !Internal variables
-  integer               :: df, k
-  integer               :: qp1, qp2
+  ! Internal variables
+  integer(kind=i_def) :: df, k, ipanel
+  integer(kind=i_def) :: qp1, qp2
 
   real(kind=r_def), dimension(ndf_chi)         :: chi1_e, chi2_e, chi3_e
   real(kind=r_def), dimension(ndf_w0)          :: theta_e
@@ -140,10 +153,10 @@ subroutine compute_total_pv_code(                                               
       chi3_e(df) = chi3( map_chi(df) + k )
     end do
     call coordinate_jacobian(ndf_chi, nqp_h, nqp_v, chi1_e, chi2_e, chi3_e,  &
-                             chi_diff_basis, jac, dj)
+                             ipanel, chi_basis, chi_diff_basis, jac, dj)
     call coordinate_jacobian_inverse(nqp_h, nqp_v, jac, dj, jac_inv)
     do df = 1, ndf_w0
-      theta_e(df)  = theta(  map_w0(df) + k )
+      theta_e(df)  = theta( map_w0(df) + k )
     end do
     do df = 1, ndf_w1
       xi_e(df) = xi( map_w1(df) + k )

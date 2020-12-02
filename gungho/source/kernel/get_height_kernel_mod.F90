@@ -9,17 +9,19 @@
 !>
 module get_height_kernel_mod
 
-  use argument_mod,         only: arg_type, func_type,                 &
-                                  GH_FIELD, GH_WRITE, GH_READ, GH_INC, &
-                                  ANY_SPACE_9,                         &
-                                  GH_BASIS,                            &
-                                  CELLS, GH_EVALUATOR
-  use base_mesh_config_mod, only: geometry, &
-                                  geometry_spherical
-  use constants_mod,        only: r_def
-  use fs_continuity_mod,    only: W0, W2, W3
-  use kernel_mod,           only: kernel_type
-  use planet_config_mod,    only: scaled_radius
+  use argument_mod,              only: arg_type, func_type,                 &
+                                       GH_FIELD, GH_WRITE, GH_READ, GH_INC, &
+                                       ANY_SPACE_9,                         &
+                                       GH_BASIS,                            &
+                                       CELLS, GH_EVALUATOR
+  use base_mesh_config_mod,      only: geometry, &
+                                       geometry_spherical
+  use constants_mod,             only: r_def, i_def
+  use finite_element_config_mod, only: spherical_coord_system, &
+                                       spherical_coord_system_xyz
+  use fs_continuity_mod,         only: W0, W2, W3
+  use kernel_mod,                only: kernel_type
+  use planet_config_mod,         only: scaled_radius
 
   implicit none
 
@@ -56,9 +58,9 @@ contains
 !>        Will only work at lowest order for now
 !! @param[in] nlayers Number of layers
 !! @param[inout] height The height field
-!! @param[in] chi_1 X component of the coordinate
-!! @param[in] chi_2 Y component of the coordinate
-!! @param[in] chi_3 Z component of the coordinate
+!! @param[in] chi_1 1st component of the coordinate
+!! @param[in] chi_2 2nd component of the coordinate
+!! @param[in] chi_3 3rd component of the coordinate
 !! @param[in] ndf_x Number of degrees of freedom per cell for height
 !! @param[in] undf_x Number of unique degrees of freedom for height
 !! @param[in] map_x Dofmap for the cell at the base of the column for height
@@ -75,45 +77,63 @@ subroutine get_height_code(nlayers,                         &
                            )
   implicit none
 
-  !Arguments
+  ! Arguments
   integer, intent(in) :: nlayers
 
-  integer, intent(in)                                :: ndf_x, undf_x
-  integer, intent(in)                                :: ndf_chi, undf_chi
-  real(kind=r_def), dimension(undf_x), intent(inout) :: height
-  real(kind=r_def), dimension(undf_chi), intent(in)  :: chi_1, chi_2, chi_3
+  integer(kind=i_def),                         intent(in) :: ndf_x, undf_x
+  integer(kind=i_def),                         intent(in) :: ndf_chi, undf_chi
+  real(kind=r_def),    dimension(undf_x),   intent(inout) :: height
+  real(kind=r_def),    dimension(undf_chi),    intent(in) :: chi_1, chi_2, chi_3
 
-  integer, dimension(ndf_x), intent(in)                       :: map_x
-  integer, dimension(ndf_chi), intent(in)                     :: map_chi
-  real(kind=r_def), dimension(1, ndf_chi, ndf_x), intent(in)  :: basis_chi
+  integer(kind=i_def), dimension(ndf_x),           intent(in) :: map_x
+  integer(kind=i_def), dimension(ndf_chi),         intent(in) :: map_chi
+  real(kind=r_def),    dimension(1,ndf_chi,ndf_x), intent(in) :: basis_chi
 
-  !Internal variables
-  integer          :: df_chi, df_x, k
+  ! Internal variables
+  integer(kind=i_def) :: df_chi, df_x, k
+  real(kind=r_def)    :: coord(3), radius, height_at_dof
 
-  real(kind=r_def) :: xyz(3), r
+  if ( (geometry == geometry_spherical) .and. &
+       (spherical_coord_system == spherical_coord_system_xyz) ) then
+    ! NB This will result in the height above
+    ! the spherical representation of the planet
+    ! but not necessarily the height above the bottom
+    ! of the mesh
+    ! This should be reviewed with ticket #562
 
-  do k = 0, nlayers-1
-    do df_x = 1, ndf_x
-      xyz(:) = 0.0_r_def
-      do df_chi = 1, ndf_chi
-        xyz(1) = xyz(1) + chi_1(map_chi(df_chi)+k)*basis_chi(1,df_chi,df_x)
-        xyz(2) = xyz(2) + chi_2(map_chi(df_chi)+k)*basis_chi(1,df_chi,df_x)
-        xyz(3) = xyz(3) + chi_3(map_chi(df_chi)+k)*basis_chi(1,df_chi,df_x)
+    do k = 0, nlayers-1
+      do df_x = 1, ndf_x
+        coord(:) = 0.0_r_def
+        do df_chi = 1, ndf_chi
+          coord(1) = coord(1) + chi_1(map_chi(df_chi)+k)*basis_chi(1,df_chi,df_x)
+          coord(2) = coord(2) + chi_2(map_chi(df_chi)+k)*basis_chi(1,df_chi,df_x)
+          coord(3) = coord(3) + chi_3(map_chi(df_chi)+k)*basis_chi(1,df_chi,df_x)
+        end do
+
+        radius = sqrt(coord(1)**2 + coord(2)**2 + coord(3)**2)
+
+        height( map_x(df_x) + k ) = radius - scaled_radius
+
       end do
-      if (geometry == geometry_spherical) then
-        r = sqrt(xyz(1)**2 + xyz(2)**2 + xyz(3)**2)
-        ! NB This will result in the height above
-        ! the spherical representation of the planet
-        ! by not necessarily the height above the bottom
-        ! of the mesh
-        ! This should be reviewed with ticket #562
-        r = r - scaled_radius
-      else
-        r = xyz(3)
-      end if
-      height( map_x(df_x) + k ) = r
     end do
-  end do
+
+  else
+
+    ! Either the domain is Cartesian or we are using a non-Cartesian spherical
+    ! coordinate system. In both these cases, chi_3 will be the height.
+    do k = 0, nlayers-1
+      do df_x = 1, ndf_x
+        height_at_dof = 0.0_r_def
+        do df_chi = 1, ndf_chi
+          height_at_dof = height_at_dof + &
+                          chi_3(map_chi(df_chi)+k)*basis_chi(1,df_chi,df_x)
+        end do
+
+        height( map_x(df_x) + k ) = height_at_dof
+
+      end do
+    end do
+  end if
 
 end subroutine get_height_code
 

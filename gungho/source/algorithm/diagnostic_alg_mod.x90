@@ -20,8 +20,10 @@ module diagnostic_alg_mod
    use psykal_lite_mod,               only: invoke_compute_dof_level_kernel
    use psykal_builtin_light_mod,      only: invoke_convert_cart2sphere_vector, &
                                             invoke_pointwise_convert_xyz2llr
-   use runtime_constants_mod,         only: get_rmultiplicity, &
-                                            get_coordinates
+   use runtime_constants_mod,         only: get_rmultiplicity,   &
+                                            get_coordinates_xyz, &
+                                            get_coordinates,     &
+                                            get_panel_id
    use project_output_mod,            only: project_output
    use log_mod,                       only: log_event,         &
                                             log_scratch_space, &
@@ -98,8 +100,7 @@ contains
   !> @param[in] rho_num  Density
   !> @param[in] timestep Timestep
   subroutine density_diagnostic_alg(l2, rho_num, timestep)
-    use runtime_constants_mod,        only: get_coordinates, &
-                                            get_mass_matrix, &
+    use runtime_constants_mod,        only: get_mass_matrix, &
                                             w3_id
     use operator_mod,                 only: operator_type
     use field_mod,                    only: field_type
@@ -117,11 +118,8 @@ contains
     type(field_type)             :: w3_rho_diff
     type(field_type)             :: w3_rho_analytic
 
-    type(field_type), pointer    :: chi(:) => null()
     real(r_def)                  :: sum_diff, sum_analytic
     type(operator_type), pointer :: mm_w3 => null()
-
-    chi => get_coordinates()
 
     call rho_analytic%initialise( vector_space = rho_num%get_function_space() )
     call rho_diff%initialise( vector_space = rho_num%get_function_space() )
@@ -130,7 +128,7 @@ contains
 
     mm_w3 => get_mass_matrix(w3_id)
 
-    call set_rho_alg( rho_analytic, timestep)
+    call set_rho_alg( rho_analytic, timestep )
 
     ! The normalised l2 error norm with cell volume weightings is calculated as:
     ! l2 = sqrt(I((rho_num - rho_analytic)^2))/sqrt(I(rho_analtyic^2))
@@ -152,7 +150,6 @@ contains
 
     l2 = sqrt(sum_diff)/sqrt(sum_analytic)
 
-    nullify( chi )
     nullify( mm_w3 )
 
   end subroutine density_diagnostic_alg
@@ -229,7 +226,9 @@ contains
     type(field_type), intent(in)     :: wind
     integer(i_def),   intent(in)     :: mesh_id
 
-    type(field_type), pointer    :: chi(:) => null()
+    type(field_type), pointer    :: chi_xyz(:) => null(), &
+                                    chi_sph(:) => null(), &
+                                    panel_id => null()
     type(field_type)             :: physical_wind(3)
     type(field_type)             :: physical_chi(3)
     type(field_type), pointer    :: w2_rmultiplicity
@@ -238,7 +237,9 @@ contains
 
 
     ! get chi field
-    chi => get_coordinates()
+    chi_xyz => get_coordinates_xyz()
+    chi_sph => get_coordinates()
+    panel_id => get_panel_id()
 
     ! Create intermediate fields
     do i = 1,3
@@ -264,11 +265,11 @@ contains
 
     ! Convert coordinate field to physical space
 
-    call invoke( nodal_coordinates_kernel_type(physical_chi, chi) )
+    call invoke( nodal_coordinates_kernel_type(physical_chi, chi_xyz) )
 
     ! Convert 3D wind field to 3 components using the Piola transform
 
-    call invoke( convert_hdiv_field_kernel_type(physical_wind, wind, chi) )
+    call invoke( convert_hdiv_field_kernel_type(physical_wind, wind, chi_sph, panel_id) )
 
     ! Scale fields by the reciprocal of multiplicity
     do i = 1,3
@@ -314,12 +315,12 @@ contains
     logical,          intent(in)    :: W3_project
 
     ! Local variables
-    type(field_type), pointer       :: chi(:) => null()
+    type(field_type), pointer       :: chi_xyz(:) => null()
     integer(i_def)                  :: i
 
 
     ! get chi field
-    chi => get_coordinates()
+    chi_xyz => get_coordinates_xyz()
 
     ! Check if projection required, setup output field and filename
 
@@ -365,7 +366,7 @@ contains
     call output_field(1)%copy_field_properties(level)
 
     ! Convert field to physical nodal output & sample chi on nodal points
-    call invoke( nodal_coordinates_kernel_type(nodal_coordinates, chi) )
+    call invoke( nodal_coordinates_kernel_type(nodal_coordinates, chi_xyz) )
 
     ! If in spherical geometry,
     ! convert the coordinate field to (longitude, latitude, radius)
@@ -403,14 +404,17 @@ contains
     type(field_type), intent(in)    :: field
 
     ! Local variables
-    type(field_type), pointer       :: chi(:) => null()
+    type(field_type), pointer       :: chi_xyz(:) => null(), &
+                                       chi_sph(:) => null(), &
+                                       panel_id => null()
     integer(i_def)                  :: i
     integer(i_def)                  :: output_fs
     type(field_type), pointer       :: rmultiplicity
 
     ! get chi field
-    chi => get_coordinates()
-
+    chi_xyz => get_coordinates_xyz()
+    chi_sph => get_coordinates()
+    panel_id => get_panel_id()
 
     ! Create nodal coordinates, nodal output and levels fields
     ! from the properties of the input field
@@ -424,17 +428,17 @@ contains
     call field%copy_field_properties(level)
 
     ! Convert field to physical nodal output & sample chi on nodal points
-    call invoke( nodal_coordinates_kernel_type(nodal_coordinates, chi) )
+    call invoke( nodal_coordinates_kernel_type(nodal_coordinates, chi_xyz) )
 
     output_fs = field%which_function_space()
 
     ! Apply Piola transform to get collocated components
 
     if ( output_fs == W1 ) then
-      call invoke( convert_hcurl_field_kernel_type(output_field, field, chi) )
+      call invoke( convert_hcurl_field_kernel_type(output_field, field, chi_sph, panel_id) )
       output_dim = 3
     else if ( output_fs == W2 ) then
-      call invoke( convert_hdiv_field_kernel_type(output_field, field, chi) )
+      call invoke( convert_hdiv_field_kernel_type(output_field, field, chi_sph, panel_id) )
       output_dim = 3
     else
       ! If we didn't get a W1 or W2 field, just pass it through

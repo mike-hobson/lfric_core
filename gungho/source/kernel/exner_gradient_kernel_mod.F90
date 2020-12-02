@@ -57,18 +57,18 @@ contains
 !> @brief Computes the pressure gradient for rhs of the momentum equation
 !! @param[in] nlayers Number of layers
 !! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
-!! @param[in] undf_w2 Number unique of degrees of freedom  for w2
+!! @param[in] undf_w2 Number of unique degrees of freedom  for w2
 !! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
 !! @param[in] w2_basis Basis functions evaluated at quadrature points
 !! @param[in] w2_diff_basis Differntial of the basis functions evaluated at  quadrature points
 !! @param[inout] r_u Right hand side of the momentum equation
 !! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 Number unique of degrees of freedom  for w3
+!! @param[in] undf_w3 Number of unique degrees of freedom  for w3
 !! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
 !! @param[in] w3_basis Basis functions evaluated at gaussian quadrature points
 !! @param[in] exner Exner pressure
 !! @param[in] ndf_wtheta Number of degrees of freedom per cell for wtheta
-!! @param[in] undf_wtheta Number unique of degrees of freedom  for wtheta
+!! @param[in] undf_wtheta Number of unique degrees of freedom  for wtheta
 !! @param[in] map_wtheta Integer Dofmap for the cell at the base of the column for wtheta
 !! @param[in] wtheta_basis Basis functions evaluated at gaussian quadrature points
 !! @param[in] wtheta_diff_basis Differntial of the basis functions evaluated at gaussian quadrature point

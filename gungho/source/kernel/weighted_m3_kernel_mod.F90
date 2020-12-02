@@ -11,7 +11,8 @@ module weighted_m3_kernel_mod
                                      GH_OPERATOR, GH_FIELD, GH_REAL,       &
                                      GH_READ, GH_WRITE,                    &
                                      ANY_SPACE_1, GH_BASIS, GH_DIFF_BASIS, &
-                                     CELLS, GH_QUADRATURE_XYoZ
+                                     CELLS, GH_QUADRATURE_XYoZ,            &
+                                     ANY_DISCONTINUOUS_SPACE_3
   use constants_mod,           only: r_def, i_def
   use coordinate_jacobian_mod, only: coordinate_jacobian
   use fs_continuity_mod,       only: W3
@@ -24,15 +25,16 @@ module weighted_m3_kernel_mod
   !---------------------------------------------------------------------------
   type, public, extends(kernel_type) :: weighted_m3_kernel_type
     private
-    type(arg_type) :: meta_args(4) = (/               &
-        arg_type(GH_OPERATOR, GH_WRITE, W3, W3),      &
-        arg_type(GH_FIELD,    GH_READ,  W3),          &
-        arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_1), &
-        arg_type(GH_REAL,     GH_READ)                &
+    type(arg_type) :: meta_args(5) = (/                             &
+        arg_type(GH_OPERATOR, GH_WRITE, W3, W3),                    &
+        arg_type(GH_FIELD,    GH_READ,  W3),                        &
+        arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_1),               &
+        arg_type(GH_FIELD,    GH_READ,  ANY_DISCONTINUOUS_SPACE_3), &
+        arg_type(GH_REAL,     GH_READ)                              &
         /)
-    type(func_type) :: meta_funcs(2) = (/     &
-        func_type(W3, GH_BASIS),              &
-        func_type(ANY_SPACE_1, GH_DIFF_BASIS) &
+    type(func_type) :: meta_funcs(2) = (/                           &
+        func_type(W3, GH_BASIS),                                    &
+        func_type(ANY_SPACE_1, GH_BASIS, GH_DIFF_BASIS)             &
         /)
     integer :: iterates_over = CELLS
     integer :: gh_shape = GH_QUADRATURE_XYoZ
@@ -54,10 +56,11 @@ contains
 !! @param[in] ncell_3d ncell*ndf
 !! @param[inout] mm Mass matrix data array
 !! @param[in] rho Density
-!! @param[in] chi1 Chi in the first dir
-!! @param[in] chi2 Chi in the 2nd dir
-!! @param[in] chi3 Chi in the 3rd dir
-!! @param[in] scalar Scalar weight for the opetator
+!! @param[in] chi_1 1st (spherical) coordinate field in Wchi
+!! @param[in] chi_2 2nd (spherical) coordinate field in Wchi
+!! @param[in] chi_3 3rd (spherical) coordinate field in Wchi
+!! @param[in] panel_id Field giving the ID for mesh panels.
+!! @param[in] scalar Scalar weight for the operator
 !! @param[in] ndf_w3 Number of degrees of freedom per cell for the operator space.
 !! @param[in] undf_w3 Total number of degrees of freedom for the W3 space
 !! @param[in] map_w3 Dofmap for the bottom layer in the W3 space
@@ -65,7 +68,11 @@ contains
 !! @param[in] ndf_chi Number of degrees of freedom per cell for the coordinate field.
 !! @param[in] undf_chi Number of unique degrees of freedum  for chi field
 !! @param[in] map_chi Dofmap for the cell at the base of the column.
+!! @param[in] basis_chi Basis functions evaluated at quadrature points.
 !! @param[in] diff_basis_chi Differential basis functions evaluated at quadrature points.
+!! @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
+!! @param[in] undf_pid Number of unique degrees of freedom for panel_id
+!! @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
 !! @param[in] nqp_h Number of horizontal quadrature points
 !! @param[in] nqp_v Number of vertical quadrature points
 !! @param[in] wqp_h Horizontal quadrature weights
@@ -73,11 +80,12 @@ contains
 subroutine weighted_m3_code(cell, nlayers, ncell_3d,            &
                             mm,                                 &
                             rho,                                &
-                            chi1, chi2, chi3,                   &
+                            chi1, chi2, chi3, panel_id,         &
                             scalar,                             &
                             ndf_w3, undf_w3, map_w3, basis_w3,  &
-                            ndf_chi, undf_chi,                  &
-                            map_chi, diff_basis_chi,            &
+                            ndf_chi, undf_chi, map_chi,         &
+                            basis_chi, diff_basis_chi,          &
+                            ndf_pid, undf_pid, map_pid,         &
                             nqp_h, nqp_v, wqp_h, wqp_v)
 
   implicit none
@@ -85,13 +93,16 @@ subroutine weighted_m3_code(cell, nlayers, ncell_3d,            &
   ! Arguments
   integer(kind=i_def), intent(in)     :: cell, nqp_h, nqp_v
   integer(kind=i_def), intent(in)     :: nlayers, ndf_w3, ndf_chi, undf_chi, undf_w3
+  integer(kind=i_def), intent(in)     :: ndf_pid, undf_pid
   integer(kind=i_def), intent(in)     :: ncell_3d
 
   integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
   integer(kind=i_def), dimension(ndf_w3),  intent(in) :: map_w3
+  integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
 
   real(kind=r_def), dimension(ndf_w3,ndf_w3,ncell_3d),  intent(inout)  :: mm
 
+  real(kind=r_def), dimension(1,ndf_chi,nqp_h,nqp_v), intent(in) :: basis_chi
   real(kind=r_def), dimension(3,ndf_chi,nqp_h,nqp_v), intent(in) :: diff_basis_chi
   real(kind=r_def), dimension(1,ndf_w3,nqp_h,nqp_v),  intent(in) :: basis_w3
 
@@ -99,6 +110,7 @@ subroutine weighted_m3_code(cell, nlayers, ncell_3d,            &
   real(kind=r_def), dimension(undf_chi), intent(in)           :: chi1
   real(kind=r_def), dimension(undf_chi), intent(in)           :: chi2
   real(kind=r_def), dimension(undf_chi), intent(in)           :: chi3
+  real(kind=r_def), dimension(undf_pid), intent(in)           :: panel_id
   real(kind=r_def),                      intent(in)           :: scalar
 
   real(kind=r_def), dimension(nqp_h), intent(in) :: wqp_h
@@ -106,12 +118,14 @@ subroutine weighted_m3_code(cell, nlayers, ncell_3d,            &
 
   ! Internal variables
   integer(kind=i_def)                          :: df, df1, df2, k, ik, loc
-  integer(kind=i_def)                          :: qp1, qp2
+  integer(kind=i_def)                          :: qp1, qp2, ipanel
   real(kind=r_def), dimension(ndf_chi)         :: chi1_e, chi2_e, chi3_e
   real(kind=r_def)                             :: rho_quad
   real(kind=r_def)                             :: integrand
   real(kind=r_def), dimension(nqp_h,nqp_v)     :: dj
   real(kind=r_def), dimension(3,3,nqp_h,nqp_v) :: jac
+
+  ipanel = int(panel_id(map_pid(1)), i_def)
 
   do k = 0, nlayers-1
     do df = 1, ndf_chi
@@ -121,7 +135,7 @@ subroutine weighted_m3_code(cell, nlayers, ncell_3d,            &
       chi3_e(df) = chi3(loc)
     end do
     call coordinate_jacobian(ndf_chi, nqp_h, nqp_v, chi1_e, chi2_e, chi3_e,  &
-                             diff_basis_chi, jac, dj)
+                             ipanel, basis_chi, diff_basis_chi, jac, dj)
 
     ik = 1 + k + (cell-1)*nlayers
     mm(:,:,ik) = 0.0_r_def

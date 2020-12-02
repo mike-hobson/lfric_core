@@ -25,7 +25,9 @@ module rk_transport_mod
                                                get_qr,                         &
                                                w2_id, w3_id, w3inv_id,         &
                                                wt_id, theta_space_id,          &
-                                               get_coordinates
+                                               get_coordinates,                &
+                                               get_coordinates_xyz,            &
+                                               get_panel_id
 
   use transport_config_mod,              only: operators,          &
                                                fv_flux_order,      &
@@ -140,7 +142,7 @@ contains
     integer(i_def)               :: stage
     type(operator_type), pointer :: mm_wt => null()
 
-    type( field_type ), pointer :: chi(:) => null()
+    type( field_type ), pointer :: chi_xyz(:) => null()
     type( field_type ), pointer :: md_w3 => null(), md_wt => null()
     type( field_type )          :: wt_multiplicity
     integer(i_def)              :: direction, polynomial
@@ -245,7 +247,7 @@ contains
                                       nfaces_re_h, nfaces_re_v)
       end if
 
-      chi => get_coordinates()
+      chi_xyz => get_coordinates_xyz()
       nqp_xyz = fv_flux_order+1
       qr = quadrature_xyoz_type(nqp_xyz, gaussian_quadrature)
       mesh              => rho%get_mesh()
@@ -266,8 +268,8 @@ contains
             call flux_coeffs(polynomial,direction)%initialise( vector_space = rho_fs )
           end do
         end do
-        call invoke_poly1d_flux_coeffs( flux_coeffs, md_w3, chi, qr, qrf, &
-                                        fv_flux_order,                    &
+        call invoke_poly1d_flux_coeffs( flux_coeffs, md_w3, chi_xyz, &
+                                        qr, qrf, fv_flux_order,      &
                                         flux_stencil_extent, nfaces_re_h )
       else
         allocate( flux_coeffs(flux2d_stencil_size, nfaces_re_h) )
@@ -276,8 +278,8 @@ contains
             call flux_coeffs(polynomial,direction)%initialise( vector_space = rho_fs )
           end do
         end do
-        call invoke_poly2d_flux_coeffs( flux_coeffs, md_w3, chi, qr, qrf, &
-                                        fv_flux_order,                    &
+        call invoke_poly2d_flux_coeffs( flux_coeffs, md_w3, chi_xyz, &
+                                        qr, qrf, fv_flux_order,      &
                                         flux2d_stencil_size, nfaces_re_h )
       end if
       call log_event( "Gungho: computing vertical flux coeffs", LOG_LEVEL_INFO )
@@ -292,7 +294,7 @@ contains
       qrf = quadrature_face_type(nqp_xyz, .false., .true., &
                                  reference_element, gaussian_quadrature)
 
-      call invoke_poly1d_vert_flux_coeffs( vert_flux_coeffs, md_w3, chi, &
+      call invoke_poly1d_vert_flux_coeffs( vert_flux_coeffs, md_w3, chi_xyz, &
                                            qr, qrf, fv_flux_order, nfaces_re_v )
       if ( subroutine_timers ) call timer('rk_transport_alg: V flux coeffs')
 
@@ -315,8 +317,8 @@ contains
             call adv_coeffs(polynomial,direction)%initialise( vector_space = theta_fs )
           end do
         end do
-        call invoke_poly1d_advective_coeffs( adv_coeffs, md_wt, chi, qr, qre,  &
-                                             fv_advective_order,               &
+        call invoke_poly1d_advective_coeffs( adv_coeffs, md_wt, chi_xyz, qr, qre,  &
+                                             fv_advective_order,                   &
                                              advective_stencil_extent, nfaces_re_h )
       else
         allocate( adv_coeffs(advective2d_stencil_size, nfaces_re_h) )
@@ -325,9 +327,9 @@ contains
             call adv_coeffs(polynomial,direction)%initialise( vector_space = theta_fs )
           end do
         end do
-        call invoke_poly2d_advective_coeffs( adv_coeffs, md_wt, chi, qr, &
-                                             qre, fv_advective_order,    &
-                                             advective2d_stencil_size,   &
+        call invoke_poly2d_advective_coeffs( adv_coeffs, md_wt, chi_xyz, qr, &
+                                             qre, fv_advective_order,        &
+                                             advective2d_stencil_size,       &
                                              nfaces_re_h )
       end if
       call log_event( "Gungho: computing vertical advective coeffs", LOG_LEVEL_INFO )
@@ -338,8 +340,8 @@ contains
           call vert_adv_coeffs(polynomial,direction)%initialise( vector_space = theta_fs )
         end do
       end do
-      call invoke_poly1d_vert_adv_coeffs( vert_adv_coeffs, md_wt, chi, &
-                                          fv_advective_order, nfaces_re_v )
+      call invoke_poly1d_vert_adv_coeffs( vert_adv_coeffs, md_wt, chi_xyz, &
+                                          fv_advective_order, nfaces_re_v  )
 
       if ( consistent_metric ) then
         call advective_av_chi3%initialise(vector_space = theta_av%get_function_space() )
@@ -347,8 +349,9 @@ contains
         call chi3_at_wt%initialise(vector_space = theta_fs )
         call wt_multiplicity%initialise(vector_space = theta_fs )
         call invoke( setval_c(wt_multiplicity, 0.0_r_def),       &
+                     setval_c(chi3_at_wt, 0.0_r_def),            &
                      multiplicity_kernel_type(wt_multiplicity),  &
-                     sample_field_kernel_type( chi3_at_wt, wt_multiplicity, chi(3)) )
+                     sample_field_kernel_type( chi3_at_wt, wt_multiplicity, chi_xyz(3)) )
       end if
       if ( subroutine_timers ) call timer('rk_transport_alg: V adv coeffs')
     else
@@ -360,7 +363,7 @@ contains
     call rho%copy_field(rho0)
     call theta%copy_field(theta0)
 
-    nullify( mm_wt, u_fs, rho_fs, theta_fs, mesh, reference_element )
+    nullify( mm_wt, u_fs, rho_fs, theta_fs, mesh, reference_element, chi_xyz )
 
     if ( subroutine_timers ) call timer('rk_transport_alg')
 
@@ -386,7 +389,9 @@ contains
     ! The quadrature object
     type( quadrature_xyoz_type )          :: qr
     ! Coordinate fields
-    type( field_type ), pointer :: chi(:) => null()
+    type( field_type ), pointer :: chi_xyz(:) => null()
+    type( field_type ), pointer :: chi_sph(:) => null()
+    type( field_type ), pointer :: panel_id => null()
 
     integer(i_def) :: stage, st
 
@@ -400,13 +405,14 @@ contains
     if ( subroutine_timers ) call timer('rk_transport_alg')
 
     qr = get_qr()
-    chi => get_coordinates()
+    chi_xyz => get_coordinates_xyz()
+    chi_sph => get_coordinates()
+    panel_id => get_panel_id()
 
     ! Create operators needed for timestepping
     mm_w3_inv => get_mass_matrix(w3inv_id)
     call invoke( setval_X(rho_n,   rho), &
                  setval_X(theta_n, theta) )
-
 
     ! Runge-Kutta algorithm
     do stage = 1,num_rk_stage
@@ -422,6 +428,7 @@ contains
             call invoke_poly1d_adv_recon( theta_av, u, theta, adv_coeffs, &
                                           fv_advective_order, advective_stencil_extent, &
                                           nfaces_re_h )
+
             ! Horizontal advection of metric terms
             if ( consistent_metric ) then
               call invoke( setval_c(advective_av_chi3, 0.0_r_def) )
@@ -446,7 +453,6 @@ contains
           end if
           call invoke( poly_advective_kernel_type( rt_prediction(stage), &
                                                    u, theta_av) )
-
           ! Compute vertical components of mass flux
           call invoke_poly1d_vert_flux( mass_flux, u, rho, &
                                         vert_flux_coeffs,  &
@@ -457,7 +463,7 @@ contains
           if ( consistent_metric ) then
             call invoke( poly_advective_kernel_type(theta_metrics, u, advective_av_chi3), &
             ! Modify advecting wind
-                         consistent_wind_kernel_type(consistent_wind, u, theta_metrics, chi) )
+                         consistent_wind_kernel_type(consistent_wind, u, theta_metrics, chi_xyz) )
           end if
           call invoke_poly1d_vert_adv( rt_prediction(stage), consistent_wind, theta, &
                                        vert_adv_coeffs, &
@@ -472,7 +478,7 @@ contains
 
           ! Rho advection, compute mass flux
           call invoke( name = "Compute mass flux",                 &
-                       flux_rhs_kernel_type(r_u, u, rho, chi, qr), &
+                       flux_rhs_kernel_type(r_u, u, rho, chi_sph, panel_id, qr), &
                        enforce_bc_kernel_type(r_u) )
           call mass_matrix_solver_alg( mass_flux, r_u)
 
@@ -490,7 +496,6 @@ contains
         call invoke( inc_X_plus_bY(r_rho, ak(stage,st), rr_prediction(st)), &
                      inc_X_plus_bY(r_theta, ak(stage,st), rt_prediction(st)) )
       end do
-
       ! Invert mass matrices and add increments
       ! Rho
       call invoke( name = "Invert mass matrices and add increments",     &
@@ -509,7 +514,7 @@ contains
       end select
     end do
 
-    nullify( mm_w3_inv, mt_lumped_inv, chi )
+    nullify( mm_w3_inv, mt_lumped_inv, chi_xyz, chi_sph, panel_id )
     if ( subroutine_timers ) call timer('rk_transport_alg')
 
   end subroutine rk_transport_step

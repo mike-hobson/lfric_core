@@ -13,17 +13,17 @@ module initial_u_kernel_mod
 
   use argument_mod,            only : arg_type, func_type,       &
                                       GH_FIELD, GH_INC, GH_READ, &
-                                      ANY_SPACE_9,               &
+                                      ANY_SPACE_9, GH_REAL,      &
                                       GH_BASIS, GH_DIFF_BASIS,   &
                                       CELLS, GH_QUADRATURE_XYoZ, &
-                                      GH_REAL
+                                      ANY_DISCONTINUOUS_SPACE_3
   use constants_mod,           only : r_def, i_def, PI
   use fs_continuity_mod,       only : W2
   use initial_wind_config_mod, only : profile_sin_uv,                        &
                                       profile, sbr_angle_lat, sbr_angle_lon, &
                                       u0, v0, shear, wavelength
-
   use kernel_mod,              only : kernel_type
+  use log_mod,                 only : log_event, LOG_LEVEL_ERROR
 
   implicit none
 
@@ -35,14 +35,15 @@ module initial_u_kernel_mod
   !>
   type, public, extends(kernel_type) :: initial_u_kernel_type
     private
-    type(arg_type) :: meta_args(3) = (/             &
-        arg_type(GH_FIELD,   GH_INC,  W2),          &
-        ARG_TYPE(GH_FIELD*3, GH_READ, ANY_SPACE_9), &
-        arg_type(GH_REAL,    GH_READ)               &
+    type(arg_type) :: meta_args(4) = (/                           &
+        arg_type(GH_FIELD,   GH_INC,  W2),                        &
+        arg_type(GH_FIELD*3, GH_READ, ANY_SPACE_9),               &
+        arg_type(GH_FIELD,   GH_READ, ANY_DISCONTINUOUS_SPACE_3), &
+        arg_type(GH_REAL,    GH_READ)                             &
         /)
-    type(func_type) :: meta_funcs(2) = (/               &
-        func_type(W2, GH_BASIS),                        &
-        func_type(ANY_SPACE_9, GH_BASIS, GH_DIFF_BASIS) &
+    type(func_type) :: meta_funcs(2) = (/                         &
+        func_type(W2, GH_BASIS),                                  &
+        func_type(ANY_SPACE_9, GH_BASIS, GH_DIFF_BASIS)           &
         /)
     integer :: iterates_over = CELLS
     integer :: gh_shape = GH_QUADRATURE_XYoZ
@@ -55,75 +56,98 @@ module initial_u_kernel_mod
 !-----------------------------------------------------------------------------
 contains
 
-!> @brief Compute the right hand side to initialise the wind field.
-!! @param[in] nlayers Number of layers
-!! @param[inout] rhs Right hand side field to compute
-!! @param[in] chi_1 X component of the coordinate field
-!! @param[in] chi_2 Y component of the coordinate field
-!! @param[in] chi_3 Z component of the coordinate field
-!> @param[in] time Time (timestep multiplied by dt)
-!! @param[in] ndf Number of degrees of freedom per cell
-!! @param[in] undf Total number of degrees of freedom
-!! @param[in] map Dofmap for the cell at the base of the column
-!! @param[in] basis Basis functions evaluated at gaussian quadrature points
-!! @param[in] ndf_chi Number of dofs per cell for the coordinate field
-!! @param[in] undf_chi Total number of degrees of freedom
-!! @param[in] map_chi Dofmap for the coordinate field
-!! @param[in] chi_basis Basis functions evaluated at gaussian quadrature points
-!! @param[in] chi_diff_basis Basis functions evaluated at gaussian quadrature points
-!! @param[in] nqp_h Number of quadrature points in the horizontal
-!! @param[in] nqp_v Number of quadrature points in the vertical
-!! @param[in] wqp_h Horizontal quadrature weights
-!! @param[in] wqp_v Vertical quadrature weights
-subroutine initial_u_code(nlayers, &
-                          rhs, &
-                          chi_1, chi_2, chi_3, time, &
-                          ndf, undf, &
-                          map, basis, &
-                          ndf_chi, undf_chi, &
-                          map_chi, chi_basis, chi_diff_basis, &
-                          nqp_h, nqp_v, wqp_h, wqp_v &
-                          )
+  !> @brief Compute the right hand side to initialise the wind field.
+  !! @param[in] nlayers Number of layers
+  !! @param[in,out] rhs Right hand side field to compute
+  !! @param[in] chi_sph_1 1st coordinate in spherical Wchi
+  !! @param[in] chi_sph_2 2nd coordinate in spherical Wchi
+  !! @param[in] chi_sph_3 3rd coordinate in spherical Wchi
+  !! @param[in] panel_id A field giving the ID for mesh panels.
+  !! @param[in] time Time (timestep multiplied by dt)
+  !! @param[in] ndf Number of degrees of freedom per cell for W2
+  !! @param[in] undf Total number of degrees of freedom for W2
+  !! @param[in] map Dofmap for the cell at the base of the column for W2
+  !! @param[in] basis Basis functions for W2 evaluated at gaussian quadrature points
+  !! @param[in] ndf_chi_sph Number of degrees of freedom per cell for spherical chi
+  !! @param[in] undf_chi_sph Number of unique degrees of freedom for spherical chi
+  !! @param[in] map_chi_sph Dofmap for the cell at the base of the column for spherical chi
+  !! @param[in] chi_sph_basis Basis functions for spherical Wchi evaluated at
+  !!                          gaussian quadrature points
+  !! @param[in] chi_sph_diff_basis Differential of the spherical Wchi basis functions
+  !!                               evaluated at gaussian quadrature point
+  !! @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
+  !! @param[in] undf_pid Number of unique degrees of freedom for panel_id
+  !! @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
+  !! @param[in] nqp_h Number of quadrature points in the horizontal
+  !! @param[in] nqp_v Number of quadrature points in the vertical
+  !! @param[in] wqp_h Horizontal quadrature weights
+  !! @param[in] wqp_v Vertical quadrature weights
+  subroutine initial_u_code(nlayers,                         &
+                            rhs,                             &
+                            chi_sph_1, chi_sph_2, chi_sph_3, &
+                            panel_id,                        &
+                            time,                            &
+                            ndf, undf, map, basis,           &
+                            ndf_chi_sph, undf_chi_sph,       &
+                            map_chi_sph, chi_sph_basis,      &
+                            chi_sph_diff_basis,              &
+                            ndf_pid, undf_pid, map_pid,      &
+                            nqp_h, nqp_v, wqp_h, wqp_v       &
+                            )
 
   use analytic_wind_profiles_mod, only : analytic_wind
   use base_mesh_config_mod,       only : geometry, &
                                          geometry_spherical
   use coordinate_jacobian_mod,    only : coordinate_jacobian
-  use coord_transform_mod,        only : sphere2cart_vector, xyz2llr
+  use coord_transform_mod,        only : sphere2cart_vector, &
+                                         xyz2llr, alphabetar2llr
+  use finite_element_config_mod,  only : spherical_coord_system, &
+                                         spherical_coord_system_xyz, &
+                                         spherical_coord_system_abh
+  use planet_config_mod,          only : scaled_radius
 
   implicit none
 
-  !Arguments
-  integer, intent(in) :: nlayers, ndf, ndf_chi
-  integer, intent(in) :: undf, undf_chi
-  integer, intent(in) :: nqp_h, nqp_v
+  ! Arguments
+  integer(kind=i_def), intent(in) :: nlayers, ndf, ndf_pid, ndf_chi_sph
+  integer(kind=i_def), intent(in) :: undf, undf_pid, undf_chi_sph
+  integer(kind=i_def), intent(in) :: nqp_h, nqp_v
 
-  integer, dimension(ndf),     intent(in) :: map
-  integer, dimension(ndf_chi), intent(in) :: map_chi
+  integer(kind=i_def), dimension(ndf),         intent(in) :: map
+  integer(kind=i_def), dimension(ndf_chi_sph), intent(in) :: map_chi_sph
+  integer(kind=i_def), dimension(ndf_pid),     intent(in) :: map_pid
 
   real(kind=r_def), intent(in), dimension(3,ndf,    nqp_h,nqp_v) :: basis
-  real(kind=r_def), intent(in), dimension(3,ndf_chi,nqp_h,nqp_v) :: chi_diff_basis
-  real(kind=r_def), intent(in), dimension(1,ndf_chi,nqp_h,nqp_v) :: chi_basis
+  real(kind=r_def), intent(in), dimension(3,ndf_chi_sph,nqp_h,nqp_v) :: chi_sph_diff_basis
+  real(kind=r_def), intent(in), dimension(1,ndf_chi_sph,nqp_h,nqp_v) :: chi_sph_basis
 
-  real(kind=r_def), dimension(undf),     intent(inout) :: rhs
-  real(kind=r_def), dimension(undf_chi), intent(in)    :: chi_1, chi_2, chi_3
-  real(kind=r_def), intent(in)                         :: time
+  real(kind=r_def), dimension(undf),      intent(inout) :: rhs
+  real(kind=r_def), dimension(undf_chi_sph), intent(in) :: chi_sph_1, &
+                                                           chi_sph_2, &
+                                                           chi_sph_3
+  real(kind=r_def), dimension(undf_pid),  intent(in)    :: panel_id
+  real(kind=r_def), intent(in)                          :: time
 
-  real(kind=r_def), dimension(nqp_h), intent(in)      ::  wqp_h
-  real(kind=r_def), dimension(nqp_v), intent(in)      ::  wqp_v
+  real(kind=r_def), dimension(nqp_h), intent(in)        ::  wqp_h
+  real(kind=r_def), dimension(nqp_v), intent(in)        ::  wqp_v
 
 
-  integer(i_def), parameter :: n_options = 3
-  real(r_def)               :: opt_args(n_options)
+  integer(kind=i_def), parameter :: n_options = 3
+  real(kind=r_def)               :: opt_args(n_options)
 
-  !Internal variables
-  integer               :: df, k, qp1, qp2
+  ! Internal variables
+  integer(kind=i_def)                          :: df, k, qp1, qp2
   real(kind=r_def), dimension(nqp_h,nqp_v)     :: dj
   real(kind=r_def), dimension(3,3,nqp_h,nqp_v) :: jacobian
-  real(kind=r_def), dimension(ndf_chi)         :: chi_1_cell, chi_2_cell, chi_3_cell
-  real(kind=r_def), dimension(3)               :: u_physical, u_spherical, xyz, llr
+  real(kind=r_def), dimension(ndf_chi_sph)     :: chi_sph_1_cell, &
+                                                  chi_sph_2_cell, &
+                                                  chi_sph_3_cell
+  real(kind=r_def), dimension(3)               :: u_physical, u_spherical, coords, llr
   real(kind=r_def)                             :: integrand
 
+  integer(kind=i_def) :: ipanel
+
+  ipanel = int(panel_id(map_pid(1)), i_def)
 
   if ( geometry == geometry_spherical ) then
     ! Options for spherical domains
@@ -138,37 +162,56 @@ subroutine initial_u_code(nlayers, &
   end if
 
   do k = 0, nlayers-1
-    do df = 1, ndf_chi
-      chi_1_cell(df) = chi_1( map_chi(df) + k)
-      chi_2_cell(df) = chi_2( map_chi(df) + k)
-      chi_3_cell(df) = chi_3( map_chi(df) + k)
+    do df = 1, ndf_chi_sph
+      chi_sph_1_cell(df) = chi_sph_1( map_chi_sph(df) + k)
+      chi_sph_2_cell(df) = chi_sph_2( map_chi_sph(df) + k)
+      chi_sph_3_cell(df) = chi_sph_3( map_chi_sph(df) + k)
     end do
-    call coordinate_jacobian(ndf_chi, &
-                             nqp_h, &
-                             nqp_v, &
-                             chi_1_cell, &
-                             chi_2_cell, &
-                             chi_3_cell, &
-                             chi_diff_basis, &
-                             jacobian, &
+
+    call coordinate_jacobian(ndf_chi_sph,        &
+                             nqp_h,              &
+                             nqp_v,              &
+                             chi_sph_1_cell,     &
+                             chi_sph_2_cell,     &
+                             chi_sph_3_cell,     &
+                             ipanel,             &
+                             chi_sph_basis,      &
+                             chi_sph_diff_basis, &
+                             jacobian,           &
                              dj)
 
     do qp2 = 1, nqp_v
       do qp1 = 1, nqp_h
         ! Compute analytical vector wind in physical space
-        xyz(:) = 0.0_r_def
-        do df = 1, ndf_chi
-          xyz(1) = xyz(1) + chi_1_cell(df)*chi_basis(1,df,qp1,qp2)
-          xyz(2) = xyz(2) + chi_2_cell(df)*chi_basis(1,df,qp1,qp2)
-          xyz(3) = xyz(3) + chi_3_cell(df)*chi_basis(1,df,qp1,qp2)
+        coords(:) = 0.0_r_def
+        do df = 1, ndf_chi_sph
+          coords(1) = coords(1) + chi_sph_1_cell(df)*chi_sph_basis(1,df,qp1,qp2)
+          coords(2) = coords(2) + chi_sph_2_cell(df)*chi_sph_basis(1,df,qp1,qp2)
+          coords(3) = coords(3) + chi_sph_3_cell(df)*chi_sph_basis(1,df,qp1,qp2)
         end do
 
         if ( geometry == geometry_spherical ) then
-          call xyz2llr(xyz(1), xyz(2), xyz(3), llr(1), llr(2), llr(3))
+
+          ! Need to obtain longitude, latitude and radius from position vector
+          if ( spherical_coord_system == spherical_coord_system_xyz ) then
+            ! Pos_vec is (X,Y,Z)
+            call xyz2llr(coords(1), coords(2), coords(3), llr(1), llr(2), llr(3))
+          else if ( spherical_coord_system == spherical_coord_system_abh ) then
+            ! Pos_vec is (alpha, beta, h)
+            llr(3) = coords(3) + scaled_radius
+            call alphabetar2llr(coords(1), coords(2), llr(3), ipanel, llr(1), llr(2))
+          else
+            call log_event('initial_u_kernel is not implemented ' // &
+                           'with your spherical coordinate system',  &
+                           LOG_LEVEL_ERROR)
+          end if
+
+          ! Obtain (lon,lat,r) components of u and then transform to (X,Y,Z) components
           u_spherical = analytic_wind(llr, time, profile, n_options, opt_args)
           u_physical  = sphere2cart_vector(u_spherical,llr)
         else
-          u_physical = analytic_wind(xyz, time, profile, n_options, opt_args)
+          ! For planar geometries, no transformation is needed
+          u_physical = analytic_wind(coords, time, profile, n_options, opt_args)
         end if
 
         do df = 1, ndf

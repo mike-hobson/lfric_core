@@ -45,7 +45,8 @@ contains
 
     use base_mesh_config_mod,      only : geometry_planar, &
                                           partitioner_planar
-    use finite_element_config_mod, only : cellshape_quadrilateral
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
     use feign_config_mod,          only : feign_base_mesh_config,           &
                                           feign_initial_temperature_config, &
                                           feign_planet_config,              &
@@ -57,7 +58,7 @@ contains
 
     ! Initialise YAXT
     call xt_initialize(this%getMpiCommunicator())
-    !Store the MPI communicator for later use
+    ! Store the MPI communicator for later use
     call store_comm(this%getMpiCommunicator())
 
     call feign_base_mesh_config( filename='foo',                      &
@@ -78,6 +79,8 @@ contains
          cellshape = cellshape_quadrilateral,               &
          element_order = 0, coordinate_order = 0,           &
          rehabilitate = .true.,                             &
+         spherical_coord_order = 0,                         &
+         spherical_coord_system=spherical_coord_system_xyz, &
          vorticity_in_w1 =.false. )
 
   end subroutine setUp

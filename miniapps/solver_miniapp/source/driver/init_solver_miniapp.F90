@@ -7,7 +7,7 @@
 !> @brief init functionality for the miniapp skeleton
 
 !> @details Handles init of prognostic fields and through the call to
-!>          runtime_csontants the coordinate fields and fem operators
+!>          runtime_constants the coordinate fields and fem operators
 
 module init_solver_miniapp_mod
 
@@ -32,10 +32,11 @@ contains
   !> @param[in] twod_mesh_id The id of the twod mesh
   !> @param[inout] chi An size 3 array of fields holding the coordinates of the mesh
   !> @param[inout] The field vector which is to be initialised.
-  subroutine init_solver_miniapp(mesh_id, chi, fv )
+  subroutine init_solver_miniapp(mesh_id, chi, panel_id, fv )
     implicit none
     integer(i_def), intent(in)             :: mesh_id
     type( field_type ), intent(inout)      :: chi(:)
+    type( field_type ), intent(inout)      :: panel_id
     ! prognostic fields
     type( field_vector_type ), intent(inout) :: fv
     type( field_type )                       :: f1, f2
@@ -60,7 +61,7 @@ contains
     call fv%import_field(f1,1)
     call fv%import_field(f2,2)
 
-    write(log_scratch_space,'(A,E16.8)') "W0, W3 Fvector initiialised to 0.5/1.0 norm=",fv%norm()
+    write(log_scratch_space,'(A,E16.8)') "W0, W3 Fvector initialised to 0.5/1.0 norm=",fv%norm()
     call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
     call log_event( 'solver miniapp initialised', LOG_LEVEL_INFO )

@@ -7,7 +7,7 @@
 !-------------------------------------------------------------------------------
 module assign_coordinate_field_mod_test
 
-  use constants_mod,     only : r_def
+  use constants_mod,     only : r_def, i_def
   use yaxt,              only : xt_initialize, xt_finalize
   use mpi_mod,           only : store_comm, clear_comm
   use pFUnit_Mod
@@ -31,10 +31,13 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use base_mesh_config_mod,    only : geometry_planar, &
-                                        partitioner_planar
-    use feign_config_mod,        only : feign_base_mesh_config, &
-                                        feign_domain_size_config
+    use base_mesh_config_mod,      only : geometry_planar, &
+                                          partitioner_planar
+    use feign_config_mod,          only : feign_base_mesh_config, &
+                                          feign_domain_size_config, &
+                                          feign_finite_element_config
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
 
     implicit none
 
@@ -55,6 +58,14 @@ contains
                                    planar_domain_max_y=2.0_r_def, &
                                    planar_domain_min_x=0.0_r_def, &
                                    planar_domain_min_y=0.0_r_def )
+
+    call feign_finite_element_config( cellshape=cellshape_quadrilateral, &
+                                      coordinate_order=0_i_def,          &
+                                      element_order=0_i_def,             &
+                                      rehabilitate=.true.,               &
+                                      spherical_coord_order=0_i_def,     &
+                                      spherical_coord_system=spherical_coord_system_xyz, &
+                                      vorticity_in_w1=.false. )
 
   end subroutine setUp
 
@@ -80,18 +91,18 @@ contains
   @Test( npes=[1] )
   subroutine test_all( this )
 
-    use assign_coordinate_field_mod, only : assign_coordinate
+    use assign_coordinate_field_mod, only : assign_coordinate_xyz
 
     implicit none
 
     class(assign_coordinate_file_test_type), intent(inout) :: this
 
-    real(r_def), parameter :: tol = 1.0e-3_r_def, &
-                              one = 1.0_r_def
+    real(kind=r_def), parameter :: tol = 1.0e-3_r_def, &
+                                   one = 1.0_r_def
 
-    integer :: nlayers, ndf, nverts, i, undf
-    integer :: map(1)
-    real(kind=r_def) :: x(1),y(1),z(1), dz(1)
+    integer(kind=i_def) :: nlayers, ndf, nverts, i, undf, ndf_pid, undf_pid
+    integer(kind=i_def) :: map(1), map_pid(1)
+    real(kind=r_def) :: x(1),y(1),z(1), dz(1), panel_id(1)
     real(kind=r_def) :: vertices_phys(3,8,1), vertices_comp(8,3), nodal_coord(3,1)
 
     nlayers = 1
@@ -100,6 +111,13 @@ contains
     map(1)  = 1
     undf    = 1
     dz      = 2.0_r_def
+
+    ! Define panel_id field
+    panel_id = (/ 1.0_r_def /)
+    ndf_pid = 1
+    undf_pid = 1
+    map_pid = (/ 1 /)
+
 
     vertices_phys(1,:,1) = (/ 0.0_r_def, 2.0_r_def, 2.0_r_def, 0.0_r_def, 0.0_r_def, 2.0_r_def, 2.0_r_def, 0.0_r_def /)
     vertices_phys(2,:,1) = (/ 0.0_r_def, 0.0_r_def, 2.0_r_def, 2.0_r_def, 0.0_r_def, 0.0_r_def, 2.0_r_def, 2.0_r_def /)
@@ -113,9 +131,10 @@ contains
 
     nodal_coord(:,1) = (/ 0.5_r_def, 0.5_r_def, 0.5_r_def /)
 
-    call assign_coordinate(nlayers,ndf,nverts,undf,map,dz,x,y,z, &
-                           vertices_phys,nodal_coord,vertices_comp, &
-                           2.0_r_def, 0.0_r_def)
+    call assign_coordinate_xyz(nlayers,ndf,nverts,undf,map,dz,x,y,z,    &
+                               vertices_phys,nodal_coord,vertices_comp, &
+                               2.0_r_def, 0.0_r_def, panel_id, ndf_pid, &
+                               undf_pid, map_pid)
 
     @assertEqual( one, x(1), tol )
     @assertEqual( one, y(1), tol )

@@ -41,8 +41,11 @@ contains
                                           partitioner_planar
     use extrusion_config_mod,      only : method_uniform,       &
                                           stretching_method_linear
-    use feign_config_mod,          only : feign_base_mesh_config
-    use feign_config_mod,          only : feign_extrusion_config
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
+    use feign_config_mod,          only : feign_finite_element_config, &
+                                          feign_base_mesh_config, &
+                                          feign_extrusion_config
 
     implicit none
 
@@ -68,6 +71,14 @@ contains
                          stretching_height= 1.0_r_def,               &
                          stretching_method= stretching_method_linear &
                          )
+    call feign_finite_element_config(                       &
+                         cellshape=cellshape_quadrilateral, &
+                         coordinate_order=0_i_def,          &
+                         element_order=0_i_def,             &
+                         rehabilitate=.true.,               &
+                         spherical_coord_order = 0,         &
+                         spherical_coord_system=spherical_coord_system_xyz, &
+                         vorticity_in_w1=.false. )
 
   end subroutine setUp
 
@@ -118,7 +129,7 @@ contains
     real(r_def), allocatable :: srf_alt_w3(:)
     real(r_def), allocatable :: srf_alt_w0(:)
     real(r_def), allocatable :: multipl_w0_sl(:)
-    real(r_def), allocatable :: chi1(:), chi2(:), chi3(:)
+    real(r_def), allocatable :: chi1(:), chi2(:), chi3(:), panel_id(:)
 
     real(r_def) :: answer
 
@@ -169,7 +180,9 @@ contains
     allocate( srf_alt_w3(undf_w3_sl) )
     allocate( srf_alt_w0(undf_w0_sl) )
     allocate( multipl_w0_sl(undf_w0_sl) )
+    allocate( panel_id(undf_w3_sl) )
 
+    panel_id(:) = 1.0_r_def
     call get_wchi_3x3x3_field(chi1, chi2, chi3, dx, dy, dz, &
                               0.0_r_def, map_wchi, nlayers)
 
@@ -204,12 +217,16 @@ contains
                                      chi1,               &
                                      chi2,               &
                                      chi3,               &
+                                     panel_id,           &
                                      srf_alt_w0,         &
                                      domain_surface,     &
                                      domain_top,         &
                                      ndf_wchi,           &
                                      undf_wchi,          &
                                      map_wchi(:, cell),  &
+                                     ndf_w3_sl,          &
+                                     undf_w3_sl,         &
+                                     map_w3_sl(:,cell),  &
                                      ndf_w0_sl,          &
                                      undf_w0_sl,         &
                                      map_w0_sl(:, cell), &
@@ -242,6 +259,7 @@ contains
     deallocate( chi1 )
     deallocate( chi2 )
     deallocate( chi3 )
+    deallocate( panel_id )
     deallocate( basis_w0_on_wchi )
 
   end subroutine test_all

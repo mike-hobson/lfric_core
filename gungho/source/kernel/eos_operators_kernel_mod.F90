@@ -20,7 +20,8 @@ module eos_operators_kernel_mod
                                      GH_READ, GH_WRITE,              &
                                      ANY_SPACE_1,                    &
                                      GH_BASIS, GH_DIFF_BASIS,        &
-                                     CELLS, GH_QUADRATURE_XYoZ
+                                     CELLS, GH_QUADRATURE_XYoZ,      &
+                                     ANY_DISCONTINUOUS_SPACE_3
   use constants_mod,           only: r_def, i_def
   use coordinate_jacobian_mod, only: pointwise_coordinate_jacobian
   use fs_continuity_mod,       only: W3, Wtheta
@@ -33,20 +34,21 @@ module eos_operators_kernel_mod
   !---------------------------------------------------------------------------
   type, public, extends(kernel_type) :: eos_operators_kernel_type
     private
-    type(arg_type) :: meta_args(8) = (/                   &
-        arg_type(GH_OPERATOR, GH_WRITE, W3, W3),          &
-        arg_type(GH_OPERATOR, GH_WRITE, W3, W3),          &
-        arg_type(GH_OPERATOR, GH_WRITE, W3, Wtheta),      &
-        arg_type(GH_FIELD,    GH_READ,  W3),              &
-        arg_type(GH_FIELD,    GH_READ,  W3),              &
-        arg_type(GH_FIELD,    GH_READ,  Wtheta),          &
-        arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_1),     &
-        arg_type(GH_REAL,     GH_READ)                    &
+    type(arg_type) :: meta_args(9) = (/                             &
+        arg_type(GH_OPERATOR, GH_WRITE, W3, W3),                    &
+        arg_type(GH_OPERATOR, GH_WRITE, W3, W3),                    &
+        arg_type(GH_OPERATOR, GH_WRITE, W3, Wtheta),                &
+        arg_type(GH_FIELD,    GH_READ,  W3),                        &
+        arg_type(GH_FIELD,    GH_READ,  W3),                        &
+        arg_type(GH_FIELD,    GH_READ,  Wtheta),                    &
+        arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_1),               &
+        arg_type(GH_FIELD,    GH_READ,  ANY_DISCONTINUOUS_SPACE_3), &
+        arg_type(GH_REAL,     GH_READ)                              &
         /)
-    type(func_type) :: meta_funcs(3) = (/     &
-        func_type(W3,          GH_BASIS),     &
-        func_type(Wtheta,      GH_BASIS),     &
-        func_type(ANY_SPACE_1, GH_DIFF_BASIS) &
+    type(func_type) :: meta_funcs(3) = (/                           &
+        func_type(W3,          GH_BASIS),                           &
+        func_type(Wtheta,      GH_BASIS),                           &
+        func_type(ANY_SPACE_1, GH_BASIS, GH_DIFF_BASIS)             &
         /)
     integer :: iterates_over = CELLS
     integer :: gh_shape = GH_QUADRATURE_XYoZ
@@ -73,9 +75,10 @@ contains
 !! @param[in] exner Reference pressure
 !! @param[in] rho Reference density
 !! @param[in] theta Reference potential temperature
-!! @param[in] chi1 Chi in the first dir
-!! @param[in] chi2 Chi in the 2nd dir
-!! @param[in] chi3 Chi in the 3rd dir
+!! @param[in] chi1 1st (spherical) coordinate field in Wchi
+!! @param[in] chi2 2nd (spherical) coordinate field in Wchi
+!! @param[in] chi3 3rd (spherical) coordinate field in Wchi
+!! @param[in] panel_id Field giving the ID for mesh panels.
 !! @param[in] scalar Scalar weight for the operator
 !! @param[in] ndf_w3 Number of degrees of freedom per cell for the operator space.
 !! @param[in] undf_w3 Total number of degrees of freedom for the W3 space
@@ -88,7 +91,11 @@ contains
 !! @param[in] ndf_chi Number of degrees of freedom per cell for the coordinate field.
 !! @param[in] undf_chi Number of unique degrees of freedom for chi field
 !! @param[in] map_chi Dofmap for the cell at the base of the column.
-!! @param[in] diff_basis_chi Differential basis functions evaluated at quadrature points.
+!! @param[in] basis_chi Wchi basis functions evaluated at quadrature points.
+!! @param[in] diff_basis_chi Wchi differential basis functions evaluated at quadrature points.
+!! @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
+!! @param[in] undf_pid Number of unique degrees of freedom for panel_id
+!! @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
 !! @param[in] nqp_h Number of horizontal quadrature points
 !! @param[in] nqp_v Number of vertical quadrature points
 !! @param[in] wqp_h Horizontal quadrature weights
@@ -99,11 +106,13 @@ subroutine eos_operators_code(cell, nlayers,                      &
                               ncell_3d3, p3theta,                 &
                               exner, rho, theta,                  &
                               chi1, chi2, chi3,                   &
+                              panel_id,                           &
                               scalar,                             &
                               ndf_w3, undf_w3, map_w3, basis_w3,  &
                               ndf_wt, undf_wt, map_wt, basis_wt,  &
                               ndf_chi, undf_chi,                  &
-                              map_chi, diff_basis_chi,            &
+                              map_chi, basis_chi, diff_basis_chi, &
+                              ndf_pid, undf_pid, map_pid,         &
                               nqp_h, nqp_v, wqp_h, wqp_v)
 
   implicit none
@@ -111,18 +120,20 @@ subroutine eos_operators_code(cell, nlayers,                      &
   ! Arguments
   integer(kind=i_def), intent(in)     :: cell, nqp_h, nqp_v
   integer(kind=i_def), intent(in)     :: nlayers
-  integer(kind=i_def), intent(in)     :: ndf_w3, ndf_chi, ndf_wt
-  integer(kind=i_def), intent(in)     :: undf_chi, undf_w3, undf_wt
+  integer(kind=i_def), intent(in)     :: ndf_w3, ndf_chi, ndf_wt, ndf_pid
+  integer(kind=i_def), intent(in)     :: undf_chi, undf_w3, undf_wt, undf_pid
   integer(kind=i_def), intent(in)     :: ncell_3d1,  ncell_3d2, ncell_3d3
 
   integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
   integer(kind=i_def), dimension(ndf_w3),  intent(in) :: map_w3
+  integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
   integer(kind=i_def), dimension(ndf_wt),  intent(in) :: map_wt
 
   real(kind=r_def), dimension(ndf_w3,ndf_w3,ncell_3d1),  intent(inout)  :: m3exner
   real(kind=r_def), dimension(ndf_w3,ndf_w3,ncell_3d2),  intent(inout)  :: m3rho
   real(kind=r_def), dimension(ndf_w3,ndf_wt,ncell_3d3),  intent(inout)  :: p3theta
 
+  real(kind=r_def), intent(in)  :: basis_chi(1,ndf_chi,nqp_h,nqp_v)
   real(kind=r_def), dimension(3,ndf_chi,nqp_h,nqp_v), intent(in) :: diff_basis_chi
   real(kind=r_def), dimension(1,ndf_w3,nqp_h,nqp_v),  intent(in) :: basis_w3
   real(kind=r_def), dimension(1,ndf_wt,nqp_h,nqp_v),  intent(in) :: basis_wt
@@ -132,6 +143,7 @@ subroutine eos_operators_code(cell, nlayers,                      &
   real(kind=r_def), dimension(undf_chi), intent(in)           :: chi1
   real(kind=r_def), dimension(undf_chi), intent(in)           :: chi2
   real(kind=r_def), dimension(undf_chi), intent(in)           :: chi3
+  real(kind=r_def), dimension(undf_pid), intent(in)           :: panel_id
   real(kind=r_def),                      intent(in)           :: scalar
 
   real(kind=r_def), dimension(nqp_h), intent(in) :: wqp_h
@@ -146,6 +158,10 @@ subroutine eos_operators_code(cell, nlayers,                      &
   real(kind=r_def), dimension(3,3)             :: jac
   real(kind=r_def)                             :: dj
 
+  integer(kind=i_def) :: ipanel
+
+  ipanel = int(panel_id(map_pid(1)), i_def)
+
   do k = 0, nlayers-1
     do df = 1, ndf_chi
       chi1_e(df) = chi1(map_chi(df) + k)
@@ -158,9 +174,11 @@ subroutine eos_operators_code(cell, nlayers,                      &
     p3theta(:,:,ik) = 0.0_r_def
     do qp2 = 1, nqp_v
       do qp1 = 1, nqp_h
-        call pointwise_coordinate_jacobian(ndf_chi, chi1_e, chi2_e, chi3_e,  &
-                                           diff_basis_chi(:,:,qp1,qp2), &
-                                           jac, dj)
+        call pointwise_coordinate_jacobian(ndf_chi, chi1_e, chi2_e, chi3_e, &
+                                           ipanel, basis_chi(:,:,qp1,qp2),  &
+                                           diff_basis_chi(:,:,qp1,qp2),     &
+                                           jac, dj                          )
+
         exner_quad = 0.0_r_def
         rho_quad = 0.0_r_def
         do df = 1,ndf_w3

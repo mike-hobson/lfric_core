@@ -18,8 +18,7 @@ module split_mol_cosmic_alg_mod
   use function_space_collection_mod,     only: function_space_collection
   use finite_element_config_mod,         only: element_order
   use fs_continuity_mod,                 only: W2, W3
-  use runtime_constants_mod,             only: get_coordinates,               &
-                                               get_cell_orientation,          &
+  use runtime_constants_mod,             only: get_cell_orientation,          &
                                                get_detj_at_w2
   use flux_direction_mod,                only: z_direction
   use vert_conservative_cosmic_alg_mod,  only: vert_conservative_cosmic_alg
@@ -64,12 +63,10 @@ subroutine split_transport_rho_step( wind, rho )
   type(field_type)          :: dep_z
   type(field_type), pointer :: detj_w2 => null()
   type(field_type), pointer :: cell_orient => null()
-  type(field_type), pointer :: chi(:) => null()
 
   call wind%copy_field_properties(dep_z)
   detj_w2 => get_detj_at_w2()
   cell_orient => get_cell_orientation()
-  chi => get_coordinates()
 
   if ( subroutine_timers ) call timer('split_transport_rho_step')
 
@@ -80,7 +77,7 @@ subroutine split_transport_rho_step( wind, rho )
 
   if ( subroutine_timers ) call timer('split_transport_rho_step')
 
-  nullify( detj_w2, cell_orient, chi )
+  nullify( detj_w2, cell_orient )
 
 end subroutine split_transport_rho_step
 

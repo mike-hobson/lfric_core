@@ -10,7 +10,8 @@ module calc_dA_at_w2_kernel_mod
   use argument_mod,          only : arg_type, func_type,        &
                                     GH_FIELD, GH_READ, GH_INC,  &
                                     ANY_SPACE_1, GH_DIFF_BASIS, &
-                                    CELLS, GH_EVALUATOR
+                                    ANY_DISCONTINUOUS_SPACE_3,  &
+                                    CELLS, GH_EVALUATOR, GH_BASIS
   use constants_mod,         only : r_def, i_def
   use fs_continuity_mod,     only : W2
   use kernel_mod,            only : kernel_type
@@ -26,17 +27,18 @@ module calc_dA_at_w2_kernel_mod
   !>
   type, public, extends(kernel_type) :: calc_dA_at_w2_kernel_type
     private
-    type(arg_type) :: meta_args(2) = (/              &
-        arg_type(GH_FIELD,    GH_INC,   W2),         &
-        arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_1) &
+    type(arg_type) :: meta_args(3) = (/                            &
+        arg_type(GH_FIELD,    GH_INC,   W2),                       &
+        arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_1),              &
+        arg_type(GH_FIELD,    GH_READ,  ANY_DISCONTINUOUS_SPACE_3) &
         /)
-    type(func_type) :: meta_funcs(1) = (/     &
-        func_type(ANY_SPACE_1, GH_DIFF_BASIS) &
+    type(func_type) :: meta_funcs(1) = (/                          &
+        func_type(ANY_SPACE_1, GH_BASIS, GH_DIFF_BASIS)            &
         /)
     integer(i_def) :: iterates_over = CELLS
     integer(i_def) :: gh_shape = GH_EVALUATOR
   contains
-    procedure, nopass ::calc_dA_at_w2_code
+    procedure, nopass :: calc_dA_at_w2_code
   end type
 
   !---------------------------------------------------------------------------
@@ -51,19 +53,27 @@ contains
 !> @param[in]  chi1           The array of coordinates in the first direction
 !> @param[in]  chi2           The array of coordinates in the second direction
 !> @param[in]  chi3           The array of coordinates in the third direction
+!> @param[in]  panel_id       A field giving the ID for mesh panels.
 !> @param[in]  ndf_w2         The number of degrees of freedom per cell for the output field
 !> @param[in]  undf_w2        The number of unique degrees of freedom for the output field
 !> @param[in]  map_w2         Integer array holding the dofmap for the cell at the base of the column for the output field
 !> @param[in]  ndf_chi        The number of degrees of freedom per cell for the coordinate field
 !> @param[in]  undf_chi       The number of unique degrees of freedom for the coordinate field
 !> @param[in]  map_chi        Integer array holding the dofmap for the cell at the base of the column for the coordinate field
+!> @param[in]  basis_chi      The basis functions of the coordinate space evaluated at the nodal points
 !> @param[in]  diff_basis_chi The diff basis functions of the coordinate space evaluated at the nodal points
+!> @param[in]  ndf_pid        Number of degrees of freedom per cell for panel_id
+!> @param[in]  undf_pid       Number of unique degrees of freedom for panel_id
+!> @param[in]  map_pid        Dofmap for the cell at the base of the column for panel_id
 subroutine calc_dA_at_w2_code( nlayers,                                  &
                                dA,                                       &
                                chi1, chi2, chi3,                         &
+                               panel_id,                                 &
                                ndf_w2, undf_w2, map_w2,                  &
                                ndf_chi, undf_chi, map_chi,               &
-                               diff_basis_chi                            )
+                               basis_chi, diff_basis_chi,                &
+                               ndf_pid, undf_pid, map_pid                &
+                              )
 
   use coordinate_jacobian_mod, only: coordinate_jacobian, coordinate_jacobian_inverse
 
@@ -75,11 +85,16 @@ subroutine calc_dA_at_w2_code( nlayers,                                  &
   integer(kind=i_def), intent(in)    :: undf_w2
   integer(kind=i_def), intent(in)    :: ndf_chi
   integer(kind=i_def), intent(in)    :: undf_chi
+  integer(kind=i_def), intent(in)    :: ndf_pid
+  integer(kind=i_def), intent(in)    :: undf_pid
   real(kind=r_def), dimension(undf_w2), intent(inout)       :: dA
   real(kind=r_def), dimension(undf_chi), intent(in)         :: chi1, chi2, chi3
+  real(kind=r_def), dimension(undf_pid), intent(in)         :: panel_id
   integer(kind=i_def), dimension(ndf_w2), intent(in)        :: map_w2
   integer(kind=i_def), dimension(ndf_chi), intent(in)       :: map_chi
   real(kind=r_def), dimension(3,ndf_chi,ndf_w2), intent(in) :: diff_basis_chi
+  real(kind=r_def), dimension(1,ndf_chi,ndf_w2), intent(in) :: basis_chi
+  integer(kind=i_def), dimension(ndf_pid), intent(in)       :: map_pid
 
   ! Internal variables
   integer(kind=i_def) :: df, k
@@ -90,14 +105,18 @@ subroutine calc_dA_at_w2_code( nlayers,                                  &
   real(kind=r_def), dimension(3,3,ndf_w2) :: jac_inv
   real(kind=r_def), dimension(3,3,ndf_w2) :: JTJinvT
 
+  integer(kind=i_def) :: ipanel
+
+  ipanel = int(panel_id(map_pid(1)), i_def)
+
   do k = 0, nlayers-1
     do df = 1,ndf_chi
       chi1_e(df) = chi1(map_chi(df) + k)
       chi2_e(df) = chi2(map_chi(df) + k)
       chi3_e(df) = chi3(map_chi(df) + k)
     end do
-    call coordinate_jacobian(ndf_chi, ndf_w2, 1, chi1_e, chi2_e, chi3_e,  &
-                             diff_basis_chi, jacobian, dj)
+    call coordinate_jacobian(ndf_chi, ndf_w2, 1, chi1_e, chi2_e, chi3_e,    &
+                             ipanel, basis_chi, diff_basis_chi, jacobian, dj)
 
     call coordinate_jacobian_inverse(ndf_w2, 1, jacobian, dj, jac_inv)
 

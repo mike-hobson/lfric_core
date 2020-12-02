@@ -59,10 +59,10 @@ contains
 !! @param[in] height_wt Height coordinate in wtheta
 !! @param[in] height_w3 Height coordinate in w3
 !! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 Number unique of degrees of freedom  for w3
+!! @param[in] undf_w3 Number of unique degrees of freedom  for w3
 !! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
 !! @param[in] ndf_wt Number of degrees of freedom per cell for wtheta
-!! @param[in] undf_wt Number unique of degrees of freedom  for wtheta
+!! @param[in] undf_wt Number of unique degrees of freedom  for wtheta
 !! @param[in] map_wt Dofmap for the cell at the base of the column for wt
 subroutine sample_eos_rho_code(nlayers, rho, exner, theta, moist_dyn_gas, &
                                ndf_w3, undf_w3, map_w3, basis_3, ndf_wt,  &

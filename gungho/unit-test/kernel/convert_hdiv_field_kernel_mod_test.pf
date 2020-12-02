@@ -8,10 +8,13 @@ module convert_hdiv_field_kernel_mod_test
 
   use constants_mod,                       only : i_def, r_def
   use get_unit_test_m3x3_q3x3x3_sizes_mod, only : get_w0_m3x3_q3x3x3_size, &
-                                                  get_w2_m3x3_q3x3x3_size
+                                                  get_w2_m3x3_q3x3x3_size, &
+                                                  get_w3_m3x3_q3x3x3_size
   use get_unit_test_m3x3_dofmap_mod,       only : get_w0_m3x3_dofmap, &
-                                                  get_w2_m3x3_dofmap
+                                                  get_w2_m3x3_dofmap, &
+                                                  get_w3_m3x3_dofmap
   use get_unit_test_w2nodal_basis_mod,     only : get_w2_w2nodal_basis, &
+                                                  get_w0_w2nodal_basis, &
                                                   get_w0_w2nodal_diff_basis
   use get_unit_test_3x3x3_chi_mod,         only : get_w0_3x3x3_field
   use pFUnit_Mod
@@ -37,7 +40,10 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use feign_config_mod,        only : feign_formulation_config
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
+    use feign_config_mod,          only : feign_finite_element_config, &
+                                          feign_formulation_config
 
     implicit none
 
@@ -45,8 +51,17 @@ contains
 
     ! Initialise YAXT
     call xt_initialize(this%getMpiCommunicator())
-    !Store the MPI communicator for later use
+    ! Store the MPI communicator for later use
     call store_comm(this%getMpiCommunicator())
+
+    call feign_finite_element_config(           &
+             cellshape=cellshape_quadrilateral, &
+             coordinate_order=0_i_def,          &
+             element_order=0_i_def,             &
+             rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+             vorticity_in_w1=.false. )
 
     call feign_formulation_config( transport_only        = .false.,         &
                                    l_multigrid           = .false.,         &
@@ -102,7 +117,7 @@ contains
     real(kind=r_def) :: answer
 
     integer(i_def) :: nlayers, ncells, ncell_3d, cell, icell
-    integer(i_def) :: ndf_w0, undf_w0, ndf_w2, undf_w2
+    integer(i_def) :: ndf_w0, undf_w0, ndf_w2, undf_w2, ndf_pid, undf_pid
     integer(i_def) :: dim_space, dim_space_diff
     integer(i_def) :: nqp_h, nqp_v
 
@@ -110,10 +125,12 @@ contains
 
     integer(i_def), allocatable :: map_w0(:,:)
     integer(i_def), allocatable :: map_w2(:,:)
+    integer(i_def), allocatable :: map_pid(:,:)
+    real(r_def), allocatable :: basis_w0(:,:,:)
     real(r_def), allocatable :: diff_basis_w0(:,:,:)
     real(r_def), allocatable :: basis_w2(:,:,:)
 
-    real(r_def), allocatable :: chi1(:), chi2(:), chi3(:)
+    real(r_def), allocatable :: chi1(:), chi2(:), chi3(:), panel_id(:)
     real(r_def), allocatable :: phys1(:), phys2(:), phys3(:)
     real(r_def), allocatable :: comp(:)
 
@@ -126,18 +143,27 @@ contains
                                   dim_space, dim_space_diff, &
                                   nqp_h, nqp_v, &
                                   nlayers )
+    call get_w3_m3x3_q3x3x3_size( ndf_pid, undf_pid, ncells, &
+                                  dim_space, dim_space_diff, &
+                                  nqp_h, nqp_v, 1 )
+
     call get_w0_m3x3_dofmap(map_w0)
     call get_w2_m3x3_dofmap(map_w2)
+    call get_w3_m3x3_dofmap(map_pid, 1)
     call get_w0_w2nodal_diff_basis(diff_basis_w0)
+    call get_w0_w2nodal_basis(basis_w0)
     call get_w2_w2nodal_basis(basis_w2)
 
     ! Compute coordinates
     allocate(chi1(undf_w0))
     allocate(chi2(undf_w0))
     allocate(chi3(undf_w0))
+    allocate(panel_id(undf_pid))
 
     call get_w0_3x3x3_field(chi1, chi2, chi3, dx, dy, dz, &
                             map_w0, nlayers)
+
+    panel_id(:) = 1.0_r_def
 
     ! Create the data
     cell = 5
@@ -161,11 +187,13 @@ contains
                                  chi1,                            &
                                  chi2,                            &
                                  chi3,                            &
+                                 panel_id,                        &
                                  ndf_w2, undf_w2, map_w2(:,cell), &
                                  ndf_w2, undf_w2, map_w2(:,cell), &
                                  basis_w2,                        &
                                  ndf_w0, undf_w0, map_w0(:,cell), &
-                                 diff_basis_w0                    &
+                                 basis_w0, diff_basis_w0,         &
+                                 ndf_pid, undf_pid, map_pid       &
                                 )
 
     answer = 1.0_r_def
@@ -182,12 +210,15 @@ contains
 
     deallocate(map_w0)
     deallocate(map_w2)
+    deallocate(map_pid)
     deallocate(diff_basis_w0)
+    deallocate(basis_w0)
     deallocate(basis_w2)
 
     deallocate(chi1)
     deallocate(chi2)
     deallocate(chi3)
+    deallocate(panel_id)
     deallocate(phys1)
     deallocate(phys2)
     deallocate(phys3)

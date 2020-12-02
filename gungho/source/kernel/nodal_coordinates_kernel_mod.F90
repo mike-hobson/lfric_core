@@ -40,7 +40,7 @@ type, public, extends(kernel_type) :: nodal_coordinates_kernel_type
   integer :: iterates_over = CELLS
   integer :: gh_shape = GH_EVALUATOR
 contains
-  procedure, nopass ::nodal_coordinates_code
+  procedure, nopass :: nodal_coordinates_code
 end type
 
 !-------------------------------------------------------------------------------

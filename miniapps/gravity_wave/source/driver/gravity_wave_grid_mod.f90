@@ -36,16 +36,21 @@ contains
   !> @brief Initialises grid related information used by the model
   !> @param [inout] mesh_id The identifier of the primary mesh
   !> @param [inout] twod_mesh_id The identifier of the primary 2d mesh
-  !> @param [inout] chi Function space representatio of the 3d mesh
+  !> @param [inout] chi_xyz (X,Y,Z) coordinate fields
+  !> @param [inout] chi_sph Spherical coordinate fields
+  !> @param [inout] panel_id 2D field giving cubed sphere panel ids
   !> @param [inout] multigrid_function_space_chain An ordered  list of function
   !>                                               spaces used by multigrid
-  subroutine initialise_grid(mesh_id, twod_mesh_id, chi, &
+  subroutine initialise_grid(mesh_id, twod_mesh_id,      &
+                             chi_xyz, chi_sph, panel_id, &
                              multigrid_function_space_chain)
 
     implicit none
 
     integer(i_def),   intent(inout) :: mesh_id, twod_mesh_id
-    type(field_type), intent(inout) :: chi(3)
+    type(field_type), intent(inout) :: chi_xyz(3)
+    type(field_type), intent(inout) :: chi_sph(3)
+    type(field_type), intent(inout) :: panel_id
     type(function_space_chain_type), intent(inout) :: &
                                        multigrid_function_space_chain
 
@@ -69,7 +74,7 @@ contains
                     multigrid_mesh_ids=multigrid_mesh_ids )
 
     ! Create FEM specifics (function spaces and chi field)
-    call init_fem( mesh_id, chi )
+    call init_fem(mesh_id, chi_xyz, chi_sph, panel_id)
 
     if (l_multigrid) then
 

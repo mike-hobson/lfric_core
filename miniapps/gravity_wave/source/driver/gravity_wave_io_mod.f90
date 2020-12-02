@@ -29,18 +29,18 @@ contains
   !> @param [in] clock Model time.
   !> @param [in] mesh_id The identifier of the primary mesh
   !> @param [in] twod_mesh_id The identifier of the primary 2d mesh
-  !> @param [in] chi A size 3 array of fields holding the coordinates of the
-  !>                 mesh.
+  !> @param [in] chi_xyz A size 3 array of fields holding the (X,Y,Z)
+  !>                     coordinates of the mesh.
   !> @param [in] xios_ctx XIOS context identifier
   !>
-  subroutine initialise_io(comm, clock, mesh_id, twod_mesh_id, chi, xios_ctx)
+  subroutine initialise_io(comm, clock, mesh_id, twod_mesh_id, chi_xyz, xios_ctx)
 
     implicit none
 
     integer(i_native), intent(in) :: comm
     type(clock_type),  intent(in) :: clock
     integer(i_def),    intent(in) :: mesh_id, twod_mesh_id
-    type(field_type),  intent(in) :: chi(3)
+    type(field_type),  intent(in) :: chi_xyz(3)
     character(len=*),  intent(in) :: xios_ctx
 
   !----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ contains
                           clock,        &
                           mesh_id,      &
                           twod_mesh_id, &
-                          chi )
+                          chi_xyz )
 
     if (clock%is_initialisation()) then
       ! Make sure XIOS calendar is set to timestep 1 as it starts there

@@ -70,7 +70,7 @@ contains
     !! @param[in] undf_wtheta The number of total degrees of freedom for wtheta
     !! @param[in] map_wtheta Integer array holding the dofmap for the cell at the base of the column
     !! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
-    !! @param[in] undf_w3 Number unique of degrees of freedom  for w3
+    !! @param[in] undf_w3 Number of unique degrees of freedom  for w3
     !! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
     !! @param[in] ndf_chi Number of degrees of freedom per cell for chi
     !! @param[in] undf_chi Number of total degrees of freedom for chi

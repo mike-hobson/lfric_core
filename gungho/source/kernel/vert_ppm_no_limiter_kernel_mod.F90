@@ -58,7 +58,7 @@ contains
 !! @param[out] a2      Coefficient a2
 !! @param[in]  rho     Density
 !! @param[in]  ndf_w3  Number of degrees of freedom for W3 per cell
-!! @param[in]  undf_w3 Number of unique of degrees of freedom for W3
+!! @param[in]  undf_w3 Number of unique degrees of freedom for W3
 !! @param[in]  map_w3  The dofmap for the cell at the base of the column
 subroutine vert_ppm_no_limiter_code( nlayers,                      &
                                      a0,                           &

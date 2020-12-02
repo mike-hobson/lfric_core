@@ -7,8 +7,10 @@
 !-------------------------------------------------------------------------------
 module w3_solver_kernel_mod_test
 
-  use constants_mod,  only : i_def, r_def
+  use constants_mod, only : i_def, r_def
   use pFUnit_Mod
+  use yaxt,          only : xt_initialize, xt_finalize
+  use mpi_mod,       only : store_comm, clear_comm
 
   implicit none
 
@@ -16,7 +18,7 @@ module w3_solver_kernel_mod_test
   public :: test_all
 
   @TestCase
-  type, extends(TestCase), public :: w3_solver_test_type
+  type, extends(MPITestCase), public :: w3_solver_test_type
     private
   contains
     procedure setUp
@@ -29,23 +31,51 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
+    use feign_config_mod,          only : feign_finite_element_config
+
     implicit none
 
     class(w3_solver_test_type), intent(inout) :: this
+
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    ! Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
+    call feign_finite_element_config(           &
+             cellshape=cellshape_quadrilateral, &
+             coordinate_order=0_i_def,          &
+             element_order=0_i_def,             &
+             rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+             vorticity_in_w1=.false. )
+
 
   end subroutine setUp
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
+    use configuration_mod,        only: final_configuration
+
     implicit none
 
     class(w3_solver_test_type), intent(inout) :: this
 
+    call final_configuration()
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
   end subroutine tearDown
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  @Test( npes=[1] )
   subroutine test_all( this )
 
     use w3_solver_kernel_mod, only: solver_w3_code
@@ -55,6 +85,8 @@ contains
             get_gaussian_q3x3x3_quadrature_points_z,   &
             get_gaussian_q3x3x3_quadrature_weights_xy, &
             get_gaussian_q3x3x3_quadrature_weights_z
+    use get_unit_test_q3x3x3_basis_mod, only: &
+            get_w0_q3x3x3_basis
 
     use get_unit_test_m3x3_q3x3x3_sizes_mod, only: get_w0_m3x3_q3x3x3_size
 
@@ -64,24 +96,29 @@ contains
 
     real(r_def), parameter :: tol = 1.0e-14_r_def
 
-    integer(i_def) :: ndf, map(1), undf
-    real(kind=r_def) :: xdata(1)
-    real(kind=r_def) :: rhsdata(1)
-    real(kind=r_def) :: answer
-    integer(i_def)   :: map_w0(8)
-    real(kind=r_def) :: chi(8,3)
-    real(kind=r_def) :: x_vert(8,3)
-    real(kind=r_def) :: fx, fy, fz
-    integer :: df, dim, qp1, qp2
+    integer(kind=i_def) :: ndf, map(1), undf
+    real(kind=r_def)    :: xdata(1)
+    real(kind=r_def)    :: rhsdata(1)
+    real(kind=r_def)    :: answer
+    integer(kind=i_def) :: map_w0(8)
+    integer(kind=i_def) :: map_pid(1)
+    real(kind=r_def)    :: chi(8,3)
+    real(kind=r_def)    :: panel_id(1)
+    real(kind=r_def)    :: x_vert(8,3)
+    real(kind=r_def)    :: fx, fy, fz
+    integer(kind=i_def) :: df, dim, qp1, qp2
 
     integer(i_def) :: ndf_chi, undf_chi
 
     real(r_def), allocatable :: basis(:,:,:,:)
+    real(r_def), allocatable :: basis_w0(:,:,:,:)
     real(r_def), allocatable :: diff_basis(:,:,:,:)
 
     integer(i_def) :: nlayers
     integer(i_def) :: ndf_w0
     integer(i_def) :: undf_w0
+    integer(i_def) :: ndf_pid
+    integer(i_def) :: undf_pid
     integer(i_def) :: ncells
     integer(i_def) :: dim_space
     integer(i_def) :: dim_space_diff
@@ -115,8 +152,14 @@ contains
     ndf_chi  = ndf_w0
     undf_chi = undf_w0
 
+    ndf_pid = 1
+    undf_pid = ncells
+    map_pid = (/ 1 /)
+
     allocate( basis(1,8,nqp_h,nqp_v) )
     allocate( diff_basis(3,8,nqp_h,nqp_v) )
+
+    call get_w0_q3x3x3_basis(basis_w0)
 
     x_vert(1,:) = (/ 0.0_r_def, 0.0_r_def, 0.0_r_def /)
     x_vert(2,:) = (/ 1.0_r_def, 0.0_r_def, 0.0_r_def /)
@@ -126,6 +169,8 @@ contains
     x_vert(6,:) = (/ 1.0_r_def, 0.0_r_def, 1.0_r_def /)
     x_vert(7,:) = (/ 1.0_r_def, 1.0_r_def, 1.0_r_def /)
     x_vert(8,:) = (/ 0.0_r_def, 1.0_r_def, 1.0_r_def /)
+
+    panel_id(:) = 1.0_r_def
 
     ndf_w0 = 8
     do df = 1, ndf_w0
@@ -159,9 +204,11 @@ contains
     !=====================================
     call solver_w3_code(nlayers,                               &
                         xdata, rhsdata,                        &
-                        chi(:,1),chi(:,2),chi(:,3),            &
+                        chi(:,1),chi(:,2),chi(:,3), panel_id,  &
                         ndf, undf, map, basis,                 &
-                        ndf_chi, undf_chi, map_w0, diff_basis, &
+                        ndf_chi, undf_chi, map_w0,             &
+                        basis_w0, diff_basis,                  &
+                        ndf_pid, undf_pid, map_pid,            &
                         nqp_h, nqp_v, wh, wv )
 
 ! Answer for hardwired jacobian
@@ -170,6 +217,7 @@ contains
     @assertEqual( answer, xdata(1), tol )
 
     deallocate( basis )
+    deallocate( basis_w0 )
     deallocate( diff_basis )
 
     deallocate( wh )

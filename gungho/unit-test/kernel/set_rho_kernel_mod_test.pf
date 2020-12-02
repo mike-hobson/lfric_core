@@ -63,8 +63,10 @@ contains
 
     use base_mesh_config_mod,      only : geometry_planar, &
                                           partitioner_planar
-    use finite_element_config_mod, only : cellshape_quadrilateral
-    use feign_config_mod,          only : feign_base_mesh_config,           &
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
+    use feign_config_mod,          only : feign_finite_element_config,      &
+                                          feign_base_mesh_config,           &
                                           feign_idealised_config,           &
                                           feign_initial_density_config,     &
                                           feign_initial_temperature_config, &
@@ -77,7 +79,7 @@ contains
 
     ! Initialise YAXT
     call xt_initialize(this%getMpiCommunicator())
-    !Store the MPI communicator for later use
+    ! Store the MPI communicator for later use
     call store_comm(this%getMpiCommunicator())
 
     call feign_base_mesh_config( filename='foo',                      &
@@ -85,6 +87,15 @@ contains
                                  geometry=geometry_planar,            &
                                  partitioner=partitioner_planar,      &
                                  fplane=.false., f_lat_deg=0.0_r_def )
+
+    call feign_finite_element_config(           &
+             cellshape=cellshape_quadrilateral, &
+             coordinate_order=0_i_def,          &
+             element_order=0_i_def,             &
+             rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+             vorticity_in_w1=.false. )
 
     call feign_idealised_config( test=test_gravity_wave )
     call feign_initial_density_config( tracer_background=tracer_background,   &
@@ -139,7 +150,7 @@ contains
     real(r_def) :: answer(3)
 
     integer(i_def) :: nlayers, ncells, cell, icell
-    integer(i_def) :: ndf_w0, undf_w0, ndf_w3, undf_w3
+    integer(i_def) :: ndf_w0, undf_w0, ndf_w3, undf_w3, ndf_pid, undf_pid
     integer(i_def) :: dim_space, dim_space_diff
     integer(i_def) :: nqp_h, nqp_v
 
@@ -148,12 +159,13 @@ contains
 
     integer(i_def), allocatable :: map_w0(:,:)
     integer(i_def), allocatable :: map_w3(:,:)
+    integer(i_def), allocatable :: map_pid(:,:)
     real(r_def), allocatable :: diff_basis_w0(:,:,:,:)
     real(r_def), allocatable :: basis_w0(:,:,:,:)
     real(r_def), allocatable :: basis_w3(:,:,:,:)
     real(r_def), allocatable :: wh(:), wv(:)
 
-    real(r_def), allocatable :: chi1(:), chi2(:), chi3(:)
+    real(r_def), allocatable :: chi1(:), chi2(:), chi3(:), panel_id(:)
     real(r_def), allocatable :: rho(:)
 
     nlayers = 3
@@ -173,13 +185,19 @@ contains
     call get_gaussian_q3x3x3_quadrature_weights_xy(wh)
     call get_gaussian_q3x3x3_quadrature_weights_z(wv)
 
+    ndf_pid = 1_i_def
+    undf_pid = ncells
+    call get_w3_m3x3_dofmap(map_pid, 1_i_def)
+
     ! Compute coordinates
     allocate(chi1(undf_w0))
     allocate(chi2(undf_w0))
     allocate(chi3(undf_w0))
+    allocate(panel_id(undf_pid))
 
     call get_w0_3x3x3_field(chi1, chi2, chi3, dx, dy, dz, &
                             map_w0, nlayers)
+    panel_id(:) = 1.0_r_def
 
     ! Create the data
     allocate(rho(undf_w3))
@@ -193,6 +211,7 @@ contains
                        chi1,              &
                        chi2,              &
                        chi3,              &
+                       panel_id,          &
                        time,              &
                        ndf_w3,            &
                        undf_w3,           &
@@ -203,6 +222,9 @@ contains
                        map_w0,            &
                        basis_w0,          &
                        diff_basis_w0,     &
+                       ndf_pid,           &
+                       ncells,            &
+                       map_pid(:,cell),   &
                        nqp_h,             &
                        nqp_v,             &
                        wh,                &
@@ -217,6 +239,7 @@ contains
 
     deallocate(map_w0)
     deallocate(map_w3)
+    deallocate(map_pid)
     deallocate(diff_basis_w0)
     deallocate(basis_w0)
     deallocate(basis_w3)
@@ -226,6 +249,7 @@ contains
     deallocate(chi1)
     deallocate(chi2)
     deallocate(chi3)
+    deallocate(panel_id)
     deallocate(rho)
 
   end subroutine test_all

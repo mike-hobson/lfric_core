@@ -15,9 +15,10 @@ use kernel_mod,              only : kernel_type
 use argument_mod,            only : arg_type, func_type,                     &
                                     GH_FIELD, GH_READ, GH_INC,               &
                                     ANY_SPACE_9, ANY_SPACE_2, ANY_SPACE_1,   &
+                                    ANY_DISCONTINUOUS_SPACE_3,               &
                                     GH_DIFF_BASIS, GH_BASIS,                 &
                                     CELLS, GH_EVALUATOR
-use constants_mod,           only : r_def
+use constants_mod,           only : r_def, i_def
 
 implicit none
 
@@ -27,19 +28,20 @@ implicit none
 !> The type declaration for the kernel. Contains the metadata needed by the Psy layer
 type, public, extends(kernel_type) :: convert_hdiv_field_kernel_type
   private
-  type(arg_type) :: meta_args(3) = (/                                  &
+  type(arg_type) :: meta_args(4) = (/                                  &
        arg_type(GH_FIELD*3,  GH_INC,  ANY_SPACE_1),                    &
        arg_type(GH_FIELD,    GH_READ, ANY_SPACE_2),                    &
-       arg_type(GH_FIELD*3,  GH_READ, ANY_SPACE_9)                     &
+       arg_type(GH_FIELD*3,  GH_READ, ANY_SPACE_9),                    &
+       arg_type(GH_FIELD,    GH_READ, ANY_DISCONTINUOUS_SPACE_3)       &
        /)
   type(func_type) :: meta_funcs(2) = (/                                &
        func_type(ANY_SPACE_2, GH_BASIS),                               &
-       func_type(ANY_SPACE_9, GH_DIFF_BASIS)                           &
+       func_type(ANY_SPACE_9, GH_BASIS, GH_DIFF_BASIS)                 &
        /)
   integer :: iterates_over = CELLS
   integer :: gh_shape = GH_EVALUATOR
 contains
-  procedure, nopass ::convert_hdiv_field_code
+  procedure, nopass :: convert_hdiv_field_code
 end type
 
 !-------------------------------------------------------------------------------
@@ -52,48 +54,69 @@ contains
 !> @param[in] ndf Number of degrees of freedom per cell for the output field
 !> @param[in] undf Number of unique degrees of freedom for the output field
 !> @param[in] map Dofmap for the cell at the base of the column for the output field
-!> @param[inout] physical_field1 First component of the output field in physical units
-!> @param[inout] physical_field2 Second component of the  output field in physical units
-!> @param[inout] physical_field3 Third component of the  output field in physical units
+!> @param[in,out] physical_field1 First component of the output field in physical units
+!> @param[in,out] physical_field2 Second component of the  output field in physical units
+!> @param[in,out] physical_field3 Third component of the  output field in physical units
 !> @param[in] computational_field Output field in computational units
 !> @param[in] chi1 Coordinates in the first direction
 !> @param[in] chi2 Coordinates in the second direction
 !> @param[in] chi3 Coordinates in the third direction
+!> @param[in] panel_id A field giving the ID for mesh panels.
+!> @param[in] ndf1 Number of degrees of freedom per cell for the physical field
+!> @param[in] undf1 Number of unique degrees of freedom for the physical field
+!> @param[in] map1 Dofmap for the cell at the base of the column for the physical field
+!> @param[in] ndf2 Number of degrees of freedom per cell for the computational field
+!> @param[in] undf2 Number of unique degrees of freedom for the computational field
+!> @param[in] map2 Dofmap for the cell at the base of the column for the computational field
+!> @param[in] basis2 Basis functions for the computational field evaluated at
+!>                   the physical field nodal points
 !> @param[in] ndf_chi Number of degrees of freedom per cell for the coordinate field
 !> @param[in] undf_chi Number of unique degrees of freedom for the coordinate field
 !> @param[in] map_chi Dofmap for the cell at the base of the column for the coordinate field
-!> @param[in] basis Basis functions of the output field evaluated at its nodal points
-!> @param[in] diff_basis_chi Differential basis functions of the coordinate space evaluated at the nodal points
+!> @param[in] basis_chi Basis functions of the coordinate field evaluated at
+!>                      the physical field nodal points
+!> @param[in] diff_basis_chi Differential basis functions of the coordinate
+!>                           space evaluated at the physical field nodal points
+!> @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
+!> @param[in] undf_pid Number of unique degrees of freedom for panel_id
+!> @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
 subroutine convert_hdiv_field_code(nlayers,                                  &
                                    physical_field1,                          &
                                    physical_field2,                          &
                                    physical_field3,                          &
                                    computational_field,                      &
                                    chi1, chi2, chi3,                         &
+                                   panel_id,                                 &
                                    ndf1, undf1, map1,                        &
                                    ndf2, undf2, map2,                        &
                                    basis2,                                   &
                                    ndf_chi, undf_chi, map_chi,               &
-                                   diff_basis_chi                            &
-                                 )
+                                   basis_chi, diff_basis_chi,                &
+                                   ndf_pid, undf_pid, map_pid                &
+                                   )
   use coordinate_jacobian_mod, only: coordinate_jacobian
   implicit none
-  !Arguments
+  ! Arguments
   integer,                                    intent(in)    :: nlayers
   integer,                                    intent(in)    :: ndf1, undf1, &
                                                                ndf2, undf2, &
                                                                ndf_chi, &
-                                                               undf_chi
+                                                               undf_chi, &
+                                                               ndf_pid, &
+                                                               undf_pid
   integer,          dimension(ndf1),          intent(in)    :: map1
   integer,          dimension(ndf2),          intent(in)    :: map2
   integer,          dimension(ndf_chi),       intent(in)    :: map_chi
+  integer,          dimension(ndf_pid),       intent(in)    :: map_pid
   real(kind=r_def), dimension(undf2),         intent(in)    :: computational_field
   real(kind=r_def), dimension(undf_chi),      intent(in)    :: chi1, chi2, chi3
+  real(kind=r_def), dimension(undf_pid),      intent(in)    :: panel_id
   real(kind=r_def), dimension(undf1),         intent(inout) :: physical_field1,&
                                                                physical_field2,&
                                                                physical_field3
-  real(kind=r_def), dimension(3,ndf_chi,ndf1), intent(in)    :: diff_basis_chi
-  real(kind=r_def), dimension(3,ndf2,ndf1),    intent(in)    :: basis2
+  real(kind=r_def), dimension(1,ndf_chi,ndf1), intent(in)   :: basis_chi
+  real(kind=r_def), dimension(3,ndf_chi,ndf1), intent(in)   :: diff_basis_chi
+  real(kind=r_def), dimension(3,ndf2,ndf1),    intent(in)   :: basis2
 
   !Internal variables
   integer          :: df, df2, k
@@ -101,14 +124,19 @@ subroutine convert_hdiv_field_code(nlayers,                                  &
   real(kind=r_def) :: vector_in(3), vector_out(3)
   real(kind=r_def), dimension(ndf_chi) :: chi1_e, chi2_e, chi3_e
 
+  integer(kind=i_def) :: ipanel
+
+  ipanel = int(panel_id(map_pid(1)), i_def)
+
   do k = 0, nlayers-1
     do df = 1,ndf_chi
       chi1_e(df) = chi1(map_chi(df) + k)
       chi2_e(df) = chi2(map_chi(df) + k)
       chi3_e(df) = chi3(map_chi(df) + k)
     end do
-    call coordinate_jacobian(ndf_chi, ndf1, 1, chi1_e, chi2_e, chi3_e,  &
-                             diff_basis_chi, jacobian, dj)
+    call coordinate_jacobian(ndf_chi, ndf1, 1, chi1_e, chi2_e, chi3_e,    &
+                             ipanel, basis_chi, diff_basis_chi, jacobian, dj)
+
     do df = 1,ndf1
       vector_in(:) = 0.0_r_def
       do df2 = 1,ndf2

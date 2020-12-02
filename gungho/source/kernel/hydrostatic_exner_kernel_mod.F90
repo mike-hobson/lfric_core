@@ -67,13 +67,13 @@ contains
 !! @param[in] chi_2 Y component of the chi coordinate field
 !! @param[in] chi_3 Z component of the chi coordinate field
 !! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 Number unique of degrees of freedom  for w3
+!! @param[in] undf_w3 Number of unique degrees of freedom  for w3
 !! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
 !! @param[in] ndf_wt Number of degrees of freedom per cell for wtheta
-!! @param[in] undf_wt Number unique of degrees of freedom  for wtheta
+!! @param[in] undf_wt Number of unique degrees of freedom  for wtheta
 !! @param[in] map_wt Dofmap for the cell at the base of the column for wt
 !! @param[in] ndf_chi Number of degrees of freedom per cell for wchi
-!! @param[in] undf_chi Number unique of degrees of freedom  for wchi
+!! @param[in] undf_chi Number of unique degrees of freedom  for wchi
 !! @param[in] map_chi Dofmap for the cell at the base of the column for wchi
 !! @param[in] basis_chi Dofmap for the cell at the base of the column for wchi
 subroutine hydrostatic_exner_code(nlayers, exner, theta, moist_dyn_gas, moist_dyn_tot, &

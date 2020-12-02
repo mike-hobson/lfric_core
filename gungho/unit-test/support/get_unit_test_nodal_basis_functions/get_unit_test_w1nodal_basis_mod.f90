@@ -23,6 +23,7 @@ module get_unit_test_w1nodal_basis_mod
   private
 
   public :: get_w1_w1nodal_basis, &
+            get_w0_w1nodal_basis, &
             get_w0_w1nodal_diff_basis
 
   contains
@@ -125,6 +126,36 @@ module get_unit_test_w1nodal_basis_mod
         0.0_r_def,  0.0_r_def,  0.5_r_def,  0.0_r_def,  1.0_r_def, &
         0.0_r_def,  0.0_r_def],  [3,12,12] )
   end subroutine get_w1_w1nodal_basis
+
+!---------------------------------------------------------------------
+
+  subroutine get_w0_w1nodal_basis(basis_w0)
+    ! Return the basis function for a field on a w0 function space
+    ! evaluated on w1 nodal points
+    implicit none
+    real(r_def), allocatable, intent(out) :: basis_w0(:,:,:)
+
+    allocate(basis_w0(1,8,12))
+    basis_w0 = reshape( [ &
+    0.5_r_def, 0.0_r_def, 0.5_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def,   &
+    0.0_r_def, 0.0_r_def, 0.5_r_def, 0.5_r_def, 0.0_r_def, 0.0_r_def,   &
+    0.0_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def, 0.5_r_def,   &
+    0.0_r_def, 0.5_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def,   &
+    0.0_r_def, 0.0_r_def, 0.5_r_def, 0.5_r_def, 0.0_r_def, 0.0_r_def,   &
+    0.0_r_def, 0.0_r_def, 0.5_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def,   &
+    0.5_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def, 0.5_r_def,   &
+    0.0_r_def, 0.0_r_def, 0.0_r_def, 0.5_r_def, 0.0_r_def, 0.0_r_def,   &
+    0.0_r_def, 0.0_r_def, 0.0_r_def, 0.5_r_def, 0.0_r_def, 0.0_r_def,   &
+    0.0_r_def, 0.5_r_def, 0.0_r_def, 0.0_r_def, 0.5_r_def, 0.0_r_def,   &
+    0.0_r_def, 0.0_r_def, 0.5_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def,   &
+    0.0_r_def, 0.0_r_def, 0.5_r_def, 0.0_r_def, 0.5_r_def, 0.0_r_def,   &
+    0.0_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def, 0.5_r_def, 0.5_r_def,   &
+    0.0_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def,   &
+    0.0_r_def, 0.5_r_def, 0.0_r_def, 0.5_r_def, 0.0_r_def, 0.0_r_def,   &
+    0.0_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def, 0.5_r_def, 0.5_r_def ], &
+    [1,8,12] )
+
+  end subroutine get_w0_w1nodal_basis
 
 !---------------------------------------------------------------------
 

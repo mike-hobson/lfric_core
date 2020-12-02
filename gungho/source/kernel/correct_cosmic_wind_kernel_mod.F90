@@ -70,7 +70,6 @@ contains
                                       )
 
 
-    use coordinate_jacobian_mod, only: coordinate_jacobian
     use flux_direction_mod,      only: x_direction, y_direction
 
     implicit none
@@ -106,7 +105,7 @@ contains
               wind_out(map_w2(local_dofs_x(1)) + k) = wind_in(map_w2(local_dofs_x(1)) + k)
               wind_out(map_w2(local_dofs_x(2)) + k) = wind_in(map_w2(local_dofs_x(2)) + k)
             end if
-          elseif (direction == y_direction) then
+          else if (direction == y_direction) then
             if (int_orientation == 3 .or. int_orientation == 4) then
               wind_out(map_w2(local_dofs_y(1)) + k) = -1.0_r_def*wind_in(map_w2(local_dofs_y(1)) + k)
               wind_out(map_w2(local_dofs_y(2)) + k) = -1.0_r_def*wind_in(map_w2(local_dofs_y(2)) + k)
@@ -114,7 +113,7 @@ contains
               wind_out(map_w2(local_dofs_y(1)) + k) = wind_in(map_w2(local_dofs_y(1)) + k)
               wind_out(map_w2(local_dofs_y(2)) + k) = wind_in(map_w2(local_dofs_y(2)) + k)
             end if
-          endif
+          end if
 
       end do
 

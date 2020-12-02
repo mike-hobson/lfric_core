@@ -23,6 +23,8 @@ cellshape='quadrilateral',
 coordinate_order=2,
 element_order=0,
 rehabilitate=.true.,
+spherical_coord_order=1,
+spherical_coord_system='abh'
 vorticity_in_w1=.true.,
 /
 &initial_temperature
@@ -95,7 +97,6 @@ radius=6371229.0e-3
 rd=287.05
 scaling_factor=1.0
 /
-
 &idealised
 test='cosine_hill',
 /
@@ -132,7 +133,6 @@ planar_domain_max_y=1.0,
 planar_domain_min_x=-1.0,
 planar_domain_min_y=-1.0,
 /
-
 &section_choice
 aerosol='none',
 boundary_layer='none',

@@ -6,12 +6,13 @@
 !> @brief Computes the broken (cell-local) divergence operator
 module compute_broken_div_operator_kernel_mod
 
-  use argument_mod,              only: arg_type, func_type,     &
-                                       GH_OPERATOR, GH_FIELD,   &
-                                       GH_READ, GH_WRITE,       &
-                                       ANY_SPACE_1,             &
-                                       GH_BASIS, GH_DIFF_BASIS, &
-                                       CELLS, GH_QUADRATURE_XYoZ
+  use argument_mod,              only: arg_type, func_type,       &
+                                       GH_OPERATOR, GH_FIELD,     &
+                                       GH_READ, GH_WRITE,         &
+                                       ANY_SPACE_1,               &
+                                       GH_BASIS, GH_DIFF_BASIS,   &
+                                       CELLS, GH_QUADRATURE_XYoZ, &
+                                       ANY_DISCONTINUOUS_SPACE_3
   use constants_mod,             only: r_def, i_def
   use coordinate_jacobian_mod,   only: coordinate_jacobian
   use fs_continuity_mod,         only: W2broken, W3
@@ -28,14 +29,15 @@ module compute_broken_div_operator_kernel_mod
 
   type, public, extends(kernel_type) :: compute_broken_div_operator_kernel_type
     private
-    type(arg_type) :: meta_args(2) = (/                &
-        arg_type(GH_OPERATOR, GH_WRITE, W3, W2broken), &
-        arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_1)   &
+    type(arg_type) :: meta_args(3) = (/                            &
+        arg_type(GH_OPERATOR, GH_WRITE, W3, W2broken),             &
+        arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_1),              &
+        arg_type(GH_FIELD,    GH_READ,  ANY_DISCONTINUOUS_SPACE_3) &
         /)
-    type(func_type) :: meta_funcs(3) = (/     &
-        func_type(W3, GH_BASIS),              &
-        func_type(W2broken, GH_DIFF_BASIS),   &
-        func_type(ANY_SPACE_1, GH_DIFF_BASIS) &
+    type(func_type) :: meta_funcs(3) = (/                          &
+        func_type(W3, GH_BASIS),                                   &
+        func_type(W2broken, GH_DIFF_BASIS),                        &
+        func_type(ANY_SPACE_1, GH_BASIS, GH_DIFF_BASIS)            &
         /)
     integer :: iterates_over = CELLS
     integer :: gh_shape = GH_QUADRATURE_XYoZ
@@ -55,9 +57,10 @@ contains
   !! @param[in] nlayers  Number of layers.
   !! @param[in] ncell_3d ncell*ndf
   !! @param[out] broken_div Local stencil of the broken div operator.
-  !! @param[in] chi1     Physical coordinates in the 1st dir.
-  !! @param[in] chi2     Physical coordinates in the 2nd dir.
-  !! @param[in] chi3     Physical coordinates in the 3rd dir.
+  !! @param[in] chi1     1st (spherical) coordinate field in Wchi
+  !! @param[in] chi2     2nd (spherical) coordinate field in Wchi
+  !! @param[in] chi3     3rd (spherical) coordinate field in Wchi
+  !! @param[in] panel_id Field giving the ID for mesh panels.
   !! @param[in] ndf_w3   Number of degrees of freedom per cell for W3 space.
   !! @param[in] basis_w3 Scalar basis functions evaluated at quadrature points
   !!                     for W3 space.
@@ -68,20 +71,26 @@ contains
   !! @param[in] undf_chi Number of unique degrees of freedom for chi field.
   !! @param[in] map_chi  Dofmap for the cell at the base of the column, for the
   !!                     space on which the chi field lives.
+  !! @param[in] basis_chi Basis functions evaluated at quadrature points for the
+  !!                      space on which the chi field lives.
   !! @param[in] diff_basis_chi Vector differential basis functions evaluated at
   !!                     quadrature points for the space on which the chi
   !!                     field lives.
+  !! @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
+  !! @param[in] undf_pid Number of unique degrees of freedom for panel_id
+  !! @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
   !! @param[in] nqp_h    Number of horizontal quadrature points.
   !! @param[in] nqp_v    Number of vertical quadrature points.
   !! @param[in] wqp_h    Horizontal quadrature weights.
   !! @param[in] wqp_v    Vertical quadrature weights.
   subroutine compute_broken_div_operator_code(cell, nlayers, ncell_3d,       &
                                               broken_div,                    &
-                                              chi1, chi2, chi3,              &
+                                              chi1, chi2, chi3, panel_id,    &
                                               ndf_w3, basis_w3,              &
                                               ndf_w2b, diff_basis_w2b,       &
-                                              ndf_chi, undf_chi,             &
-                                              map_chi, diff_basis_chi,       &
+                                              ndf_chi, undf_chi, map_chi,    &
+                                              basis_chi, diff_basis_chi,     &
+                                              ndf_pid, undf_pid, map_pid,    &
                                               nqp_h, nqp_v, wqp_h, wqp_v)
 
     implicit none
@@ -90,10 +99,14 @@ contains
     integer(kind=i_def),                     intent(in) :: cell, nqp_h, nqp_v
     integer(kind=i_def),                     intent(in) :: nlayers
     integer(kind=i_def),                     intent(in) :: ncell_3d
-    integer(kind=i_def),                     intent(in) :: ndf_w3, ndf_w2b
+    integer(kind=i_def),                     intent(in) :: ndf_w3
+    integer(kind=i_def),                     intent(in) :: ndf_pid, undf_pid
+    integer(kind=i_def),                     intent(in) :: ndf_w2b
     integer(kind=i_def),                     intent(in) :: ndf_chi, undf_chi
     integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
+    integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
 
+    real(kind=r_def), intent(in) :: basis_chi(1, ndf_chi, nqp_h, nqp_v)
     real(kind=r_def), intent(in) :: diff_basis_chi(3, ndf_chi, nqp_h, nqp_v)
     real(kind=r_def), intent(in) :: basis_w3(1, ndf_w3, nqp_h, nqp_v)
     real(kind=r_def), intent(in) :: diff_basis_w2b(1, ndf_w2b, nqp_h, nqp_v)
@@ -102,16 +115,19 @@ contains
     real(kind=r_def), dimension(undf_chi),                  intent(in)    :: chi1
     real(kind=r_def), dimension(undf_chi),                  intent(in)    :: chi2
     real(kind=r_def), dimension(undf_chi),                  intent(in)    :: chi3
+    real(kind=r_def), dimension(undf_pid),                  intent(in)    :: panel_id
     real(kind=r_def), dimension(nqp_h),                     intent(in)    :: wqp_h
     real(kind=r_def), dimension(nqp_v),                     intent(in)    :: wqp_v
 
     ! Internal variables
-    integer(kind=i_def)                             :: df, df2, df3, k, ik
+    integer(kind=i_def)                             :: df, df2, df3, k, ik, ipanel
     integer(kind=i_def)                             :: qp1, qp2
     real(kind=r_def), dimension(ndf_chi)            :: chi1_e, chi2_e, chi3_e
     real(kind=r_def)                                :: integrand
     real(kind=r_def), dimension(nqp_h, nqp_v)       :: dj
     real(kind=r_def), dimension(3, 3, nqp_h, nqp_v) :: jac
+
+    ipanel = int(panel_id(map_pid(1)), i_def)
 
     ! Loop over layers
     do k = 0, nlayers - 1
@@ -126,7 +142,7 @@ contains
 
       ! Compute Jacobian
       call coordinate_jacobian(ndf_chi, nqp_h, nqp_v, chi1_e, chi2_e, chi3_e,  &
-                               diff_basis_chi, jac, dj)
+                               ipanel, basis_chi, diff_basis_chi, jac, dj)
 
       ! Run over dof extent of W2Broken
       do df2 = 1, ndf_w2b

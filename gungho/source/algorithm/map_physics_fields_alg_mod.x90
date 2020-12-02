@@ -41,10 +41,10 @@ contains
   !> @param[in]    dA         Areas of faces
   !> @param[in]    height_wth Height of wth space
   !> @param[in]    height_w3  Height of w3 space
-  !> @param[in]    chi        Coordinate array
+  !> @param[in]    chi_xyz    (X,Y,Z) Coordinate array
   !> @param[inout] derived_fields Group of derived fields
-  subroutine map_physics_fields_alg(u, exner, rho, theta, mr, dA, &
-                                    height_wth, height_w3, chi,   &
+  subroutine map_physics_fields_alg(u, exner, rho, theta, mr, dA,   &
+                                    height_wth, height_w3, chi_xyz, &
                                     derived_fields)
     implicit none
     ! Prognostic fields
@@ -54,7 +54,7 @@ contains
 
     ! Coordinate fields
     type( field_type ), intent( in )    :: dA, height_w3, height_wth
-    type( field_type ), intent( in )    :: chi(3)
+    type( field_type ), intent( in )    :: chi_xyz(3)
 
     type( field_type ), pointer :: theta_in_w3 => null()
     type( field_type ), pointer :: rho_in_wth => null()
@@ -109,7 +109,7 @@ contains
                                                  u_physics,  1, &
                                                  height_wth, 1, &
                                                  height_w3,  1, &
-                                                 chi ) )
+                                                 chi_xyz ) )
     end if
 
     if ( subroutine_timers ) call timer("map_physics_fields")

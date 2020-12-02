@@ -13,8 +13,9 @@
 
 module rotation_vector_mod
 
-use constants_mod,     only: r_def
-use planet_config_mod, only: scaled_omega
+use constants_mod,     only: r_def, i_def
+use planet_config_mod, only: scaled_omega, scaled_radius
+use log_mod,           only: log_event, LOG_LEVEL_ERROR
 
 implicit none
 
@@ -41,11 +42,11 @@ subroutine rotation_vector_fplane(ngp_h, ngp_v, omegaf, latitude, rotation_vec)
 
 implicit none
 
-integer,          intent(in)  :: ngp_h, ngp_v
-real(kind=r_def), intent(in)  :: omegaf, latitude
-real(kind=r_def), intent(out) :: rotation_vec(3,ngp_h,ngp_v)
+integer(kind=i_def), intent(in)  :: ngp_h, ngp_v
+real(kind=r_def),    intent(in)  :: omegaf, latitude
+real(kind=r_def),    intent(out) :: rotation_vec(3,ngp_h,ngp_v)
 
-integer :: i, j
+integer(kind=i_def) :: i, j
 
 rotation_vec = 0.0_r_def
 
@@ -70,25 +71,33 @@ end subroutine rotation_vector_fplane
 !! @param[in] chi_1          Holds the chi_1 coordinate field
 !! @param[in] chi_2          Holds the chi_2 coordinate field
 !! @param[in] chi_3          Holds the chi_3 coordinate field
-!! @param[in] chi_basis       Holds the chi basis functions
+!! @param[in] panel_id       ID of mesh panel
+!! @param[in] chi_basis      Holds the chi basis functions
 !! @param[out] rotation_vec  Holds the values of the rotation vector on quadrature points
-subroutine rotation_vector_sphere(ndf_chi, ngp_h, ngp_v, chi_1, chi_2, chi_3, chi_basis, rotation_vec)
+subroutine rotation_vector_sphere(ndf_chi, ngp_h, ngp_v, chi_1, chi_2, chi_3, &
+                                  panel_id, chi_basis, rotation_vec)
 !-------------------------------------------------------------------------------
 ! Compute the rotation vector Omega = (0, 2*cos(lat), 2*sin(lat)) on quadrature points
 !-------------------------------------------------------------------------------
 
-use coord_transform_mod, only: xyz2llr, sphere2cart_vector
+use coord_transform_mod,       only: xyz2llr,                    &
+                                     alphabetar2llr,             &
+                                     sphere2cart_vector
+use finite_element_config_mod, only: spherical_coord_system,     &
+                                     spherical_coord_system_abh, &
+                                     spherical_coord_system_xyz
 
 implicit none
 
-integer,          intent(in)  :: ndf_chi, ngp_h, ngp_v
-real(kind=r_def), intent(in)  :: chi_1(ndf_chi), chi_2(ndf_chi), chi_3(ndf_chi)
-real(kind=r_def), intent(in), dimension(1,ndf_chi,ngp_h,ngp_v) :: chi_basis
-real(kind=r_def), intent(out) :: rotation_vec(3,ngp_h,ngp_v)
+integer(kind=i_def), intent(in)  :: ndf_chi, ngp_h, ngp_v, panel_id
+real(kind=r_def),    intent(in)  :: chi_1(ndf_chi), chi_2(ndf_chi), chi_3(ndf_chi)
+real(kind=r_def),    intent(out) :: rotation_vec(3,ngp_h,ngp_v)
+real(kind=r_def),    intent(in), dimension(1,ndf_chi,ngp_h,ngp_v) :: chi_basis
 
-integer :: i, j, df
-real(kind=r_def) :: x, y, z, lat, long, r
-real(kind=r_def) :: llr(3)
+
+integer(kind=i_def) :: i, j, df
+real(kind=r_def)    :: lat, long, r
+real(kind=r_def)    :: llr(3), coords(3)
 
 lat = 0.0_r_def
 long = 0.0_r_def
@@ -96,23 +105,40 @@ rotation_vec = 0.0_r_def
 
 do j = 1, ngp_v
   do i = 1, ngp_h
-    x = 0.0_r_def
-    y = 0.0_r_def
-    z = 0.0_r_def
+    ! Calculate the position vector at this quadrature point
+    coords(:) = 0.0_r_def
     do df = 1, ndf_chi
-        x = x + chi_1(df)*chi_basis(1,df,i,j)
-        y = y + chi_2(df)*chi_basis(1,df,i,j)
-        z = z + chi_3(df)*chi_basis(1,df,i,j)
+      coords(1) = coords(1) + chi_1(df)*chi_basis(1,df,i,j)
+      coords(2) = coords(2) + chi_2(df)*chi_basis(1,df,i,j)
+      coords(3) = coords(3) + chi_3(df)*chi_basis(1,df,i,j)
     end do
-    call xyz2llr(x,y,z,long,lat,r)
+
+    ! Need to obtain longitude, latitude and radius from position vector
+    if ( spherical_coord_system == spherical_coord_system_xyz ) then
+      ! coords is (X,Y,Z)
+      call xyz2llr(coords(1), coords(2), coords(3), long, lat, r)
+    else if ( spherical_coord_system == spherical_coord_system_abh ) then
+      ! coords is (alpha, beta, h)
+      r = coords(3) + scaled_radius
+      call alphabetar2llr(coords(1), coords(2), r, panel_id, long, lat)
+    else
+      call log_event('rotation vector is not implemented ' // &
+                     'with your spherical coordinate system', &
+                     LOG_LEVEL_ERROR)
+    end if
+
+    ! Get (long,lat,r) components of planet rotation vector
     rotation_vec(1,i,j) = 0.0_r_def
     rotation_vec(2,i,j) = 2.0_r_def*scaled_omega*cos(lat)
     rotation_vec(3,i,j) = 2.0_r_def*scaled_omega*sin(lat)
 
+    ! Obtain (X,Y,Z) components of rotation vector
     llr = (/long, lat, r/)
-    rotation_vec(:,i,j) = sphere2cart_vector( rotation_vec(:,i,j),llr)
+    rotation_vec(:,i,j) = sphere2cart_vector( rotation_vec(:,i,j), llr )
+
   end do
 end do
+
 
 end subroutine rotation_vector_sphere
 

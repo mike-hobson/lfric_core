@@ -9,11 +9,12 @@
 !>
 module compute_mass_matrix_kernel_w2_mod
 
-  use argument_mod,            only: arg_type, func_type,    &
-                                     GH_OPERATOR, GH_FIELD,   &
-                                     GH_READ, GH_WRITE,       &
-                                     ANY_SPACE_9,             &
-                                     GH_BASIS, GH_DIFF_BASIS, &
+  use argument_mod,            only: arg_type, func_type,       &
+                                     GH_OPERATOR, GH_FIELD,     &
+                                     GH_READ, GH_WRITE,         &
+                                     ANY_SPACE_9,               &
+                                     ANY_DISCONTINUOUS_SPACE_3, &
+                                     GH_BASIS, GH_DIFF_BASIS,   &
                                      CELLS, GH_QUADRATURE_XYoZ
   use constants_mod,           only: i_def, r_def
   use coordinate_jacobian_mod, only: coordinate_jacobian
@@ -28,13 +29,14 @@ module compute_mass_matrix_kernel_w2_mod
 
   type, public, extends(kernel_type) :: compute_mass_matrix_kernel_w2_type
     private
-    type(arg_type) :: meta_args(2) = (/              &
-        arg_type(GH_OPERATOR, GH_WRITE, W2, W2),     &
-        arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_9) &
+    type(arg_type) :: meta_args(3) = (/                            &
+        arg_type(GH_OPERATOR, GH_WRITE, W2, W2),                   &
+        arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_9),              &
+        ARG_TYPE(GH_FIELD,    GH_READ,  ANY_DISCONTINUOUS_SPACE_3) &
         /)
-    type(func_type) :: meta_funcs(2) = (/      &
-        func_type(ANY_SPACE_9, GH_DIFF_BASIS), &
-        func_type(W2, GH_BASIS)                &
+    type(func_type) :: meta_funcs(2) = (/                          &
+        func_type(ANY_SPACE_9, GH_DIFF_BASIS, GH_BASIS),           &
+        func_type(W2, GH_BASIS)                                    &
         /)
     integer :: iterates_over = CELLS
     integer :: gh_shape = GH_QUADRATURE_XYoZ
@@ -53,19 +55,24 @@ contains
 !!
 !! @param[in] cell     Identifying number of cell.
 !! @param[in] nlayers  Number of layers.
-!! @param[in] ndf_w2   Degrees of freedom per cell.
 !! @param[in] ncell_3d ncell*ndf
-!! @param[in] basis_w2 Vector basis functions evaluated at quadrature points.
 !! @param[in] mm       Local stencil or mass matrix.
+!! @param[in] chi_1    1st (spherical) coordinate field in Wchi
+!! @param[in] chi_2    2nd (spherical) coordinate field in Wchi
+!! @param[in] chi_3    3rd (spherical) coordinate field in Wchi
+!! @param[in] panel_id Field giving the ID for mesh panels.
+!! @param[in] ndf_w2   Degrees of freedom per cell.
+!! @param[in] basis_w2 Vector basis functions evaluated at quadrature points.
 !! @param[in] ndf_chi  Degrees of freedum per cell for chi field.
 !! @param[in] undf_chi Unique degrees of freedum  for chi field.
 !! @param[in] map_chi  Dofmap for the cell at the base of the column, for the
 !!                     space on which the chi field lives
+!! @param[in] basis_chi Wchi basis functions evaluated at quadrature points.
 !! @param[in] diff_basis_chi Vector differential basis functions evaluated at
 !!                           quadrature points.
-!! @param[inout] chi1  Physical coordinate in the 1st dir.
-!! @param[inout] chi2  Physical coordinate in the 2nd dir.
-!! @param[inout] chi3  Physical coordinate in the 3rd dir.
+!! @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
+!! @param[in] undf_pid Number of unique degrees of freedom for panel_id
+!! @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
 !! @param[in] nqp_h    Number of horizontal quadrature points.
 !! @param[in] nqp_v    Number of vertical quadrature points.
 !! @param[in] wqp_h    Horizontal quadrature weights.
@@ -73,40 +80,51 @@ contains
 subroutine compute_mass_matrix_w2_code(cell, nlayers, ncell_3d,     &
                                        mm,                          &
                                        chi1, chi2, chi3,            &
+                                       panel_id,                    &
                                        ndf_w2, basis_w2,            &
                                        ndf_chi, undf_chi, map_chi,  &
+                                       basis_chi,                   &
                                        diff_basis_chi,              &
+                                       ndf_pid, undf_pid,           &
+                                       map_pid,                     &
                                        nqp_h, nqp_v, wqp_h, wqp_v )
 
   implicit none
 
-  !Arguments
-  integer,   intent(in)     :: cell, nqp_h, nqp_v
-  integer,   intent(in)     :: nlayers
-  integer,   intent(in)     :: ncell_3d
-  integer,   intent(in)     :: ndf_w2
-  real(kind=r_def), dimension(3,ndf_w2,nqp_h,nqp_v), intent(in) :: basis_w2
-  integer,   intent(in)     :: ndf_chi
-  integer,   intent(in)     :: undf_chi
-  integer(i_def), intent(in)    :: map_chi(ndf_chi)
-  real(r_def),    intent(inout) :: mm(ndf_w2,ndf_w2,ncell_3d)
-  real(r_def),    intent(in)    :: diff_basis_chi(3,ndf_chi,nqp_h,nqp_v)
-  real(r_def),    intent(inout) :: chi1(undf_chi)
-  real(r_def),    intent(inout) :: chi2(undf_chi)
-  real(r_def),    intent(inout) :: chi3(undf_chi)
-  real(r_def),    intent(in)    :: wqp_h(nqp_h)
-  real(r_def),    intent(in)    :: wqp_v(nqp_v)
+  ! Arguments
+  integer(kind=i_def),   intent(in) :: cell, nqp_h, nqp_v
+  integer(kind=i_def),   intent(in) :: nlayers
+  integer(kind=i_def),   intent(in) :: ncell_3d
+  integer(kind=i_def),   intent(in) :: ndf_w2
+  integer(kind=i_def),   intent(in) :: ndf_chi
+  integer(kind=i_def),   intent(in) :: undf_chi
+  integer(kind=i_def),   intent(in) :: ndf_pid, undf_pid
+  integer(kind=i_def),   intent(in) :: map_chi(ndf_chi)
+  integer(kind=i_def),   intent(in) :: map_pid(ndf_pid)
 
-  !Internal variables
-  integer                                      :: df, df2, k, ik
-  integer                                      :: qp1, qp2
+  real(kind=r_def),   intent(inout) :: mm(ndf_w2,ndf_w2,ncell_3d)
+  real(kind=r_def),      intent(in) :: basis_w2(3,ndf_w2,nqp_h,nqp_v)
+  real(kind=r_def),      intent(in) :: diff_basis_chi(3,ndf_chi,nqp_h,nqp_v)
+  real(kind=r_def),      intent(in) :: basis_chi(1,ndf_chi,nqp_h,nqp_v)
+  real(kind=r_def),      intent(in) :: chi1(undf_chi)
+  real(kind=r_def),      intent(in) :: chi2(undf_chi)
+  real(kind=r_def),      intent(in) :: chi3(undf_chi)
+  real(kind=r_def),      intent(in) :: panel_id(undf_pid)
+  real(kind=r_def),      intent(in) :: wqp_h(nqp_h)
+  real(kind=r_def),      intent(in) :: wqp_v(nqp_v)
+
+  ! Internal variables
+  integer(kind=i_def)                          :: df, df2, k, ik, ipanel
+  integer(kind=i_def)                          :: qp1, qp2
 
   real(kind=r_def), dimension(ndf_chi)         :: chi1_e, chi2_e, chi3_e
   real(kind=r_def)                             :: integrand
   real(kind=r_def), dimension(nqp_h,nqp_v)     :: dj
   real(kind=r_def), dimension(3,3,nqp_h,nqp_v) :: jac
 
-  !loop over layers: Start from 1 as in this loop k is not an offset
+  ipanel = int(panel_id(map_pid(1)), i_def)
+
+  ! loop over layers: Start from 1 as in this loop k is not an offset
   do k = 1, nlayers
      ik = k + (cell-1)*nlayers
 
@@ -118,7 +136,8 @@ subroutine compute_mass_matrix_w2_code(cell, nlayers, ncell_3d,     &
      end do
 
     call coordinate_jacobian(ndf_chi, nqp_h, nqp_v, chi1_e, chi2_e, chi3_e,  &
-                             diff_basis_chi, jac, dj)
+                             ipanel, basis_chi, diff_basis_chi, jac, dj)
+
     do df2 = 1, ndf_w2
        do df = df2, ndf_w2 ! mass matrix is symmetric
           mm(df,df2,ik) = 0.0_r_def

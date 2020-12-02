@@ -31,9 +31,12 @@ module init_transport_mod
 
   !> @param[in] mesh_id                Mesh-id
   !> @param[in] twod_mesh_id           2D Mesh-id
-  !> @param[in,out] chi                Coordinate field
-  !> @param[in] shifted_mesh_id        Mesh-id for vertically shifted coordinates
-  !> @param[in,out] shifted_chi        Coordinate field for vertically shifted coordinates
+  !> @param[in,out] chi_xyz            Global Cartesian (X,Y,Z) Coordinate field
+  !> @param[in,out] chi_sph            Spherical coordinate field
+  !> @param[in,out] panel_id           2D field with cubed sphere panel id
+  !> @param[in] shifted_mesh_id        Mesh-id for vertically shifted mesh
+  !> @param[in,out] shifted_chi_xyz    (X,Y,Z) coordinate field for vertically shifted mesh
+  !> @param[in,out] shifted_chi_sph    spherical coordinate field for vertically shifted mesh
   !> @param[in,out] wind_n             Wind field at timestep n
   !> @param[in,out] density            Density field
   !> @param[in,out] theta              Theta field
@@ -44,17 +47,21 @@ module init_transport_mod
   !> @param[in,out] divergence         Divergence field
   !> @param[in,out] wind_shifted       Wind field on vertically shifted W2 field
   !> @param[in,out] density_shifted    Density field on vertically shifted W3 field
-  subroutine init_transport( mesh_id, twod_mesh_id, chi, shifted_mesh_id, shifted_chi, &
+  subroutine init_transport( mesh_id, twod_mesh_id, chi_xyz, chi_sph, panel_id,        &
+                             shifted_mesh_id, shifted_chi_xyz, shifted_chi_sph,        &
                              wind_n, density, theta, dep_pts_x, dep_pts_y, dep_pts_z,  &
-                             increment, divergence, wind_shifted, density_shifted )
+                             increment, divergence, wind_shifted, density_shifted      )
 
     implicit none
 
     integer(i_def),   intent(in)      :: mesh_id
     integer(i_def),   intent(in)      :: twod_mesh_id
-    type(field_type), intent(inout)   :: chi(:)
+    type(field_type), intent(inout)   :: chi_xyz(:)
+    type(field_type), intent(inout)   :: chi_sph(:)
+    type(field_type), intent(inout)   :: panel_id
     integer(i_def),   intent(in)      :: shifted_mesh_id
-    type(field_type), intent(inout)   :: shifted_chi(:)
+    type(field_type), intent(inout)   :: shifted_chi_xyz(:)
+    type(field_type), intent(inout)   :: shifted_chi_sph(:)
     type(field_type), intent(inout)   :: wind_n
     type(field_type), intent(inout)   :: density
     type(field_type), intent(inout)   :: theta
@@ -98,7 +105,8 @@ module init_transport_mod
                           function_space_collection%get_fs( shifted_mesh_id, element_order, W3 ) )
 
     ! Create runtime_constants object.
-    call create_runtime_constants( mesh_id, twod_mesh_id, chi, shifted_mesh_id, shifted_chi )
+    call create_runtime_constants( mesh_id, twod_mesh_id, chi_xyz, chi_sph, panel_id, &
+                                   shifted_mesh_id, shifted_chi_xyz, shifted_chi_sph )
 
     ! Initialise density and theta fields
     call transport_init_fields_alg( wind_n,    &

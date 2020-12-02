@@ -31,7 +31,9 @@ module rk_alg_timestep_mod
                                        get_inverse_lumped_mass_matrix, &
                                        theta_space_id, &
                                        w3inv_id, &
+                                       get_coordinates_xyz, &
                                        get_coordinates, &
+                                       get_panel_id, &
                                        get_coriolis
   use transport_config_mod,      only: operators, &
                                        operators_fv
@@ -192,7 +194,9 @@ contains
     ! Temps for retrieving things from runtime_constants
     type(field_type),    pointer :: mm_lumped_inv_wtheta => null()
     type(field_type),    pointer :: geopotential => null()
-    type( field_type ),  pointer :: chi(:) => null()
+    type( field_type ),  pointer :: chi_xyz(:) => null()
+    type( field_type ),  pointer :: chi_sph(:) => null()
+    type( field_type ),  pointer :: panel_id => null()
     type(operator_type), pointer :: m3_inv => null(), &
                                     coriolis => null()
 
@@ -213,7 +217,9 @@ contains
     mm_lumped_inv_wtheta => get_inverse_lumped_mass_matrix(theta_space_id)
 
     ! Get coordinates
-    chi => get_coordinates()
+    chi_xyz => get_coordinates_xyz()
+    chi_sph => get_coordinates()
+    panel_id => get_panel_id()
     !=== Do a single timestep ==============================================!
 
     ! Runge-Kutta algorithm
@@ -234,11 +240,11 @@ contains
       if ( vorticity_in_w1 ) then
         call invoke( vorticity_advection_kernel_type(rhs_prediction(igh_u,stage), &
                                                      state(igh_u), vorticity,     &
-                                                     chi, qr) )
+                                                     chi_sph, panel_id, qr) )
       else
         call invoke( w2_vorticity_advection_kernel_type(rhs_prediction(igh_u,stage), &
                                                         state(igh_u), vorticity,     &
-                                                        chi, qr) )
+                                                        chi_sph, panel_id, qr) )
       end if
 
       call invoke( name = "Compute new rhs",                                        &
@@ -249,7 +255,8 @@ contains
                                             state(igh_p), state(igh_t),             &
                                             moist_dyn, geopotential, qr ),          &
                    kinetic_energy_gradient_kernel_type(                             &
-                        rhs_prediction(igh_u,stage), state(igh_u), chi, qr ),       &
+                                        rhs_prediction(igh_u,stage), state(igh_u),  &
+                                        chi_sph, panel_id, qr ),                    &
                    enforce_bc_kernel_type( rhs_prediction(1,stage) ) )
       call set_bundle_scalar(0.0_r_def, rhs, bundle_size)
 
@@ -275,7 +282,8 @@ contains
       ! Recompute exner from eos
       m3_inv => get_mass_matrix(w3inv_id)
       call invoke( project_pressure_kernel_type( state(igh_p), state(igh_d), state(igh_t), &
-                                                 moist_dyn(gas_law), chi, m3_inv, qr ) )
+                                                 moist_dyn(gas_law), chi_sph,              &
+                                                 panel_id, m3_inv, qr ) )
       ! Diagnostics
       call inc(igh_t)%copy_field(diagnostic_field)
       call diagnostic_field%log_minmax(LOG_LEVEL_TRACE, 'theta_inc')
@@ -292,8 +300,8 @@ contains
     ! Apply viscosity
     if ( viscosity ) then
       call log_event( 'Applying Viscosity', LOG_LEVEL_INFO )
-      call invoke(tracer_viscosity_kernel_type(   inc(igh_t), state(igh_t), 1, chi), &
-                  momentum_viscosity_kernel_type( inc(igh_u), state(igh_u), 1, chi), &
+      call invoke(tracer_viscosity_kernel_type(   inc(igh_t), state(igh_t), 1, chi_xyz), &
+                  momentum_viscosity_kernel_type( inc(igh_u), state(igh_u), 1, chi_xyz), &
                   setval_c(inc(igh_d), 0.0_r_def) )
       call bundle_axpy(dt, inc, state, state, bundle_size)
     end if
@@ -305,7 +313,7 @@ contains
                  setval_X(rho,   state(igh_d)), &
                  setval_X(exner, state(igh_p)) )
 
-    nullify( mm_lumped_inv_wtheta, geopotential, chi, m3_inv, &
+    nullify( mm_lumped_inv_wtheta, geopotential, chi_xyz, chi_sph, panel_id, m3_inv, &
              mesh, reference_element )
 
     if ( subroutine_timers ) call timer('rk_alg')

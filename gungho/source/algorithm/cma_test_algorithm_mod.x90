@@ -52,7 +52,8 @@ module cma_test_algorithm_mod
                                              columnwise_operator_type
   use fs_continuity_mod,              only : W0,W1,W2,W2V,W2H,W3,Wchi
   use assign_coordinate_field_mod,    only : assign_coordinate_field
-  use finite_element_config_mod,      only : element_order, coordinate_order
+  use finite_element_config_mod,      only : element_order, coordinate_order, &
+                                             spherical_coord_order
   ! Kernels for field assignment and manipulation
   use enforce_bc_kernel_mod,          only : enforce_bc_kernel_type
   use assign_field_random_kernel_mod, only : assign_field_random_kernel_type
@@ -87,8 +88,10 @@ module cma_test_algorithm_mod
   integer(kind=i_def) :: mesh_id
   ! Index of coordinate function space
   integer(kind=i_def) :: chi_space
-  ! Coordinate field
-  type(field_type) :: chi(3)
+  ! Coordinate fields
+  type(field_type) :: chi_xyz(3)
+  type(field_type) :: chi_sph(3)
+  type(field_type) :: panel_id
   ! Quadrature rule
   type( quadrature_xyoz_type ) :: qr
   type( quadrature_rule_gaussian_type ) :: quadrature_rule
@@ -190,10 +193,23 @@ contains
                                                  chi_space)
 
     do i = 1,3
-       call chi(i)%initialise(vector_space = fs_coord )
+       call chi_xyz(i)%initialise(vector_space = fs_coord )
     end do
 
-    call assign_coordinate_field(chi, mesh_id)
+    fs_pressure => function_space_collection%get_fs(mesh_id, 1, W3)
+    call panel_id%initialise(vector_space = fs_pressure )
+
+    call assign_coordinate_field(chi_xyz, panel_id, &
+                                 mesh_id, spherical_coords=.false.)
+
+    fs_coord => function_space_collection%get_fs(mesh_id, spherical_coord_order, Wchi)
+
+    do i = 1,3
+      call chi_sph(i)%initialise(vector_space = fs_coord )
+    end do
+
+    call assign_coordinate_field(chi_sph, panel_id, &
+                                 mesh_id, spherical_coords=.true.)
 
     ! Construct quadrature rule
     qr = quadrature_xyoz_type(3, quadrature_rule)
@@ -230,11 +246,11 @@ contains
     call mm_vel_h_diag%initialise( fs_vel_h )
     ! NOTE: These are separate invokes as chi is defined as any space and
     ! PSyclone does not support multiple any_spaces in the same invoke
-    call invoke( compute_mass_matrix_kernel_w2_type( mm_vel_v, chi, qr ) )
-    call invoke( compute_mass_matrix_kernel_w2_type( mm_vel_h, chi, qr ) )
-    call invoke( compute_mass_matrix_kernel_w3_type( mm_pressure, chi, qr ) )
-    call invoke( compute_div_operator_kernel_type( div_v, chi, qr ) )
-    call invoke( compute_div_operator_kernel_type( div_h, chi, qr ) )
+    call invoke( compute_mass_matrix_kernel_w2_type( mm_vel_v, chi_sph, panel_id, qr ) )
+    call invoke( compute_mass_matrix_kernel_w2_type( mm_vel_h, chi_sph, panel_id, qr ) )
+    call invoke( compute_mass_matrix_kernel_w3_type( mm_pressure, chi_sph, panel_id, qr ) )
+    call invoke( compute_div_operator_kernel_type( div_v, chi_sph, panel_id, qr ) )
+    call invoke( compute_div_operator_kernel_type( div_h, chi_sph, panel_id, qr ) )
     call invoke( transpose_matrix_kernel_type( div_v, grad_v ) )
 
     ! Extract diagonal of vertical and horizontal velocity mass matrices

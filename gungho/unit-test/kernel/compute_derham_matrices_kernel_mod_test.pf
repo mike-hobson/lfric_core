@@ -4,12 +4,14 @@
 ! which you should have received as part of this distribution.
 !-----------------------------------------------------------------------------
 
-!> Test the DeRahm complex operators
+!> Test the derham complex operators
 !>
-module compute_derahm_matrices_kernel_mod_test
+module compute_derham_matrices_kernel_mod_test
 
   use constants_mod,                 only : i_def, r_def
   use pFUnit_Mod
+  use yaxt,                          only : xt_initialize, xt_finalize
+  use mpi_mod,                       only : store_comm, clear_comm
 
   implicit none
 
@@ -17,22 +19,71 @@ module compute_derahm_matrices_kernel_mod_test
   public :: test_all
 
   @TestCase
-  type, extends(TestCase), public :: compute_derahm_matrices_test_type
+  type, extends(MPITestCase), public :: compute_derham_matrices_test_type
     private
   contains
+    procedure setUp
+    procedure tearDown
     procedure test_all
-  end type compute_derahm_matrices_test_type
+  end type compute_derham_matrices_test_type
 
 contains
 
-  @test
-  subroutine test_all( this )
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine setUp( this )
 
-    use compute_derahm_matrices_kernel_mod, only : compute_derahm_matrices_code
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
+    use feign_config_mod,          only : feign_finite_element_config
 
     implicit none
 
-    class(compute_derahm_matrices_test_type), intent(inout) :: this
+    class(compute_derham_matrices_test_type), intent(inout) :: this
+
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    ! Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
+    call feign_finite_element_config(           &
+             cellshape=cellshape_quadrilateral, &
+             coordinate_order=0_i_def,          &
+             element_order=0_i_def,             &
+             rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+             vorticity_in_w1=.false. )
+
+  end subroutine setUp
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine tearDown( this )
+
+    use configuration_mod,        only: final_configuration
+
+    implicit none
+
+    class(compute_derham_matrices_test_type), intent(inout) :: this
+
+    call final_configuration()
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
+  end subroutine tearDown
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  @Test( npes=[1] )
+  subroutine test_all( this )
+
+    use compute_derham_matrices_kernel_mod, only : compute_derham_matrices_code
+
+    implicit none
+
+    class(compute_derham_matrices_test_type), intent(inout) :: this
 
     real(r_def), parameter :: tol = 1.0e-12_r_def
 
@@ -40,16 +91,20 @@ contains
     real(r_def), dimension(1,1,1) :: M0, M1, M2, M2b, M3, Mt, &
                                      grad, div, broken_div, curl
     ! Coordinate fields
-    real(r_def), dimension(8) :: x, y, z
-    real(r_def)               :: dx, dy, dz, zero
+    real(r_def), dimension(8)    :: x, y, z
+    real(r_def)                  :: dx, dy, dz, zero
+    real(r_def), dimension(1)    :: panel_id
     ! Maps
     integer(i_def), dimension(8) :: mapx
+    integer(i_def), dimension(1) :: map_w3
     ! Basis arrays
     real(r_def), dimension(3)   :: v, ds
     real(r_def), dimension(1)   :: dv, s
+    real(r_def), dimension(1,8) :: gamma
     real(r_def), dimension(3,8) :: dgamma
     ! Array sizes
     integer(i_def), parameter :: ndf = 1_i_def
+    integer(i_def), parameter :: undf = 1_i_def
     integer(i_def), parameter :: ndfx = 8_i_def
     ! Quadrature
     integer(i_def), parameter :: nqp = 1_i_def
@@ -66,10 +121,13 @@ contains
     x = (/ zero, dx,   dx,   zero, zero, dx,   dx, zero /)
     y = (/ zero, zero, dy,   dy,   zero, zero, dy, dy /)
     z = (/ zero, zero, zero, zero, dz,   dz,   dz, dz /)
+    panel_id = (/ 1.0_r_def /)
 
     do i = 1,8
       mapx(i) = int(i,i_def)
     end do
+
+    map_w3 = (/ 1_i_def /)
 
     ! Basis functions
     s(1) = 1.0_r_def
@@ -90,8 +148,9 @@ contains
     dgamma(:,7) = (/  1.0_r_def,  1.0_r_def,  1.0_r_def /)
     dgamma(:,8) = (/ -1.0_r_def,  1.0_r_def,  1.0_r_def /)
     dgamma = 0.25_r_def*dgamma
+    gamma(:,:) = 0.125_r_def
 
-    call compute_derahm_matrices_code(1_i_def, 1_i_def,        &
+    call compute_derham_matrices_code(1_i_def, 1_i_def,        &
                                       1_i_def, M0,             &
                                       1_i_def, M1,             &
                                       1_i_def, M2,             &
@@ -103,6 +162,7 @@ contains
                                       1_i_def, div,            &
                                       1_i_def, broken_div,     &
                                       x, y, z,                 &
+                                      panel_id,                &
                                       ndf, s, ds,              &
                                       ndf, v, ds,              &
                                       ndf, v, dv,              &
@@ -110,7 +170,8 @@ contains
                                       ndf, s,                  &
                                       ndf, s,                  &
                                       ndfx, ndfx,              &
-                                      mapx, dgamma,            &
+                                      mapx, gamma, dgamma,     &
+                                      ndf, undf, map_w3,       &
                                       nqp, nqp, wgt, wgt)
 
     answer = (dx*dy*dz)*s(1)*s(1)
@@ -143,4 +204,4 @@ contains
 
   end subroutine test_all
 
-end module compute_derahm_matrices_kernel_mod_test
+end module compute_derham_matrices_kernel_mod_test

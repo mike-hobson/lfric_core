@@ -7,12 +7,13 @@
 !>
 module calc_detj_at_w2_kernel_mod
 
-  use argument_mod,      only : arg_type, func_type,       &
-                                GH_FIELD, GH_READ, GH_INC, &
-                                GH_DIFF_BASIS,             &
-                                CELLS, GH_EVALUATOR
+  use argument_mod,      only : arg_type, func_type,              &
+                                GH_FIELD, GH_READ, GH_INC,        &
+                                GH_DIFF_BASIS, GH_BASIS,          &
+                                ANY_SPACE_1, CELLS, GH_EVALUATOR, &
+                                ANY_DISCONTINUOUS_SPACE_3
   use constants_mod,     only : r_def, i_def
-  use fs_continuity_mod, only : W0, W2
+  use fs_continuity_mod, only : W2
   use kernel_mod,        only : kernel_type
 
   implicit none
@@ -25,17 +26,18 @@ module calc_detj_at_w2_kernel_mod
   !>
   type, public, extends(kernel_type) :: calc_detj_at_w2_kernel_type
     private
-    type(arg_type) :: meta_args(2) = (/      &
-        arg_type(GH_FIELD,    GH_INC,   W2), &
-        arg_type(GH_FIELD*3,  GH_READ,  W0)  &
+    type(arg_type) :: meta_args(3) = (/                            &
+        arg_type(GH_FIELD,    GH_INC,   W2),                       &
+        arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_1),              &
+        arg_type(GH_FIELD,    GH_READ,  ANY_DISCONTINUOUS_SPACE_3) &
         /)
-    type(func_type) :: meta_funcs(1) = (/ &
-        func_type(W0, GH_DIFF_BASIS)      &
+    type(func_type) :: meta_funcs(1) = (/                          &
+        func_type(ANY_SPACE_1, GH_BASIS, GH_DIFF_BASIS)            &
         /)
     integer :: iterates_over = CELLS
     integer :: gh_shape = GH_EVALUATOR
   contains
-    procedure, nopass ::calc_detj_at_w2_code
+    procedure, nopass :: calc_detj_at_w2_code
   end type
 
   !---------------------------------------------------------------------------
@@ -47,9 +49,10 @@ contains
 
 !> @param[in]  nlayers        Integer the number of layers
 !> @param[out] detj_w2        The output field containing the detj values at W2 locations
-!> @param[in]  chi1           The array of coordinates in the first direction
-!> @param[in]  chi2           The array of coordinates in the second direction
-!> @param[in]  chi3           The array of coordinates in the third direction
+!> @param[in]  chi1           1st (spherical) coordinate field in Wchi
+!> @param[in]  chi2           2nd (spherical) coordinate field in Wchi
+!> @param[in]  chi3           3rd (spherical) coordinate field in Wchi
+!> @param[in]  panel_id       Field giving the ID for mesh panels.
 !> @param[in]  ndf_w2         The number of degrees of freedom per cell for the output field
 !> @param[in]  undf_w2        The number of unique degrees of freedom for the output field
 !> @param[in]  map_w2         Integer array holding the dofmap for the cell at the base of the column for the output field
@@ -57,13 +60,21 @@ contains
 !> @param[in]  ndf_chi        The number of degrees of freedom per cell for the coordinate field
 !> @param[in]  undf_chi       The number of unique degrees of freedom for the coordinate field
 !> @param[in]  map_chi        Integer array holding the dofmap for the cell at the base of the column for the coordinate field
+!> @param[in]  diff_basis_chi Basis functions of the coordinate space evaluated at the nodal points
 !> @param[in]  diff_basis_chi The diff basis functions of the coordinate space evaluated at the nodal points
+!> @param[in]  ndf_pid        Number of degrees of freedom per cell for panel_id
+!> @param[in]  undf_pid       Number of unique degrees of freedom for panel_id
+!> @param[in]  map_pid        Dofmap for the cell at the base of the column for panel_id
+
 subroutine calc_detj_at_w2_code( nlayers,                                  &
                                  detj_w2,                                  &
                                  chi1, chi2, chi3,                         &
+                                 panel_id,                                 &
                                  ndf_w2, undf_w2, map_w2,                  &
                                  ndf_chi, undf_chi, map_chi,               &
-                                 diff_basis_chi                            )
+                                 basis_chi, diff_basis_chi,                &
+                                 ndf_pid, undf_pid, map_pid                &
+                                )
 
   use coordinate_jacobian_mod, only: pointwise_coordinate_jacobian
 
@@ -75,17 +86,25 @@ subroutine calc_detj_at_w2_code( nlayers,                                  &
   integer(kind=i_def),                            intent(in)    :: undf_w2
   integer(kind=i_def),                            intent(in)    :: ndf_chi
   integer(kind=i_def),                            intent(in)    :: undf_chi
+  integer(kind=i_def),                            intent(in)    :: ndf_pid
+  integer(kind=i_def),                            intent(in)    :: undf_pid
   real(kind=r_def), dimension(undf_w2),           intent(inout) :: detj_w2
   real(kind=r_def), dimension(undf_chi),          intent(in)    :: chi1, chi2, chi3
+  real(kind=r_def), dimension(undf_pid),          intent(in)    :: panel_id
   integer(kind=i_def), dimension(ndf_w2),         intent(in)    :: map_w2
   integer(kind=i_def), dimension(ndf_chi),        intent(in)    :: map_chi
+  integer(kind=i_def), dimension(ndf_pid),        intent(in)    :: map_pid
   real(kind=r_def), dimension(3,ndf_chi,ndf_w2),  intent(in)    :: diff_basis_chi
+  real(kind=r_def), dimension(1,ndf_chi,ndf_w2),  intent(in)    :: basis_chi
 
-  !Internal variables
+  ! Internal variables
   integer(kind=i_def)                  :: df, k
+  integer(kind=i_def)                  :: ipanel
   real(kind=r_def), dimension(ndf_chi) :: chi1_e, chi2_e, chi3_e
   real(kind=r_def)                     :: detj
   real(kind=r_def), dimension(3,3)     :: jacobian
+
+  ipanel = int(panel_id(map_pid(1)), i_def)
 
   do k = 0, nlayers-1
 
@@ -96,8 +115,11 @@ subroutine calc_detj_at_w2_code( nlayers,                                  &
     end do
 
     do df = 1,ndf_w2
-      call pointwise_coordinate_jacobian(ndf_chi, chi1_e, chi2_e, chi3_e, diff_basis_chi(:,:,df), &
+      call pointwise_coordinate_jacobian(ndf_chi, chi1_e, chi2_e, chi3_e, &
+                                         ipanel, basis_chi(:,:,df),       &
+                                         diff_basis_chi(:,:,df),          &
                                          jacobian, detj)
+
       detj_w2(map_w2(df)+k) = detj + detj_w2(map_w2(df)+k)
     end do
 

@@ -55,14 +55,15 @@ contains
   subroutine setUp(this)
 
     use schar_orography_cartesian_mod, only : schar_cartesian_type
-    use finite_element_config_mod,     only : cellshape_quadrilateral
     use base_mesh_config_mod,          only : geometry_planar, &
                                               partitioner_planar
-    use feign_config_mod,              only :                    &
-                                       feign_base_mesh_config,   &
-                                       feign_domain_size_config, &
-                                       feign_extrusion_config,   &
-                                       feign_orography_schar_cartesian_config
+    use finite_element_config_mod,     only : cellshape_quadrilateral, &
+                                              spherical_coord_system_xyz
+    use feign_config_mod,              only : feign_finite_element_config, &
+                                              feign_base_mesh_config,   &
+                                              feign_domain_size_config, &
+                                              feign_extrusion_config,   &
+                                              feign_orography_schar_cartesian_config
     use orography_schar_cartesian_config_mod, only : &
                                        direction_x
     use extrusion_config_mod,    only : method_uniform, stretching_method_linear
@@ -96,6 +97,14 @@ contains
                                    planar_domain_max_y =  100.0_r_def, &
                                    planar_domain_min_x = -100.0_r_def, &
                                    planar_domain_min_y = -100.0_r_def )
+
+    call feign_finite_element_config( cellshape=cellshape_quadrilateral, &
+                                      coordinate_order=0_i_def,          &
+                                      element_order=0_i_def,             &
+                                      rehabilitate=.true.,               &
+                                      spherical_coord_order = 0,         &
+                                      spherical_coord_system=spherical_coord_system_xyz, &
+                                      vorticity_in_w1=.false. )
 
     ! Set Schar Cartesian configuration
     this%mountain_height = 250.0_r_def
@@ -177,6 +186,7 @@ contains
     real(r_def), parameter    :: tol = 1.0e-3_r_def
     real(r_def)               :: height_flat_surface, height_domain_top
     real(r_def)               :: chi_1(undf), chi_2(undf), chi_3(undf)
+    real(r_def)               :: panel_id(undf)
     real(r_def)               :: eta(0:nlayers)
     real(r_def)               :: vertex_coords_2d(3,1), chi_surf, chi_test
 
@@ -226,11 +236,14 @@ contains
     do i = 1, undf
       chi_3(i) = eta2z_linear(eta(i-1), height_flat_surface, height_domain_top)
     end do
+    panel_id(:) = 1.0_r_def
     ! Test Cartesian orography assignment
     call analytic_orography_cartesian( nlayers, ndf, undf, map, &
+                                       ndf, undf, map,          &
                                        height_flat_surface,     &
                                        height_domain_top,       &
-                                       chi_1, chi_2, chi_3 )
+                                       chi_1, chi_2, chi_3,     &
+                                       panel_id )
 
     ! Test selected chi_3
     itest = 1

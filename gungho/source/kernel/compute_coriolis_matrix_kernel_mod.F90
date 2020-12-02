@@ -24,7 +24,8 @@ use argument_mod,            only: arg_type, func_type,             &
                                    GH_READ, GH_WRITE,               &
                                    ANY_SPACE_9,                     &
                                    GH_BASIS, GH_DIFF_BASIS,         &
-                                   CELLS, GH_QUADRATURE_XYoZ
+                                   CELLS, GH_QUADRATURE_XYoZ,       &
+                                   ANY_DISCONTINUOUS_SPACE_3
 use fs_continuity_mod,       only: W2
 
 use coordinate_jacobian_mod, only: coordinate_jacobian
@@ -43,13 +44,14 @@ implicit none
 
 type, public, extends(kernel_type) :: compute_coriolis_matrix_kernel_type
   private
-  type(arg_type) :: meta_args(2) = (/                                  &
-       arg_type(GH_OPERATOR, GH_WRITE, W2, W2),                        &
-       arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_9)                    &
+  type(arg_type) :: meta_args(3) = (/                                &
+      arg_type(GH_OPERATOR, GH_WRITE, W2, W2),                       &
+      arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_9),                  &
+      arg_type(GH_FIELD,    GH_READ,  ANY_DISCONTINUOUS_SPACE_3)     &
        /)
-  type(func_type) :: meta_funcs(2) = (/                                &
-       func_type(W2, GH_BASIS),                                        &
-       func_type(ANY_SPACE_9, GH_BASIS, GH_DIFF_BASIS)                 &
+  type(func_type) :: meta_funcs(2) = (/                              &
+      func_type(W2, GH_BASIS),                                       &
+      func_type(ANY_SPACE_9, GH_BASIS, GH_DIFF_BASIS)                &
        /)
   integer :: iterates_over = CELLS
   integer :: gh_shape = GH_QUADRATURE_XYoZ
@@ -70,50 +72,57 @@ contains
 !! @param[in] nlayers  Number of layers.
 !! @param[in] ncell_3d ncell*ndf
 !! @param[inout] mm    Local stencil or Coriolis operator.
-!! @param[in] chi1  Physical coordinate in the 1st dir.
-!! @param[in] chi2  Physical coordinate in the 2nd dir.
-!! @param[in] chi3  Physical coordinate in the 3rd dir.
-!! @param[in] ndf   Degrees of freedom per cell.
-!! @param[in] basis Vector basis functions evaluated at quadrature points.
-!! @param[in] ndf_chi  Degrees of freedum per cell for chi field.
-!! @param[in] undf_chi Unique degrees of freedum  for chi field.
-!! @param[in] map_chi  Dofmap for the cell at the base of the column, for the
-!!                     space on which the chi field lives
-!! @param[in] basis_chi Basis functions evaluated at
-!!                      quadrature points.
-!! @param[in] diff_basis_chi Differential basis functions evaluated at
-!!                           quadrature points.
+!! @param[in] chi_sph_1 1st coordinate in spherical Wchi
+!! @param[in] chi_sph_2 2nd coordinate in spherical Wchi
+!! @param[in] chi_sph_3 3rd coordinate in spherical Wchi
+!! @param[in] panel_id A field giving the ID for mesh panels.
+!! @param[in] ndf      Degrees of freedom per cell.
+!! @param[in] basis    Vector basis functions evaluated at quadrature points.
+!! @param[in] ndf_chi_sph Number of degrees of freedom per cell for chi
+!! @param[in] undf_chi_sph Number of unique degrees of freedom  for chi
+!! @param[in] map_chi_sph Dofmap for the cell at the base of the column for chi
+!! @param[in] chi_sph_basis Basis functions for spherical Wchi evaluated at
+!!                          gaussian quadrature points
+!! @param[in] chi_sph_diff_basis Differential of the spherical Wchi basis functions
+!!                               evaluated at gaussian quadrature point
+!! @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
+!! @param[in] undf_pid Number of unique degrees of freedom for panel_id
+!! @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
 !! @param[in] nqp_h    Number of horizontal quadrature points.
 !! @param[in] nqp_v    Number of vertical quadrature points.
 !! @param[in] wqp_h    Horizontal quadrature weights.
 !! @param[in] wqp_v    Vertical quadrature weights.
-subroutine compute_coriolis_matrix_code(cell, nlayers, ncell_3d,     &
-                                        mm,                          &
-                                        chi1, chi2, chi3,            &
-                                        ndf, basis,                  &
-                                        ndf_chi, undf_chi, map_chi,  &
-                                        basis_chi, diff_basis_chi,   &
+subroutine compute_coriolis_matrix_code(cell, nlayers, ncell_3d,           &
+                                        mm,                                &
+                                        chi_sph_1, chi_sph_2, chi_sph_3,   &
+                                        panel_id,                          &
+                                        ndf, basis,                        &
+                                        ndf_chi_sph, undf_chi_sph,         &
+                                        map_chi_sph,                       &
+                                        basis_chi_sph, diff_basis_chi_sph, &
+                                        ndf_pid, undf_pid, map_pid,        &
                                         nqp_h, nqp_v, wqp_h, wqp_v)
 
   implicit none
 
   ! Arguments
-  integer(kind=i_def), intent(in)    :: cell, nqp_h, nqp_v
+  integer(kind=i_def), intent(in)    :: cell, ndf, ndf_pid, ndf_chi_sph
+  integer(kind=i_def), intent(in)    :: undf_pid, undf_chi_sph
+  integer(kind=i_def), intent(in)    :: nqp_h, nqp_v
   integer(kind=i_def), intent(in)    :: nlayers
   integer(kind=i_def), intent(in)    :: ncell_3d
-  integer(kind=i_def), intent(in)    :: ndf
 
   real(kind=r_def), dimension(3,ndf,nqp_h,nqp_v), intent(in) :: basis
 
-  integer(kind=i_def), intent(in)    :: ndf_chi
-  integer(kind=i_def), intent(in)    :: undf_chi
-  integer(kind=i_def), intent(in)    :: map_chi(ndf_chi)
+  integer(kind=i_def), intent(in)    :: map_chi_sph(ndf_chi_sph)
+  integer(kind=i_def), intent(in)    :: map_pid(ndf_pid)
   real(kind=r_def),    intent(inout) :: mm(ndf,ndf,ncell_3d)
-  real(kind=r_def),    intent(in)    :: basis_chi(1,ndf_chi,nqp_h,nqp_v)
-  real(kind=r_def),    intent(in)    :: diff_basis_chi(3,ndf_chi,nqp_h,nqp_v)
-  real(kind=r_def),    intent(in)    :: chi1(undf_chi)
-  real(kind=r_def),    intent(in)    :: chi2(undf_chi)
-  real(kind=r_def),    intent(in)    :: chi3(undf_chi)
+  real(kind=r_def),    intent(in)    :: basis_chi_sph(1,ndf_chi_sph,nqp_h,nqp_v)
+  real(kind=r_def),    intent(in)    :: diff_basis_chi_sph(3,ndf_chi_sph,nqp_h,nqp_v)
+  real(kind=r_def),    intent(in)    :: chi_sph_1(undf_chi_sph)
+  real(kind=r_def),    intent(in)    :: chi_sph_2(undf_chi_sph)
+  real(kind=r_def),    intent(in)    :: chi_sph_3(undf_chi_sph)
+  real(kind=r_def),    intent(in)    :: panel_id(undf_pid)
   real(kind=r_def),    intent(in)    :: wqp_h(nqp_h)
   real(kind=r_def),    intent(in)    :: wqp_v(nqp_v)
 
@@ -121,35 +130,39 @@ subroutine compute_coriolis_matrix_code(cell, nlayers, ncell_3d,     &
   integer(kind=i_def)                          :: df, df2, k, ik
   integer(kind=i_def)                          :: qp1, qp2
 
-  real(kind=r_def), dimension(ndf_chi)         :: chi1_e, chi2_e, chi3_e
+  real(kind=r_def), dimension(ndf_chi_sph)     :: chi_sph_1_e, chi_sph_2_e, chi_sph_3_e
   real(kind=r_def), dimension(nqp_h,nqp_v)     :: dj
   real(kind=r_def), dimension(3,3,nqp_h,nqp_v) :: jac
   real(kind=r_def), dimension(3,nqp_h,nqp_v)   :: rotation_vector
   real(kind=r_def), dimension(3)               :: omega_cross_u
   real(kind=r_def), dimension(3)               :: jac_u, jac_v
 
+  integer(kind=i_def) :: ipanel
+
+  ipanel = int(panel_id(map_pid(1)), i_def)
 
   ! Loop over layers: Start from 1 as in this loop k is not an offset
   do k = 1, nlayers
 
      ! Indirect the chi coord field here
-     do df = 1, ndf_chi
-        chi1_e(df) = chi1(map_chi(df) + k - 1)
-        chi2_e(df) = chi2(map_chi(df) + k - 1)
-        chi3_e(df) = chi3(map_chi(df) + k - 1)
+     do df = 1, ndf_chi_sph
+        chi_sph_1_e(df) = chi_sph_1(map_chi_sph(df) + k - 1)
+        chi_sph_2_e(df) = chi_sph_2(map_chi_sph(df) + k - 1)
+        chi_sph_3_e(df) = chi_sph_3(map_chi_sph(df) + k - 1)
      end do
 
     ! Calculate rotation vector Omega = (0, 2*cos(lat), 2*sin(lat)) and Jacobian
     if ( geometry == geometry_spherical ) then
-      call rotation_vector_sphere(ndf_chi, nqp_h, nqp_v, chi1_e, chi2_e,       &
-                                  chi3_e, basis_chi, rotation_vector)
+      call rotation_vector_sphere(ndf_chi_sph, nqp_h, nqp_v, chi_sph_1_e, chi_sph_2_e,       &
+                                  chi_sph_3_e, ipanel, basis_chi_sph, rotation_vector)
     else
       call rotation_vector_fplane(nqp_h, nqp_v, scaled_omega, f_lat,           &
                                   rotation_vector)
     end if
 
-    call coordinate_jacobian(ndf_chi, nqp_h, nqp_v, chi1_e, chi2_e, chi3_e,    &
-                             diff_basis_chi, jac, dj)
+    call coordinate_jacobian(ndf_chi_sph, nqp_h, nqp_v,                     &
+                             chi_sph_1_e, chi_sph_2_e, chi_sph_3_e, ipanel, &
+                             basis_chi_sph, diff_basis_chi_sph, jac, dj )
 
     ik = k + (cell-1)*nlayers
     mm(:,:,ik) = 0.0_r_def

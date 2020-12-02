@@ -42,7 +42,9 @@ module io_dev_driver_mod
   ! Model working data set
   type (io_dev_data_type) :: model_data
   ! Coordinate field
-  type(field_type), target, dimension(3) :: chi
+  type(field_type), target, dimension(3) :: chi_xyz
+  type(field_type), target, dimension(3) :: chi_sph
+  type(field_type), target               :: panel_id
 
   ! Mesh IDs
   integer(i_def) :: mesh_id
@@ -70,7 +72,9 @@ module io_dev_driver_mod
                                     communicator,    &
                                     mesh_id,         &
                                     twod_mesh_id,    &
-                                    chi,             &
+                                    chi_xyz,         &
+                                    chi_sph,         &
+                                    panel_id,        &
                                     clock )
 
     ! Instantiate the fields stored in model_data
@@ -80,7 +84,7 @@ module io_dev_driver_mod
                             clock )
 
     ! Initialise the fields stored in the model_data
-    call initialise_model_data( model_data, chi, clock )
+    call initialise_model_data( model_data, chi_xyz, clock )
 
 
   end subroutine initialise

@@ -61,14 +61,15 @@ contains
   subroutine setUp(this)
 
     use agnesi_orography_spherical_mod, only : agnesi_spherical_type
-    use finite_element_config_mod,      only : cellshape_quadrilateral
     use base_mesh_config_mod,           only : geometry_spherical, &
                                                partitioner_cubedsphere
-    use feign_config_mod,               only :                  &
-                                        feign_base_mesh_config, &
-                                        feign_planet_config,    &
-                                        feign_extrusion_config, &
-                                        feign_orography_agnesi_spherical_config
+    use finite_element_config_mod,      only : cellshape_quadrilateral, &
+                                               spherical_coord_system_xyz
+    use feign_config_mod,               only : feign_finite_element_config, &
+                                               feign_base_mesh_config, &
+                                               feign_planet_config,    &
+                                               feign_extrusion_config, &
+                                               feign_orography_agnesi_spherical_config
     use orography_agnesi_spherical_config_mod, only :              &
                                         lambda_centre, phi_centre, &
                                         lambda_focus, phi_focus
@@ -122,6 +123,14 @@ contains
                                  stretching_height=1.0_r_def, &
                                  stretching_method=stretching_method_linear)
 
+    call feign_finite_element_config( cellshape=cellshape_quadrilateral, &
+                                      coordinate_order=0_i_def,          &
+                                      element_order=0_i_def,             &
+                                      rehabilitate=.true.,               &
+                                      spherical_coord_order = 0,         &
+                                      spherical_coord_system=spherical_coord_system_xyz, &
+                                      vorticity_in_w1=.false. )
+
     ! Initialise Witch-of-Agnesi spherical orography type
     allocate( orography_profile,                                    &
               source = agnesi_spherical_type( this%mountain_height, &
@@ -163,7 +172,7 @@ contains
     use extrusion_mod,                  only : uniform_extrusion_type
     use extrusion_config_mod,           only : method_uniform
     use planet_config_mod,              only : scaled_radius
-    use assign_orography_field_mod,     only : analytic_orography_spherical
+    use assign_orography_field_mod,     only : analytic_orography_spherical_xyz
     use coord_transform_mod,            only : xyz2llr, llr2xyz
     use orography_helper_functions_mod, only : eta2z_linear
 
@@ -185,6 +194,7 @@ contains
     real(r_def)               :: height_flat_surface, height_domain_top
     real(r_def)               :: chi_1(undf), chi_2(undf), chi_3(undf)
     real(r_def)               :: chi_1_cart(undf), chi_2_cart(undf), chi_3_cart(undf)
+    real(r_def)               :: panel_id(undf)
     real(r_def)               :: eta(0:nlayers)
     real(r_def)               :: vertex_coords_2d(3,1), chi_surf, chi_test
 
@@ -228,16 +238,19 @@ contains
     do i = 1, undf
       chi_3(i) = eta2z_linear(eta(i-1), height_flat_surface, height_domain_top)
     end do
+    panel_id(:) = 1.0_r_def
     ! Transform coordinate field to (x, y, z) as it is currently in the model
     do i = 1, undf
       call llr2xyz(chi_1(i), chi_2(i), chi_3(i), &
                    chi_1_cart(i), chi_2_cart(i), chi_3_cart(i))
     end do
     ! Test spherical orography assignment
-    call analytic_orography_spherical( nlayers, ndf, undf, map, &
-                                     height_flat_surface,     &
-                                     height_domain_top,       &
-                                     chi_1_cart, chi_2_cart, chi_3_cart )
+    call analytic_orography_spherical_xyz( nlayers, ndf, undf, map, &
+                                           ndf, undf, map,          &
+                                           height_flat_surface,     &
+                                           height_domain_top,       &
+                                           chi_1_cart, chi_2_cart, chi_3_cart, &
+                                           panel_id )
     ! Transform coordinate field back to (long, lat, r) for comparison
     do i = 1, undf
       call xyz2llr(chi_1_cart(i), chi_2_cart(i), chi_3_cart(i), &

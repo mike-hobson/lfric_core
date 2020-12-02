@@ -55,10 +55,10 @@ contains
 !! @param[in] theta Potential temperature field
 !! @param[in] height_w3 Height coordinate in w3
 !! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 Number unique of degrees of freedom  for w3
+!! @param[in] undf_w3 Number of unique degrees of freedom  for w3
 !! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
 !! @param[in] ndf_wt Number of degrees of freedom per cell for wtheta
-!! @param[in] undf_wt Number unique of degrees of freedom  for wtheta
+!! @param[in] undf_wt Number of unique degrees of freedom  for wtheta
 !! @param[in] map_wt Dofmap for the cell at the base of the column for wt
 subroutine hydrostatic_eos_exner_code(nlayers, exner, rho, theta, &
                                  moist_dyn_gas, moist_dyn_tot, moist_dyn_fac, &

@@ -33,7 +33,7 @@ module initial_exner_sample_kernel_mod
           /)
       integer :: iterates_over = CELLS
   contains
-      procedure, nopass ::initial_exner_sample_code
+      procedure, nopass :: initial_exner_sample_code
   end type
 
   !---------------------------------------------------------------------------

@@ -74,8 +74,6 @@ subroutine rhs_w3_to_sh_w3_code(                 &
                                   map_w3         &
                                )
 
-  use coordinate_jacobian_mod,    only : coordinate_jacobian
-
   implicit none
 
   ! Arguments

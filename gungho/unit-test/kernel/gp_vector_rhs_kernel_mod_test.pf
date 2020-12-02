@@ -42,7 +42,10 @@ contains
 
     use base_mesh_config_mod,    only : geometry_planar, &
                                         partitioner_planar
-    use feign_config_mod,        only : feign_base_mesh_config
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
+    use feign_config_mod,          only : feign_finite_element_config, &
+                                          feign_base_mesh_config
 
     implicit none
 
@@ -56,7 +59,7 @@ contains
 
     ! Initialise YAXT
     call xt_initialize(this%getMpiCommunicator())
-    !Store the MPI communicator for later use
+    ! Store the MPI communicator for later use
     call store_comm(this%getMpiCommunicator())
 
     call feign_base_mesh_config( filename='foo',                      &
@@ -64,6 +67,15 @@ contains
                                  geometry=geometry_planar,            &
                                  partitioner=partitioner_planar,      &
                                  fplane=.false., f_lat_deg=0.0_r_def )
+
+    call feign_finite_element_config(           &
+             cellshape=cellshape_quadrilateral, &
+             coordinate_order=0_i_def,          &
+             element_order=0_i_def,             &
+             rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+             vorticity_in_w1=.false. )
 
     qr = quadrature_xyoz_type(3, quadrature_rule)
 
@@ -107,14 +119,15 @@ contains
 
     class(gp_vector_rhs_test_type), intent(inout) :: this
 
-    integer :: num_layers,  undf, undf_f
+    integer :: num_layers,  undf, undf_f, ndf_w3, undf_w3
     type( quadrature_xyoz_type )          :: qr
     type(quadrature_xyoz_proxy_type) :: qr_proxy
     type( quadrature_rule_gaussian_type ) :: quadrature_rule
     real(kind=r_def) :: f_data(1), rhs1(8), rhs2(8), rhs3(8)
     real(kind=r_def) :: answer, tol
-    integer :: map_w0(8), map_f(1)
+    integer :: map_w0(8), map_f(1), map_w3(1)
     real(kind=r_def) :: chi(8,3)
+    real(kind=r_def) :: panel_id(1)
     real(kind=r_def) :: x_vert(8,3)
     real(kind=r_def), pointer :: xqp_h(:,:), xqp_v(:), wh(:), wv(:) => null()
     integer :: nqp_h, nqp_v
@@ -160,6 +173,11 @@ contains
       end do
     end do
     chi(:,:) = x_vert(:,:)
+    panel_id(:) = 1.0_r_def
+
+    ndf_w3 = 1
+    undf_w3 = 1
+    map_w3(1) = 1
 
     map_f(1) = 1
     t_vec = (/ 1.0_r_def, 2.0_r_def, -1.0_r_def /)
@@ -178,11 +196,13 @@ contains
     call gp_vector_rhs_code(num_layers,                   &
                             rhs1, rhs2, rhs3, f_data,     &
                             chi(:,1), chi(:,2), chi(:,3), &
+                            panel_id,                     &
                             f_data,                       &
                             ndf_w0, undf, map_w0, this%basis,  &
                             ndf_f, undf_f,map_f, this%basis_f, &
                             ndf_w0, undf, map_w0, this%basis,  &
                             this%diff_basis,                   &
+                            ndf_w3, undf_w3, map_w3,           &
                             ndf_f, undf_f, map_f,              &
                             nqp_h, nqp_v, wh, wv )
 ! Answers for hardwired jacobian

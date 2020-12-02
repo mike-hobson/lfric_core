@@ -31,12 +31,8 @@ type, public, extends(kernel_type) :: enforce_bc_kernel_type
        /)
   integer :: iterates_over = CELLS
 contains
-  procedure, nopass ::enforce_bc_code
+  procedure, nopass :: enforce_bc_code
 end type
-
-!-------------------------------------------------------------------------------
-! Constenforce_bcctors
-!-------------------------------------------------------------------------------
 
 !-------------------------------------------------------------------------------
 ! Contained functions/subroutines
@@ -48,7 +44,7 @@ contains
 !! @param[in] nlayers Number of layers
 !! @param[inout] field Input/Output data
 !! @param[in] ndf Number of degrees of freedom per cell
-!! @param[in] undf Number unique of degrees of freedom
+!! @param[in] undf Number of unique degrees of freedom
 !! @param[in] map Dofmap for the cell at the base of the column
 !! @param[in] boundary_value Flags (= 0) for dofs that live on the
 !!            vertical boundaries of the cell (=1 for other dofs)
@@ -59,7 +55,7 @@ subroutine enforce_bc_code(nlayers,                        &
 
   implicit none
 
-  !Arguments
+  ! Arguments
   integer, intent(in) :: nlayers
   integer, intent(in) :: ndf
   integer, intent(in) :: undf

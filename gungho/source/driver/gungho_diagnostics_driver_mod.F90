@@ -33,6 +33,7 @@ module gungho_diagnostics_driver_mod
   use section_choice_config_mod, only : cloud, cloud_um
   use log_mod,                   only : log_event, &
                                         LOG_LEVEL_INFO
+  use runtime_constants_mod, only: get_panel_id
 
   implicit none
 
@@ -70,7 +71,7 @@ contains
     type( field_type), pointer :: u => null()
     type( field_type), pointer :: rho => null()
     type( field_type), pointer :: exner => null()
-
+    type( field_type), pointer :: panel_id => null()
     ! Iterator for field collection
     type(field_collection_iterator_type)  :: iterator
 
@@ -91,6 +92,7 @@ contains
     moist_dyn => model_data%moist_dyn
     derived_fields => model_data%derived_fields
     cloud_fields => model_data%cloud_fields
+    panel_id => get_panel_id()
 
     ! Can't just iterate through the prognostic/diagnostic collections as
     ! some fields are scalars and some fields are vectors, so explicitly

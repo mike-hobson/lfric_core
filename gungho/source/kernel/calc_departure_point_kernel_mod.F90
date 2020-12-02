@@ -119,7 +119,7 @@ subroutine calc_departure_point_code( nlayers,                       &
   if (direction == x_direction) then
     df1 = 1
     df2 = 3
-  elseif (direction == y_direction) then
+  else if (direction == y_direction) then
     df1 = 2
     df2 = 4
   end if

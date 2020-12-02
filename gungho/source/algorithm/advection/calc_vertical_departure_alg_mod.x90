@@ -17,7 +17,7 @@ module calc_vertical_departure_alg_mod
   use calc_departure_wind_kernel_mod,    only: calc_departure_wind_kernel_type
   use vertical_trapezoidal_kernel_mod,   only: vertical_trapezoidal_kernel_type
   use function_space_mod,                only: function_space_type
-  use runtime_constants_mod,             only: get_coordinates
+  use runtime_constants_mod,             only: get_coordinates, get_panel_id
 
   implicit none
 
@@ -40,12 +40,14 @@ contains
     type( field_type )                   :: dep_wind_n
     type( field_type )                   :: dep_wind_np1
     type( function_space_type ), pointer :: w2_fs => null()
-    type( field_type ), pointer          :: chi(:) => null()
+    type( field_type ), pointer          :: chi_sph(:) => null()
+    type( field_type ), pointer          :: panel_id => null()
 
     w2_fs => wind%get_function_space()
     call   dep_wind_n%initialise( vector_space = w2_fs )
     call dep_wind_np1%initialise( vector_space = w2_fs )
-    chi => get_coordinates()
+    chi_sph => get_coordinates()
+    panel_id => get_panel_id()
 
     if ( subroutine_timers ) call timer( 'calc_vertical_departure' )
 
@@ -60,11 +62,11 @@ contains
     !
     ! These invokes are left ungrouped due to PSyclone issue #867.
     !
-    call invoke( calc_departure_wind_kernel_type(dep_wind_n, wind, chi) )
+    call invoke( calc_departure_wind_kernel_type(dep_wind_n, wind, chi_sph, panel_id) )
     call invoke( setval_X(dep_wind_np1, dep_wind_n) )
     call invoke( vertical_trapezoidal_kernel_type(dep_pts_z, dep_wind_n, dep_wind_np1) )
 
-    nullify( w2_fs, chi )
+    nullify( w2_fs, chi_sph, panel_id )
 
     if ( subroutine_timers ) call timer( 'calc_vertical_departure' )
 

@@ -32,8 +32,8 @@ module init_diagnostics_mod
 
 contains
 
-    subroutine init_diagnostics(mesh_id, twod_mesh_id, chi, &
-            depository, prognostic_fields, diagnostic_fields)
+    subroutine init_diagnostics(mesh_id, twod_mesh_id, chi_xyz, chi_sph, panel_id, &
+                                depository, prognostic_fields, diagnostic_fields)
 
         implicit none
 
@@ -44,7 +44,9 @@ contains
         type(field_collection_type), intent(out) :: prognostic_fields
         type(field_collection_type), intent(out) :: diagnostic_fields
         ! Coordinate field
-        type(field_type), intent(inout) :: chi(:)
+        type(field_type), intent(inout) :: chi_xyz(:)
+        type(field_type), intent(inout) :: chi_sph(:)
+        type(field_type), intent(inout) :: panel_id
         type (field_type), allocatable :: new_field
         type (field_type), pointer :: tmp_field
         class(pure_abstract_field_type), pointer  :: tmp_field_ptr => null()
@@ -92,7 +94,7 @@ contains
             end if
         end do
 
-        call create_runtime_constants(mesh_id, twod_mesh_id, chi)
+        call create_runtime_constants(mesh_id, twod_mesh_id, chi_xyz, chi_sph, panel_id)
 
         call log_event('diagnostics: Miniapp initialised', LOG_LEVEL_INFO)
 

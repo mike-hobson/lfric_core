@@ -9,18 +9,20 @@
 !>
 module compute_geopotential_kernel_mod
 
-  use argument_mod,           only : arg_type, func_type,         &
-                                     GH_FIELD, GH_READ, GH_WRITE, &
-                                     ANY_SPACE_9, GH_BASIS,       &
-                                     CELLS, GH_EVALUATOR
-  use base_mesh_config_mod,   only : geometry, &
-                                     geometry_spherical
-  use constants_mod,          only : r_def, i_def
-  use coord_transform_mod,    only : xyz2llr
-  use formulation_config_mod, only : shallow
-  use fs_continuity_mod,      only : W3
-  use kernel_mod,             only : kernel_type
-  use planet_config_mod,      only : gravity, scaled_radius
+  use argument_mod,              only : arg_type, func_type,         &
+                                        GH_FIELD, GH_READ, GH_WRITE, &
+                                        ANY_SPACE_9, GH_BASIS,       &
+                                        CELLS, GH_EVALUATOR
+  use base_mesh_config_mod,      only : geometry, &
+                                        geometry_spherical
+  use constants_mod,             only : r_def, i_def
+  use coord_transform_mod,       only : xyz2llr
+  use formulation_config_mod,    only : shallow
+  use finite_element_config_mod, only : spherical_coord_system, &
+                                        spherical_coord_system_xyz
+  use fs_continuity_mod,         only : W3
+  use kernel_mod,                only : kernel_type
+  use planet_config_mod,         only : gravity, scaled_radius
 
   implicit none
 
@@ -52,9 +54,9 @@ contains
 
 !! @param[in] nlayers Number of layers
 !! @param[inout] phi Geopotential array
-!! @param[in] chi_1 Physical x coordinates
-!! @param[in] chi_2 Physical y coordinates
-!! @param[in] chi_3 Physical z coordinates
+!! @param[in] chi_1 1st physical coordinate field
+!! @param[in] chi_2 2nd physical coordinate field
+!! @param[in] chi_3 3rd physical coordinate field
 !! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
 !! @param[in] undf_w3 Number of unique degrees of freedom for w3
 !! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
@@ -86,57 +88,78 @@ subroutine compute_geopotential_code(nlayers, phi,               &
 
   ! Internal variables
   integer(kind=i_def) :: df, dfc, k
-  real(kind=r_def)    :: x(3)
-  real(kind=r_def)    :: lat, lon, r, s
+  real(kind=r_def)    :: coord(3)
+  real(kind=r_def)    :: lat, lon, radius, shallow_switch, height
 
   real(kind=r_def), dimension(ndf_chi) :: chi_1_e, chi_2_e, chi_3_e
 
-
+  ! If geometry is spherical then calculate geopotential using radius
   if ( geometry == geometry_spherical ) then
+    ! We introduce a shallow_switch, which controls whether we assume
+    ! a constant geopotential with radius or whether to use inverse square law
     if ( shallow ) then
-      s = 1.0_r_def
+      shallow_switch = 1.0_r_def
     else
-      s = 0.0_r_def
+      shallow_switch = 0.0_r_def
     end if
-    do k = 0, nlayers-1
+    ! For Cartesian coordinate system, obtain radius from (X,Y,Z)
+    if (spherical_coord_system == spherical_coord_system_xyz) then
+      do k = 0, nlayers-1
         do dfc = 1, ndf_chi
-            chi_1_e(dfc) = chi_1( map_chi(dfc) + k)
-            chi_2_e(dfc) = chi_2( map_chi(dfc) + k)
-            chi_3_e(dfc) = chi_3( map_chi(dfc) + k)
+          chi_1_e(dfc) = chi_1( map_chi(dfc) + k)
+          chi_2_e(dfc) = chi_2( map_chi(dfc) + k)
+          chi_3_e(dfc) = chi_3( map_chi(dfc) + k)
         end do
 
         do df = 1, ndf_w3
-            x(:) = 0.0_r_def
-            do dfc = 1, ndf_chi
-                x(1) = x(1) + chi_1_e(dfc)*chi_basis(1,dfc,df)
-                x(2) = x(2) + chi_2_e(dfc)*chi_basis(1,dfc,df)
-                x(3) = x(3) + chi_3_e(dfc)*chi_basis(1,dfc,df)
-            end do
-            call xyz2llr(x(1), x(2), x(3), lon, lat, r)
+          coord(:) = 0.0_r_def
+          do dfc = 1, ndf_chi
+            coord(1) = coord(1) + chi_1_e(dfc)*chi_basis(1,dfc,df)
+            coord(2) = coord(2) + chi_2_e(dfc)*chi_basis(1,dfc,df)
+            coord(3) = coord(3) + chi_3_e(dfc)*chi_basis(1,dfc,df)
+          end do
+          call xyz2llr(coord(1), coord(2), coord(3), lon, lat, radius)
 
-            phi(map_w3(df) + k) =  gravity*(s*r - (1.0_r_def-s)*scaled_radius**2/r)
+          phi(map_w3(df) + k) =  gravity*(shallow_switch*radius - &
+                          (1.0_r_def-shallow_switch)*scaled_radius**2/radius)
 
         end do
-    end do
+      end do
+    ! The spherical coordinate system already has radius as chi_3
+    else
+      do k = 0, nlayers-1
+        do df = 1, ndf_w3
+          height = 0.0_r_def
+          do dfc = 1, ndf_chi
+            height = height + chi_3( map_chi(dfc) + k )*chi_basis(1,dfc,df)
+          end do
 
+          phi(map_w3(df) + k) = gravity*              &
+             (shallow_switch*(scaled_radius+height) - &
+             (1.0_r_def-shallow_switch)*scaled_radius**2/(scaled_radius+height))
+
+        end do
+      end do
+    end if
+
+  ! Otherwise domain is planar Cartesian and chi_3 is the height
   else
 
     do k = 0, nlayers-1
+      do dfc = 1, ndf_chi
+        chi_3_e(dfc) = chi_3( map_chi(dfc) + k )
+      end do
+
+      do df = 1, ndf_w3
+        height = 0.0_r_def
         do dfc = 1, ndf_chi
-            chi_3_e(dfc) = chi_3( map_chi(dfc) + k)
+          height = height + chi_3_e(dfc)*chi_basis(1,dfc,df)
         end do
 
-        do df = 1, ndf_w3
-            x(:) = 0.0_r_def
-            do dfc = 1, ndf_chi
-                x(3) = x(3) + chi_3_e(dfc)*chi_basis(1,dfc,df)
-            end do
+        phi(map_w3(df) + k) =  gravity*height
 
-            phi(map_w3(df) + k) =  gravity*x(3)
-
-        end do
+      end do
     end do
-
   end if
 
 end subroutine compute_geopotential_code

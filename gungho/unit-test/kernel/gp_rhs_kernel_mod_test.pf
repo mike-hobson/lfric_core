@@ -12,6 +12,8 @@ module gp_rhs_kernel_mod_test
   use quadrature_xyoz_mod,               only: quadrature_xyoz_type, &
                                                quadrature_xyoz_proxy_type
   use quadrature_rule_gaussian_mod,      only: quadrature_rule_gaussian_type
+  use yaxt,                              only: xt_initialize, xt_finalize
+  use mpi_mod,                           only: store_comm, clear_comm
 
 
   implicit none
@@ -20,7 +22,7 @@ module gp_rhs_kernel_mod_test
   public :: test_all
 
   @TestCase
-  type, extends(TestCase), public :: gp_rhs_test_type
+  type, extends(MPITestCase), public :: gp_rhs_test_type
     private
     real(r_def), allocatable :: basis(:,:,:,:),   &
                                 basis_f(:,:,:,:), &
@@ -35,11 +37,17 @@ module gp_rhs_kernel_mod_test
   integer(i_def), parameter :: undf   = 8
   integer(i_def), parameter :: undf_f = 8
   integer(i_def), parameter :: ndf_f  = 1
+  integer(i_def), parameter :: ndf_pid = 1
+  integer(i_def), parameter :: undf_pid = 1
 
 contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
+
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
+    use feign_config_mod,          only : feign_finite_element_config
 
     implicit none
 
@@ -50,6 +58,20 @@ contains
     type( quadrature_rule_gaussian_type ) :: quadrature_rule
 
     integer(i_def) :: nqp_h, nqp_v
+
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    ! Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
+    call feign_finite_element_config(           &
+             cellshape=cellshape_quadrilateral, &
+             coordinate_order=0_i_def,          &
+             element_order=0_i_def,             &
+             rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+             vorticity_in_w1=.false. )
 
     qr = quadrature_xyoz_type(3, quadrature_rule)
 
@@ -66,16 +88,25 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
+    use configuration_mod,        only: final_configuration
+
     implicit none
 
     class(gp_rhs_test_type), intent(inout) :: this
 
     deallocate( this%basis, this%basis_f, this%diff_basis )
 
+    call final_configuration()
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
   end subroutine tearDown
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  @Test( npes=[1] )
   subroutine test_all( this )
 
     use gp_rhs_kernel_mod, only : gp_rhs_code
@@ -90,8 +121,9 @@ contains
     type( quadrature_rule_gaussian_type ) :: quadrature_rule
     real(kind=r_def) :: f_data(1), rhs(8)
     real(kind=r_def) :: answer, tol
-    integer :: map_w0(8), map_f(1)
+    integer :: map_w0(8), map_f(1), map_pid(1)
     real(kind=r_def) :: chi(8,3)
+    real(kind=r_def) :: panel_id(1)
     real(kind=r_def) :: x_vert(8,3)
     real(kind=r_def),pointer :: xqp_h(:,:), xqp_v(:) => null()
     real(kind=r_def), pointer :: wh(:), wv(:) => null()
@@ -137,6 +169,9 @@ contains
       end do
     end do
     chi(:,:) = x_vert(:,:)
+    panel_id(:) = 1.0_r_def
+
+    map_pid(1) = 1
 
     map_f(1) = 1
     this%basis_f(:,:,:,:) = 1.0_r_def
@@ -144,12 +179,15 @@ contains
 
     num_layers=1
     rhs(:) = 0.0_r_def
-    call gp_rhs_code(num_layers,                       &
-                     rhs, f_data,                      &
-                     chi(:,1), chi(:,2), chi(:,3),     &
+    call gp_rhs_code(num_layers,                            &
+                     rhs, f_data,                           &
+                     chi(:,1), chi(:,2), chi(:,3),          &
+                     panel_id,                              &
                      ndf_w0, undf, map_w0, this%basis,      &
-                     ndf_f, undf_f,map_f, this%basis_f,     &
-                     ndf_w0, undf, map_w0, this%diff_basis, &
+                     ndf_f, undf_f, map_f, this%basis_f,    &
+                     ndf_w0, undf, map_w0,                  &
+                     this%basis, this%diff_basis,           &
+                     ndf_pid, undf_pid, map_pid,            &
                      nqp_h, nqp_v, wh, wv )
 
 ! Answer for hardwired jacobian

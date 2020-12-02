@@ -22,14 +22,14 @@ module io_dev_init_fields_alg_mod
 contains
   !> @details An algorithm for initialising IO_Dev fields analytically
   !> @param[inout] core_fields The core model field collection
-  !> @param[in]    chi         A size 3 array of fields holding the mesh
-  !>                           coordinates
-subroutine io_dev_init_fields_alg(core_fields, chi)
+  !> @param[in]    chi_xyz     A size 3 array of fields holding the mesh
+  !>                           (X,Y,Z) coordinates
+subroutine io_dev_init_fields_alg(core_fields, chi_xyz)
 
     implicit none
 
     type(field_collection_type), intent(inout) :: core_fields
-    type(field_type),            intent(in)    :: chi(3)
+    type(field_type),            intent(in)    :: chi_xyz(3)
 
     type(field_collection_iterator_type) :: iter
 
@@ -44,7 +44,7 @@ subroutine io_dev_init_fields_alg(core_fields, chi)
 
         ! Initialise fields to default analytic value (product of x, y and z
         ! coordinates)
-        call invoke ( io_dev_init_kernel_type(fld, chi) )
+        call invoke ( io_dev_init_kernel_type(fld, chi_xyz) )
 
       end select
     end do

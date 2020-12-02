@@ -24,6 +24,8 @@ cellshape='quadrilateral',
 coordinate_order=2,
 element_order=0,
 rehabilitate=.true.,
+spherical_coord_order=2,
+spherical_coord_system='xyz',
 /
 
 &formulation

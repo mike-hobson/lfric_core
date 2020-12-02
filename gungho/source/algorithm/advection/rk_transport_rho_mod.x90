@@ -27,7 +27,7 @@ module rk_transport_rho_mod
                                                get_qr,                         &
                                                w2_id, w3_id, w3inv_id,         &
                                                wt_id, theta_space_id,          &
-                                               get_coordinates,                &
+                                               get_coordinates_xyz,            &
                                                get_detj_at_w2
 
   use transport_config_mod,              only: operators,                      &
@@ -73,10 +73,6 @@ module rk_transport_rho_mod
   ! 'State' items that need to be created once but used every step
   type( field_type )              :: rho_n, r_u, r_rho, rho_inc, mass_flux
   type( field_type ), allocatable :: rr_prediction(:)
-  type( field_type )              :: mt_lumped
-  type( field_type )              :: rho0
-  type( field_type )              :: ones
-  type( field_type )              :: advective_av_chi3, theta_metrics, chi3_at_wt
 
   ! Needed for nonuniform FV operators
   type( field_type ), allocatable :: flux_coeffs(:,:), vert_flux_coeffs(:,:)
@@ -110,7 +106,7 @@ contains
 
     integer(i_def)              :: flux_stencil_size,  &
                                    direction, polynomial
-    type( field_type ), pointer :: chi(:) => null()
+    type( field_type ), pointer :: chi_xyz(:) => null()
     type( field_type ), pointer :: md_w3 => null()
 
     type( quadrature_rule_gaussian_type )      :: gaussian_quadrature
@@ -170,7 +166,7 @@ contains
                                        flux_stencil_size,         &
                                        nfaces_h, nfaces_v         )
 
-        chi => get_coordinates()
+        chi_xyz => get_coordinates_xyz()
         nqp_xyz = fv_flux_order+1
         qr = quadrature_xyoz_type(nqp_xyz, gaussian_quadrature)
         if ( oned_reconstruction ) then
@@ -193,12 +189,12 @@ contains
           end do
         end do
         if ( oned_reconstruction ) then
-          call invoke_poly1d_flux_coeffs( flux_coeffs, md_w3, chi, qr, qrf, &
-                                          fv_flux_order,                    &
+          call invoke_poly1d_flux_coeffs( flux_coeffs, md_w3, chi_xyz, &
+                                          qr, qrf, fv_flux_order,      &
                                           flux_stencil_extent, nfaces_h )
         else
-          call invoke_poly2d_flux_coeffs( flux_coeffs, md_w3, chi, qr, qrf, &
-                                          fv_flux_order,                    &
+          call invoke_poly2d_flux_coeffs( flux_coeffs, md_w3, chi_xyz, &
+                                          qr, qrf, fv_flux_order,      &
                                           flux2d_stencil_size, nfaces_h )
         end if
         call log_event( "Gungho: computing vertical flux coeffs", LOG_LEVEL_INFO )
@@ -214,7 +210,7 @@ contains
         nqp_xyz = 1
         qrf = quadrature_face_type(nqp_xyz, .false., .true.,                  &
                                    reference_element, gaussian_quadrature)
-        call invoke_poly1d_vert_flux_coeffs( vert_flux_coeffs, md_w3, chi,    &
+        call invoke_poly1d_vert_flux_coeffs( vert_flux_coeffs, md_w3, chi_xyz, &
                                              qr, qrf, fv_flux_order, nfaces_v )
       else
         call log_event( "Gungho: subgrid mappings needed for FV MoL with high &
@@ -222,7 +218,7 @@ contains
       end if
     end if
 
-    nullify( chi, md_w3, w3_fs, reference_element, mesh )
+    nullify( chi_xyz, md_w3, w3_fs, reference_element, mesh )
 
   end subroutine rk_transport_rho_init
 
@@ -242,9 +238,8 @@ contains
     ! The quadrature object
     type( quadrature_xyoz_type )          :: qr
     ! Coordinate fields
-    type( field_type ), pointer :: chi(:) => null()
-    type(function_space_type), pointer :: u_fs     => null()
-    type(function_space_type), pointer :: rho_fs   => null()
+    type( function_space_type ), pointer :: u_fs     => null()
+    type( function_space_type ), pointer :: rho_fs   => null()
 
     integer(i_def) :: stage, st
 
@@ -257,7 +252,6 @@ contains
     if ( subroutine_timers ) call timer('rk_transport_rho_alg')
 
     qr = get_qr()
-    chi => get_coordinates()
     u_fs   => u%get_function_space()
     rho_fs => rho%get_function_space()
 
@@ -311,7 +305,7 @@ contains
 
     end do
 
-    nullify( mm_w3_inv, mt_lumped_inv, chi, u_fs, rho_fs )
+    nullify( mm_w3_inv, mt_lumped_inv, u_fs, rho_fs )
 
     if ( subroutine_timers ) call timer('rk_transport_rho_alg')
 

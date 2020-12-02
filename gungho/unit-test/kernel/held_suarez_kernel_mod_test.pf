@@ -336,12 +336,8 @@ contains
                                    u_proxy%data,                 &
                                    exner_proxy%data,             &
                                    w2_rmultiplicity_proxy%data,  &
-                                   chi_proxy(1)%data,            &
-                                   chi_proxy(2)%data,            &
-                                   chi_proxy(3)%data,            &
                                    ndf_w2, undf_w2, map_w2,      &
-                                   ndf_wth, undf_wth, map_wth,   &
-                                   ndf_wchi, undf_wchi, map_wchi &
+                                   ndf_wth, undf_wth, map_wth    &
                                  )
 
 

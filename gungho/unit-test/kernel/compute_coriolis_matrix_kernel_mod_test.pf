@@ -9,9 +9,10 @@ module compute_coriolis_matrix_kernel_mod_test
 
   use constants_mod, only : i_def, r_def, PI
   use get_unit_test_m3x3_dofmap_mod, &
-    only : get_w0_m3x3_dofmap, get_w2_m3x3_dofmap
+    only : get_w0_m3x3_dofmap, get_w2_m3x3_dofmap, get_w3_m3x3_dofmap
   use get_unit_test_m3x3_q3x3x3_sizes_mod, &
-    only : get_w0_m3x3_q3x3x3_size, get_w2_m3x3_q3x3x3_size
+    only : get_w0_m3x3_q3x3x3_size, get_w2_m3x3_q3x3x3_size, &
+           get_w3_m3x3_q3x3x3_size
   use get_unit_test_q3x3x3_basis_mod, &
     only : get_w0_q3x3x3_basis, get_w0_q3x3x3_diff_basis, get_w2_q3x3x3_basis
   use get_unit_test_q3x3x3_quadrature_mod, &
@@ -43,7 +44,10 @@ contains
 
     use base_mesh_config_mod,      only : geometry_planar, &
                                           partitioner_planar
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
     use feign_config_mod,          only : feign_base_mesh_config, &
+                                          feign_finite_element_config, &
                                           feign_formulation_config, &
                                           feign_planet_config
 
@@ -53,7 +57,7 @@ contains
 
     ! Initialise YAXT
     call xt_initialize(this%getMpiCommunicator())
-    !Store the MPI communicator for later use
+    ! Store the MPI communicator for later use
     call store_comm(this%getMpiCommunicator())
 
     call feign_planet_config( cp=1000.0_r_def,         &
@@ -70,6 +74,15 @@ contains
                                  partitioner=partitioner_planar,    &
                                  fplane=.true.,                     &
                                  f_lat_deg=PI/4.0_r_def )
+
+    call feign_finite_element_config(           &
+             cellshape=cellshape_quadrilateral, &
+             coordinate_order=0_i_def,          &
+             element_order=0_i_def,             &
+             rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+             vorticity_in_w1=.false. )
 
     call feign_formulation_config( dlayer_on=.false.,            &
                                    dry_static_adjust=.false.,    &
@@ -129,11 +142,14 @@ contains
     integer(i_def) :: unused
     integer(i_def) :: ndf_w2
     integer(i_def) :: ndf_w0, undf_w0
+    integer(i_def) :: ndf_w3, undf_w3
     integer(i_def) :: nqp_h, nqp_v
     integer(i_def) :: ncells, ncell_3d
 
     real(r_def),    allocatable :: chi1_data(:), chi2_data(:), chi3_data(:)
+    real(r_def),    allocatable :: panel_id(:)
     integer(i_def), allocatable :: map_w0(:,:)
+    integer(i_def), allocatable :: map_w3(:,:)
     real(r_def),    allocatable :: w0_diff_basis(:,:,:,:)
     real(r_def),    allocatable :: w0_basis(:,:,:,:)
     integer(i_def), allocatable :: map_w2(:,:)
@@ -153,6 +169,9 @@ contains
                                   unused, unused, nlayers )
     call get_w2_m3x3_dofmap( map_w2, nlayers )
     call get_w2_q3x3x3_basis( w2_basis )
+    call get_w3_m3x3_q3x3x3_size( ndf_w3, undf_w3, unused, unused, unused, &
+                                  unused, unused, nlayers )
+    call get_w3_m3x3_dofmap( map_w3, nlayers )
     call get_gaussian_q3x3x3_quadrature_weights_xy( wh )
     call get_gaussian_q3x3x3_quadrature_weights_z( wv )
 
@@ -160,6 +179,9 @@ contains
     allocate(chi1_data(undf_w0))
     allocate(chi2_data(undf_w0))
     allocate(chi3_data(undf_w0))
+    allocate(panel_id(undf_w3))
+
+    panel_id(:) = 1.0_r_def
 
     call get_w0_3x3x3_field(chi1_data, chi2_data, chi3_data, dx, &
                             dy, dz, map_w0, nlayers)
@@ -176,6 +198,7 @@ contains
                                        chi1_data,     &
                                        chi2_data,     &
                                        chi3_data,     &
+                                       panel_id,      &
                                        ndf_w2,        &
                                        w2_basis,      &
                                        ndf_w0,        &
@@ -183,6 +206,9 @@ contains
                                        map_w0,        &
                                        w0_basis,      &
                                        w0_diff_basis, &
+                                       ndf_w3,        &
+                                       undf_w3,       &
+                                       map_w3,        &
                                        nqp_h,         &
                                        nqp_v,         &
                                        wh,            &
@@ -196,10 +222,11 @@ contains
     @assertEqual( answer, local_stencil(:, :, 1 ), tol )
 
     deallocate( local_stencil )
-    deallocate( chi3_data, chi2_data, chi1_data )
+    deallocate( chi3_data, chi2_data, chi1_data, panel_id )
     deallocate( wv, wh )
     deallocate( w2_basis, map_w2 )
-    deallocate( w0_diff_basis, w0_basis, map_w0)
+    deallocate( w0_diff_basis, w0_basis, map_w0 )
+    deallocate( map_w3 )
 
   end subroutine test_all
 

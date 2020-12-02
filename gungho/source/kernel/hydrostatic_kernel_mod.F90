@@ -82,16 +82,16 @@ contains
 !! @param[in] moist_dyn_fac Moist dynamics water factor
 !! @param[in] phi Geopotential field
 !! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
-!! @param[in] undf_w2 Number unique of degrees of freedom  for w2
+!! @param[in] undf_w2 Number of unique degrees of freedom  for w2
 !! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
 !! @param[in] w2_basis Basis functions evaluated at quadrature points
 !! @param[in] w2_diff_basis Differential of the basis functions evaluated at quadrature points
 !! @param[in] ndf_w3 Number of degrees of freedom per cell for w3
-!! @param[in] undf_w3 Number unique of degrees of freedom  for w3
+!! @param[in] undf_w3 Number of unique degrees of freedom  for w3
 !! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
 !! @param[in] w3_basis Basis functions evaluated at gaussian quadrature points
 !! @param[in] ndf_wt Number of degrees of freedom per cell for wt
-!! @param[in] undf_wt Number unique of degrees of freedom  for wt
+!! @param[in] undf_wt Number of unique degrees of freedom  for wt
 !! @param[in] map_wt Dofmap for the cell at the base of the column for wt
 !! @param[in] wt_basis Basis functions evaluated at gaussian quadrature points
 !! @param[in] wt_diff_basis Differential of the basis functions evaluated at quadrature points

@@ -66,12 +66,12 @@ contains
 !>         written in the vector invariant form
 !! @param[in] nlayers Number of layers
 !! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
-!! @param[in] undf_w2 Number unique of degrees of freedom  for w2
+!! @param[in] undf_w2 Number of unique degrees of freedom  for w2
 !! @param[in] map_w2 Dofmap for the cell at the base of the column for w2
 !! @param[in] w2_basis Basis functions evaluated at quadrature points
 !! @param[inout] r_u Right hand side of the momentum equation
 !! @param[in] ndf_w0 Number of degrees of freedom per cell for w0
-!! @param[in] undf_w0 Number unique of degrees of freedom  for w0
+!! @param[in] undf_w0 Number of unique degrees of freedom  for w0
 !! @param[in] map_w0 Dofmap for the cell at the base of the column for w0
 !! @param[in] w0_diff_basis Differntial of the basis functions evaluated at gaussian quadrature point
 !! @param[in] phi Geopotential

@@ -94,21 +94,21 @@ contains
 
   !> @brief Initialises the working data set dependent of namelist configuration
   !> @param[inout] model_data The working data set for a model run
-  !> @param[in]    chi        A size 3 array of fields holding the mesh
-  !>                          coordinates
+  !> @param[in]    chi_xyz    A size 3 array of fields holding the mesh
+  !>                          (X,Y,Z) coordinates
   !> @param[in]    clock      The model clock object
-  subroutine initialise_model_data( model_data, chi, clock )
+  subroutine initialise_model_data( model_data, chi_xyz, clock )
 
     implicit none
 
     type( io_dev_data_type ), intent(inout) :: model_data
-    type( field_type ),       intent(in)    :: chi(3)
+    type( field_type ),       intent(in)    :: chi_xyz(3)
     ! Clock will be integrated with future I/O testing functionality
     class( clock_type ),      intent(in)    :: clock
 
     ! Initialise all the model fields here analytically - setting data value
     ! equal to product of x, y and z coordinates
-    call io_dev_init_fields_alg( model_data%core_fields, chi )
+    call io_dev_init_fields_alg( model_data%core_fields, chi_xyz )
 
     !---------------------------------------------------------------
     ! Now we make separate init calls based on model configuration

@@ -17,6 +17,7 @@ module w3_to_sh_w3_ints_kernel_mod
                                     GH_READ, GH_WRITE,         &
                                     CELLS, GH_FIELD,           &
                                     ANY_DISCONTINUOUS_SPACE_3, &
+                                    ANY_DISCONTINUOUS_SPACE_9, &
                                     GH_BASIS, GH_DIFF_BASIS,   &
                                     ANY_SPACE_9,               &
                                     GH_QUADRATURE_XYoZ
@@ -34,13 +35,14 @@ module w3_to_sh_w3_ints_kernel_mod
   !>
   type, public, extends(kernel_type) :: w3_to_sh_w3_ints_kernel_type
     private
-    type(arg_type) :: meta_args(3) = (/                            &
+    type(arg_type) :: meta_args(4) = (/                            &
         arg_type(GH_FIELD*2, GH_WRITE, W3),                        &
         arg_type(GH_FIELD,   GH_READ,  ANY_DISCONTINUOUS_SPACE_3), &
-        arg_type(GH_FIELD*3, GH_READ,  ANY_SPACE_9)                &
+        arg_type(GH_FIELD*3, GH_READ,  ANY_SPACE_9),               &
+        arg_type(GH_FIELD,   GH_READ,  ANY_DISCONTINUOUS_SPACE_9)  &
         /)
     type(func_type) :: meta_funcs(1) = (/                          &
-        func_type(ANY_SPACE_9, GH_DIFF_BASIS)                      &
+        func_type(ANY_SPACE_9, GH_BASIS, GH_DIFF_BASIS)            &
         /)
     integer :: iterates_over = CELLS
     integer :: gh_shape = GH_QUADRATURE_XYoZ
@@ -61,9 +63,10 @@ contains
 !> @param[in,out] T_ip1 The below diagonal components of the transform matrix. Is a field in W3.
 !> @param[in,out] T_i The above diagonal components of the transform matrix. Is a field in W3.
 !> @param[in] dummy_w3_sh A dummy field in the shifted W3 space.
-!> @param[in] chi_dl_1 Component of the coordinate field for the double level mesh.
-!> @param[in] chi_dl_2 Component of the coordinate field for the double level mesh.
-!> @param[in] chi_dl_3 Component of the coordinate field for the double level mesh.
+!> @param[in] chi_dl_1 The 1st spherical coordinate field in Wchi for double level mesh.
+!> @param[in] chi_dl_2 The 2nd spherical coordinate field in Wchi for double level mesh.
+!> @param[in] chi_dl_3 The 3rd spherical coordinate field in Wchi for double level mesh.
+!> @param[in] panel_id A field giving the ID for the mesh panels.
 !> @param[in] ndf_w3 Number of degrees of freedom per cell for W3
 !> @param[in] undf_w3 Number of (local) unique degrees of freedom for W3
 !> @param[in] map_w3 Dofmap for the cell at the base of the column for W3
@@ -73,7 +76,12 @@ contains
 !> @param[in] ndf_wchi_dl Number of degrees of freedom per cell for double level WChi.
 !> @param[in] undf_wchi_dl Number of (local) unique degrees of freedom for double level WChi.
 !> @param[in] map_wch_dl Dofmap for the cell at the base of the column for double level WChi.
+!> @param[in] chi_basis 4-dim array for holding the WChi basis functions
+!>                      evaluated at quadrature points.
 !> @param[in] chi_diff_basis Basis functions evaluated at gaussian quadrature points
+!! @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
+!! @param[in] undf_pid Number of unique degrees of freedom for panel_id
+!! @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
 !> @param[in] nqp_h Number of quadrature points in the horizontal
 !> @param[in] nqp_v Number of quadrature points in the vertical
 !> @param[in] wqp_h Horizontal quadrature weights
@@ -85,6 +93,7 @@ subroutine w3_to_sh_w3_ints_code( nlayers,        &
                                   chi_dl_1,       &
                                   chi_dl_2,       &
                                   chi_dl_3,       &
+                                  panel_id,       &
                                   ndf_w3,         &
                                   undf_w3,        &
                                   map_w3,         &
@@ -94,7 +103,11 @@ subroutine w3_to_sh_w3_ints_code( nlayers,        &
                                   ndf_wchi_dl,    &
                                   undf_wchi_dl,   &
                                   map_wchi_dl,    &
+                                  chi_basis,      &
                                   chi_diff_basis, &
+                                  ndf_pid,        &
+                                  undf_pid,       &
+                                  map_pid,        &
                                   nqp_h,          &
                                   nqp_v,          &
                                   wqp_h,          &
@@ -109,19 +122,24 @@ subroutine w3_to_sh_w3_ints_code( nlayers,        &
   ! Arguments
   integer(kind=i_def),                           intent(in) :: nlayers
   integer(kind=i_def),                           intent(in) :: nqp_h, nqp_v
-  integer(kind=i_def),                           intent(in) :: ndf_w3_sh, ndf_w3, ndf_wchi_dl
-  integer(kind=i_def),                           intent(in) :: undf_w3_sh, undf_w3, undf_wchi_dl
+  integer(kind=i_def),                           intent(in) :: ndf_w3_sh, ndf_w3
+  integer(kind=i_def),                           intent(in) :: ndf_wchi_dl, ndf_pid
+  integer(kind=i_def),                           intent(in) :: undf_w3_sh, undf_w3
+  integer(kind=i_def),                           intent(in) :: undf_wchi_dl, undf_pid
   integer(kind=i_def), dimension(ndf_w3_sh),     intent(in) :: map_w3_sh
   integer(kind=i_def), dimension(ndf_w3),        intent(in) :: map_w3
   integer(kind=i_def), dimension(ndf_wchi_dl),   intent(in) :: map_wchi_dl
+  integer(kind=i_def), dimension(ndf_pid),       intent(in) :: map_pid
 
   real(kind=r_def),    dimension(undf_w3),    intent(inout) :: T_ip1, T_i
   real(kind=r_def),    dimension(undf_w3_sh),    intent(in) :: dummy_w3_sh
   real(kind=r_def),    dimension(undf_wchi_dl),  intent(in) :: chi_dl_1, chi_dl_2, chi_dl_3
+  real(kind=r_def),    dimension(undf_pid),      intent(in) :: panel_id
   real(kind=r_def),    dimension(nqp_h),         intent(in) :: wqp_h
   real(kind=r_def),    dimension(nqp_v),         intent(in) :: wqp_v
 
   real(kind=r_def), dimension(3, ndf_wchi_dl, nqp_h, nqp_v), intent(in) :: chi_diff_basis
+  real(kind=r_def), dimension(3, ndf_wchi_dl, nqp_h, nqp_v), intent(in) :: chi_basis
 
   ! Internal variables
   integer(kind=i_def)                          :: df, k
@@ -135,6 +153,9 @@ subroutine w3_to_sh_w3_ints_code( nlayers,        &
                                                   upper_chi_3_e
   real(kind=r_def), dimension(nqp_h,nqp_v)     :: lower_dj, upper_dj
   real(kind=r_def), dimension(3,3,nqp_h,nqp_v) :: lower_jac, upper_jac
+
+  integer(kind=i_def) :: ipanel
+  ipanel = int(panel_id(map_pid(1)), i_def)
 
   do k = 0, nlayers-1
     ! Extract coordinates for lower and upper half cells
@@ -150,9 +171,11 @@ subroutine w3_to_sh_w3_ints_code( nlayers,        &
 
     ! Get dj for lower and upper half cells
     call coordinate_jacobian(ndf_wchi_dl, nqp_h, nqp_v, lower_chi_1_e, lower_chi_2_e, &
-                             lower_chi_3_e, chi_diff_basis, lower_jac, lower_dj)
+                             lower_chi_3_e, ipanel, chi_basis, chi_diff_basis,        &
+                             lower_jac, lower_dj)
     call coordinate_jacobian(ndf_wchi_dl, nqp_h, nqp_v, upper_chi_1_e, upper_chi_2_e, &
-                             upper_chi_3_e, chi_diff_basis, upper_jac, upper_dj)
+                             upper_chi_3_e, ipanel, chi_basis, chi_diff_basis,        &
+                             upper_jac, upper_dj)
 
     ! Initialise values to zero
     T_ip1_e = 0.0_r_def

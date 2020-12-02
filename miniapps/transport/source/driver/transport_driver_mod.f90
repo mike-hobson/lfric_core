@@ -112,8 +112,11 @@ module transport_driver_mod
   type(field_type), pointer :: cell_orientation_shifted => null()
 
   ! Coordinate field
-  type(field_type), target, dimension(3) :: chi
-  type(field_type), target, dimension(3) :: shifted_chi
+  type(field_type), target, dimension(3) :: chi_xyz
+  type(field_type), target, dimension(3) :: chi_sph
+  type(field_type), target               :: panel_id
+  type(field_type), target, dimension(3) :: shifted_chi_xyz
+  type(field_type), target, dimension(3) :: shifted_chi_sph
 
   class(clock_type), allocatable :: clock
 
@@ -214,16 +217,18 @@ contains
                     multigrid_2d_mesh_ids=multigrid_2d_mesh_ids )
 
     ! FEM initialisation
-    call init_fem( mesh_id, chi,                           &
-                    shifted_mesh_id=shifted_mesh_id,       &
-                    shifted_chi=shifted_chi,               &
-                    multigrid_mesh_ids=multigrid_mesh_ids, &
-                    multigrid_2d_mesh_ids=multigrid_2d_mesh_ids )
+    call init_fem( mesh_id, chi_xyz, chi_sph, panel_id,    &
+                   shifted_mesh_id=shifted_mesh_id,        &
+                   shifted_chi_xyz=shifted_chi_xyz,        &
+                   shifted_chi_sph=shifted_chi_sph,        &
+                   multigrid_mesh_ids=multigrid_mesh_ids,  &
+                   multigrid_2d_mesh_ids=multigrid_2d_mesh_ids )
 
     ! Transport initialisation
-    call init_transport( mesh_id, twod_mesh_id, chi, shifted_mesh_id,                &
-                         shifted_chi, wind_n, density, theta, dep_pts_x, dep_pts_y,  &
-                         dep_pts_z, increment, wind_divergence,                      &
+    call init_transport( mesh_id, twod_mesh_id, chi_xyz, chi_sph, panel_id, &
+                         shifted_mesh_id, shifted_chi_xyz, shifted_chi_sph, &
+                         wind_n, density, theta, dep_pts_x, dep_pts_y,      &
+                         dep_pts_z, increment, wind_divergence,             &
                          wind_shifted, density_shifted )
 
     ! Full global meshes no longer required, so reclaim
@@ -265,7 +270,7 @@ contains
                             clock,        &
                             mesh_id,      &
                             twod_mesh_id, &
-                            chi )
+                            chi_xyz )
     end if
 
     ! Output initial conditions
@@ -353,7 +358,7 @@ contains
         ! Calculate departure points.
         ! Here the wind is assumed to be the same at timestep n and timestep n+1
         call calc_dep_pts( dep_pts_x, dep_pts_y, dep_pts_z, wind_divergence,    &
-                           wind_n, wind_n, detj_at_w2, chi, cell_orientation )
+                           wind_n, wind_n, detj_at_w2, cell_orientation )
       end if
 
       if ( subroutine_timers ) call timer( 'transport step' )

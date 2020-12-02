@@ -89,7 +89,7 @@ contains
   !> @param[in] w2_basis_face W2 basis functions evaluated at Gaussian
   !!                          quadrature points on horizontal faces
   !> @param[in] ndf_w3 Number of degrees of freedom per cell for W3
-  !> @param[in] undf_w3 Number of unique of degrees freedom for W3
+  !> @param[in] undf_w3 Number of unique degrees freedom for W3
   !> @param[in] map_w3 Dofmap for the cell at the base of the column for W3
   !> @param[in] w3_basis_face W3 basis functions evaluated at Gaussian
   !!                          quadrature points on horizontal faces

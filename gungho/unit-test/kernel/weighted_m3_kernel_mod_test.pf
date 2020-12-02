@@ -10,6 +10,8 @@ module weighted_m3_kernel_mod_test
 
   use constants_mod, only: i_def, r_def
   use pFUnit_Mod
+  use yaxt,          only : xt_initialize, xt_finalize
+  use mpi_mod,       only : store_comm, clear_comm
 
   implicit none
 
@@ -17,7 +19,7 @@ module weighted_m3_kernel_mod_test
   public :: test_all
 
   @TestCase
-  type, extends(TestCase), public :: weighted_m3_test_type
+  type, extends(MPITestCase), public :: weighted_m3_test_type
     private
   contains
     procedure setUp
@@ -30,23 +32,51 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          spherical_coord_system_xyz
+    use feign_config_mod,          only : feign_finite_element_config
+
     implicit none
 
     class(weighted_m3_test_type), intent(inout) :: this
+
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    ! Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
+    call feign_finite_element_config(           &
+             cellshape=cellshape_quadrilateral, &
+             coordinate_order=0_i_def,          &
+             element_order=0_i_def,             &
+             rehabilitate=.true.,               &
+             spherical_coord_order = 0,         &
+             spherical_coord_system=spherical_coord_system_xyz, &
+             vorticity_in_w1=.false. )
+
 
   end subroutine setUp
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
+    use configuration_mod,        only: final_configuration
+
     implicit none
 
     class(weighted_m3_test_type), intent(inout) :: this
 
+    call final_configuration()
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
   end subroutine tearDown
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  @Test( npes=[1] )
   subroutine test_all( this )
 
     use weighted_m3_kernel_mod, only : weighted_m3_code
@@ -58,6 +88,7 @@ contains
                                                    get_w3_m3x3_q3x3x3_size
 
     use get_unit_test_q3x3x3_basis_mod, only: get_w0_q3x3x3_diff_basis, &
+                                              get_w0_q3x3x3_basis, &
                                               get_w3_q3x3x3_basis
 
     use get_unit_test_q3x3x3_quadrature_mod, only:     &
@@ -86,6 +117,7 @@ contains
     integer(i_def), allocatable :: map_mass_matrix(:,:)
 
     real(r_def), allocatable :: diff_basis_chi(:,:,:,:)
+    real(r_def), allocatable :: basis_chi(:,:,:,:)
     real(r_def), allocatable :: basis_mass_matrix(:,:,:,:)
 
     real(r_def), allocatable :: rho_data(:)
@@ -93,14 +125,18 @@ contains
 
     integer(i_def) :: ndf_w0, undf_w0
     integer(i_def) :: ndf_w3, undf_w3
+    integer(i_def) :: ndf_pid, undf_pid
     integer(i_def) :: nqp_h, nqp_v
     integer(i_def) :: ncells, nlayers, ncells_3d
     integer(i_def) :: dim_space, dim_space_diff
 
     integer(i_def), allocatable :: map_w0(:,:)
     integer(i_def), allocatable :: map_w3(:,:)
+    integer(i_def), allocatable :: map_pid(:,:)
 
     real(r_def), allocatable :: chi_data(:,:)
+    real(r_def), allocatable :: panel_id(:)
+    real(r_def), allocatable :: basis_w0(:,:,:,:)
     real(r_def), allocatable :: diff_basis_w0(:,:,:,:)
     real(r_def), allocatable :: basis_w3(:,:,:,:)
     real(r_def), allocatable :: wh(:)
@@ -119,13 +155,18 @@ contains
     call get_w3_m3x3_q3x3x3_size( ndf_w3, undf_w3, ncells,   &
                                   dim_space, dim_space_diff, &
                                   nqp_h, nqp_v, nlayers )
+    call get_w3_m3x3_q3x3x3_size( ndf_pid, undf_pid, ncells, &
+                                  dim_space, dim_space_diff, &
+                                  nqp_h, nqp_v, 1 )
 
     ! Get maps
     call get_w0_m3x3_dofmap( map_w0 )
     call get_w3_m3x3_dofmap( map_w3 )
+    call get_w3_m3x3_dofmap( map_pid, 1 )
 
     ! Get basis functions
     call get_w0_q3x3x3_diff_basis( diff_basis_w0 )
+    call get_w0_q3x3x3_basis( basis_w0 )
     call get_w3_q3x3x3_basis( basis_w3 )
 
     ! Get weights
@@ -134,7 +175,9 @@ contains
 
     ! Compute coordinates
     allocate(chi_data(3,undf_w0))
+    allocate(panel_id(ncells))
 
+    panel_id(:) = 1.0_r_def
     call get_w0_3x3x3_field(chi_data(1,:), chi_data(2,:), chi_data(3,:), &
                             dx, dy, dz, map_w0)
 
@@ -151,6 +194,7 @@ contains
     allocate( map_chi,           source=map_w0 )
     allocate( map_mass_matrix,   source=map_w3 )
     allocate( basis_mass_matrix, source=basis_w3 )
+    allocate( basis_chi,    source=basis_w0 )
     allocate( diff_basis_chi,    source=diff_basis_w0 )
 
     allocate( local_stencil( ndf_w3, ndf_w3, ncells_3d ) )
@@ -171,6 +215,7 @@ contains
                            chi_data(1,:),           &
                            chi_data(2,:),           &
                            chi_data(3,:),           &
+                           panel_id,                &
                            1.0_r_def,               &
                            ndf_mass_matrix,         &
                            undf_mass_matrix,        &
@@ -179,7 +224,11 @@ contains
                            ndf_chi,                 &
                            undf_chi,                &
                            map_chi(:,cell),         &
+                           basis_chi,               &
                            diff_basis_chi,          &
+                           ndf_pid,                 &
+                           undf_pid,                &
+                           map_pid,                 &
                            nqp_h,                   &
                            nqp_v,                   &
                            wh,                      &
@@ -193,13 +242,17 @@ contains
     deallocate( map_chi )
     deallocate( map_mass_matrix )
     deallocate( local_stencil )
+    deallocate( basis_chi )
     deallocate( diff_basis_chi )
     deallocate( basis_mass_matrix )
 
     deallocate( chi_data )
+    deallocate( panel_id )
     deallocate( map_w0 )
     deallocate( map_w3 )
+    deallocate( map_pid )
     deallocate( diff_basis_w0 )
+    deallocate( basis_w0 )
     deallocate( basis_w3 )
     deallocate( wh )
     deallocate( wv )

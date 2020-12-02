@@ -34,20 +34,20 @@ contains
   !> @param[in]     derived_fields         Group of derived fields
   !> @param[in]     theta                  Theta field
   !> @param[in]     exner_in_wth           Exner pressure on wtheta space
-  !> @param[in]     chi                    Coordinate array
+  !> @param[in]     chi_xyz                (X,Y,Z) coordinate array
   !> @param[in]     dA                     Areas of faces
   !> @param[out]    dtheta_hs              Theta increment from HS code
   !> @param[out]    du_hs                  Wind increment from HS code
   !> @param[in,out] held_suarez_thermo_done Flag to say if thermo code run
   !> @param[in,out] held_suarez_wind_done   Flag to say if wind code run
-  subroutine held_suarez_alg(derived_fields, theta, exner_in_wth, chi, dA, &
-                             dtheta_hs, du_hs,                             &
+  subroutine held_suarez_alg(derived_fields, theta, exner_in_wth,          &
+                             chi_xyz, dA,  dtheta_hs, du_hs,               &
                              held_suarez_thermo_done, held_suarez_wind_done)
 
     implicit none
 
     type( field_collection_type ), intent(in) :: derived_fields
-    type( field_type ), intent( in )  :: theta, exner_in_wth, chi(3), dA
+    type( field_type ), intent( in )  :: theta, exner_in_wth, chi_xyz(3), dA
     type( field_type ), intent( out ) :: dtheta_hs, du_hs
 
     logical, intent(inout) :: held_suarez_thermo_done, held_suarez_wind_done
@@ -66,7 +66,7 @@ contains
       call log_event( &
          'slow_physics: Running Held-Suarez theta forcing', &
          LOG_LEVEL_INFO )
-      call invoke(held_suarez_fv_kernel_type(dtheta_hs, theta, exner_in_wth, chi))
+      call invoke(held_suarez_fv_kernel_type(dtheta_hs, theta, exner_in_wth, chi_xyz))
       held_suarez_thermo_done=.true. ! Collect this increment later on
 
     end if
@@ -84,7 +84,7 @@ contains
          LOG_LEVEL_INFO )
       call invoke(held_suarez_fv_wind_kernel_type(du_hs, u_physics,   &
                                                   w2_rmultiplicity,   &
-                                                  exner_in_wth, chi), &
+                                                  exner_in_wth),      &
                   inc_X_times_Y(du_hs, dA) )
       held_suarez_wind_done=.true. ! Collect this increment later on
 

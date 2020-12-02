@@ -3,27 +3,28 @@
 ! For further details please refer to the file COPYRIGHT.txt
 ! which you should have received as part of this distribution.
 !-----------------------------------------------------------------------------
-!> @brief Computes the subset of mass matrices of the DeRahm complex for Multigrid.
+!> @brief Computes the subset of mass matrices of the derham complex for Multigrid.
 !>
-!> @details Compute the mass matrices of the DeRahm cochain,
+!> @details Compute the mass matrices of the derham cochain,
 !> these are the mass matrices for the W2, W3 and Wtheta function spaces
 !> along with the divergence operator
 !> Since they all depend upon the mesh Jacobian they are computed as one
 !> to reduce the cost
 !>
-module mg_derahm_mat_kernel_mod
+module mg_derham_mat_kernel_mod
 
-  use argument_mod,            only: arg_type, func_type,     &
-                                     GH_OPERATOR, GH_FIELD,   &
-                                     GH_READ, GH_WRITE,       &
-                                     ANY_SPACE_1,             &
-                                     ANY_SPACE_9,             &
-                                     GH_BASIS, GH_DIFF_BASIS, &
-                                     CELLS, GH_QUADRATURE_XYoZ
+  use argument_mod,            only: arg_type, func_type,       &
+                                     GH_OPERATOR, GH_FIELD,     &
+                                     GH_READ, GH_WRITE,         &
+                                     ANY_SPACE_1,               &
+                                     ANY_SPACE_9,               &
+                                     GH_BASIS, GH_DIFF_BASIS,   &
+                                     CELLS, GH_QUADRATURE_XYoZ, &
+                                     ANY_DISCONTINUOUS_SPACE_3
   use constants_mod,           only: r_def, i_def
   use coordinate_jacobian_mod, only: pointwise_coordinate_jacobian, &
                                      pointwise_coordinate_jacobian_inverse
-  use fs_continuity_mod,        only: W2, W3, wtheta
+  use fs_continuity_mod,       only: W2, W3, wtheta
   use kernel_mod,              only: kernel_type
 
   implicit none
@@ -34,35 +35,36 @@ module mg_derahm_mat_kernel_mod
   ! Public types
   !---------------------------------------------------------------------------
 
-  type, public, extends(kernel_type) :: mg_derahm_mat_kernel_type
+  type, public, extends(kernel_type) :: mg_derham_mat_kernel_type
     private
-    type(arg_type) :: meta_args(5) = (/                            &
+    type(arg_type) :: meta_args(6) = (/                            &
         arg_type(GH_OPERATOR, GH_WRITE, W2, W2),                   &
         arg_type(GH_OPERATOR, GH_WRITE, W3, W3),                   &
         arg_type(GH_OPERATOR, GH_WRITE, Wtheta, Wtheta),           &
         arg_type(GH_OPERATOR, GH_WRITE, W3, W2),                   &
-        arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_9)               &
+        arg_type(GH_FIELD*3,  GH_READ,  ANY_SPACE_9),              &
+        ARG_TYPE(GH_FIELD,    GH_READ,  ANY_DISCONTINUOUS_SPACE_3) &
         /)
-    type(func_type) :: meta_funcs(4) = (/                &
-        func_type(W2,          GH_BASIS, GH_DIFF_BASIS), &
-        func_type(W3,          GH_BASIS),                &
-        func_type(Wtheta,      GH_BASIS),                &
-        func_type(ANY_SPACE_9,           GH_DIFF_BASIS)            &
+    type(func_type) :: meta_funcs(4) = (/                          &
+        func_type(W2,          GH_BASIS, GH_DIFF_BASIS),           &
+        func_type(W3,          GH_BASIS),                          &
+        func_type(Wtheta,      GH_BASIS),                          &
+        func_type(ANY_SPACE_9, GH_BASIS,  GH_DIFF_BASIS)           &
         /)
     integer :: iterates_over = CELLS
     integer :: gh_shape = GH_QUADRATURE_XYoZ
   contains
-    procedure, nopass :: mg_derahm_mat_code
+    procedure, nopass :: mg_derham_mat_code
   end type
 
-  public mg_derahm_mat_code
+  public mg_derham_mat_code
 
   !---------------------------------------------------------------------------
   ! Contained functions/subroutines
   !---------------------------------------------------------------------------
 contains
 
-!> @brief This subroutine computes the operator matrices for the modified DeRahm complex
+!> @brief This subroutine computes the operator matrices for the modified derham complex
 !! @param[in] cell Cell number
 !! @param[in] nlayers Number of layers.
 !! @param[in] ncell_3d2 ncell*nlayers
@@ -76,6 +78,7 @@ contains
 !! @param[in] chi1 Physical coordinates in the 1st dir
 !! @param[in] chi2 Physical coordinates in the 2nd dir
 !! @param[in] chi3 Physical coordinates in the 3rd dir
+!! @param[in] panel_id Field giving the ID for mesh panels.
 !! @param[in] ndf_w2 Number of degrees of freedom per cell for W2 space.
 !! @param[in] basis_w2 Basis functions evaluated at quadrature points for W2 space.
 !! @param[in] diff_basis_w2 Differential of basis functions evaluated at quadrature points for W2 space.
@@ -87,38 +90,47 @@ contains
 !! @param[in] undf_chi Number of unique degrees of freedom for chi field
 !! @param[in] map_chi Dofmap for the cell at the base of the column, for the
 !!                    space on which the chi field lives
+!! @param[in] basis_chi Basis functions for Wchi evaluated at quadrature points.
 !! @param[in] diff_basis_chi Vector differential basis functions evaluated at
 !!                           quadrature points.
+!! @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
+!! @param[in] undf_pid Number of unique degrees of freedom for panel_id
+!! @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
 !! @param[in] nqp_h Number of horizontal quadrature points
 !! @param[in] nqp_v Number of vertical quadrature points
 !! @param[in] wqp_h Horizontal quadrature weights
 !! @param[in] wqp_v Vertical quadrature weights
-subroutine mg_derahm_mat_code(cell, nlayers,                      &
-                                        ncell_3d2, mm2,                     &
-                                        ncell_3d3, mm3,                     &
-                                        ncell_3dt, mmt,                     &
-                                        ncell_3d6, div,                     &
-                                        chi1, chi2, chi3,                   &
-                                        ndf_w2, basis_w2, diff_basis_w2,    &
-                                        ndf_w3, basis_w3,                   &
-                                        ndf_wt, basis_wt,                   &
-                                        ndf_chi, undf_chi,                  &
-                                        map_chi, diff_basis_chi,            &
-                                        nqp_h, nqp_v, wqp_h, wqp_v)
+subroutine mg_derham_mat_code(cell, nlayers,                      &
+                              ncell_3d2, mm2,                     &
+                              ncell_3d3, mm3,                     &
+                              ncell_3dt, mmt,                     &
+                              ncell_3d6, div,                     &
+                              chi1, chi2, chi3,                   &
+                              panel_id,                           &
+                              ndf_w2, basis_w2, diff_basis_w2,    &
+                              ndf_w3, basis_w3,                   &
+                              ndf_wt, basis_wt,                   &
+                              ndf_chi, undf_chi,                  &
+                              map_chi, basis_chi, diff_basis_chi, &
+                              ndf_pid, undf_pid, map_pid,         &
+                              nqp_h, nqp_v, wqp_h, wqp_v)
 
   implicit none
   ! Arguments
   integer(kind=i_def),   intent(in)     :: cell, nqp_h, nqp_v
   integer(kind=i_def),   intent(in)     :: nlayers
-  integer(kind=i_def),   intent(in)     :: ndf_w2, ndf_w3, ndf_wt
+  integer(kind=i_def),   intent(in)     :: ndf_w2, ndf_w3, ndf_wt, ndf_pid
   integer(kind=i_def),   intent(in)     :: ncell_3d2, ncell_3d3, ncell_3dt, ncell_3d6
   integer(kind=i_def),   intent(in)     :: ndf_chi
   integer(kind=i_def),   intent(in)     :: undf_chi
+  integer(kind=i_def),   intent(in)     :: undf_pid
   integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
+  integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
   real(kind=r_def), intent(out) :: mm2(ndf_w2,ndf_w2,ncell_3d2)
   real(kind=r_def), intent(out) :: mm3(ndf_w3,ndf_w3,ncell_3d3)
   real(kind=r_def), intent(out) :: mmt(ndf_wt,ndf_wt,ncell_3dt)
   real(kind=r_def), intent(out) :: div(ndf_w3,ndf_w2,ncell_3d6)
+  real(kind=r_def), intent(in)  :: basis_chi(1,ndf_chi,nqp_h,nqp_v)
   real(kind=r_def), intent(in)  :: diff_basis_chi(3,ndf_chi,nqp_h,nqp_v)
   real(kind=r_def), intent(in)  :: basis_w2(3,ndf_w2,nqp_h,nqp_v)
   real(kind=r_def), intent(in)  :: basis_w3(1,ndf_w3,nqp_h,nqp_v)
@@ -127,6 +139,7 @@ subroutine mg_derahm_mat_code(cell, nlayers,                      &
   real(kind=r_def), intent(in)  :: chi1(undf_chi)
   real(kind=r_def), intent(in)  :: chi2(undf_chi)
   real(kind=r_def), intent(in)  :: chi3(undf_chi)
+  real(kind=r_def), intent(in)  :: panel_id(undf_pid)
   real(kind=r_def), intent(in)  :: wqp_h(nqp_h)
   real(kind=r_def), intent(in)  :: wqp_v(nqp_v)
 
@@ -141,6 +154,10 @@ subroutine mg_derahm_mat_code(cell, nlayers,                      &
   real(kind=r_def), dimension(3,3)             :: jac_t
   real(kind=r_def), dimension(3)               :: jac_v
   real(kind=r_def)                             :: wt
+
+  integer(kind=i_def) :: ipanel
+
+  ipanel = int(panel_id(map_pid(1)), i_def)
 
   do k = 0, nlayers-1
 
@@ -160,9 +177,11 @@ subroutine mg_derahm_mat_code(cell, nlayers,                      &
      do qp2 = 1, nqp_v
         do qp1 = 1, nqp_h
            ! Precompute some frequently used terms
-           call pointwise_coordinate_jacobian(ndf_chi, chi1_e, chi2_e, chi3_e,  &
-                diff_basis_chi(:,:,qp1,qp2), &
-                jac, dj)
+           call pointwise_coordinate_jacobian(ndf_chi, chi1_e, chi2_e, chi3_e, &
+                                              ipanel, basis_chi(:,:,qp1,qp2),  &
+                                              diff_basis_chi(:,:,qp1,qp2),     &
+                                              jac, dj)
+
            jac_inv = pointwise_coordinate_jacobian_inverse(jac,dj)
            jac_t = transpose(jac_inv)
            wt = wqp_h(qp1)*wqp_v(qp2)
@@ -225,6 +244,6 @@ subroutine mg_derahm_mat_code(cell, nlayers,                      &
      end do
   end do ! end of k loop
 
-end subroutine mg_derahm_mat_code
+end subroutine mg_derham_mat_code
 
-end module mg_derahm_mat_kernel_mod
+end module mg_derham_mat_kernel_mod

@@ -199,8 +199,21 @@
 {%-           if appName not in appsToRun %}
 {%-             do appsToRun.append(appName) %}
 {%-           endif %}
-{%            set appKey = key + '_' + science_label %}
+{%-           set appKey = key + '_' + science_label %}
 {%-           do scheduledTasksDict.update({appKey: env_dict}) %}
+
+{#            Add env dictionary to any additional tasks
+              for this `run_application` #}
+{%-           set key, resPrecisions = mission | get_precision_macro() %}
+{%-           set run_application_profile = (run_application_profile | default('fast-debug', true)) %}
+{%-           for compiler in compiler_setup.keys() %}
+{%-             for precision in resPrecisions %}
+{%-               set appKey = key + '_' + compiler + '_' +
+                               precision + '-bit_' + run_application_profile %}
+{%-               do scheduledTasksDict.update({appKey: env_dict}) %}
+{%-             endfor %}
+{%-           endfor %}
+
 {%-         endif %}
 {%-       endfor %}
 {%-     endif %}

@@ -108,6 +108,8 @@
             HOST_SOURCE_SHUMLIB = {{HOST_SOURCE_SHUMLIB_BASE}}{{SOURCE_SHUMLIB_REV}}
         [[[job]]]
             execution time limit = PT5M
+	    execution retry delays = 2*PT1M
+
 
 {# Include common runtime families #}
 {% include "family-common.rc" %}

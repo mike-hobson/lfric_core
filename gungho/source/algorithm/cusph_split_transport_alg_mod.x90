@@ -54,14 +54,12 @@ contains
   !> @param[in,out] mass_flux_y       Mass fluxes in y direction used to update density
   !> @param[in]     dep_pts_x         Departure points in x direction
   !> @param[in]     dep_pts_y         Departure points in y direction
-  !> @param[in]     detj_at_w2        Detj values at W2 dof locations
   subroutine cusph_split_transport_alg( rho,                &
                                         cell_orientation,   &
                                         mass_flux_x,        &
                                         mass_flux_y,        &
                                         dep_pts_x,          &
-                                        dep_pts_y,          &
-                                        detj_at_w2 )
+                                        dep_pts_y )
 
     implicit none
 
@@ -71,7 +69,6 @@ contains
     type(field_type),    intent(inout)  :: mass_flux_y
     type(field_type),    intent(in)     :: dep_pts_x
     type(field_type),    intent(in)     :: dep_pts_y
-    type(field_type),    intent(in)     :: detj_at_w2
 
     type( field_type ) :: rho_adv_x, rho_adv_y, rho_hat_adv_x, rho_hat_adv_y
     type( field_type ) :: rho_x, rho_y
@@ -91,9 +88,9 @@ contains
 
     ! Perform two 1D advective updates in the x and y directions (horizontal)
     call oned_density_update_alg(x_direction, dep_pts_x,       &
-                                  cell_orientation, detj_at_w2, rho, rho_adv_x)
+                                  cell_orientation, rho, rho_adv_x)
     call oned_density_update_alg(y_direction, dep_pts_y,       &
-                                  cell_orientation, detj_at_w2, rho, rho_adv_y)
+                                  cell_orientation, rho, rho_adv_y)
 
     ! Average the two advective density updates with the density at timestep level n
     call invoke( name = "average_rho_and_init_mass_fluxes",                       &

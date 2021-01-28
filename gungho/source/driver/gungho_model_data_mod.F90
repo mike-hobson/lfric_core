@@ -263,7 +263,6 @@ contains
         ! namelist options
 
         call init_gungho_prognostics_alg( model_data%prognostic_fields, &
-                                          model_data%diagnostic_fields, &
                                           model_data%mr,                &
                                           model_data%moist_dyn )
 

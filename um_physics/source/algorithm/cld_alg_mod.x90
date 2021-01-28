@@ -45,13 +45,12 @@ contains
   !>@param[in]     turbulence_fields (in)     Fields for turbulence scheme
   !>@param[in]     cloud_fields      (in,out) Fields for cloud scheme
   !>@param[in]     theta_n           (in)     theta at start of timestep
-  !>@param[in]     exner_n           (in)     exner at start of timestep
   !>@param[in]     mr_n              (in)     mixing ratios at start of timestep
   !>@param[in]     step              (in)     Timestep
   subroutine cld_alg(theta_inc, mr, theta, exner, rho,         &
                      derived_fields, turbulence_fields,        &
                      cloud_fields,                             &
-                     theta_n, exner_n, mr_n, step)
+                     theta_n, mr_n, step)
 
     use cld_kernel_mod, only: cld_kernel_type
 
@@ -70,7 +69,6 @@ contains
     type( field_type ), intent( in )    :: exner            ! Current value w3
     type( field_type ), intent( in )    :: rho              ! Current value w3
     type( field_type ), intent( in )    :: theta_n          ! Start of TS wth
-    type( field_type ), intent( in )    :: exner_n          ! Start of TS w3
     type( field_type ), intent( in )    :: mr_n(nummr)      ! Start of TS
 
     integer( i_def ),   intent( in )    :: step

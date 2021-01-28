@@ -150,7 +150,7 @@ contains
     ! Call algorithm to calculate mass fluxes in x and y direction using COSMIC scheme
     call cusph_split_transport_alg( rho, cell_orientation,             &
                                     mass_flux_x, mass_flux_y, dep_pts_x, &
-                                    dep_pts_y, detj_at_w2 )
+                                    dep_pts_y )
 
     ! Calculate divergence (increment) in the x direction
     call cusph_fv_density_update_alg( increment_x, mass_flux_x, mass_flux_y,     &

@@ -85,7 +85,7 @@ contains
 
     ! Perform advective update in the Y direction.
     call oned_density_update_alg( y_direction, dep_pts_y, cell_orientation,    &
-                                  detj_at_w2, rho, rho_adv_y )
+                                  rho, rho_adv_y )
 
     ! Perform advective update in the Z direction.
     call vert_advective_cosmic_alg( rho_adv_z, rho, dep_pts_z, detj_at_w2,     &

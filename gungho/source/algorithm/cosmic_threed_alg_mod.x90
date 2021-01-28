@@ -16,7 +16,6 @@ module cosmic_threed_alg_mod
   use cosmic_divergence_alg_mod,        only: cosmic_divergence_alg
   use cusph_cosmic_transport_alg_mod,   only: cusph_cosmic_transport_step
   use cusph_fv_density_update_alg_mod,  only: cusph_fv_density_update_alg
-  use cusph_split_transport_alg_mod,    only: cusph_split_transport_alg
   use field_mod,                        only: field_type
   use finite_element_config_mod,        only: element_order
   use flux_direction_mod,               only: x_direction, &

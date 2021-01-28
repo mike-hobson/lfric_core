@@ -46,7 +46,6 @@ contains
   subroutine oned_density_update_alg(   direction,            &
                                         dep_pts,              &
                                         cell_orientation,     &
-                                        detj_at_w2,           &
                                         rho_in,               &
                                         rho_out)
 
@@ -55,7 +54,6 @@ contains
     integer(i_def), intent(in)          :: direction
     type(field_type),    intent(in)     :: dep_pts
     type(field_type),    intent(in)     :: cell_orientation
-    type(field_type),    intent(in)     :: detj_at_w2
     type(field_type),    intent(in)     :: rho_in
     type(field_type),    intent(inout)  :: rho_out
 

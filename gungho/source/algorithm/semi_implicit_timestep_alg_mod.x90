@@ -593,7 +593,7 @@ contains
                     state(igh_t), state(igh_p), state(igh_d),       &
                     derived_fields, turbulence_fields,              &
                     cloud_fields,                                   &
-                    state_n(igh_t), state_n(igh_p), mr_n,           &
+                    state_n(igh_t), mr_n,                           &
                     clock%get_step() )
       call invoke(inc_X_plus_Y(state(igh_t), dtheta))
     end if

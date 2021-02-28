@@ -176,7 +176,8 @@ contains
     end if
 
     ! Do advection of fields
-    call advection_alg(rhs_adv, state, wind, wind, wind)
+    call advection_alg(rhs_adv, state, wind, wind, wind, &
+                       dt_step=dt, n_substeps=1)
 
     ! Update state
     call invoke( name="increment_theta_and_rho",                      &
@@ -187,9 +188,10 @@ contains
     if ( use_moisture ) then
       if ( moisture_conservation ) then
         call conservative_mr_adv_alg(mr_out, mr, state(igh_u), state(igh_u), &
-                                     state(igh_d), rho)
+                                     state(igh_d), rho, dt)
       else
-        call advection_mr_alg(mr_inc, mr, state(igh_u), state(igh_u))
+        call advection_mr_alg(mr_inc, mr, state(igh_u), state(igh_u), &
+                                dt_step=dt, n_substeps=1)
         call add_bundle(mr_inc, mr, mr_out, nummr)
       end if
       call copy_bundle(mr_out, mr, nummr)

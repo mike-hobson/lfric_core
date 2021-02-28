@@ -197,7 +197,9 @@ contains
       else
         call rhs_adv%initialise( u%get_function_space() )
         call invoke( setval_c( rhs_adv, 0.0_r_def ) )
-        call advect_momentum_alg( rhs_adv, u, u, u, u, dt, .true. )
+        call advect_momentum_alg( rhs_adv, u, u, u, u, &
+                                  dt_step=dt, n_substeps=1, &
+                                  from_si=.true. )
         call invoke( inc_X_plus_Y( rhs_tmp, rhs_adv ) )
       end if
     end if

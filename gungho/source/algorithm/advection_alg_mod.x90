@@ -8,8 +8,9 @@
 !>        equations
 module advection_alg_mod
 
-  use constants_mod,                  only: r_def, i_def, l_def, str_def
+  use constants_mod,                  only: r_def, i_def, l_def, str_def, tiny_eps
   use log_mod,                        only: log_event,         &
+                                            log_scratch_space, &
                                             LOG_LEVEL_ERROR,   &
                                             LOG_LEVEL_INFO
   use enforce_bc_kernel_mod,          only: enforce_bc_kernel_type
@@ -68,7 +69,8 @@ module advection_alg_mod
                                             theta_splitting_none,           &
                                             theta_splitting_vh,             &
                                             theta_splitting_hv,             &
-                                            theta_splitting_strang
+                                            theta_splitting_strang,         &
+                                            cfl_control_stab
   use formulation_config_mod,         only: moisture_conservation,          &
                                             si_momentum_equation,           &
                                             transport_only,                 &
@@ -222,8 +224,17 @@ contains
 
     integer(i_def), intent(in) :: t_step, outer
 
-    logical          :: do_moisture_diagnostics
-    integer(i_def)   :: i_mr
+    logical                            :: do_moisture_diagnostics
+    integer(i_def)                     :: imr
+    ! Substepping variables
+    type(field_type)                   :: cfl
+    type(field_type), pointer          :: detj_at_w2 => null()
+    real(r_def)                        :: cfl_min, cfl_max
+    type(field_type)                   :: rho_in
+    type(field_type), dimension(nummr) :: mr_tmp, mr_in
+    integer(i_def)                     :: sub_step_count
+    real(r_def)                        :: dt_substep, dt_fraction
+    integer(i_def)                     :: n_control_substeps
 
     advection_counter = advection_counter + 1_i_def
 
@@ -240,17 +251,53 @@ contains
 
       ! Advect dynamics prognostics
       call log_event("Advecting dynamics prognostic fields...", LOG_LEVEL_INFO)
-      call advection_alg(rhs, state_after_slow, wind_n, wind_np1, advected_wind )
+
+      ! Calculate substepping timestep if needed for mol
+      call cfl%initialise( wind_n%get_function_space() )
+      detj_at_w2 => get_detj_at_w2()
+      ! Set advecting velocity = 0.5(u_np1 + u_n)
+      call invoke( aX_plus_bY(cfl, 0.5_r_def, wind_n, &
+                                   0.5_r_def, wind_np1), &
+                   inc_X_divideby_Y(cfl, detj_at_w2), &
+                   inc_a_times_X(dt, cfl )        &
+                   )
+      call cfl%field_minmax(cfl_min, cfl_max)
+      cfl_max = max(abs(cfl_max),abs(cfl_min))
+      n_control_substeps = int(cfl_max/(cfl_control_stab+tiny_eps),i_def) + 1_i_def
+      dt_fraction = 1.0_r_def/real(n_control_substeps, r_def)
+      dt_substep = dt*dt_fraction
+      if (n_control_substeps > 1)then
+        write( log_scratch_space, '(A,I3,2E16.8)' )  &
+             'Advection will be substepped: n_control_substeps, cfl_max, dt_substep: ', &
+             n_control_substeps, cfl_max, dt_substep
+        call log_event( log_scratch_space, LOG_LEVEL_INFO )
+      end if
+
+      call advection_alg(rhs, state_after_slow, wind_n, wind_np1, advected_wind, &
+                         dt, n_control_substeps )
       call bundle_ax(dt, rhs, rhs, bundle_size)
 
       if ( use_moisture )then
         call log_event("Advecting moisture fields...", LOG_LEVEL_INFO)
         ! Advect mr_after_slow values with latest advecting velocity
         if ( moisture_conservation ) then
-          call conservative_mr_adv_alg(mr, mr_after_slow, wind_n, wind_np1, &
-                                       state_after_slow(igh_d), rho_guess)
+          call state_after_slow(igh_d)%copy_field(rho_in)
+          do imr=1,nummr
+            call mr_after_slow(imr)%copy_field(mr_in(imr))
+            call mr_tmp(imr)%initialise( mr(imr)%get_function_space() )
+            ! don't think I need this, but just as a check
+            call invoke(setval_c(mr_tmp(imr), 0.0_r_def))
+          end do
+          do sub_step_count = 1, n_control_substeps
+            call conservative_mr_adv_alg(mr_tmp, mr_in, wind_n, wind_np1, &
+                                         rho_in, rho_guess, dt_substep)
+            call copy_bundle(mr_tmp, mr_in, nummr)
+            call rho_guess%copy_field(rho_in)
+          end do
+          call copy_bundle(mr_tmp, mr, nummr)
         else
-          call advection_mr_alg(mr_inc, mr_after_slow, wind_n, wind_np1)
+          call advection_mr_alg(mr_inc, mr_after_slow, wind_n, wind_np1, &
+                                dt, n_control_substeps)
           ! Update latest value for mr
           call add_bundle(mr_inc, mr_after_slow, mr, nummr)
         end if
@@ -266,8 +313,8 @@ contains
         end if
 
         ! Clip moisture mixing ratios to remove negative values
-        do i_mr = 1, nummr
-          call invoke( enforce_lower_bound_kernel_type (mr(i_mr), 0.0_r_def) )
+        do imr = 1, nummr
+          call invoke( enforce_lower_bound_kernel_type (mr(imr), 0.0_r_def) )
         end do
         call invoke(moist_dyn_factors_kernel_type(moist_dyn, mr))
 
@@ -279,7 +326,8 @@ contains
         !   * The advected cloud fields variables get updated during this call
         call advection_generic_field_alg( cloud_fields,                   &
                                           cloud_fields_after_slow,        &
-                                          wind_n, wind_np1 )
+                                          wind_n, wind_np1,               &
+                                          dt, n_control_substeps )
 
       end if
       if (do_moisture_diagnostics) then
@@ -314,11 +362,14 @@ contains
   !> @param[in]     wind_n Wind field at timestep n
   !> @param[in]     wind_np1 Latest estimate of wind field at timestep n+1
   !> @param[in]     advected_wind predictor for the wind to be advected
+  !> @param[in]     dt_step timestep length of step
+  !> @param[in]     n_substep number of steps
   subroutine advection_alg( advection,           &
                             state,               &
                             wind_n,              &
                             wind_np1,            &
-                            advected_wind )
+                            advected_wind,       &
+                            dt_step, n_substeps )
 
   implicit none
   type(field_type), intent(inout) :: advection(bundle_size)
@@ -326,6 +377,8 @@ contains
   type(field_type), intent(in)    :: wind_n
   type(field_type), intent(in)    :: wind_np1
   type(field_type), intent(in)    :: advected_wind
+  real(r_def), intent(in)         :: dt_step
+  integer(i_def), intent(in)      :: n_substeps
 
   type(operator_type), pointer :: mm_wt         => null(), &
                                   mm_w3_inv     => null(), &
@@ -335,8 +388,16 @@ contains
                                   u_grad_theta,            &
                                   mass_flux,               &
                                   advecting_wind
+  type(field_type) :: field, field_inc, field_old, mass_flux_i
+  integer(i_def)   :: sub_step_count
+
+  real(r_def) :: dt_substep, dt_fraction
 
   if ( subroutine_timers ) call timer('advection_alg')
+
+  ! substepping timesteps
+  dt_fraction = 1.0_r_def/real(n_substeps, r_def)
+  dt_substep = dt_step*dt_fraction
 
   ! Construct fields needed for advection
   call advecting_wind%initialise( state(igh_u)%get_function_space() )
@@ -358,20 +419,36 @@ contains
                       shifted=.false., density_predictor=.true.,       &
                       logspace=.false.)
     else
-    ! Reconstruct the advection increment from the mass flux
-    call advect_field(mass_flux, state(igh_d), advecting_wind,         &
-                      scheme, wind_n, wind_np1, advect_density=.true., &
-                      timestep=dt, si_advective_terms=.false.,         &
-                      shifted=.false., density_predictor=.true.,       &
-                      logspace=log_rho )
-    mm_w3_inv => get_mass_matrix(w3inv_id)
-    div       => get_div()
-    call invoke( setval_c(r_rho, 0.0_r_def),                       &
-                 matrix_vector_kernel_type(r_rho, mass_flux, div), &
-                 inc_a_times_X(-1.0_r_def, r_rho),                 &
-                 dg_matrix_vector_kernel_type(advection(igh_d),    &
-                                              r_rho, mm_w3_inv) )
-    end if
+      ! Reconstruct the advection increment from the mass flux
+     call state(igh_d)%copy_field(field)
+     call field_inc%initialise( field%get_function_space() )
+     call mass_flux_i%initialise( state(igh_u)%get_function_space() )
+     call invoke(setval_c(mass_flux, 0.0_r_def), &
+                 setval_c(mass_flux_i, 0.0_r_def), &
+                 setval_c(advection(igh_d), 0.0_r_def))
+     mm_w3_inv => get_mass_matrix(w3inv_id)
+     div       => get_div()
+     do sub_step_count = 1, n_substeps
+       call field%copy_field(field_old)
+       call advect_field(mass_flux_i, field, advecting_wind,  &
+          scheme, wind_n, wind_np1, advect_density=.true.,    &
+          timestep=dt_substep, si_advective_terms=.false.,    &
+          shifted=.false., density_predictor=.true.,          &
+          logspace=log_rho                                    &
+          )
+       call invoke( setval_c(r_rho, 0.0_r_def),                         &
+                    matrix_vector_kernel_type(r_rho, mass_flux_i, div), &
+                    inc_a_times_X(-1.0_r_def, r_rho),                   &
+                    dg_matrix_vector_kernel_type(field_inc,             &
+                                                 r_rho, mm_w3_inv),     &
+                    ! update the mass flux and increment
+                    inc_X_plus_bY(mass_flux, dt_fraction, mass_flux_i),      &
+                    inc_X_plus_bY(advection(igh_d), dt_fraction, field_inc), &
+                    ! update the field
+                    aX_plus_Y(field, dt_substep, field_inc, field_old)       &
+                   )
+     end do
+   end if
   else
     ! Cosmic computes the advection increment instead of the mass flux
     call advect_field(advection(igh_d), state(igh_d), advecting_wind,  &
@@ -385,11 +462,21 @@ contains
   ! Cosmic is not yet implemented and so must use method of lines scheme
   call log_event( "Advecting potential temperature...", LOG_LEVEL_INFO)
   call u_grad_theta%initialise( state(igh_t)%get_function_space() )
-  call advect_field(u_grad_theta, state(igh_t), advecting_wind,  &
+
+  call invoke(setval_c(u_grad_theta, 0.0_r_def))
+  call state(igh_t)%copy_field(field)
+  do sub_step_count = 1, n_substeps
+    call field%copy_field(field_old)
+    call field_inc%initialise( field%get_function_space() )
+    call advect_field(field_inc, field, advecting_wind,  &
                     scheme_method_of_lines, wind_n, wind_np1,    &
-                    advect_density=.false., timestep=dt,         &
+                    advect_density=.false., timestep=dt_substep, &
                     si_advective_terms=.false., shifted=.false., &
                     density_predictor=.false., logspace=log_theta )
+    call invoke( aX_plus_Y(field, dt_substep, field_inc, field_old), &
+                 inc_X_plus_bY(u_grad_theta, dt_fraction, field_inc) &
+                 )
+  end do
   ! u_grad_theta now contains a pointwise incremente to theta,
   ! i.e. theta_np1 = theta_n - dt*u_grad_theta
   ! Depending upon what the temporal discretisation is this needs
@@ -420,8 +507,9 @@ contains
     ! Advect wind field
     call log_event( "Advecting wind...", LOG_LEVEL_INFO)
     call advect_momentum_alg(advection(igh_u), advected_wind, &
-                             advecting_wind,&
-                             wind_n, wind_np1, dt, .false.)
+                             advecting_wind,                  &
+                             wind_n, wind_np1,                &
+                             dt, n_substeps, .false.)
   end if
 
   ! Don't advect Exner pressure
@@ -430,7 +518,7 @@ contains
   nullify(mm_wt, mm_w3_inv, div,  mt_lumped_inv)
 
   if ( subroutine_timers ) call timer('advection_alg')
-  end subroutine advection_alg
+end subroutine advection_alg
 
   !===========================================================================!
   !> @details A wrapper algorithm for computing the advection of the moisture
@@ -439,14 +527,23 @@ contains
   !> @param[in]     mr Mixing ratios
   !> @param[in]     wind_n Time level n winds
   !> @param[in]     wind_np1 Time level n+1 winds
-  subroutine advection_mr_alg( mr_inc, mr, wind_n, wind_np1 )
+  !> @param[in]     dt_step timestep length of step
+  !> @param[in]     n_substep number of steps
+  subroutine advection_mr_alg( mr_inc, mr, wind_n, wind_np1, dt_step, n_substeps )
     implicit none
     type(field_type), intent(inout) :: mr_inc(nummr)
     type(field_type), intent(in)    :: mr(nummr)
     type(field_type), intent(in)    :: wind_n, wind_np1
+    real(r_def), intent(in)         :: dt_step
+    integer(i_def), intent(in)      :: n_substeps
 
     type(field_type) :: advecting_wind
     integer(i_def)   :: imr
+
+    type(field_type) :: field, field_inc, field_old
+    integer(i_def)   :: sub_step_count
+
+    real(r_def) :: dt_substep, dt_fraction
 
     if ( subroutine_timers ) call timer('advection_mr_alg')
     call log_event( "Computing moisture advection...", LOG_LEVEL_INFO)
@@ -454,12 +551,25 @@ contains
     call advecting_wind%initialise( wind_n%get_function_space() )
     call invoke( aX_plus_bY(advecting_wind, 0.5_r_def, wind_n, 0.5_r_def, wind_np1) )
 
+    ! substepping timesteps
+    dt_fraction = 1.0_r_def/real(n_substeps, r_def)
+    dt_substep = dt_step*dt_fraction
+
     do imr = 1, nummr_to_advect
-      call advect_field( mr_inc(imr), mr(imr), advecting_wind,        &
-                         scheme_method_of_lines, wind_n, wind_np1,    &
-                         advect_density=.false., timestep=dt,         &
-                         si_advective_terms=.false., shifted=.false., &
-                         density_predictor=.false., logspace=.false. )
+      call mr(imr)%copy_field(field)
+      call invoke(setval_c(mr_inc(imr), 0.0_r_def))
+      do sub_step_count = 1, n_substeps
+        call field%copy_field(field_old)
+        call field_inc%initialise( field%get_function_space() )
+        call advect_field( field_inc, field, advecting_wind,        &
+                           scheme_method_of_lines, wind_n, wind_np1,    &
+                           advect_density=.false., timestep=dt_substep, &
+                           si_advective_terms=.false., shifted=.false., &
+                           density_predictor=.false., logspace=.false. )
+        call invoke( aX_plus_Y(field, dt_substep, field_inc, field_old), &
+                     inc_X_plus_bY(mr_inc(imr), dt_fraction, field_inc) &
+                     )
+      end do
       ! Make mr_inc into an increment by multiplying by dt
       call invoke( inc_a_times_X(dt, mr_inc(imr)) )
     end do
@@ -476,7 +586,9 @@ contains
   !> @param[in]     wind_np1 Time level n+1 winds
   !> @param[in]     rho_d_n Time level n dry density
   !> @param[in,out] rho_d_star Guess of transported rho_d to be calculated
-  subroutine conservative_mr_adv_alg( mr_out, mr, wind_n, wind_np1, rho_d_n, rho_d_star )
+  !> @param[in]     dt_step timestep length of step
+  subroutine conservative_mr_adv_alg( mr_out, mr, wind_n, wind_np1,  &
+                                      rho_d_n, rho_d_star, dt_step )
 
     ! Kernels for mappings used by conservative transport scheme
     use field_bundle_mod,                   only: bundle_ax, add_bundle
@@ -493,6 +605,7 @@ contains
     type(field_type), intent(in)       :: wind_n, wind_np1
     type(field_type), intent(in)       :: rho_d_n
     type(field_type), intent(inout)    :: rho_d_star
+    real(r_def),      intent(in)       :: dt_step
 
     ! Internal arguments
     integer(kind=i_def)                :: i, imr
@@ -588,7 +701,7 @@ contains
     ! Advect dry density
     call advect_field(mass_flux, rho_d_n, advecting_wind,                      &
                       scheme_method_of_lines, wind_n, wind_np1,                &
-                      advect_density=.true., timestep=dt,                      &
+                      advect_density=.true., timestep=dt_step,                 &
                       si_advective_terms=.false., shifted=.false.,             &
                       density_predictor=.false., logspace=log_rho )
 
@@ -597,7 +710,7 @@ contains
                  matrix_vector_kernel_type(r_rho, mass_flux, div),             &
                  inc_a_times_X(-1.0_r_def, r_rho),                             &
                  dg_matrix_vector_kernel_type(rho_d_inc, r_rho, mm_w3_inv),    &
-                 aX_plus_Y(rho_d_star, dt, rho_d_inc, rho_d_n)                 )
+                 aX_plus_Y(rho_d_star, dt_step, rho_d_inc, rho_d_n)            )
 
 
     ! Use dry densities to get tridiagonal matrices
@@ -622,7 +735,7 @@ contains
       call advect_field(mass_flux_shifted, rho_X_n(imr),                       &
                         advecting_wind_shifted,                                &
                         scheme_method_of_lines, wind_n, wind_np1,              &
-                        advect_density=.true., timestep=dt,                    &
+                        advect_density=.true., timestep=dt_step,               &
                         si_advective_terms=.false., shifted=.true.,            &
                         density_predictor=.false., logspace=.false.)
 
@@ -637,7 +750,7 @@ contains
     end do
 
     ! Add density increments to get advected densities
-    call bundle_ax(dt, rho_X_inc, rho_X_inc, nummr)
+    call bundle_ax(dt_step, rho_X_inc, rho_X_inc, nummr)
     call add_bundle(rho_X_inc, rho_X_n, rho_X_star, nummr)
 
     ! Obtain mixing ratios back from wet densities
@@ -656,22 +769,27 @@ contains
 
   !===========================================================================!
   !> @details A wrapper algorithm for advection a generic prognostic.
-  !> @param[in] generic_fields            (in,out) collection which gets updated
-  !> @param[in] generic_fields_after_slow (in)     collection to advect
-  !> @param[in] wind_n                    (in)     Time level n winds
-  !> @param[in] wind_np1                  (in)     Time level n+1 winds
+  !> @param[in]     generic_fields            collection which gets updated
+  !> @param[in,out] generic_fields_after_slow collection to advect
+  !> @param[in]     wind_n                    Time level n winds
+  !> @param[in]     wind_np1                  Time level n+1 winds
+  !> @param[in]     dt_step                   timestep length of step
+  !> @param[in]     n_substep                 number of steps
   subroutine advection_generic_field_alg( generic_fields,                    &
                                           generic_fields_after_slow,         &
-                                          wind_n, wind_np1 )
+                                          wind_n, wind_np1,                  &
+                                          dt_step, n_substeps)
 
     use field_collection_mod,     only: field_collection_type,       &
                                         field_collection_real_iterator_type
 
     implicit none
 
-    type(field_collection_type), intent(in) :: generic_fields
-    type(field_collection_type), intent(in) :: generic_fields_after_slow
-    type(field_type),            intent(in) :: wind_n, wind_np1
+    type(field_collection_type), intent(in)    :: generic_fields
+    type(field_collection_type), intent(inout) :: generic_fields_after_slow
+    type(field_type),            intent(in)    :: wind_n, wind_np1
+    real(r_def), intent(in)         :: dt_step
+    integer(i_def), intent(in)      :: n_substeps
 
     type(field_type) :: advecting_wind
     type(field_type) :: gf_inc
@@ -685,9 +803,19 @@ contains
     ! The saved version of single_generic_field after slow physics
     type(field_type), pointer :: after_slow_generic_field => null()
 
+    ! Variables for substepping
+    real(r_def)      :: dt_substep, dt_fraction
+    type(field_type) :: field, field_inc, field_old
+    integer(i_def)   :: sub_step_count
+
+
     if ( subroutine_timers ) call timer( 'advection_generic_field_alg' )
 
     call log_event( "Computing generic field advection...", LOG_LEVEL_INFO )
+
+    ! substepping timesteps
+    dt_fraction = 1.0_r_def/real(n_substeps, r_def)
+    dt_substep = dt_step*dt_fraction
 
     ! Set advecting velocity = 0.5(u_np1 + u_n)
     call advecting_wind%initialise( wind_n%get_function_space() )
@@ -709,23 +837,28 @@ contains
         call log_event( "Advecting "//                                        &
              trim(after_slow_generic_field%get_name()), LOG_LEVEL_INFO)
         call after_slow_generic_field%copy_field_properties(gf_inc)
-
-        call advect_field( gf_inc, after_slow_generic_field, advecting_wind,  &
+        call after_slow_generic_field%copy_field(field)
+        call invoke(setval_c(gf_inc, 0.0_r_def))
+        do sub_step_count = 1, n_substeps
+          call field%copy_field(field_old)
+          call field_inc%initialise( field%get_function_space() )
+          call advect_field( field_inc, field, advecting_wind,  &
                            scheme_method_of_lines, wind_n, wind_np1,          &
-                           advect_density=.false., timestep=dt,               &
+                           advect_density=.false., timestep=dt_substep,       &
                            si_advective_terms=.false., shifted=.false.,       &
                            density_predictor=.false., logspace=.false. )
-
+          call invoke( aX_plus_Y(field, dt_substep, field_inc, field_old), &
+                       inc_X_plus_bY(gf_inc, dt_fraction, field_inc) &
+                       )
+        end do
         ! Get the field from the original collection which we want to update
         single_generic_field => generic_fields%get_field(                     &
              trim(after_slow_generic_field%get_name() ) )
-
         ! Make inc into an increment by multiplying by dt
         call invoke( inc_a_times_X(dt, gf_inc ) ,                             &
                      ! and add it on to the field
                      X_plus_Y(single_generic_field, after_slow_generic_field, &
                                                     gf_inc ) )
-
       end do
 
     end if
@@ -743,11 +876,12 @@ contains
   !> @param[in]     advecting_wind Advecting wind field
   !> @param[in]     wind_n Time level n wind field
   !> @param[in]     wind_np1 Time level n+1 wind field
-  !> @param[in]     timestep delta t to advect field by
+  !> @param[in]     dt_step timestep length of step
+  !> @param[in]     n_substep number of steps
   !> @param[in]     from_si Flag if calling this routine from semi-implicit
   !!                (instead of advection) routines
   subroutine advect_momentum_alg( rhs, advected_wind, advecting_wind, &
-                                  wind_n, wind_np1, timestep, from_si )
+                                  wind_n, wind_np1, dt_step, n_substeps, from_si )
 
     use convert_hdiv_field_kernel_mod,  only: convert_hdiv_field_kernel_type
     use project_advective_update_kernel_mod, &
@@ -763,7 +897,8 @@ contains
     type(field_type), intent(inout)     :: rhs
     type(field_type), intent(in)        :: advected_wind, advecting_wind
     type(field_type), intent(in)        :: wind_n, wind_np1
-    real(r_def),      intent(in)        :: timestep
+    real(r_def), intent(in)             :: dt_step
+    integer(i_def), intent(in)          :: n_substeps
     logical,          intent(in)        :: from_si
 
     type(field_type), dimension(3)      :: u_scalar, adv_wind_update
@@ -773,8 +908,17 @@ contains
     type(quadrature_xyoz_type)          :: qr
     type(quadrature_rule_gaussian_type) :: quadrature_rule
     integer(i_def)                      :: dir
+    type(field_type)                    :: field, field_inc, field_old
+    integer(i_def)                      :: sub_step_count
+
+    ! Variables for substepping
+    real(r_def)      :: dt_substep, dt_fraction
 
     if ( subroutine_timers ) call timer('momentum advection')
+
+    ! substepping timesteps
+    dt_fraction = 1.0_r_def/real(n_substeps, r_def)
+    dt_substep = dt_step*dt_fraction
 
     ws_fs => function_space_collection%get_fs( rhs%get_mesh_id(), &
                                                element_order, W3 )
@@ -803,11 +947,20 @@ contains
     ! Compute reconstruction of each velocity component
     ! Cosmic is not yet implemented and so must use method of lines scheme
     do dir = 1,3
-      call advect_field(adv_wind_update(dir), u_scalar(dir), advecting_wind, &
+      call u_scalar(dir)%copy_field(field)
+      call invoke(setval_c(adv_wind_update(dir), 0.0_r_def))
+      do sub_step_count = 1, n_substeps
+        call field%copy_field(field_old)
+        call field_inc%initialise( field%get_function_space() )
+        call advect_field(field_inc, field, advecting_wind, &
                         scheme_method_of_lines, wind_n, wind_np1,            &
-                        advect_density=.false., timestep=timestep,           &
+                        advect_density=.false., timestep=dt_substep,         &
                         si_advective_terms=from_si, shifted=.false.,         &
                         density_predictor=.false., logspace=.false.)
+        call invoke( aX_plus_Y(field, dt_substep, field_inc, field_old), &
+                     inc_X_plus_bY(adv_wind_update(dir), dt_fraction, field_inc) &
+                     )
+      end do
     end do
     ! Compute the updates to the W2 wind field using the physical scalar
     ! update

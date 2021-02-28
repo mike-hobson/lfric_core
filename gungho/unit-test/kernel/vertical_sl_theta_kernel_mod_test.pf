@@ -60,6 +60,7 @@ contains
                                  oned_reconstruction = .false.,               &
                                  rho_splitting = rho_splitting_none,          &
                                  theta_splitting = theta_splitting_none,      &
+                                 cfl_control_stab = 1.5_r_def,                &
                                  cfl_mol_1d_stab = 1.0_r_def,                 &
                                  cfl_mol_2d_stab = 1.0_r_def,                 &
                                  cfl_mol_3d_stab = 1.0_r_def,                 &

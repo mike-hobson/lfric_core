@@ -32,7 +32,6 @@ module gen_planar_mod
 
   private
 
-  public :: gen_planar_type
   public :: NON_PERIODIC_ID
 
   ! set Cartesian axis for north
@@ -61,9 +60,11 @@ module gen_planar_mod
   ! Flag to print out mesh data for debugging purposes
   logical(l_def),     parameter :: DEBUG = .false.
 
-  type, extends(ugrid_generator_type) :: gen_planar_type
+  type, extends(ugrid_generator_type), public :: gen_planar_type
 
     private
+
+    logical(l_def)      :: generated = .false.
 
     character(str_def)  :: mesh_name
     character(str_def)  :: mesh_class
@@ -85,6 +86,7 @@ module gen_planar_mod
     integer(i_def)      :: n_nodes
     integer(i_def)      :: n_edges
     integer(i_def)      :: n_faces
+
     logical(l_def)      :: periodic_x
     logical(l_def)      :: periodic_y
     logical(l_def)      :: cartesian
@@ -124,6 +126,8 @@ module gen_planar_mod
     procedure :: write_mesh
     procedure :: rotate_mesh
     procedure :: latlon_to_eq
+    procedure :: is_generated
+    procedure :: get_corner_gid
 
     procedure :: clear
 
@@ -249,7 +253,7 @@ function gen_planar_constructor( reference_element,          &
   integer(i_def) :: min_cells_x
   integer(i_def) :: min_cells_y
 
-  ! At present this mesh generator stratedy only supports 2d quad elements
+  ! At present this mesh generator strategy only supports 2d quad elements
   ! i.e. cube elements
   select type(reference_element)
     type is (reference_cube_type)
@@ -1361,6 +1365,41 @@ subroutine calc_coords(self)
   return
 end subroutine calc_coords
 
+
+!-------------------------------------------------------------------------------
+!> @brief    Get the global cell id at a specified corner of the planar domain.
+!> @details  Returns the global cell id of the cell at a given corner of the
+!>           domain.
+!>
+!> @param[in] corner      [NW|NE|SW|SE] enumerations from the reference element.
+!>                        Identifies which corner cell is being requested.
+!> @return    corner_gid  Global cell id of cell at requested domain corner.
+!>
+!-------------------------------------------------------------------------------
+function get_corner_gid(self, corner) result(corner_gid)
+
+  implicit none
+
+  class(gen_planar_type), intent(in) :: self
+  integer(i_def),         intent(in) :: corner
+
+  integer(i_def) :: corner_gid
+
+  corner_gid = imdi
+  select case (corner)
+  case(NW)
+    corner_gid = self%north_cells(1)
+  case(NE)
+    corner_gid = self%north_cells(self%edge_cells_x)
+  case(SW)
+    corner_gid = self%south_cells(1)
+  case(SE)
+    corner_gid = self%south_cells(self%edge_cells_x)
+  end select
+
+  return
+end function get_corner_gid
+
 !-----------------------------------------------------------------------------
 !> @brief   Find the first lat and lon for an unrotated mesh
 !> @details Given the latitude and longitude of the bottom left node
@@ -1707,6 +1746,8 @@ subroutine generate(self)
 
   if (DEBUG) call write_mesh(self)
 
+  self%generated = .true.
+
   return
 end subroutine generate
 
@@ -1729,7 +1770,9 @@ subroutine calc_global_mesh_maps(self)
                     target_ncells, target_cells_per_source_cell,i
   integer(i_def), allocatable :: cell_map(:,:)
 
-  allocate( self%global_mesh_maps, source=global_mesh_map_collection_type())
+  if (.not. allocated( self%global_mesh_maps )) then
+    allocate( self%global_mesh_maps, source=global_mesh_map_collection_type() )
+  end if
 
   source_id  = 1
   source_cpp = self%edge_cells_x*self%edge_cells_y
@@ -1744,8 +1787,15 @@ subroutine calc_global_mesh_maps(self)
     target_cells_per_source_cell = max(1,target_ncells/source_ncells)
     allocate(cell_map(target_cells_per_source_cell,source_ncells))
 
-    call calc_global_cell_map(self, target_edge_cells_x, target_edge_cells_y, cell_map )
-    call self%global_mesh_maps%add_global_mesh_map( source_id, i+1, cell_map )
+    call calc_global_cell_map( self,                &
+                               target_edge_cells_x, &
+                               target_edge_cells_y, &
+                               cell_map )
+
+    call self%global_mesh_maps%add_global_mesh_map( source_id, &
+                                                    i+1,       &
+                                                    cell_map )
+
     deallocate(cell_map)
 
   end do
@@ -2013,6 +2063,28 @@ subroutine write_mesh(self)
 
   return
 end subroutine write_mesh
+
+!-------------------------------------------------------------------------------
+!> @brief    Returns whether the strategy data has been generated.
+!> @details  On instantiation, object data such as connectivities, coordianates
+!>           etc are not calculated until the object has been "generated".
+!>           Objects such as LBC strategy require these data for themselves to
+!>           be generated. This function provides a means to inquire about
+!>           this requiremnet.
+!> @return   answer  Has this strategy be generated?, <<logical>>
+!-------------------------------------------------------------------------------
+function is_generated(self) result(answer)
+
+  implicit none
+  class(gen_planar_type), intent(in) :: self
+
+  logical(l_def) :: answer
+
+  answer = self%generated
+
+  return
+end function is_generated
+
 
 subroutine gen_planar_final(self)
 

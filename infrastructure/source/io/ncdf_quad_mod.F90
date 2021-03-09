@@ -33,6 +33,7 @@ private
 ! Module parameters
 !-------------------------------------------------------------------------------
 
+integer(i_def), parameter :: ONE  = 1   !< One
 integer(i_def), parameter :: TWO  = 2   !< Two
 integer(i_def), parameter :: FOUR = 4   !< Four
 
@@ -78,11 +79,10 @@ type, extends(ugrid_file_type), public :: ncdf_quad_type
   type(global_mesh_map_collection_type) :: target_mesh_maps
 
   ! Dimension values
-  integer(i_def) :: nmesh_nodes          !< Number of nodes
-  integer(i_def) :: nmesh_edges          !< Number of edges
-  integer(i_def) :: nmesh_faces          !< Number of faces
-  integer(i_def) :: nmesh_targets        !< Number of mesh(es) to map to
-
+  integer(i_def) :: nmesh_nodes       !< Number of nodes
+  integer(i_def) :: nmesh_edges       !< Number of edges
+  integer(i_def) :: nmesh_faces       !< Number of faces
+  integer(i_def) :: nmesh_targets     !< Number of mesh(es) to map to
 
   ! Dimension ids
   integer(i_def) :: nmesh_nodes_dim_id   !< NetCDF-assigned ID for number of nodes
@@ -91,6 +91,7 @@ type, extends(ugrid_file_type), public :: ncdf_quad_type
 
   integer(i_def), allocatable :: ntargets_per_source_dim_id(:)
                                          !< NetCDF-assigned ID for number of mesh targets
+  integer(i_def) :: one_dim_id           !< NetCDF-assigned ID for constant one
   integer(i_def) :: two_dim_id           !< NetCDF-assigned ID for constant two
   integer(i_def) :: four_dim_id          !< NetCDF-assigned ID for constant four
 
@@ -263,6 +264,13 @@ subroutine define_dimensions(self)
   ! in the NetCDF file. Trying to redefine the same variable name
   ! will throw a error, so check to see if constants are present
   ! already.
+  ierr = nf90_inq_dimid (self%ncid, 'One', self%one_dim_id)
+  if (ierr /= nf90_noerr) then
+    ierr = nf90_def_dim(self%ncid, 'One', ONE, self%one_dim_id)
+    cmess = 'Defining One'
+    call check_err(ierr, routine, cmess)
+  end if
+
   ierr = nf90_inq_dimid (self%ncid, 'Two', self%two_dim_id)
   if (ierr /= nf90_noerr) then
     ierr = nf90_def_dim(self%ncid, 'Two', TWO, self%two_dim_id)
@@ -526,7 +534,7 @@ subroutine assign_attributes(self)
   cmess   = 'Adding attribute "'//trim(attname)// &
             '" to variable "'//trim(var_name)//'"'
   ierr = nf90_put_att( self%ncid, id, trim(attname), &
-                       size(self%target_mesh_names) )
+                       self%nmesh_targets )
   call check_err(ierr, routine, cmess)
 
   if (allocated(self%target_mesh_names)) then
@@ -740,7 +748,7 @@ subroutine assign_attributes(self)
     long_x_name = 'longitude of 2D mesh nodes.'
     long_y_name = 'latitude of 2D mesh nodes.'
 
-  case ('plane')
+  case ('plane','lbc')
     std_x_name  = 'projection_x_coordinate'
     std_y_name  = 'projection_y_coordinate'
     long_x_name = 'x coordinate of 2D mesh nodes.'
@@ -808,7 +816,7 @@ subroutine assign_attributes(self)
     std_y_name  = 'latitude'
     long_x_name = 'longitude of 2D face centres'
     long_y_name = 'latitude of 2D face centres'
-  case ('plane')
+  case ('plane','lbc')
     std_x_name  = 'projection_x_coordinate'
     std_y_name  = 'projection_y_coordinate'
     long_x_name = 'x coordinate of 2D face centres'
@@ -1256,7 +1264,8 @@ subroutine read_mesh( self, mesh_name, mesh_class,                     &
   real(r_ncdf), allocatable :: node_coordinates_ncdf(:,:)
   real(r_ncdf), allocatable :: face_coordinates_ncdf(:,:)
 
-  integer(i_def) :: lower1,upper1,lower2,upper2
+  integer(i_def) :: lower1, upper1
+  integer(i_def) :: lower2, upper2
 
   character(str_def) :: lchar_px
   character(str_def) :: lchar_py

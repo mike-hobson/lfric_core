@@ -1,0 +1,37 @@
+"dynamics":
+  Class:               plane
+  Periodic X:          F
+  Periodic Y:          F
+  Constructor inputs:  edge_cells_x=16;edge_cells_y=8;periodic_x=F;periodic_y=F;domain_x=1600.00;domain_y=400.00;cartesian=T
+  Nodes:               153
+  Edges:               280
+  Faces:               128
+  Nodes per face:      4
+  Edges per face:      4
+  Nodes per edge:      2
+  Max. faces per node: 4
+"physics":
+  Class:               plane
+  Periodic X:          F
+  Periodic Y:          F
+  Constructor inputs:  edge_cells_x=48;edge_cells_y=24;periodic_x=F;periodic_y=F;domain_x=1600.00;domain_y=400.00;cartesian=T
+  Nodes:               1225
+  Edges:               2376
+  Faces:               1152
+  Nodes per face:      4
+  Edges per face:      4
+  Nodes per edge:      2
+  Max. faces per node: 4
+"dynamics-lbc":
+  Class:               lbc
+  Periodic X:          F
+  Periodic Y:          F
+  Constructor inputs:  lam_strategy=<gen_planar_type,"dynamics">;rim_depth=1
+  Nodes:               88
+  Edges:               132
+  Faces:               44
+  Nodes per face:      4
+  Edges per face:      4
+  Nodes per edge:      2
+  Max. faces per node: 4
+  Maps to:             "dynamics"

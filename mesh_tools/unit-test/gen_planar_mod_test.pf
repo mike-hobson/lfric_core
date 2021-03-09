@@ -143,7 +143,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .true.
     logical(l_def) :: periodic_y = .true.
@@ -159,8 +159,6 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
@@ -295,7 +293,7 @@ contains
 
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .true.
     logical(l_def) :: periodic_y = .true.
@@ -467,7 +465,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .true.
     logical(l_def) :: periodic_y = .false.
@@ -480,8 +478,6 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
@@ -600,7 +596,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .true.
@@ -609,8 +605,6 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
@@ -735,7 +729,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .false.
@@ -747,8 +741,6 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
@@ -871,7 +863,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .true.
     logical(l_def) :: periodic_y = .false.
@@ -887,8 +879,6 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
@@ -1013,7 +1003,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .true.
     logical(l_def) :: periodic_y = .false.
@@ -1029,8 +1019,6 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
@@ -1163,7 +1151,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .true.
     logical(l_def) :: periodic_y = .false.
@@ -1179,8 +1167,6 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
@@ -1317,7 +1303,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .true.
     logical(l_def) :: periodic_y = .false.
@@ -1333,8 +1319,6 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
@@ -1473,7 +1457,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .true.
@@ -1482,8 +1466,6 @@ contains
     integer(i_def) :: edge_cells_x = 1
     integer(i_def) :: edge_cells_y = 2
 
-    real(r_def) :: dy
-
     integer(i_def)           :: row,i
     integer(i_def), pointer  :: edge_cell_ids(:) => null()
     integer(i_def)           ::  icell
@@ -1491,8 +1473,6 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
@@ -1617,7 +1597,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .true.
@@ -1633,8 +1613,6 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
@@ -1771,7 +1749,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .true.
@@ -1780,8 +1758,6 @@ contains
     integer(i_def) :: edge_cells_x = 2
     integer(i_def) :: edge_cells_y = 2
 
-    real(r_def) :: dy
-
     integer(i_def)           :: row,i
     integer(i_def), pointer  :: edge_cell_ids(:) => null()
     integer(i_def)           ::  icell
@@ -1789,8 +1765,6 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
@@ -1928,7 +1902,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .true.
@@ -1944,8 +1918,6 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
@@ -2104,7 +2076,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .false.
@@ -2120,12 +2092,8 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
-
-    real(r_def) :: dy
 
     type(reference_cube_type) :: cube_element
     cube_element = reference_cube_type()
@@ -2247,7 +2215,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .false.
@@ -2263,12 +2231,8 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
-
-    real(r_def) :: dy
 
     type(reference_cube_type) :: cube_element
     cube_element = reference_cube_type()
@@ -2398,7 +2362,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .false.
@@ -2414,15 +2378,11 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
     real(r_def), parameter :: domain_x = 1.0
     real(r_def), parameter :: domain_y = 3.0
-
-    real(r_def) :: dy
 
     type(reference_cube_type) :: cube_element
     cube_element = reference_cube_type()
@@ -2558,7 +2518,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .false.
@@ -2574,12 +2534,8 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
-
-    real(r_def) :: dy
 
     type(reference_cube_type) :: cube_element
     cube_element = reference_cube_type()
@@ -2709,7 +2665,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .false.
@@ -2725,15 +2681,11 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
 
     real(r_def), parameter :: domain_x = 3.0
     real(r_def), parameter :: domain_y = 1.0
-
-    real(r_def) :: dy
 
     type(reference_cube_type) :: cube_element
     cube_element = reference_cube_type()
@@ -2868,7 +2820,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .false.
@@ -2889,12 +2841,8 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
-
-    real(r_def) :: dy
 
     type(reference_cube_type) :: cube_element
     cube_element = reference_cube_type()
@@ -3018,7 +2966,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .false.
@@ -3041,12 +2989,8 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
-
-    real(r_def) :: dy
 
     type(reference_cube_type) :: cube_element
     cube_element = reference_cube_type()
@@ -3182,7 +3126,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .false.
@@ -3205,12 +3149,8 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
-
-    real(r_def) :: dy
 
     type(reference_cube_type) :: cube_element
     cube_element = reference_cube_type()
@@ -3346,7 +3286,7 @@ contains
     type(gen_planar_type) :: mesh_gen
     integer(i_def) :: nodes, edges, faces
     integer(i_def) :: nodes_per_face, edges_per_face
-    integer(i_def) :: nodes_per_edge, max_faces_per_node
+    integer(i_def) :: nodes_per_edge
 
     logical(l_def) :: periodic_x = .false.
     logical(l_def) :: periodic_y = .false.
@@ -3369,12 +3309,8 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    character(str_def)  :: test_mesh_name
-    character(str_def)  :: test_mesh_class
     character(str_def)  :: test_coord_units_x
     character(str_def)  :: test_coord_units_y
-
-    real(r_def) :: dy
 
     type(reference_cube_type) :: cube_element
     cube_element = reference_cube_type()

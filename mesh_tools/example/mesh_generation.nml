@@ -2,22 +2,22 @@
 ! Example namelists for mesh generation
 !--------------------------------------------------------------------
 ! These example namelists will result in the mesh generators
-! producing an output file (<mesh_filename>) which will 
+! producing an output file (<mesh_filename>) which will
 ! contain <n_meshes> mesh topologies which are identified by
 ! the by <mesh_names>.
 !
-! Additional intergrid mappings may be produced and included 
-! in the output file. Each map is specified by an item in the 
+! Additional intergrid mappings may be produced and included
+! in the output file. Each map is specified by an item in the
 ! <mesh_maps> list. Maps are specified by a string of the two
-! mesh names spearated by a ":". Each item will cause a 
-! map to be added to the maps source mesh, i.e. 
-! 
-! 'dynamics:physics' will result in a map added to the 
+! mesh names spearated by a ":". Each item will cause a
+! map to be added to the maps source mesh, i.e.
+!
+! 'dynamics:physics' will result in a map added to the
 !
 !  *  "dynamics" mesh (source) object mapping to "physics"  (target)
 !  *  "physics"  mesh (source) object mapping to "dynamics" (target)
 !
-! Notes: Only the first "n_meshes" listed in mesh_names will be 
+! Notes: Only the first "n_meshes" listed in mesh_names will be
 !        output in the mesh file.
 !===================================================================
 &mesh
@@ -38,7 +38,7 @@
 ! Each cubesphere mesh is specified by the corresponding number of
 ! cells on a panel edge. These are listed in the variable <edge_cells>
 ! and correspond to the order of names given by <mesh_names>.
-! 
+!
 ! Any smoothing iterations specified will be applied to all meshes
 ! requested. Smoothing is experimental (especially with regards to
 ! intergrid mesh maps) is advised to be left as 0 for general use.
@@ -61,7 +61,7 @@
 ! cells on a panel edge in the x/y axes. These are listed in the
 ! variables <edge_cells_x>/<edge_cells_y> and correspond to the
 ! order of mesh topologies given by <mesh_names>.
-! 
+!
 ! All lised meshes will occupy the same domain and periodicity.
 !
 ! Note: When requesting a integrid mesh map, for a given pair of
@@ -76,4 +76,7 @@
   domain_y      = 400.0
   periodic_x    = .true.
   periodic_y    = .false.
+  create_lbc_mesh = .false.
+  lbc_rim_depth   = 1
+  lbc_parent_mesh = '<lam mesh name>'
 /

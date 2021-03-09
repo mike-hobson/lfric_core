@@ -93,7 +93,7 @@ function add_new_mesh( self, mesh ) result( mesh_id )
 
   mesh_name = mesh%get_mesh_name()
 
-  ! Check list of tag names to see if mesh is already in collection
+  ! Check to see if mesh is already in collection
   if (self%check_for(mesh_name)) then
     write(log_scratch_space,'(A)')  &
         'Mesh '//trim(mesh_name)//  &

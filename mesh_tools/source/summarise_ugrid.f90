@@ -22,7 +22,7 @@ program summarise_ugrid
   use ugrid_2d_mod,    only : ugrid_2d_type
   use ugrid_file_mod,  only : ugrid_file_type
   use log_mod,         only : initialise_logging, finalise_logging, &
-                              log_event, log_scratch_space,&
+                              log_event, log_scratch_space,         &
                               LOG_LEVEL_ERROR, LOG_LEVEL_INFO
   use mpi_mod,         only : initialise_comm, store_comm, finalise_comm, &
                               get_comm_size, get_comm_rank
@@ -83,7 +83,6 @@ program summarise_ugrid
       '================================================================', &
       LOG_LEVEL_INFO )
 
-
   do i=1, n_meshes
 
     ! Load in specified mesh from UGRID file into ugrid file object
@@ -94,24 +93,26 @@ program summarise_ugrid
 
     if (n_meshes > 1) then
       ! Extract data on the current mesh in the ugrid file object
-      call infile%get_metadata( mesh_name=mesh_name,                   &
-                                mesh_class=mesh_class,                 &
-                                constructor_inputs=constructor_inputs, &
-                                nmaps=nmaps,                           &
-                                target_mesh_names=target_mesh_names,   &
-                                periodic_x=periodic_x,                 &
-                                periodic_y=periodic_y )
+      call infile%get_metadata(                                &
+                      mesh_name          = mesh_name,          &
+                      mesh_class         = mesh_class,         &
+                      constructor_inputs = constructor_inputs, &
+                      nmaps              = nmaps,              &
+                      target_mesh_names  = target_mesh_names,  &
+                      periodic_x         = periodic_x,         &
+                      periodic_y         = periodic_y )
     else
-      call infile%get_metadata( mesh_name=mesh_name,                   &
-                                mesh_class=mesh_class,                 &
-                                constructor_inputs=constructor_inputs, &
-                                periodic_x=periodic_x,                 &
-                                periodic_y=periodic_y )
+      call infile%get_metadata(                                &
+                      mesh_name          = mesh_name,          &
+                      mesh_class         = mesh_class,         &
+                      constructor_inputs = constructor_inputs, &
+                      periodic_x         = periodic_x,         &
+                      periodic_y         = periodic_y )
     end if
 
-    call infile%get_dimensions( nodes, edges, faces, nodes_per_face, &
-                                edges_per_face, nodes_per_edge,      &
-                                max_faces_per_node )
+    call infile%get_dimensions( nodes, edges, faces,            &
+                                nodes_per_face, edges_per_face, &
+                                nodes_per_edge, max_faces_per_node )
 
     ! Write extracted data and log output
     write (log_scratch_space, '(A)') &
@@ -125,11 +126,11 @@ program summarise_ugrid
 
     fmt_str='(A,T24,L1)'
     write ( log_scratch_space, fmt_str ) &
-       '  Periodic X: ', periodic_x
+        '  Periodic X: ', periodic_x
     call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
 
     write ( log_scratch_space, fmt_str ) &
-       '  Periodic Y: ', periodic_y
+        '  Periodic Y: ', periodic_y
     call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
 
     fmt_str='(A,T24,A)'
@@ -165,7 +166,7 @@ program summarise_ugrid
 
 
     if (allocated(target_mesh_names)) then
-      if (size(target_mesh_names) > 0) then
+      if (size(target_mesh_names) > 0 .and. nmaps > 0) then
         target_mesh_names_str = '"'//trim(adjustl(target_mesh_names(1)))//'"'
         if (size(target_mesh_names) > 1) then
           do j=2, size(target_mesh_names)
@@ -174,12 +175,14 @@ program summarise_ugrid
                  trim(target_mesh_names(j)) // '"'
           end do
         end if
-        fmt_str='(A,T24,A)'
-        write ( log_scratch_space, fmt_str ) &
-             '  Maps to:', trim(adjustl(target_mesh_names_str))
-        call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
       end if
+
+      fmt_str='(A,T24,A)'
+      write ( log_scratch_space, fmt_str ) &
+           '  Maps to:', trim(adjustl(target_mesh_names_str))
+      call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
       deallocate(target_mesh_names)
+
     end if
 
   end do

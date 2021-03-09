@@ -25,6 +25,7 @@
                       'cubedsphere_c3',
                       'planar_maps',
                       'cubedsphere_rotated',
+                      'planar_lbc',
                       'planar_biperiodic',
                       'planar_non_periodic',
                       'planar_trench_x',

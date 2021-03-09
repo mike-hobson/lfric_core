@@ -70,7 +70,7 @@ contains
     type(gencube_ps_type)  :: csgen
     integer(i_def)         :: nodes, edges, faces
     integer(i_def)         :: nodes_per_face, edges_per_face
-    integer(i_def)         :: nodes_per_edge, max_faces_per_node
+    integer(i_def)         :: nodes_per_edge
 
     character(str_def)  :: test_mesh_name
     character(str_def)  :: test_mesh_class
@@ -91,8 +91,6 @@ contains
     type(global_mesh_map_type),            pointer :: global_mesh_map  => null()
 
     real(r_def), parameter :: eps = 1E-09_r_def
-
-    integer(i_def) :: i,j,k,l,m
 
     integer(i_def), parameter :: edge_cells = 1
     integer(i_def), parameter :: nsmooth = 0
@@ -221,7 +219,7 @@ contains
     type(gencube_ps_type)  :: csgen
     integer(i_def)         :: nodes, edges, faces
     integer(i_def)         :: nodes_per_face, edges_per_face
-    integer(i_def)         :: nodes_per_edge, max_faces_per_node
+    integer(i_def)         :: nodes_per_edge
 
     character(str_def)  :: test_mesh_name
     character(str_def)  :: test_mesh_class
@@ -242,8 +240,6 @@ contains
     type(global_mesh_map_type),            pointer :: global_mesh_map  => null()
 
     real(r_def), parameter :: eps = 1E-09_r_def
-
-    integer(i_def) :: i,j,k,l,m
 
     integer(i_def), parameter :: edge_cells = 2
     integer(i_def), parameter :: nsmooth = 0
@@ -541,8 +537,6 @@ contains
     ! at higher resolutions this is expected to tend towards the true value
     real(r_def), parameter :: eps = 1E-09_r_def
     real(r_def), parameter :: tol = 0.1
-
-    integer(i_def) :: i
 
     ! Higher cells used for this test to minimise deformation from a sphere
     integer(i_def), parameter :: edge_cells = 9

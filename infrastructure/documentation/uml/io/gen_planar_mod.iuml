@@ -43,6 +43,9 @@ class gen_planar_mod::gen_planar_type {
 
   +<<create>>gen_planar_constructor( <<in>> reference_element:reference_cube_type, <<in>> mesh_name: string, <<in>> edge_cells_x: integer, <<in>> edge_cells_y: integer, <<in>> periodic_x: logical, <<in>> periodic_y: logical, <<in>> domain_x: integer, <<in>> domain_y: integer, <<in>> target_mesh_names: string[:] <<optional>>, <<in>> target_edge_cells_x: integer[:] <<optional>>, <<in>> target_edge_cells_y: integer[:] <<optional>> ): gen_planar_type
 
+  +is_generated() : logical
+  +get_corner_gid( <<in>> corner: integer ): integer
+
   +generate( ... )
   +get_metadata( ... )
   +get_dimensions( ... )

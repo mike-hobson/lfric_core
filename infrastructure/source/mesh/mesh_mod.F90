@@ -45,7 +45,9 @@ module mesh_mod
   use mesh_map_collection_mod, only : mesh_map_collection_type
   use mpi_mod,               only : get_comm_rank, get_comm_size
   use partition_mod,         only : partition_type
-  use reference_element_mod, only : reference_element_type
+  use reference_element_mod, only : reference_element_type, &
+                                    reference_prism_type, &
+                                    reference_cube_type
 
   implicit none
 
@@ -68,10 +70,6 @@ module mesh_mod
     !> The local_mesh object that describes the local mesh this mesh
     !> is built on
     type(local_mesh_type), pointer :: local_mesh
-
-    !> The partition object that describes this local
-    !> mesh's partition of the global mesh
-    type(partition_type) :: partition
 
     !> The domain limits (x,y,z) for Cartesian domains
     !>                   (long, lat, radius) for spherical
@@ -323,7 +321,11 @@ contains
   !>                           information about the partitioned mesh
   !> @param [in] global_mesh   A pointer to a global mesh object on which the
   !>                           partition is applied
-  !> @param [in] partition     Partition object to base 3D-Mesh on
+  !> @param [in] partition     Partition object to base 3D-Mesh on (This is no
+  !>                           longer used or required, but is left here to
+  !>                           maintain the API. It will be removed when the
+  !>                           final changes are made and the API can be updated
+  !>                           in one change)
   !> @param [in] extrusion     Mechnism by which extrusion is to be achieved.
   !> @param [in, optional]
   !>             mesh_name     Mesh tag name to use for this mesh. If omitted,
@@ -406,6 +408,10 @@ contains
 
     character(str_def):: name
 
+    ! Get unique id for the mesh
+    mesh_id_counter = mesh_id_counter+1
+    call self%set_id( mesh_id_counter )
+
     if (present(mesh_name)) then
       name = mesh_name
     else
@@ -414,23 +420,30 @@ contains
 
     self%mesh_name = name
 
-    call extrusion%get_reference_element( global_mesh, &
-                                          self%reference_element )
+    ! Instantiate appropriate reference element
+    select case (local_mesh%get_nverts_per_cell())
+      case (3)
+        allocate( self%reference_element, source=reference_prism_type() )
+      case (4)
+        allocate( self%reference_element, source=reference_cube_type() )
+      case default
+        write( log_scratch_space, &
+              '("Base mesh with ", I0, " vertices per cell not supported.")' &
+             ) local_mesh%get_nverts_per_cell()
+        call log_event( log_scratch_space, log_level_error )
+    end select
 
-    self%nverts_per_2d_cell = global_mesh%get_nverts_per_cell()
-    self%nverts_per_edge = global_mesh%get_nverts_per_edge()
-    self%nedges_per_2d_cell = global_mesh%get_nedges_per_cell()
+    self%nverts_per_2d_cell = local_mesh%get_nverts_per_cell()
+    self%nverts_per_edge = local_mesh%get_nverts_per_edge()
+    self%nedges_per_2d_cell = local_mesh%get_nedges_per_cell()
 
     global_mesh_id  = global_mesh%get_id()
-    mesh_id_counter = mesh_id_counter+1
-    call self%set_id( mesh_id_counter )
     self%global_mesh_id = global_mesh_id
 
-    self%partition            = partition
     self%local_mesh           => local_mesh
-    self%ncells_2d            = partition%get_num_cells_in_layer()
+    self%ncells_2d            = local_mesh%get_num_cells_in_layer()
     self%ncells_2d_with_ghost = self%ncells_2d &
-                                 + partition%get_num_cells_ghost()
+                                 + local_mesh%get_num_cells_ghost()
     self%nlayers              = extrusion%get_number_of_layers()
     self%ncells               = self%ncells_2d * self%nlayers
     self%ncells_with_ghost    = self%ncells_2d_with_ghost * self%nlayers
@@ -458,10 +471,6 @@ contains
     allocate( self%vert_on_cell(self%reference_element%get_number_vertices(), &
               self%ncells_with_ghost) )
 
-    ! Get global mesh statistics to size connectivity arrays
-    self%nverts_per_2d_cell = global_mesh%get_nverts_per_cell()
-    self%nedges_per_2d_cell = global_mesh%get_nedges_per_cell()
-
     self%nverts_per_cell = 2*self%nedges_per_2d_cell
     self%nedges_per_cell = 2*self%nedges_per_2d_cell + self%nverts_per_2d_cell
     self%nfaces_per_cell = self%nedges_per_2d_cell + 2
@@ -470,9 +479,7 @@ contains
     max_num_vertices_2d  = self%ncells_2d_with_ghost*self%nverts_per_2d_cell
     max_num_edges_2d     = self%ncells_2d_with_ghost*self%nedges_per_2d_cell
 
-
     ! Allocate arrays to hold partition connectivities, as global ids
-
     allocate( self%edge_on_cell_2d_gid (self%nedges_per_2d_cell, &
                                    self%ncells_2d_with_ghost) )
 
@@ -718,7 +725,7 @@ contains
                                    global_mesh%get_vert_cell_owner( verts(j) ) )
 
         if (self%vert_cell_owner(j,i) > 0) then
-          self%vertex_ownership(j,i) = partition%get_cell_owner( &
+          self%vertex_ownership(j,i) = local_mesh%get_cell_owner( &
                                                      self%vert_cell_owner(j,i) )
         else
           self%vertex_ownership(j,i) = get_comm_size() + 1
@@ -732,7 +739,7 @@ contains
                                    global_mesh%get_edge_cell_owner( edges(j) ) )
 
         if (self%edge_cell_owner(j,i) > 0) then
-          self%edge_ownership(j,i) = partition%get_cell_owner( &
+          self%edge_ownership(j,i) = local_mesh%get_cell_owner( &
                                                      self%edge_cell_owner(j,i) )
         else
           self%edge_ownership(j,i) = get_comm_size() + 1
@@ -773,7 +780,7 @@ contains
       gid_from_lid(i) = self%get_gid_from_lid(i)
     end do
 
-    n_panels = partition%get_num_panels_global_mesh()
+    n_panels = local_mesh%get_num_panels_global_mesh()
 
     call set_colours( self%get_ncells_2d(),                                 &
                       self%cell_next,                                       &
@@ -818,17 +825,31 @@ contains
   end function get_reference_element
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> @brief Gets the partition object that was used to create this mesh.
+  !> DEPRECATED: This function used to return the partition object, but the
+  !> partition object has been removed from the mesh. It will be removed from
+  !> the API in a future update where all API changes will be consolidated
+  !> (incremental updates to the API annoy other users). If called, the function
+  !> will now produce a message in the log, but that is well hidden when
+  !> running from a suite - so I have also added a double allocated to make sure
+  !> a traceback is also written to the error log (which is more easily found
+  !> in the suite output).
   !>
-  !> @return Pointer to partition object.
+  !> @return (null) Pointer to a partition object.
   !>
   function get_partition(self) result(partition)
 
     implicit none
     class(mesh_type),     target  :: self
     type(partition_type), pointer :: partition
+    integer(i_def),   allocatable :: ierr(:)
 
-    partition => self%partition
+    partition => null()
+    call log_event( &
+     "Error: The function mesh%get_partition() is deprecated. Do not call it", &
+     LOG_LEVEL_INFO )
+
+    allocate(ierr(1))   ! allocate the same memory twice, to force
+    allocate(ierr(2))   ! an error and generate a stack trace
 
   end function get_partition
 
@@ -1588,7 +1609,7 @@ contains
     logical(l_def)               :: owned
 
     owned = .false.
-    if ( self%partition%get_cell_owner(cell_lid) == &
+    if ( self%local_mesh%get_cell_owner(cell_lid) == &
          get_comm_rank())    owned = .true.
 
   end function is_cell_owned
@@ -1643,7 +1664,7 @@ contains
 
   end function get_num_verts_owned_2d
 
-  !> Returns the maximum depth of the inner halos from the partition object
+  !> Returns the maximum depth of the inner halos from the local partition
   !> @return inner_halo_depth The maximum depth of the inner halo cells
   !============================================================================
   function get_inner_depth( self ) result ( inner_depth )
@@ -1653,12 +1674,12 @@ contains
 
     integer(i_def) :: inner_depth
 
-    inner_depth = self%partition%get_inner_depth()
+    inner_depth = self%local_mesh%get_inner_depth()
 
   end function get_inner_depth
 
   !> Returns the total number of inner halo cells in a particular depth of
-  !> inner halo in a 2d slice from the partition object
+  !> inner halo in a 2d slice from the local partition
   !> @param[in] depth The depth of the inner halo being queried
   !> @return inner_halo_cells The total number of inner halo cells of the
   !>                          particular depth on the local partition
@@ -1674,7 +1695,7 @@ contains
     if( depth > self%get_inner_depth() )then
       inner_cells = 0
     else
-      inner_cells = self%partition%get_num_cells_inner(depth)
+      inner_cells = self%local_mesh%get_num_cells_inner(depth)
     end if
 
   end function get_num_cells_inner
@@ -1697,7 +1718,7 @@ contains
     if( depth > self%get_inner_depth() )then
       last_inner_cell = 0
     else
-      last_inner_cell = self%partition%get_last_inner_cell(depth)
+      last_inner_cell = self%local_mesh%get_last_inner_cell(depth)
     end if
 
   end function get_last_inner_cell
@@ -1727,7 +1748,7 @@ contains
 
   end function get_last_inner_cell_per_colour
 
-  !> Get the number of edge cells from the partition object
+  !> Get the number of edge cells in the local partition
   !> @return edge_cells The total number of edge cells on the
   !> local partition
   !============================================================================
@@ -1738,7 +1759,7 @@ contains
 
     integer(i_def) :: edge_cells
 
-    edge_cells = self%partition%get_num_cells_edge()
+    edge_cells = self%local_mesh%get_num_cells_edge()
 
   end function get_num_cells_edge
 
@@ -1754,7 +1775,7 @@ contains
 
     integer(i_def) :: last_edge_cell
 
-    last_edge_cell = self%partition%get_last_edge_cell()
+    last_edge_cell = self%local_mesh%get_last_edge_cell()
 
   end function get_last_edge_cell
 
@@ -1781,7 +1802,7 @@ contains
 
   end function get_last_edge_cell_per_colour
 
-  !> @details Returns the maximum depth of the halo from the partition object
+  !> @details Returns the maximum depth of the halo on the local partition
   !> @return  The maximum depth of halo cells
   !============================================================================
   function get_halo_depth( self ) result ( halo_depth )
@@ -1790,13 +1811,13 @@ contains
     class(mesh_type), intent(in) :: self
     integer(i_def)               :: halo_depth
 
-    halo_depth = self%partition%get_halo_depth()
+    halo_depth = self%local_mesh%get_halo_depth()
 
   end function get_halo_depth
 
 
   !> @details Returns the total number of halo cells in a particular depth
-  !>          of halo in a 2d slice from the partition object
+  !>          of halo in a 2d slice on the local partition
   !> @param[in] depth       The depth of the halo being queried
   !> @return                The total number of halo cells of the particular
   !>                        depth on the local partition
@@ -1812,7 +1833,7 @@ contains
     if (depth > self%get_halo_depth()) then
       halo_cells = 0
     else
-      halo_cells = self%partition%get_num_cells_halo(depth)
+      halo_cells = self%local_mesh%get_num_cells_halo(depth)
     end if
 
   end function get_num_cells_halo
@@ -1837,7 +1858,7 @@ contains
 
     ! Check arguments, which will abort if out of bounds
     call bounds_check (self, function_name, depth=depth )
-    last_halo_cell = self%partition%get_last_halo_cell(depth)
+    last_halo_cell = self%local_mesh%get_last_halo_cell(depth)
 
   end function get_last_halo_cell_any
 
@@ -1960,7 +1981,7 @@ contains
 
     integer(i_def)             :: last_halo_cell
 
-    last_halo_cell = self%partition%get_last_halo_cell( self%get_halo_depth() )
+    last_halo_cell = self%local_mesh%get_last_halo_cell( self%get_halo_depth() )
 
   end function get_last_halo_cell_deepest
 
@@ -2005,7 +2026,7 @@ contains
     class(mesh_type), intent(in) :: self
     integer(i_def)               :: ghost_cells
 
-    ghost_cells = self%partition%get_num_cells_ghost()
+    ghost_cells = self%local_mesh%get_num_cells_ghost()
 
   end function get_num_cells_ghost
 
@@ -2108,7 +2129,7 @@ contains
     type(mesh_type),  intent(in), pointer :: target_mesh
 
 
-    type(partition_type),       pointer :: target_partition   => null()
+    type(local_mesh_type),      pointer :: target_local_mesh  => null()
     type(global_mesh_type),     pointer :: source_global_mesh => null()
     type(global_mesh_map_type), pointer :: global_mesh_map    => null()
 
@@ -2145,8 +2166,8 @@ contains
     if (.not. mesh_map_exists) then
 
       ! Get the target meshes lid-gid map
-      target_partition  => target_mesh%get_partition()
-      ntarget_cells     =  target_partition%get_num_cells_in_layer()
+      target_local_mesh  => target_mesh%get_local_mesh()
+      ntarget_cells      =  target_local_mesh%get_num_cells_in_layer()
 
       allocate(target_lid_gid_map(ntarget_cells))
 
@@ -2438,7 +2459,6 @@ contains
     type(uniform_extrusion_type) :: extrusion
 
     self%local_mesh => local_mesh
-    self%partition = partition_type()
     self%nverts_per_cell = 8
     self%nedges_per_cell = 12
     self%nfaces_per_cell = 6
@@ -2491,7 +2511,7 @@ contains
     end if
 
     self%ncells_2d_with_ghost = self%ncells_2d &
-                              + self%partition%get_num_cells_ghost()
+                              + self%local_mesh%get_num_cells_ghost()
     self%ncells_with_ghost    = self%ncells_2d_with_ghost * self%nlayers
 
 

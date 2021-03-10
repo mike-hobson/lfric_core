@@ -45,7 +45,6 @@ module extrusion_mod
     procedure, public :: get_atmosphere_bottom
     procedure, public :: get_atmosphere_top
     procedure, public :: get_number_of_layers
-    procedure, public :: get_reference_element
     procedure(extrude_method), public, deferred :: extrude
 
     procedure, public :: extrusion_constructor
@@ -416,38 +415,6 @@ contains
     this%number_of_layers  = number_of_layers
 
   end subroutine extrusion_constructor
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> @brief Gets the reference element for this extrusion given a particular
-  !>        base mesh.
-  !>
-  !> @param[in] mesh Base mesh object.
-  !> @param[out] reference_element Shape of a 3D element given the extrusion.
-  !>
-  subroutine get_reference_element( this, mesh, reference_element )
-
-    use reference_element_mod, only : reference_prism_type, &
-                                      reference_cube_type
-    implicit none
-
-    class(extrusion_type),   intent(in) :: this
-    class(global_mesh_type), intent(in) :: mesh
-    class(reference_element_type), &
-                             intent(out), allocatable :: reference_element
-
-    select case (mesh%get_nverts_per_cell())
-      case (3)
-        allocate( reference_element, source=reference_prism_type() )
-      case (4)
-        allocate( reference_element, source=reference_cube_type() )
-      case default
-        write( log_scratch_space, &
-              '("Base mesh with ", I0, " vertices per cell not supported.")' &
-             ) mesh%get_nverts_per_cell()
-        call log_event( log_scratch_space, log_level_error )
-    end select
-
-  end subroutine get_reference_element
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Gets the bottom of the atmosphere or the surface of the planet.

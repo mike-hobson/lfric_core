@@ -99,6 +99,22 @@ contains
     type(partition_type) :: partition
     type(local_mesh_type) :: local_mesh
     character(str_def) :: name
+
+    integer(i_def) :: nverts_per_edge
+    integer(i_def) :: nedges_per_cell
+    integer(i_def) :: nverts_per_cell
+    integer(i_def) :: num_panels_global_mesh
+    integer(i_def) :: num_cells_in_layer
+    integer(i_def) :: inner_depth
+    integer(i_def) :: halo_depth
+    integer(i_def) :: num_cells_inner
+    integer(i_def) :: last_inner_cell
+    integer(i_def) :: num_cells_edge
+    integer(i_def) :: last_edge_cell
+    integer(i_def) :: num_cells_halo
+    integer(i_def) :: last_halo_cell
+    integer(i_def) :: num_cells_ghost
+    integer(i_def) :: cell_owner
     integer(i_def) :: lid
     integer(i_def) :: gid
 
@@ -141,11 +157,54 @@ contains
     name = local_mesh%get_mesh_name()
     @assertEqual( trim(mesh_name), trim(name) )
 
+    ! Check the local_mesh has the correct properties
+    nverts_per_edge = local_mesh%get_nverts_per_edge()
+    @assertEqual( 2, nverts_per_edge )
+    nedges_per_cell = local_mesh%get_nedges_per_cell()
+    @assertEqual( 4, nedges_per_cell )
+    nverts_per_cell = local_mesh%get_nverts_per_cell()
+    @assertEqual( 4, nverts_per_cell )
+    num_panels_global_mesh = local_mesh%get_num_panels_global_mesh()
+    @assertEqual( 1, num_panels_global_mesh )
+
     select case ( num_processes )
 
-      ! Check the cell numbers in the local mesh are correct and
-      ! in the correct order (gid <-> lid is correct)
+    ! Test functionality of the local_mesh object we've just created on both 1
+    ! and 4 processes
       case (1)
+        num_cells_in_layer = local_mesh%get_num_cells_in_layer()
+        @assertEqual( 64, num_cells_in_layer )
+
+        inner_depth = local_mesh%get_inner_depth()
+        @assertEqual( 2, inner_depth )
+
+        num_cells_inner = local_mesh%get_num_cells_inner(1)
+        @assertEqual( 20, num_cells_inner )
+
+        last_inner_cell = local_mesh%get_last_inner_cell(1)
+        @assertEqual( 36, last_inner_cell )
+
+        num_cells_edge = local_mesh%get_num_cells_edge()
+        @assertEqual( 28, num_cells_edge )
+
+        last_edge_cell = local_mesh%get_last_edge_cell()
+        @assertEqual( 64, last_edge_cell )
+
+        halo_depth = local_mesh%get_halo_depth()
+        @assertEqual( 2, halo_depth )
+
+        num_cells_halo = local_mesh%get_num_cells_halo(1)
+        @assertEqual( 0, num_cells_halo )
+
+        last_halo_cell = local_mesh%get_last_halo_cell(1)
+        @assertEqual( 64, last_halo_cell )
+
+        num_cells_ghost = local_mesh%get_num_cells_ghost()
+        @assertEqual( 0, num_cells_ghost )
+
+        cell_owner = local_mesh%get_cell_owner( 1 )
+        @assertEqual( 0, cell_owner )
+
         lid = 1
         gid = local_mesh%get_gid_from_lid( lid )
         @assertEqual( 19, gid )
@@ -155,6 +214,39 @@ contains
         @assertEqual( 8, lid )
 
       case (4)
+        num_cells_in_layer = local_mesh%get_num_cells_in_layer()
+        @assertEqual( 64, num_cells_in_layer )
+
+        inner_depth = local_mesh%get_inner_depth()
+        @assertEqual( 2, inner_depth )
+
+        num_cells_inner = local_mesh%get_num_cells_inner(1)
+        @assertEqual( 4, num_cells_inner )
+
+        last_inner_cell = local_mesh%get_last_inner_cell(1)
+        @assertEqual( 4, last_inner_cell )
+
+        num_cells_edge = local_mesh%get_num_cells_edge()
+        @assertEqual( 12, num_cells_edge )
+
+        last_edge_cell = local_mesh%get_last_edge_cell()
+        @assertEqual( 16, last_edge_cell )
+
+        halo_depth = local_mesh%get_halo_depth()
+        @assertEqual( 2, halo_depth )
+
+        num_cells_halo = local_mesh%get_num_cells_halo(1)
+        @assertEqual( 20, num_cells_halo )
+
+        last_halo_cell = local_mesh%get_last_halo_cell(1)
+        @assertEqual( 36, last_halo_cell )
+
+        num_cells_ghost = local_mesh%get_num_cells_ghost()
+        @assertEqual( 0, num_cells_ghost )
+
+        cell_owner = local_mesh%get_cell_owner(1)
+        @assertEqual( this%local_rank, cell_owner )
+
         lid = 1
         gid = local_mesh%get_gid_from_lid( lid )
         select case ( this%local_rank )

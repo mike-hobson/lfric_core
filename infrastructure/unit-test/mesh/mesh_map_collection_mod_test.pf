@@ -259,9 +259,9 @@ contains
 
     type (mesh_map_collection_type) :: mesh_maps
 
-    type (mesh_map_type),  pointer :: mesh_map  => null()
-    type (mesh_map_type),  pointer :: mesh_map2 => null()
-    type (partition_type), pointer :: partition => null()
+    type (mesh_map_type),   pointer :: mesh_map  => null()
+    type (mesh_map_type),   pointer :: mesh_map2 => null()
+    type (local_mesh_type), pointer :: local_mesh => null()
 
     integer(i_def) :: i
     integer(i_def) :: ncells_2d
@@ -269,8 +269,8 @@ contains
 
     integer(i_def), allocatable :: map(:,:)
 
-    partition => this%coarse_mesh % get_partition()
-    ncells_2d = partition%get_num_cells_in_layer()
+    local_mesh => this%coarse_mesh % get_local_mesh()
+    ncells_2d = local_mesh%get_num_cells_in_layer()
 
     mesh_maps = mesh_map_collection_type()
 

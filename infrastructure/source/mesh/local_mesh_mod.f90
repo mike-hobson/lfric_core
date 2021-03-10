@@ -25,24 +25,45 @@ module local_mesh_mod
     private
   ! Tag name of mesh
     character(str_def)          :: mesh_name
+  ! number of vertices on each cell
+    integer(i_def)     :: nverts_per_cell
+  ! number of vertices on each edge
+    integer(i_def)     :: nverts_per_edge
+  ! number of edges on each cell
+    integer(i_def)     :: nedges_per_cell
+  ! number of cells in a 2d slice of the local partition.
+    integer(i_def)     :: num_cells_in_layer
   ! A List of global cell ids known to this local mesh, ordered with inner
   ! cells first followed by the edge cells and finally the halo cells ordered
   ! by depth of halo
     integer(i_def), allocatable :: global_cell_id( : )
+  ! A list of the ranks that own all the cells known to this partition
+  ! held in the order of cells in the <code>global_cell_id</code> array
+    integer(i_def), allocatable :: cell_owner( : )
   ! The number of "inner" cells in the <code>global_cell_id</code> list -
   ! one entry for each depth of inner halo
     integer(i_def), allocatable :: num_inner( : )
+  ! The index of the last "inner" cell in the <code>global_cell_id</code> list -
+  ! one entry for each depth of inner halo
+    integer(i_def), allocatable :: last_inner_cell( : )
   ! The depth to which inner halos are generated
     integer(i_def)              :: inner_depth
   ! The number of "edge" cells in the <code>global_cell_id</code> list
     integer(i_def)              :: num_edge
+  ! The index of the last "edge" cell in the <code>global_cell_id</code> list
+    integer(i_def)              :: last_edge_cell
   ! The number of "halo" cells in the <code>global_cell_id</code> list -
   ! one entry for each depth of halo
     integer(i_def), allocatable :: num_halo( : )
+  ! The index of the last "halo" cell in the <code>global_cell_id</code> list -
+  ! one entry for each depth of halo
+    integer(i_def), allocatable :: last_halo_cell( : )
   ! The depth to which halos are generated
     integer(i_def)              :: halo_depth
   ! The number of "ghost" cells in the <code>global_cell_id</code> list
     integer(i_def)              :: num_ghost
+  ! Number of panels in the global mesh
+    integer(i_def)              :: npanels
   contains
     procedure, public :: initialise_full
     procedure, public :: initialise_unit_test
@@ -50,6 +71,21 @@ module local_mesh_mod
                                        initialise_unit_test
     procedure, public :: clear
     procedure, public :: get_mesh_name
+    procedure, public :: get_nverts_per_cell
+    procedure, public :: get_nverts_per_edge
+    procedure, public :: get_nedges_per_cell
+    procedure, public :: get_num_cells_in_layer
+    procedure, public :: get_inner_depth
+    procedure, public :: get_num_cells_inner
+    procedure, public :: get_last_inner_cell
+    procedure, public :: get_num_cells_edge
+    procedure, public :: get_last_edge_cell
+    procedure, public :: get_halo_depth
+    procedure, public :: get_num_cells_halo
+    procedure, public :: get_last_halo_cell
+    procedure, public :: get_num_cells_ghost
+    procedure, public :: get_cell_owner
+    procedure, public :: get_num_panels_global_mesh
     procedure, public :: get_gid_from_lid
     procedure, public :: get_lid_from_gid
     final :: local_mesh_destructor
@@ -86,6 +122,7 @@ contains
     type(partition_type),   intent(in)           :: partition
     character(str_def),     intent(in), optional :: mesh_name
     integer(i_def) :: depth
+    integer(i_def) :: cell
 
     ! Set name from either the given name - or the name of the global mesh
     if (present(mesh_name)) then
@@ -99,23 +136,40 @@ contains
     local_mesh_id_counter = local_mesh_id_counter + 1
     call self%set_id( local_mesh_id_counter )
 
+    self%nverts_per_cell = global_mesh%get_nverts_per_cell()
+    self%nverts_per_edge = global_mesh%get_nverts_per_edge()
+    self%nedges_per_cell = global_mesh%get_nedges_per_cell()
+    self%num_cells_in_layer = partition%get_num_cells_in_layer()
+
     self%global_cell_id = partition%get_global_cell_id()
 
     self%inner_depth = partition%get_inner_depth()
     allocate( self%num_inner(self%inner_depth) )
+    allocate( self%last_inner_cell(self%inner_depth) )
     do depth = 1, self%inner_depth
       self%num_inner( depth ) = partition%get_num_cells_inner( depth )
+      self%last_inner_cell( depth ) = partition%get_last_inner_cell( depth )
     end do
 
     self%num_edge = partition%get_num_cells_edge()
+    self%last_edge_cell = partition%get_last_edge_cell()
 
     self%halo_depth = partition%get_halo_depth()
     allocate( self%num_halo(self%halo_depth) )
+    allocate( self%last_halo_cell(self%halo_depth) )
     do depth = 1, self%halo_depth
       self%num_halo( depth ) = partition%get_num_cells_halo( depth )
+      self%last_halo_cell( depth ) = partition%get_last_halo_cell( depth )
     end do
 
     self%num_ghost = partition%get_num_cells_ghost()
+
+    allocate( self%cell_owner(self%num_cells_in_layer+self%num_ghost) )
+    do cell = 1,self%num_cells_in_layer+self%num_ghost
+      self%cell_owner(cell) = partition%get_cell_owner(cell)
+    end do
+
+    self%npanels = partition%get_num_panels_global_mesh()
 
   end subroutine initialise_full
 
@@ -134,22 +188,39 @@ contains
     local_mesh_id_counter = local_mesh_id_counter + 1
     call self%set_id( local_mesh_id_counter )
 
+    self%nverts_per_cell = 4
+    self%nverts_per_edge = 2
+    self%nedges_per_cell = 4
+    self%num_cells_in_layer = 9
+
     allocate( self%global_cell_id(9) )
     self%global_cell_id = [1,2,3,4,5,6,7,8,9]
 
     self%inner_depth = 1
     allocate( self%num_inner(self%inner_depth) )
+    allocate( self%last_inner_cell(self%inner_depth) )
     self%num_inner(1) = 9
+    self%last_inner_cell(1) = 9
 
     self%num_edge = 0
+    self%last_edge_cell = 9
 
     self%halo_depth  = 3
     allocate( self%num_halo(self%halo_depth) )
     self%num_halo(1) = 0
     self%num_halo(2) = 0
     self%num_halo(3) = 0
+    allocate( self%last_halo_cell(self%halo_depth) )
+    self%last_halo_cell(1) = 9
+    self%last_halo_cell(2) = 9
+    self%last_halo_cell(3) = 9
 
     self%num_ghost = 0
+
+    allocate( self%cell_owner(self%num_cells_in_layer+self%num_ghost) )
+    self%cell_owner = 0
+
+    self%npanels = 1
 
   end subroutine initialise_unit_test
 
@@ -186,6 +257,309 @@ contains
     mesh_name = self%mesh_name
 
   end function get_mesh_name
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets the number of vertices per 2D-cell.
+  !>
+  !> @return Number of vertices per 2D-cell.
+  !>
+  function get_nverts_per_cell( self ) result (nverts_per_cell)
+
+    implicit none
+    class(local_mesh_type), intent(in) :: self
+    integer(i_def)                     :: nverts_per_cell
+
+    nverts_per_cell = self%nverts_per_cell
+
+  end function get_nverts_per_cell
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets the number of vertices per 2D-edge.
+  !>
+  !> @return Number of vertices per 2D-edge.
+  !>
+  function get_nverts_per_edge( self ) result (nverts_per_edge)
+
+    implicit none
+    class(local_mesh_type), intent(in) :: self
+    integer(i_def)                     :: nverts_per_edge
+
+    nverts_per_edge = self%nverts_per_edge
+
+  end function get_nverts_per_edge
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets the number of edges on each cell.
+  !>
+  !> @return Number of edges per 2D-cell.
+  !>
+  function get_nedges_per_cell( self ) result (nedges_per_cell)
+
+    implicit none
+    class(local_mesh_type), intent(in) :: self
+    integer(i_def)                     :: nedges_per_cell
+
+    nedges_per_cell = self%nedges_per_cell
+
+  end function get_nedges_per_cell
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets the total of all inner, edge and all halo cells in a 2d slice
+  !>        on the local partition.
+  !>
+  !> @return The total number of the all inner, edge and halo cells on the
+  !>         local partition.
+  !>
+  function get_num_cells_in_layer( self ) result ( num_cells )
+
+    implicit none
+
+    class(local_mesh_type), intent(in) :: self
+
+    integer(i_def) :: num_cells
+
+    num_cells = self%num_cells_in_layer
+
+  end function get_num_cells_in_layer
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets the maximum depth of the inner halos.
+  !>
+  !> @return The maximum depth of the inner halos.
+  !>
+  function get_inner_depth( self ) result ( inner_depth )
+
+    implicit none
+
+    class(local_mesh_type), intent(in) :: self
+
+    integer(i_def) :: inner_depth
+
+    inner_depth = self%inner_depth
+
+  end function get_inner_depth
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets number of cells in an inner halo.
+  !>
+  !> @details Returns the total number of inner halo cells in a particular
+  !>          depth of inner halo in a 2d slice on the local partition.
+  !>
+  !> @param[in] depth The level of inner halo being queried.
+  !>
+  !> @return Total number of inner halo cells at a particular depth on
+  !>         the local partition. If depth is greater than the actual depth
+  !>         of the halo then 0 will be returned.
+  !>
+  function get_num_cells_inner( self, depth ) result ( inner_cells )
+
+    implicit none
+
+    class(local_mesh_type), intent(in) :: self
+
+    integer(i_def), intent(in) :: depth
+    integer(i_def)             :: inner_cells
+
+    if( depth > self%inner_depth )then
+      inner_cells = 0
+    else
+      inner_cells = self%num_inner(depth)
+    end if
+
+  end function get_num_cells_inner
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets the index of the last cell in an inner halo.
+  !>
+  !> @details Returns the index of the last cell in a particular depth of
+  !>          inner halo in a 2d slice on the local partition.
+  !>
+  !> @param[in] depth The level of inner halo being queried.
+  !>
+  !> @return Index of the last cell in the particular depth of inner halo on
+  !>         the local partition.
+  !>
+  function get_last_inner_cell( self, depth ) result ( last_inner_cell )
+
+    implicit none
+
+    class(local_mesh_type), intent(in) :: self
+
+    integer(i_def), intent(in) :: depth
+    integer(i_def)             :: last_inner_cell
+
+    if( depth > self%inner_depth )then
+      last_inner_cell = 0
+    else
+      last_inner_cell = self%last_inner_cell(depth)
+    end if
+
+  end function get_last_inner_cell
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets the total number of edge cells in a 2d slice on the local
+  !>        partition.
+  !>
+  !> @return Total number of "edge" cells on the local partition.
+  !>
+  function get_num_cells_edge( self ) result ( edge_cells )
+
+    implicit none
+
+    class(local_mesh_type), intent(in) :: self
+
+    integer(i_def) :: edge_cells
+
+    edge_cells = self%num_edge
+
+  end function get_num_cells_edge
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets the index of the last edge cell in a 2d slice on the local
+  !>        partition.
+  !>
+  !> @return Index of the last of "edge" cell on the local partition.
+  !>
+  function get_last_edge_cell( self ) result ( last_edge_cell )
+
+    implicit none
+
+    class(local_mesh_type), intent(in) :: self
+
+    integer(i_def) :: last_edge_cell
+
+    last_edge_cell = self%last_edge_cell
+
+  end function get_last_edge_cell
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets the maximum depth of the halo of this partition.
+  !>
+  !> @return Maximum depth of halo cells.
+  !>
+  function get_halo_depth( self ) result ( halo_depth )
+
+    implicit none
+
+    class(local_mesh_type), intent(in) :: self
+
+    integer(i_def) :: halo_depth
+
+    halo_depth = self%halo_depth
+
+  end function get_halo_depth
+
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets number of cells in a halo.
+  !>
+  !> @details Returns the total number of halo cells in a particular depth
+  !>          of halo in a 2d slice on the local partition.
+  !>
+  !> @param[in] depth The depth of the halo being queried.
+  !>
+  !> @return Total number of halo cells of the particular depth on the local
+  !>         partition.
+  !>
+  function get_num_cells_halo( self, depth ) result ( halo_cells )
+
+    implicit none
+
+    class(local_mesh_type), intent(in) :: self
+
+    integer(i_def), intent(in) :: depth
+    integer(i_def)             :: halo_cells
+
+    if( depth > self%halo_depth )then
+      halo_cells = 0
+    else
+      halo_cells = self%num_halo(depth)
+    end if
+
+  end function get_num_cells_halo
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets the index of the last cell in a halo.
+  !>
+  !> @details Returns the index of the last cell in a particular depth of halo
+  !>          in a 2d slice on the local partition.
+  !>
+  !> @param[in] depth The depth of the halo being queried.
+  !>
+  !> @return Index of the last cell in the particular depth of halo on the
+  !>         local partition.
+  !>
+  function get_last_halo_cell( self, depth ) result ( last_halo_cell )
+
+    implicit none
+
+    class(local_mesh_type), intent(in) :: self
+
+    integer(i_def), intent(in) :: depth
+    integer(i_def)             :: last_halo_cell
+
+    if( depth > self%halo_depth )then
+      last_halo_cell = 0
+    else
+      last_halo_cell = self%last_halo_cell(depth)
+    end if
+
+  end function get_last_halo_cell
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets the total number of ghost cells in a slice around the local
+  !>        partition.
+  !>
+  !> @return Total number of ghost cells around the local partition.
+  !>
+  function get_num_cells_ghost( self ) result ( ghost_cells )
+
+    implicit none
+
+    class(local_mesh_type), intent(in) :: self
+
+    integer(i_def) :: ghost_cells
+
+    ghost_cells = self%num_ghost
+
+  end function get_num_cells_ghost
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets the owner of a cell on the local partition.
+  !>
+  !> @param[in] cell_number Local ID of of the cell being queried.
+  !>
+  !> @return Owner of the given cell.
+  !>
+  function get_cell_owner( self, cell_number ) result ( cell_owner )
+
+    implicit none
+
+    class(local_mesh_type), intent(in) :: self
+
+    integer(i_def), intent(in) :: cell_number
+
+    integer(i_def) :: cell_owner
+
+    cell_owner=self%cell_owner(cell_number)
+
+  end function get_cell_owner
+
+  !---------------------------------------------------------------------------
+  !> @brief Gets the number of panels in the global mesh.
+  !>
+  !> @return Number of panels.
+  !>
+  function get_num_panels_global_mesh ( self ) result ( number_of_panels )
+
+    implicit none
+
+    class(local_mesh_type), intent(in) :: self
+    integer(i_def) :: number_of_panels
+
+    number_of_panels = self%npanels
+
+  end function get_num_panels_global_mesh
 
   !---------------------------------------------------------------------------
   !> @brief Gets the global index of the cell that corresponds to the given

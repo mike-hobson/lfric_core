@@ -41,7 +41,7 @@ module mesh_mod_test
             test_get_scalar,   test_get_integer,  test_get_boolean,  &
             test_get_1d_array, test_get_2d_array, test_get_3d_array, &
             test_get_domain,                                         &
-            test_get_partition, test_get_global_mesh_id,             &
+            test_get_local_mesh, test_get_global_mesh_id,            &
             test_mesh_map_retrieval
 
   @testCase
@@ -59,7 +59,7 @@ module mesh_mod_test
     procedure :: test_get_1d_array
     procedure :: test_get_2d_array
     procedure :: test_get_3d_array
-    procedure :: test_get_partition
+    procedure :: test_get_local_mesh
     procedure :: test_get_global_mesh_id
     procedure :: test_mesh_map_retrieval
 
@@ -726,14 +726,14 @@ contains
 
 !==============================================================================
   @Test( npes=[1] )
-  subroutine test_get_partition( this )
+  subroutine test_get_local_mesh( this )
 
     implicit none
 
     class( mesh_test_type ), intent( inout ) :: this
     type(mesh_type)      :: mesh_1
-    type(local_mesh_type), pointer :: local_mesh_ptr
-    type(partition_type), pointer :: test_partition => null()
+    type(local_mesh_type), pointer :: local_mesh_ptr => null()
+    type(local_mesh_type), pointer :: test_local_mesh => null()
 
     local_mesh_ptr => this%get_local_mesh_ptr()
 
@@ -743,17 +743,13 @@ contains
                         this%extrusion )
 
 
-    test_partition => mesh_1%get_partition()
+    test_local_mesh => mesh_1%get_local_mesh()
 
-    ! Check the returned pointer to a partition is not null
-    @assertTrue( associated(test_partition) )
+    ! Check the returned pointer to a local mesh is the same as the
+    ! one the mesh was created from
+    @assertTrue( associated(test_local_mesh, local_mesh_ptr) )
 
-    ! Check the partition in mesh is the same shape as the original partition
-    @assertEqual (test_partition%get_inner_depth(), this%partition%get_inner_depth())
-    @assertEqual (test_partition%get_last_edge_cell(), this%partition%get_last_edge_cell())
-    @assertEqual (test_partition%get_halo_depth(), this%partition%get_halo_depth())
-
-  end subroutine test_get_partition
+  end subroutine test_get_local_mesh
 
 
 !==============================================================================

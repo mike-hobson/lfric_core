@@ -60,7 +60,7 @@ class mesh_mod::mesh_type {
   +get_mesh_name() : string
   +get_reference_element() : reference_element_type <<pointer>>
   +get_global_mesh_id() : integer
-  +get_partition() : partition_type <<pointer>>
+  +get_local_mesh() : local_mesh_type <<pointer>>
   +get_nlayers() : integer
   +get_ncells_2d() : integer
   +get_ncells_2d_with_ghost() : integer

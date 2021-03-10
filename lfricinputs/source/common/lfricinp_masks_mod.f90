@@ -18,11 +18,11 @@ CONTAINS
 
 SUBROUTINE lfricinp_init_masks(stashcode_land_mask)
 
-USE log_mod,       ONLY: log_event, log_scratch_space, LOG_LEVEL_INFO
-USE field_mod,     ONLY: lfric_field_type => field_type,                       &
-                         lfric_proxy_type => field_proxy_type
-USE mesh_mod,      ONLY: mesh_type
-USE partition_mod, ONLY: partition_type
+USE log_mod,        ONLY: log_event, log_scratch_space, LOG_LEVEL_INFO
+USE field_mod,      ONLY: lfric_field_type => field_type,                      &
+                          lfric_proxy_type => field_proxy_type
+USE local_mesh_mod, ONLY: local_mesh_type
+USE mesh_mod,       ONLY: mesh_type
 
 USE lfricinp_lfric_driver_mod,         ONLY: local_rank
 USE lfricinp_check_shumlib_status_mod, ONLY: shumlib
@@ -34,9 +34,9 @@ USE f_shum_field_mod, ONLY: shum_field_type
 
 IMPLICIT NONE
 
-! LFRic mesh and local partition
+! LFRic mesh and local mesh
 TYPE(mesh_type), POINTER :: mesh
-TYPE(partition_type), POINTER :: partition
+TYPE(local_mesh_type), POINTER :: local_mesh 
 
 ! Ancil fields
 TYPE(lfric_field_type), POINTER :: ancil_field
@@ -82,15 +82,15 @@ ELSE
   ancil_field_proxy = ancil_field%get_proxy()
   dim_1d = SIZE(ancil_field_proxy%data)
   !
-  ! Get local partition LFRic mask is defined on
+  ! Get local_mesh LFRic mask is defined on
   mesh => ancil_field%get_mesh()
-  partition => mesh%get_partition()
+  local_mesh => mesh%get_local_mesh()
   !
   ! Set up LFRic logical land mask
   ALLOCATE(lfric_land_mask(dim_1d))
   DO i = 1, dim_1d
     lfric_land_mask(i) = .FALSE.
-    IF (partition%get_cell_owner(i) == local_rank ) THEN
+    IF (local_mesh%get_cell_owner(i) == local_rank ) THEN
       IF (ancil_field_proxy%data(i) > 0.0) THEN
         lfric_land_mask(i) = .TRUE.
       END IF
@@ -101,15 +101,15 @@ ELSE
   ALLOCATE(lfric_maritime_mask(dim_1d))
   DO i = 1, dim_1d
     lfric_maritime_mask(i) = .FALSE.
-    IF (partition%get_cell_owner(i) == local_rank ) THEN
+    IF (local_mesh%get_cell_owner(i) == local_rank ) THEN
       IF (ancil_field_proxy%data(i) < 1.0) THEN
         lfric_maritime_mask(i) = .TRUE.
       END IF
     END IF
   END DO
   !
-  ! Nullify LFRic mesh and partition pointers
-  NULLIFY(mesh, partition)
+  ! Nullify LFRic mesh and local_mesh pointers
+  NULLIFY(mesh, local_mesh)
 
   ! Set up UM mask dimensions
   dim_2dx = SIZE(um_input_fields(1)%rdata,DIM=1)

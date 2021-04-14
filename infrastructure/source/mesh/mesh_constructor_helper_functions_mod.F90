@@ -268,7 +268,6 @@ contains
   !> @param[out] face_on_cell    All face ids on any cell
   !> @param[out] edge_on_cell    All edge ids on any cell
   !> @param[in]  ncells_2d       Number of cells in 2D mesh.
-  !> @param[in]  ncells_3d       Number of cells in 3D mesh.
   !> @param[in]  nfaces_per_cell Number of faces on 3d-cell
   !> @param[in]  nedges_per_cell Number of edges on 3d-cell
   !> @param[in]  cell_next       Cell ids of all cells adjacent to any cell
@@ -278,7 +277,6 @@ contains
   subroutine mesh_connectivity( face_on_cell,    &
                                 edge_on_cell,    &
                                 ncells_2d,       &
-                                ncells_3d,       &
                                 nfaces_per_cell, &
                                 nedges_per_cell, &
                                 cell_next,       &
@@ -294,7 +292,6 @@ contains
     implicit none
 
     integer(i_def), intent(in)  :: ncells_2d
-    integer(i_def), intent(in)  :: ncells_3d
     integer(i_def), intent(in)  :: nfaces_per_cell
     integer(i_def), intent(in)  :: nedges_per_cell
     integer(i_def), intent(in)  :: cell_next(:, :)

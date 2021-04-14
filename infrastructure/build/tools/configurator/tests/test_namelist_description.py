@@ -52,6 +52,8 @@ module test_config_mod
   use mpi_mod,       only: broadcast
   use mpi,           only: MPI_SUCCESS
 
+  use constants_mod, only: cmdi, emdi, imdi, rmdi
+
   implicit none
 
   private
@@ -99,8 +101,6 @@ contains
   !>
   integer(i_native) function enum_from_key( key )
 
-    use constants_mod, only: emdi, imdi
-
     implicit none
 
     character(*), intent(in) :: key
@@ -139,8 +139,6 @@ contains
   !> @param[in] value Enumeration value.
   !>
   character(str_def) function key_from_enum( value )
-
-    use constants_mod, only: emdi, imdi
 
     implicit none
 
@@ -191,8 +189,6 @@ contains
   !
   subroutine read_namelist( file_unit, local_rank, &
                             dummy_enum )
-
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
 
     implicit none
 
@@ -303,8 +299,6 @@ contains
   !>
   subroutine postprocess_test_namelist()
 
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-
     implicit none
 
 
@@ -341,8 +335,6 @@ contains
   !> Clear out any allocated memory
   !>
   subroutine test_final()
-
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
 
     implicit none
 
@@ -404,6 +396,8 @@ module test_config_mod
   use mpi_mod,       only: broadcast
   use mpi,           only: MPI_SUCCESS
 
+  use constants_mod, only: cmdi, emdi, imdi, rmdi
+
   implicit none
 
   private
@@ -437,8 +431,6 @@ contains
   ! Reads the namelist file.
   !
   subroutine read_namelist( file_unit, local_rank )
-
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
 
     implicit none
 
@@ -478,8 +470,6 @@ contains
   !>
   subroutine postprocess_test_namelist()
 
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-
     implicit none
 
 
@@ -517,8 +507,6 @@ contains
   !>
   subroutine test_final()
 
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-
     implicit none
 
     foo = imdi
@@ -547,6 +535,8 @@ module test_config_mod
                          , LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_INFO
   use mpi_mod,       only: broadcast
   use mpi,           only: MPI_SUCCESS
+
+  use constants_mod, only: cmdi, emdi, imdi, rmdi
 
   implicit none
 
@@ -582,8 +572,6 @@ contains
   ! Reads the namelist file.
   !
   subroutine read_namelist( file_unit, local_rank )
-
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
 
     implicit none
 
@@ -629,8 +617,6 @@ contains
   !>
   subroutine postprocess_test_namelist()
 
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-
     implicit none
 
 
@@ -667,8 +653,6 @@ contains
   !> Clear out any allocated memory
   !>
   subroutine test_final()
-
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
 
     implicit none
 
@@ -714,6 +698,8 @@ module enum_config_mod
   use mpi_mod,       only: broadcast
   use mpi,           only: MPI_SUCCESS
 
+  use constants_mod, only: cmdi, emdi, imdi, rmdi
+
   implicit none
 
   private
@@ -748,8 +734,6 @@ contains
   !> @param[in] key Enumeration key.
   !>
   integer(i_native) function value_from_key( key )
-
-    use constants_mod, only: emdi, imdi
 
     implicit none
 
@@ -789,8 +773,6 @@ contains
   !> @param[in] value Enumeration value.
   !>
   character(str_def) function key_from_value( value )
-
-    use constants_mod, only: emdi, imdi
 
     implicit none
 
@@ -842,8 +824,6 @@ contains
   subroutine read_namelist( file_unit, local_rank, &
                             dummy_value )
 
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-
     implicit none
 
     integer(i_native), intent(in) :: file_unit
@@ -887,8 +867,6 @@ contains
   !>
   subroutine postprocess_enum_namelist()
 
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-
     implicit none
 
 
@@ -926,8 +904,6 @@ contains
   !>
   subroutine enum_final()
 
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-
     implicit none
 
     value = int(imdi,i_native)
@@ -964,6 +940,8 @@ module twoenum_config_mod
                          , LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_INFO
   use mpi_mod,       only: broadcast
   use mpi,           only: MPI_SUCCESS
+
+  use constants_mod, only: cmdi, emdi, imdi, rmdi
 
   implicit none
 
@@ -1013,8 +991,6 @@ contains
   !>
   integer(i_native) function first_from_key( key )
 
-    use constants_mod, only: emdi, imdi
-
     implicit none
 
     character(*), intent(in) :: key
@@ -1054,8 +1030,6 @@ contains
   !>
   character(str_def) function key_from_first( value )
 
-    use constants_mod, only: emdi, imdi
-
     implicit none
 
     integer(i_native), intent(in) :: value
@@ -1089,8 +1063,6 @@ contains
   !> @param[in] key Enumeration key.
   !>
   integer(i_native) function second_from_key( key )
-
-    use constants_mod, only: emdi, imdi
 
     implicit none
 
@@ -1130,8 +1102,6 @@ contains
   !> @param[in] value Enumeration value.
   !>
   character(str_def) function key_from_second( value )
-
-    use constants_mod, only: emdi, imdi
 
     implicit none
 
@@ -1185,8 +1155,6 @@ contains
                             dummy_first, &
                             dummy_second )
 
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-
     implicit none
 
     integer(i_native), intent(in) :: file_unit
@@ -1237,8 +1205,6 @@ contains
   !>
   subroutine postprocess_twoenum_namelist()
 
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-
     implicit none
 
 
@@ -1275,8 +1241,6 @@ contains
   !> Clear out any allocated memory
   !>
   subroutine twoenum_final()
-
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
 
     implicit none
 
@@ -1317,6 +1281,9 @@ module teapot_config_mod
   use mpi_mod,       only: broadcast
   use mpi,           only: MPI_SUCCESS
 
+  use constants_mod, only: cmdi, emdi, imdi, rmdi
+  use fridge_config_mod, only: milk
+
   implicit none
 
   private
@@ -1353,9 +1320,6 @@ contains
   ! Reads the namelist file.
   !
   subroutine read_namelist( file_unit, local_rank )
-
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-    use fridge_config_mod, only: milk
 
     implicit none
 
@@ -1408,9 +1372,6 @@ contains
   !>
   subroutine postprocess_teapot_namelist()
 
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-    use fridge_config_mod, only: milk
-
     implicit none
 
 
@@ -1447,8 +1408,6 @@ contains
   !> Clear out any allocated memory
   !>
   subroutine teapot_final()
-
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
 
     implicit none
 
@@ -1498,6 +1457,8 @@ module cheese_config_mod
   use mpi_mod,       only: broadcast
   use mpi,           only: MPI_SUCCESS
 
+  use constants_mod, only: cmdi, emdi, FUDGE, imdi, rmdi
+
   implicit none
 
   private
@@ -1532,8 +1493,6 @@ contains
   ! Reads the namelist file.
   !
   subroutine read_namelist( file_unit, local_rank )
-
-    use constants_mod, only: cmdi, emdi, FUDGE, imdi, rmdi
 
     implicit none
 
@@ -1575,8 +1534,6 @@ contains
   !>
   subroutine postprocess_cheese_namelist()
 
-    use constants_mod, only: cmdi, emdi, FUDGE, imdi, rmdi
-
     implicit none
 
 
@@ -1613,8 +1570,6 @@ contains
   !> Clear out any allocated memory
   !>
   subroutine cheese_final()
-
-    use constants_mod, only: cmdi, emdi, FUDGE, imdi, rmdi
 
     implicit none
 
@@ -1660,6 +1615,9 @@ module aerial_config_mod
   use mpi_mod,       only: broadcast
   use mpi,           only: MPI_SUCCESS
 
+  use constants_mod, only: cmdi, emdi, imdi, rmdi
+  use wibble_mod, only: esize
+
   implicit none
 
   private
@@ -1699,9 +1657,6 @@ contains
   ! Reads the namelist file.
   !
   subroutine read_namelist( file_unit, local_rank )
-
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-    use wibble_mod, only: esize
 
     implicit none
 
@@ -1773,9 +1728,6 @@ contains
   !>
   subroutine postprocess_aerial_namelist()
 
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-    use wibble_mod, only: esize
-
     implicit none
 
     integer(i_native) :: condition
@@ -1784,6 +1736,9 @@ contains
     real(r_def), allocatable :: new_outlist(:)
     integer(i_def), allocatable :: new_unknown(:)
     integer(i_native) :: index_unknown
+
+    condition = 0
+    size      = 0
 
     size = lsize
     allocate( new_inlist(size), stat=condition )
@@ -1849,8 +1804,6 @@ contains
   !> Clear out any allocated memory
   !>
   subroutine aerial_final()
-
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
 
     implicit none
 
@@ -1989,6 +1942,8 @@ module telly_config_mod
   use mpi_mod,       only: broadcast
   use mpi,           only: MPI_SUCCESS
 
+  use constants_mod, only: cmdi, emdi, imdi, rmdi
+
   implicit none
 
   private
@@ -2023,8 +1978,6 @@ contains
   !> @param[in] key Enumeration key.
   !>
   integer(i_native) function tubbies_from_key( key )
-
-    use constants_mod, only: emdi, imdi
 
     implicit none
 
@@ -2064,8 +2017,6 @@ contains
   !> @param[in] value Enumeration value.
   !>
   character(str_def) function key_from_tubbies( value )
-
-    use constants_mod, only: emdi, imdi
 
     implicit none
 
@@ -2117,8 +2068,6 @@ contains
   subroutine read_namelist( file_unit, local_rank, &
                             dummy_tubbies )
 
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-
     implicit none
 
     integer(i_native), intent(in) :: file_unit
@@ -2162,8 +2111,6 @@ contains
   !>
   subroutine postprocess_telly_namelist()
 
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
-
     implicit none
 
 
@@ -2200,8 +2147,6 @@ contains
   !> Clear out any allocated memory
   !>
   subroutine telly_final()
-
-    use constants_mod, only: cmdi, emdi, imdi, rmdi
 
     implicit none
 

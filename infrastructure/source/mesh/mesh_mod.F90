@@ -687,7 +687,6 @@ contains
     call mesh_connectivity( self%face_on_cell,         &
                             self%edge_on_cell,         &
                             self%ncells_2d_with_ghost, &
-                            self%ncells_with_ghost,    &
                             self%nfaces_per_cell,      &
                             self%nedges_per_cell,      &
                             self%cell_next,            &

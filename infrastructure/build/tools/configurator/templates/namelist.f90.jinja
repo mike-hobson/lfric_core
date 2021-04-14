@@ -15,6 +15,10 @@ module {{listname}}_config_mod
                          , LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_INFO
   use mpi_mod,       only: broadcast
   use mpi,           only: MPI_SUCCESS
+{%- for module, symbols in use_from | dictsort %}
+{%-   if loop.first %}{{'\n'}}{% endif %}
+  use {{module}}, only: {{symbols | sort | join(', ')}}
+{%- endfor %}
 
   implicit none
 
@@ -92,8 +96,6 @@ contains
   !>
   integer(i_native) function {{name}}_from_key( key )
 
-    use constants_mod, only: emdi, imdi
-
     implicit none
 
     character(*), intent(in) :: key
@@ -132,8 +134,6 @@ contains
   !> @param[in] value Enumeration value.
   !>
   character(str_def) function key_from_{{name}}( value )
-
-    use constants_mod, only: emdi, imdi
 
     implicit none
 
@@ -202,12 +202,6 @@ contains
 {%- else -%}
 {{' )'}}
 {%- endif %}
-
-
-{%- for module, symbols in use_from | dictsort %}
-{%-   if loop.first %}{{'\n'}}{% endif %}
-    use {{module}}, only: {{symbols | sort | join(', ')}}
-{%- endfor %}
 
     implicit none
 
@@ -345,11 +339,6 @@ contains
   !>
   subroutine postprocess_{{listname}}_namelist()
 
-{%- for module, symbols in use_from | dictsort %}
-{%-   if loop.first %}{{'\n'}}{% endif %}
-    use {{module}}, only: {{symbols | sort | join(', ')}}
-{%- endfor %}
-
     implicit none
 
 {%- if arrays %}{{'\n'}}
@@ -366,7 +355,10 @@ contains
     integer(i_native) :: index_{{name}}
 {%-   endif %}
 {%- endfor %}
-
+{%- if arrays %}{{'\n'}}
+    condition = 0
+    size      = 0
+{%- endif %}
 {{- '\n'}}
 {%-  for name in arrays %}
 {%-   set parameter = parameters[name] %}
@@ -424,8 +416,6 @@ contains
   !> Clear out any allocated memory
   !>
   subroutine {{listname}}_final()
-
-    use constants_mod, only: {{use_from['constants_mod'] | sort | join(', ')}}
 
     implicit none
 

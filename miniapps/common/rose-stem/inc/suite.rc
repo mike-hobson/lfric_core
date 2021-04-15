@@ -585,6 +585,7 @@
                                      compiler_setup[compiler],
                                      TARGET_RUN_SETUP,
                                      TARGET_REVEAL_SETUP )}}
+                       cp -r $SOURCE_DIRECTORY/example/* $CYLC_TASK_WORK_DIR
                      """
 
         script = rose task-run --app-key=canned_test --command-key={{TARGET_RUN_METHOD}}

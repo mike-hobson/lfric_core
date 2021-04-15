@@ -567,6 +567,7 @@
                                      compiler_setup[compiler],
                                      TARGET_RUN_SETUP,
                                      TARGET_REVEAL_SETUP )}}
+                       cp -r $SOURCE_DIRECTORY/example/* $CYLC_TASK_WORK_DIR
                        ulimit -s unlimited
                      """
 

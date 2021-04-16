@@ -191,6 +191,7 @@ contains
     this%partition   =  partition_type()
 
     call this%local_mesh%initialise( this%global_mesh, this%partition )
+    call this%local_mesh%init_cell_owner()
 
     scaled_radius = radius/scaling
     this%extrusion = uniform_extrusion_type( scaled_radius, domain_top, nlayers )
@@ -848,6 +849,7 @@ contains
 
       partition = partition_type(global_mesh_ptr, partitioner_ptr,1,1,1,0,1)
       call local_mesh%initialise( global_mesh_ptr, partition )
+      call local_mesh%init_cell_owner()
       local_mesh_id = local_mesh_collection%add_new_local_mesh( local_mesh )
       call global_mesh%clear()
       call local_mesh%clear()

@@ -70,6 +70,7 @@ contains
     this%global_mesh => global_mesh_collection%get_global_mesh( global_test_mesh_id )
     this%partition   = partition_type()
     call this%local_mesh%initialise( this%global_mesh, this%partition )
+    call this%local_mesh%init_cell_owner()
     this%extrusion   = uniform_extrusion_type( domain_bottom, &
                                                domain_top,    &
                                                nlayers )

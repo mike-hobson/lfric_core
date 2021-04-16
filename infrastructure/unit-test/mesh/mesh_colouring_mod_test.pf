@@ -131,6 +131,7 @@ subroutine test_compute_colours_cubedsphere(this)
                             this%total_ranks)
 
   call local_mesh%initialise( global_mesh_ptr, partition )
+  call local_mesh%init_cell_owner()
   local_mesh_ptr => local_mesh
 
   extrusion = uniform_extrusion_type( 100.0_r_def,   &
@@ -226,6 +227,7 @@ subroutine test_compute_colours_biperiodic(this)
                             this%total_ranks)
 
   call local_mesh%initialise( global_mesh_ptr, partition )
+  call local_mesh%init_cell_owner()
   local_mesh_ptr => local_mesh
 
   extrusion = uniform_extrusion_type( 100.00_r_def,  &
@@ -324,6 +326,7 @@ subroutine test_compute_colours_generic(this)
                             this%total_ranks)
 
   call local_mesh%initialise( global_mesh_ptr, partition )
+  call local_mesh%init_cell_owner()
   local_mesh_ptr => local_mesh
 
   extrusion = uniform_extrusion_type( 100.0_r_def,   &

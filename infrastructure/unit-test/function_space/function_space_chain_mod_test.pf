@@ -150,6 +150,7 @@ do i=1, size(mesh_names)
                                xproc, yproc, max_stencil_depth,  &
                                local_rank, total_ranks )
   call local_mesh%initialise( global_mesh_ptr, partition )
+  call local_mesh%init_cell_owner()
   local_mesh_id = local_mesh_collection%add_new_local_mesh( local_mesh )
   call global_mesh%clear()
   call local_mesh%clear()

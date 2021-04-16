@@ -156,6 +156,7 @@ contains
                                 this%total_ranks )
 
     call local_mesh%initialise( global_mesh_ptr, partition )
+    call local_mesh%init_cell_owner()
 
     ! Check the local mesh has the correct name
     name = local_mesh%get_mesh_name()

@@ -28,7 +28,7 @@ class local_mesh_mod::local_mesh_type {
   +initialise_full(<<in>>global_mesh: global_mesh_type, <<in>>partition: partition_type, <<in>><<optional>>mesh_name: string)
   +initialise_unit_test()
   +initialise() <<generic>>: initialise_full(...), initialise_unit_test(...)
-  -init_cell_owner()
+  +init_cell_owner()
   +clear()
   +get_mesh_name(): string
   +get_nverts_per_cell(): integer

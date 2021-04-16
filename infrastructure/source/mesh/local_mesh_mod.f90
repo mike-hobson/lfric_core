@@ -75,7 +75,7 @@ module local_mesh_mod
     procedure, public  :: initialise_unit_test
     generic            :: initialise => initialise_full, &
                                         initialise_unit_test
-    procedure, private :: init_cell_owner
+    procedure, public  :: init_cell_owner
     procedure, public  :: clear
     procedure, public  :: get_mesh_name
     procedure, public  :: get_nverts_per_cell
@@ -172,16 +172,6 @@ contains
 
     self%num_ghost = partition%get_num_cells_ghost()
 
-    !> @todo Eventually, there will be two ways to initialise a local mesh.
-    !>  The first, from global mesh and partition (as here), will be done
-    !>  in the mesh tools. The second will be from a local mesh file and will
-    !>  be done in the model. Setting up the cell_owner array will only be done
-    !>  in the model (i.e. the "from file" initialiser) as it needs a halo swap
-    !>  and only the model will be run with the full processor decomp that
-    !>  would allow that. But for now, it needs to be done here.
-    allocate( self%cell_owner(self%num_cells_in_layer+self%num_ghost) )
-    call self%init_cell_owner()
-
     if (.not. allocated(self%local_mesh_map_collection) ) &
         allocate ( self%local_mesh_map_collection,        &
               source = local_mesh_map_collection_type() )
@@ -249,7 +239,6 @@ contains
   !> parallel). When a halo swap is performed on this array, the array on
   !> every processor has its halo cells filled with their owner.
   !>
-  !> Private: should only be called by the local mesh initialiser
   subroutine init_cell_owner(self)
     use mpi_mod, only: generate_redistribution_map, get_mpi_datatype, &
                        get_comm_rank
@@ -263,6 +252,8 @@ contains
     integer(i_def) :: total_inners
     integer(i_def) :: halo_start, halo_finish
     integer(i_def) :: local_rank
+
+    allocate( self%cell_owner(self%num_cells_in_layer+self%num_ghost) )
 
     ! Work out the boundary between owned and halo cells
     total_inners=0
@@ -312,6 +303,13 @@ contains
   subroutine clear(self)
     implicit none
     class (local_mesh_type), intent(inout) :: self
+
+    if( allocated( self%global_cell_id ) )  deallocate( self%global_cell_id )
+    if( allocated( self%cell_owner ) )      deallocate( self%cell_owner )
+    if( allocated( self%num_inner ) )       deallocate( self%num_inner )
+    if( allocated( self%last_inner_cell ) ) deallocate( self%last_inner_cell )
+    if( allocated( self%num_halo ) )        deallocate( self%num_halo )
+    if( allocated( self%last_halo_cell ) )  deallocate( self%last_halo_cell )
 
     return
   end subroutine clear
@@ -612,7 +610,11 @@ contains
 
     integer(i_def) :: cell_owner
 
-    cell_owner=self%cell_owner(cell_number)
+    if ( allocated( self%cell_owner ) )then
+      cell_owner=self%cell_owner(cell_number)
+    else
+      call log_event( "Cell ownership not initialised", LOG_LEVEL_ERROR )
+    end if
 
   end function get_cell_owner
 

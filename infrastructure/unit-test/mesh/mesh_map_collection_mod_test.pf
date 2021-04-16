@@ -108,6 +108,7 @@ contains
 
     call coarse_local_mesh%initialise( coarse_global_mesh_ptr, &
                                        coarse_partition )
+    call coarse_local_mesh%init_cell_owner()
     coarse_local_mesh_ptr => coarse_local_mesh
 
     this%coarse_mesh = mesh_type( coarse_local_mesh_ptr,  &
@@ -129,6 +130,7 @@ contains
 
     call fine_local_mesh%initialise( fine_global_mesh_ptr, &
                                      fine_partition )
+    call fine_local_mesh%init_cell_owner()
     fine_local_mesh_ptr => fine_local_mesh
 
     this%fine_mesh = mesh_type( fine_local_mesh_ptr,  &

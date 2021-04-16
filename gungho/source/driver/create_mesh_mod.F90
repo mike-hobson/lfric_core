@@ -556,9 +556,12 @@ subroutine create_base_meshes( mesh_names, n_panels,    &
                                   xproc, yproc,      &
                                   max_stencil_depth, &
                                   local_rank, total_ranks )
-     ! Create local_mesh
-     call local_mesh%initialise( global_mesh_ptr, partition )
-     local_mesh_id = local_mesh_collection%add_new_local_mesh(local_mesh)
+      ! Create local_mesh
+      call local_mesh%initialise( global_mesh_ptr, partition )
+      ! Make sure the local_mesh cell owner lookup is correct
+      ! (Can only be done when the code is running on its full set of MPI tasks)
+      call local_mesh%init_cell_owner()
+      local_mesh_id = local_mesh_collection%add_new_local_mesh(local_mesh)
     end if
 
   end do

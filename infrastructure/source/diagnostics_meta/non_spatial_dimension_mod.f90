@@ -16,20 +16,41 @@ module non_spatial_dimension_mod
 
   use constants_mod,                              only: str_def,   &
                                                         str_short, &
-                                                        r_def
+                                                        r_def,     &
+                                                        str_long,  &
+                                                        i_native
   use log_mod,                                    only: log_event, &
                                                         LOG_LEVEL_ERROR
 
   implicit none
 
   private
+  public :: NUMERICAL, CATEGORICAL
+
+  !> Enumerator listing the possible non-spatial dimension categories
+  !>
+  !> Numerical - a numerical axis of real numbers
+  !> Categorical - a list of categories with strings for labels
+  enum, bind(c)
+    enumerator :: NUMERICAL,      &
+                  CATEGORICAL
+  end enum
 
   !> Defines the configurable non_spatial dimension
   type, public :: non_spatial_dimension_type
 
+    !> Name of the non-spatial dimension
     character(str_def)                              :: dimension_name
+    !> Category of the dimension: either numerical or categorical
+    integer(i_native)                               :: dimension_category
+    !> Description to be displayed in the Rose GUI help text
+    character(str_long)                             :: help_text
+    !> Definition of the axis if it is labelled using strings
     character(str_short), dimension(:), allocatable :: label_definition
+    !> Definition of the axis if it is described by real numbers
     real     (r_def),     dimension(:), allocatable :: axis_definition
+    !> Units of the non-spatial dimension
+    character(str_def)                              :: non_spatial_units
 
   contains
 
@@ -49,21 +70,39 @@ module non_spatial_dimension_mod
   !> @brief The constructor for a non_spatial_dimension_type object
   !> @param [in] dimension_name The name of the non-spatial dimension
   !> @return self the non_spatial_dimension object
-  function non_spatial_dimension_type_constructor(dimension_name, axis_definition, label_definition) result(self)
+  function non_spatial_dimension_type_constructor(dimension_name,     &
+                                                  dimension_category, &
+                                                  help_text,          &
+                                                  axis_definition,    &
+                                                  label_definition,   &
+                                                  non_spatial_units) result(self)
 
     implicit none
 
     character(*),                                 intent(in) :: dimension_name
+    integer  (i_native),                          intent(in) :: dimension_category
+    character(*),                                 intent(in) :: help_text
     real     (r_def),     dimension(:), optional, intent(in) :: axis_definition
     character(str_short), dimension(:), optional, intent(in) :: label_definition
+    character(*),                       optional, intent(in) :: non_spatial_units
 
     type(non_spatial_dimension_type) :: self
 
     self%dimension_name = dimension_name
+    self%dimension_category = dimension_category
+    self%help_text = help_text
 
-    if(present(axis_definition) .and. present(label_definition))then
-      call log_event( "A non_spatial_dimension_type cannot have an &
-      &axis_definition and label_definition", LOG_LEVEL_ERROR )
+    if (present(axis_definition) .and. present(label_definition)) then
+      call log_event( "A non_spatial_dimension_type cannot have an "// &
+                      "axis_definition and a label_definition", LOG_LEVEL_ERROR )
+
+    else if (dimension_category == NUMERICAL .and. present(label_definition)) then
+      call log_event( "Numerical non-spatial dimensions cannot have a "// &
+                      "label_definition", LOG_LEVEL_ERROR )
+
+    else if (dimension_category == CATEGORICAL .and. present(axis_definition)) then
+      call log_event( "Categorical non-spatial dimensions cannot have "// &
+                      "an axis_definition", LOG_LEVEL_ERROR )
     end if
 
     if(present(axis_definition)) then
@@ -72,6 +111,10 @@ module non_spatial_dimension_mod
 
     if (present(label_definition)) then
       allocate(self%label_definition, source=label_definition)
+    end if
+
+    if (present(non_spatial_units)) then
+      self%non_spatial_units = non_spatial_units
     end if
 
   end function non_spatial_dimension_type_constructor

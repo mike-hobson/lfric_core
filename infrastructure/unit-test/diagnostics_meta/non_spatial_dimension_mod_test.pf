@@ -70,14 +70,17 @@ contains
 
     ! This section is where the code for a self-contained test should be put
 
-    use non_spatial_dimension_mod, only: non_spatial_dimension_type
+    use non_spatial_dimension_mod, only: non_spatial_dimension_type, &
+                                         NUMERICAL, &
+                                         CATEGORICAL
 
     implicit none
 
     class(non_spatial_dimension_type_test_type), intent(inout) :: this
 
     !> Create non_spatial_dimension_types
-    type(non_spatial_dimension_type) :: non_spatial_dimension
+    type(non_spatial_dimension_type) :: non_spatial_dimension_no_axis
+    type(non_spatial_dimension_type) :: non_spatial_dimension_no_label
     type(non_spatial_dimension_type) :: non_spatial_dimension_axis
     type(non_spatial_dimension_type) :: non_spatial_dimension_label
 
@@ -85,17 +88,37 @@ contains
     character(str_def), dimension(:), allocatable :: label
 
     !> Instantiate example objects
-    non_spatial_dimension = non_spatial_dimension_type(dimension_name="Test")
+    non_spatial_dimension_no_axis = non_spatial_dimension_type( &
+            dimension_name = "Test_Numerical", &
+            dimension_category = NUMERICAL, &
+            help_text = "Test numerical help text")
 
-    non_spatial_dimension_axis = non_spatial_dimension_type(dimension_name="Test_Axis", &
-            axis_definition=(real([1.0, 2.0 ,3.0], r_def)))
+    non_spatial_dimension_no_label = non_spatial_dimension_type( &
+            dimension_name = "Test_Categorical", &
+            dimension_category = CATEGORICAL, &
+            help_text = "Test categorical help text")
 
-    non_spatial_dimension_label = non_spatial_dimension_type(dimension_name="Test_Label",&
-            label_definition=[character(str_short) ::'Alpha', 'Bravo', 'Charlie'])
+    non_spatial_dimension_axis = non_spatial_dimension_type( &
+            dimension_name = "Test_Axis", &
+            dimension_category = NUMERICAL, &
+            help_text = "Test axis help text", &
+            axis_definition = [real(r_def) :: 1.0, 2.0, 3.0], &
+            non_spatial_units = "1")
+
+    non_spatial_dimension_label = non_spatial_dimension_type( &
+            dimension_name="Test_Label", &
+            dimension_category = CATEGORICAL, &
+            help_text = "Test axis help text", &
+            label_definition=[character(str_short) :: 'Alpha', &
+                                                      'Bravo', &
+                                                      'Charlie'])
 
     !> Testing objects
-    @assertEqual("Test", non_spatial_dimension%get_dimension_name())
-    @assertEqual(REAL([1.0, 2.0 ,3.0], r_def), non_spatial_dimension_axis%get_axis_definition())
+    @assertEqual("Test_Numerical", non_spatial_dimension_no_axis%get_dimension_name())
+
+    @assertEqual("Test_Categorical", non_spatial_dimension_no_label%get_dimension_name())
+
+    @assertEqual([real(r_def) :: 1.0, 2.0 ,3.0], non_spatial_dimension_axis%get_axis_definition())
     @assertEqual("Test_Axis", non_spatial_dimension_axis%get_dimension_name())
 
     @assertEqual("Test_Label", non_spatial_dimension_label%get_dimension_name())

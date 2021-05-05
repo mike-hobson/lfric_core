@@ -71,7 +71,9 @@ contains
     ! This section is where the code for a self-contained test should be put
 
     use diagnostics_mod,                only: field_meta_data_type
-    use non_spatial_dimension_mod,      only: non_spatial_dimension_type
+    use non_spatial_dimension_mod,      only: non_spatial_dimension_type, &
+                                              NUMERICAL, &
+                                              CATEGORICAL
     use vertical_dimensions_mod,        only: model_height_dimension, &
                                               fixed_height_dimension
     use misc_meta_data_mod,             only: misc_meta_data_type
@@ -105,9 +107,12 @@ contains
       packing = 0, &
       vertical_dimension = model_height_dimension(TOP_ATMOSPHERIC_LEVEL, &
                                                   BOTTOM_ATMOSPHERIC_LEVEL), &
-      non_spatial_dimension = [non_spatial_dimension_type(&
-              dimension_name="test_axis_non_spatial_dimension", &
-              axis_definition=[real(r_def) :: 1,2,3,4,5,6,7,8,9])], &
+      non_spatial_dimension = [non_spatial_dimension_type( &
+              dimension_name = "test_axis_non_spatial_dimension", &
+              dimension_category = NUMERICAL, &
+              help_text = "Test axis help text", &
+              axis_definition = [real(r_def) :: 1,2,3,4,5,6,7,8,9], &
+              non_spatial_units = "1")], &
 
       standard_name = "eastward_wind", &
       misc_meta_data = [misc_meta_data_type("test_name_1","test_value_1"), &
@@ -129,16 +134,18 @@ contains
       vertical_dimension = fixed_height_dimension( &
               level_definition = real([1.5], r_def)), &
       non_spatial_dimension = [non_spatial_dimension_type(&
-              dimension_name="Tiles", &
-              label_definition=[character(str_short) ::'Broadleaf Tree', &
-                                                       'Needle Leaf Tree', &
-                                                       'C3 Grass', &
-                                                       'C4 Grass', &
-                                                       'Shrub', &
-                                                       'Urban', &
-                                                       'Water', &
-                                                       'Soil', &
-                                                       'Ice'])], &
+              dimension_name = "Tiles", &
+              dimension_category = CATEGORICAL, &
+              help_text = "Tiles help text", &
+              label_definition=[character(str_short) :: 'Broadleaf Tree', &
+                                                        'Needle Leaf Tree', &
+                                                        'C3 Grass', &
+                                                        'C4 Grass', &
+                                                        'Shrub', &
+                                                        'Urban', &
+                                                        'Water', &
+                                                        'Soil', &
+                                                        'Ice'])], &
       standard_name = "air_temperature")
 
 !    !> Testing objects

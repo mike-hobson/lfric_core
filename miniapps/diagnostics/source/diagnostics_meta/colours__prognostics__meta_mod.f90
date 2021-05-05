@@ -18,11 +18,14 @@ module colours__prognostics__meta_mod
     !       (eg W3, STANDARD_TIMESTEP & BILINEAR below)
     !   * any dimensions that fields live on
     use diagnostics_mod,                only: field_meta_data_type
-    use constants_mod,                  only: REAL_TYPE, str_def
+    use constants_mod,                  only: REAL_TYPE, str_def, r_def
     use fs_continuity_mod,              only: W3
     use time_step_enum_mod,             only: STANDARD_TIMESTEP
     use interpolation_enum_mod,         only: BILINEAR
     use vertical_dimensions_mod,        only: model_height_dimension
+    use non_spatial_dimension_mod,      only: non_spatial_dimension_type, &
+                                              NUMERICAL, &
+                                              CATEGORICAL
     use levels_enum_mod,                only: BOTTOM_ATMOSPHERIC_LEVEL, &
                                               TOP_ATMOSPHERIC_LEVEL
 
@@ -76,6 +79,11 @@ contains
             vertical_dimension = model_height_dimension( &
                     bottom = BOTTOM_ATMOSPHERIC_LEVEL, &
                     top = TOP_ATMOSPHERIC_LEVEL), &
+            non_spatial_dimension = [non_spatial_dimension_type( &
+                    dimension_name = "red_numerical_NSD", &
+                    dimension_category = NUMERICAL, &
+                    help_text ="Red help text", &
+                    non_spatial_units = "1")], &
             standard_name = "red")
 
         self%green = field_meta_data_type(&
@@ -94,6 +102,10 @@ contains
             vertical_dimension = model_height_dimension( &
                     bottom = BOTTOM_ATMOSPHERIC_LEVEL, &
                     top = TOP_ATMOSPHERIC_LEVEL), &
+            non_spatial_dimension = [non_spatial_dimension_type( &
+                    dimension_name = "green_Categorical_NSD", &
+                    dimension_category = CATEGORICAL, &
+                    help_text = "Green help text")], &
             standard_name = "green")
 
         self%blue = field_meta_data_type(&
@@ -112,6 +124,12 @@ contains
             vertical_dimension = model_height_dimension( &
                     bottom = BOTTOM_ATMOSPHERIC_LEVEL, &
                     top = TOP_ATMOSPHERIC_LEVEL), &
+            non_spatial_dimension = [non_spatial_dimension_type( &
+                    dimension_name = "blue_fixed_NSD", &
+                    dimension_category = NUMERICAL, &
+                    help_text = "Blue help text", &
+                    axis_definition = [real(r_def) :: 0,1,2,3], &
+                    non_spatial_units = "1")], &
             standard_name = "blue")
 
         end function colours__prognostics__meta_constructor

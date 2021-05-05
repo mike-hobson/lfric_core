@@ -18,10 +18,10 @@ module levels_enum_mod
     enumerator :: BOTTOM_ATMOSPHERIC_LEVEL = 1001,                          &
                   TOP_ATMOSPHERIC_LEVEL = 1002,                             &
                   TOP_WET_LEVEL = 1003,                                     &
-                  TOP_ATMOSPHERIC_LEVEL_MINUS_1 = 1004,                     &
+                  TOP_ATMOSPHERIC_LEVEL_MINUS_ONE = 1004,                   &
                   BOTTOM_LEVEL_IN_BOUNDARY_LAYER = 1005,                    &
                   TOP_LEVEL_IN_BOUNDARY_LAYER = 1006,                       &
-                  BOTTOM_LEVEL_ABOVE_BOUNDARY_LAYER = 1007,           &
+                  BOTTOM_LEVEL_ABOVE_BOUNDARY_LAYER = 1007,                 &
                   BOTTOM_SOIL_LEVEL = 1008,                                 &
                   TOP_SOIL_LEVEL = 1009,                                    &
                   BOTTOM_TRACER_LEVEL = 1010,                               &
@@ -36,15 +36,7 @@ module levels_enum_mod
                   TOP_LEVEL_OF_ATMOSPHERE_PLUS_ONE = 1019,                  &
                   BOTTOM_SOIL_LEVEL_PLUS_ONE = 1020,                        &
                   TOP_OZONE_LEVEL = 1021,                                   &
-                  NUMBER_OF_ATMOS_LEVELS_MULTIPLY_SW_BANDS = 1022,          &
-                  NUMBER_OF_ATMOS_LEVELS_PLUS_ONE_MULTIPLY_SW_BANDS = 1023, &
-                  NUMBER_OF_WET_LEVELS_MULTIPLY_SW_BANDS = 1024,            &
-                  NUMBER_OF_ATMOS_LEVELS_MULTIPLY_LW_BANDS = 1025,          &
-                  NUMBER_OF_ATMOS_LEVELS_PLUS_ONE_MULTIPLY_LW_BANDS = 1026, &
-                  NUMBER_OF_WET_LEVELS_MULTIPLY_LW_BANDS = 1027,            &
-                  NUMBER_OF_SW_RADIATION_BANDS = 1028,                      &
-                  NUMBER_OF_LW_RADIATION_BANDS = 1029,                      &
-                  NUMBER_OF_CLOUDY_LEVELS = 1030
+                  NUMBER_OF_CLOUDY_LEVELS = 1022
 
   end enum
 end module levels_enum_mod

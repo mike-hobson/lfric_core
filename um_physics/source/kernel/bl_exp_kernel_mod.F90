@@ -549,7 +549,14 @@ contains
     !---------------------------------------
     use jules_fields_mod, only : crop_vars, psparms, ainfo, trif_vars,         &
                                  aerotype, urban_param, progs, trifctltype,    &
-                                 coast, jules_vars
+                                 coast, jules_vars,                            &
+                                !fluxes, &
+                                !lake, &
+                                forcing
+                                !rivers, &
+                                !veg3_parm, &
+                                !veg3_field, &
+                                !chemvars
 
     implicit none
 
@@ -1372,6 +1379,13 @@ contains
     !     JULES TYPES (IN OUT)
          crop_vars, psparms, ainfo, trif_vars, aerotype, urban_param,          &
          progs, trifctltype, coast, jules_vars,                                &
+        !fluxes, &
+        !lake, &
+         forcing, &
+        !rivers, &
+        !veg3_parm, &
+        !veg3_field, &
+        !chemvars
     !     INOUT variables for TKE based turbulence schemes
          e_trb, tsq_trb, qsq_trb, cov_trb, zhpar_shcu,                         &
     !     INOUT variables from bdy_expl1 needed elsewhere
@@ -1511,6 +1525,13 @@ contains
     !     JULES TYPES (IN OUT)
          crop_vars, psparms, ainfo, trif_vars, aerotype, urban_param,   &
          progs, trifctltype, coast, jules_vars,                         &
+        !fluxes, &
+        !lake, &
+         forcing, &
+        !rivers, &
+        !veg3_parm, &
+        !veg3_field, &
+        !chemvars
     !     INOUT variables for TKE based turbulence schemes
          e_trb, tsq_trb, qsq_trb, cov_trb, zhpar_shcu,                  &
       ! INOUT variables from bdy_expl1 needed elsewhere

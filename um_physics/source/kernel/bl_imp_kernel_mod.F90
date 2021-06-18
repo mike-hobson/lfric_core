@@ -435,7 +435,14 @@ contains
     ! JULES modules
     !---------------------------------------
     use jules_fields_mod, only : crop_vars, ainfo, aerotype, progs, coast, &
-      jules_vars
+      jules_vars,                                                          &
+      !fluxes, &
+      !lake, &
+      forcing
+      !rivers, &
+      !veg3_parm, &
+      !veg3_field, &
+      !chemvars
 
     implicit none
 
@@ -1274,6 +1281,13 @@ contains
           , tstar_sea,taux_land,taux_ssi,tauy_land,tauy_ssi,Error_code  &
     ! JULES TYPES (IN OUT)
           , crop_vars, ainfo, aerotype, progs, coast, jules_vars        &
+          !fluxes, &
+          !lake, &
+          , forcing &
+          !rivers, &
+          !veg3_parm, &
+          !veg3_field, &
+          !chemvars
     ! OUT fields
           , surf_ht_flux_land, zlcl_mix                                 &
           , theta_star_surf, qv_star_surf                               &
@@ -1545,6 +1559,13 @@ contains
           , tstar_sea,taux_land,taux_ssi,tauy_land,tauy_ssi,Error_code  &
     ! JULES TYPES (IN OUT)
           , crop_vars, ainfo, aerotype, progs, coast, jules_vars        &
+          !fluxes, &
+          !lake, &
+          , forcing &
+          !rivers, &
+          !veg3_parm, &
+          !veg3_field, &
+          !chemvars
     ! OUT fields
           , surf_ht_flux_land, zlcl_mix                                 &
           , theta_star_surf, qv_star_surf                               &

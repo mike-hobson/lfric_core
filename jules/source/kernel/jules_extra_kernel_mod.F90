@@ -256,7 +256,14 @@ contains
     use jules_snow_mod, only: nsmax
     use jules_fields_mod, only: crop_vars, psparms, toppdm, fire_vars, ainfo, &
                                 trif_vars, soilecosse, aerotype, urban_param, &
-                                progs, trifctltype, jules_vars
+                                progs, trifctltype, jules_vars, &
+                                !fluxes, &
+                                !lake, &
+                                forcing
+                                !rivers, &
+                                !veg3_parm, &
+                                !veg3_field, &
+                                !chemvars
     use nlsizes_namelist_mod, only: row_length, rows, land_pts => land_field, &
                                     sm_levels, ntiles
     use UM_ParCore, only: nproc
@@ -367,9 +374,8 @@ contains
 
     ! Real variables (module intent=in)
     ! Driving data
-    real(r_um), dimension(row_length, rows) :: ls_rain_ij, con_rain_ij,       &
-         ls_snow_ij, con_snow_ij, pstar_ij, ls_graup_ij, tl_1_ij,             &
-         lw_down_ij, qw_1_ij, u_1_ij, v_1_ij, cca_2d_ij, soil_clay_ij,        &
+    real(r_um), dimension(row_length, rows) :: ls_graup_ij, &
+         u_1_ij, v_1_ij, cca_2d_ij, soil_clay_ij,                             &
          flash_rate_ancil, pop_den_ancil, flandg, rho_star
 
     ! State
@@ -436,10 +442,10 @@ contains
     !-------------------------------------------------------------------
 
     ! Data from 2D fields
-    ls_rain_ij(1,1)  = ls_rain(map_2d(1))   ! Large-scale rainfall rate
-    con_rain_ij(1,1) = conv_rain(map_2d(1)) ! Convective rainfall rate
-    ls_snow_ij(1,1)  = ls_snow(map_2d(1))   ! Large-scale snowfall rate
-    con_snow_ij(1,1) = conv_snow(map_2d(1)) ! Convective snowfallfall rate
+    forcing%ls_rain_ij(1,1)  = ls_rain(map_2d(1))   ! Large-scale rainfall rate
+    forcing%con_rain_ij(1,1) = conv_rain(map_2d(1)) ! Convective rainfall rate
+    forcing%ls_snow_ij(1,1)  = ls_snow(map_2d(1))   ! Large-scale snowfall rate
+    forcing%con_snow_ij(1,1) = conv_snow(map_2d(1)) ! Convective snowfallfall rate
     ls_rainfrac_gb(1) = lsca_2d(map_2d(1))  ! Large-scale cloud amount
     cca_2d_ij(1,1)   = cca_2d(map_2d(1))    ! Convective cloud amount
 
@@ -645,8 +651,7 @@ contains
 
     call surf_couple_extra(                                                   &
     !Driving data and associated INTENT(IN)
-    ls_rain_ij, con_rain_ij, ls_snow_ij, con_snow_ij, tl_1_ij, lw_down_ij,    &
-    qw_1_ij, u_1_ij, v_1_ij, pstar_ij,                                        &
+    u_1_ij, v_1_ij,                                                           &
 
     !Fluxes INTENT(IN)
     ei_surft, surf_htf_surft, ecan_surft, ext_soilt, sw_surft,                &
@@ -693,7 +698,14 @@ contains
 
     ! JULES TYPES containing field data
     crop_vars, psparms, toppdm, fire_vars, ainfo, trif_vars, soilecosse,      &
-    urban_param, progs, trifctltype, jules_vars                               &
+    urban_param, progs, trifctltype, jules_vars,                              &
+    !fluxes, &
+    !lake, &
+    forcing &
+    !rivers, &
+    !veg3_parm, &
+    !veg3_field, &
+    !chemvars
     )
 
   !---------------------------------------------------------------------------

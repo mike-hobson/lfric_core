@@ -14,15 +14,15 @@
 # variables below are empty, and the revisions of any projects with
 # dependent changes should be updated to the revision at which those
 # changes were committed to the project's trunk
-export casim_rev=um11.9  # Note CASIM is not actually
-export casim_sources=    # called in LFRic presently
+export casim_rev=8786
+export casim_sources=
 export jules_rev=um11.9
 export jules_sources=
 export shumlib_rev=um11.9
 export shumlib_sources=
 export socrates_rev=1040
 export socrates_sources=
-export um_rev=99979
+export um_rev=100132
 export um_sources=
 
 #### Do not edit the definitions below this line without

@@ -124,8 +124,8 @@ contains
 
     ! profile fields from level 1 upwards
     real(r_um), dimension(row_length,rows,nlayers) ::   &
-         cff, q, theta, qcf, rho_dry_theta, rho_wet_tq, &
-         exner_theta_levels
+         cff, q, theta, qcf, qcf2, rho_dry_theta,       &
+         rho_wet_tq, exner_theta_levels
 
     real(r_um), dimension(row_length,rows,1:bl_levels) :: elm_in
     real(r_um), dimension(row_length,rows,nlayers) :: wvar_in
@@ -143,6 +143,7 @@ contains
       exner_theta_levels(1,1,k) = exner_in_wth(map_wth(1)+ k)
       q(1,1,k) =  m_v(map_wth(1) + k)
       qcf(1,1,k) = m_ci(map_wth(1) + k)
+      qcf2(1,1,k)= 0.0  !dummy variable to pass to bm_calc_tau
       ! cloud fields
       cff(1,1,k) = cf_ice(map_wth(1) + k)
       ! turbulence fields
@@ -167,7 +168,7 @@ contains
 
     call bm_calc_tau(q, theta, exner_theta_levels, qcf, bl_levels, cff, &
                     p_theta_levels, wvar_in, elm_in, rho_dry_theta,     &
-                    rho_wet_tq, tau_dec_out, tau_hom_out, tau_mph_out)
+                    rho_wet_tq, tau_dec_out, tau_hom_out, tau_mph_out, qcf2)
 
 
     ! update output fields

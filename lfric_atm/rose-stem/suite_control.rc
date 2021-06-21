@@ -286,20 +286,6 @@
                      resolution=("C48",1800.0))',
    'publish_commit'
   ],
-  'nightly-full-debug': [
-    'run_application("lfric_atm", "basic_gal7", checkkgo=False,
-                     resolutions=[("C12",1800.0)],
-                     env={"crun":1, "nrun":32,
-                          "directives":{"C12":{"mpi_parts":6,
-                                               "threads":1,
-                                               "wallclock":"00:12:00"},
-                                       },
-                         }
-                     )',
-    'check_compilers("lfric_atm", "basic_gal7", "full-debug",
-                     resolution=("C12",1800.0))',
-    'publish_commit'
-  ],
 
   'performance': [
     'run_application("lfric_atm", "aquaplanet_profile",

@@ -57,7 +57,7 @@
     [[events]]
         mail events = timeout
         abort on timeout = True
-{%- if 'nightly' in groupsToRun or 'nightly-full-debug' in groupsToRun %}
+{%- if 'nightly' in groupsToRun %}
         abort on stalled = True
 {%- endif %}
         timeout = PT3H

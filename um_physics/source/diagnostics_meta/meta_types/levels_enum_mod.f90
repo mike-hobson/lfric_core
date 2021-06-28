@@ -12,31 +12,30 @@
 module levels_enum_mod
 
   implicit none
-  !> THE NUMBERS IN THIS FILE ARE ARBITARY.
-  !> DO NOT ATTEMPT TO USE THEM IN ANY CODE
+
   enum, bind(c)
-    enumerator :: BOTTOM_ATMOSPHERIC_LEVEL = 1001,                          &
-                  TOP_ATMOSPHERIC_LEVEL = 1002,                             &
-                  TOP_WET_LEVEL = 1003,                                     &
-                  TOP_ATMOSPHERIC_LEVEL_MINUS_ONE = 1004,                   &
-                  BOTTOM_LEVEL_IN_BOUNDARY_LAYER = 1005,                    &
-                  TOP_LEVEL_IN_BOUNDARY_LAYER = 1006,                       &
-                  BOTTOM_LEVEL_ABOVE_BOUNDARY_LAYER = 1007,                 &
-                  BOTTOM_SOIL_LEVEL = 1008,                                 &
-                  TOP_SOIL_LEVEL = 1009,                                    &
-                  BOTTOM_TRACER_LEVEL = 1010,                               &
-                  TOP_TRACER_LEVEL = 1011,                                  &
-                  TOP_GRAVITY_WAVE_DRAG_LEVEL_PLUS_ONE = 1012,              &
-                  BOTTOM_GRAVITY_WAVE_DRAG_LEVEL = 1013,                    &
-                  TOP_GRAVITY_WAVE_DRAG_LEVEL = 1014,                       &
-                  BOTTOM_LEVEL_IN_VERTICAL_DIFFUSION_ROUTINE = 1015,        &
-                  TOP_LEVEL_IN_VERTICAL_DIFFUSION_ROUTINE_MINUS_ONE = 1016, &
-                  TOP_LEVEL_IN_VERTICAL_DIFFUSION_ROUTINE = 1017,           &
-                  TOP_LEVEL_IN_BOUNDARY_LAYER_MINUS_ONE = 1018,             &
-                  TOP_LEVEL_OF_ATMOSPHERE_PLUS_ONE = 1019,                  &
-                  BOTTOM_SOIL_LEVEL_PLUS_ONE = 1020,                        &
-                  TOP_OZONE_LEVEL = 1021,                                   &
-                  NUMBER_OF_CLOUDY_LEVELS = 1022
+    enumerator :: BOTTOM_ATMOSPHERIC_LEVEL,                          &
+                  TOP_ATMOSPHERIC_LEVEL,                             &
+                  TOP_WET_LEVEL,                                     &
+                  TOP_ATMOSPHERIC_LEVEL_MINUS_ONE,                   &
+                  BOTTOM_LEVEL_IN_BOUNDARY_LAYER,                    &
+                  TOP_LEVEL_IN_BOUNDARY_LAYER,                       &
+                  BOTTOM_LEVEL_ABOVE_BOUNDARY_LAYER,                 &
+                  BOTTOM_SOIL_LEVEL,                                 &
+                  TOP_SOIL_LEVEL,                                    &
+                  BOTTOM_TRACER_LEVEL,                               &
+                  TOP_TRACER_LEVEL,                                  &
+                  TOP_GRAVITY_WAVE_DRAG_LEVEL_PLUS_ONE,              &
+                  BOTTOM_GRAVITY_WAVE_DRAG_LEVEL,                    &
+                  TOP_GRAVITY_WAVE_DRAG_LEVEL,                       &
+                  BOTTOM_LEVEL_IN_VERTICAL_DIFFUSION_ROUTINE,        &
+                  TOP_LEVEL_IN_VERTICAL_DIFFUSION_ROUTINE_MINUS_ONE, &
+                  TOP_LEVEL_IN_VERTICAL_DIFFUSION_ROUTINE,           &
+                  TOP_LEVEL_IN_BOUNDARY_LAYER_MINUS_ONE,             &
+                  TOP_LEVEL_OF_ATMOSPHERE_PLUS_ONE,                  &
+                  BOTTOM_SOIL_LEVEL_PLUS_ONE,                        &
+                  TOP_OZONE_LEVEL,                                   &
+                  NUMBER_OF_CLOUDY_LEVELS
 
   end enum
 end module levels_enum_mod

@@ -12,10 +12,9 @@
 module positive_enum_mod
 
   implicit none
-  !> THE NUMBERS IN THIS FILE ARE ARBITARY.
-  !> DO NOT ATTEMPT TO USE THEM IN ANY CODE
+
   enum, bind(c)
-    enumerator :: POSITIVE_UP = 2001, &
-                  POSITIVE_DOWN = 2002
+    enumerator :: POSITIVE_UP, &
+                  POSITIVE_DOWN
   end enum
 end module positive_enum_mod

@@ -12,11 +12,10 @@
 module interpolation_enum_mod
 
   implicit none
-  !> THE NUMBERS IN THIS FILE ARE ARBITARY.
-  !> DO NOT ATTEMPT TO USE THEM IN ANY CODE
+
   enum, bind(c)
 
-    enumerator :: BILINEAR = 4002
+    enumerator :: BILINEAR
 
   end enum
 

@@ -12,15 +12,14 @@
 module field_synonyms_enum_mod
 
   implicit none
-  !> THE NUMBERS IN THIS FILE ARE ARBITARY.
-  !> DO NOT ATTEMPT TO USE THEM IN ANY CODE
+
   enum, bind(c)
 
-    enumerator :: AMIP = 1001
-    enumerator :: CF = 1002
-    enumerator :: CMIP6 = 1003
-    enumerator :: GRIB = 1004
-    enumerator :: STASH = 1005
+    enumerator :: AMIP, &
+                  CF,   &
+                  CMIP6,&
+                  GRIB, &
+                  STASH
 
   end enum
 

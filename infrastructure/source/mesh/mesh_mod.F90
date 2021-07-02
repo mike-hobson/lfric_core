@@ -6,14 +6,8 @@
 !> @brief Local 3D mesh object.
 !>
 !> This module provides details for a mesh_type which is generated using a
-!> local_mesh object, a global mesh object and a partition object, along with
-!> some inputs that describe the vertical structure.
-!>
-!> NOTE: Much information is duplicated between the local mesh and global
-!> mesh/partition objects. In the longer term, all information will be moved
-!> into the local mesh object, so the global mesh/partition objects will be
-!> no longer needed and will be removed. In the interim, there will be
-!> duplication
+!> local_mesh object along with some inputs that describe the vertical
+!> structure.
 !>
 !> It also contains a static mesh object for unit testing. This is returned
 !> if a mesh_object is instantiated with an integer argument and a local mesh.
@@ -23,8 +17,6 @@ module mesh_mod
   use constants_mod,         only : i_def, i_native, r_def, l_def, str_def, &
                                     pi, imdi
   use extrusion_mod,         only : extrusion_type
-  use global_mesh_mod,       only : global_mesh_type
-  use global_mesh_collection_mod, only : global_mesh_collection
   use linked_list_mod,       only : linked_list_type, &
                                     linked_list_item_type
   use linked_list_data_mod,  only : linked_list_data_type
@@ -73,9 +65,6 @@ module mesh_mod
     !> The domain limits (x,y,z) for Cartesian domains
     !>                   (long, lat, radius) for spherical
     type(domain_size_type) :: domain_size
-
-    !> Global mesh id that this mesh was generated from
-    integer(i_def) :: global_mesh_id
 
     !> Number of 3d-cell layers in mesh object
     integer(i_def) :: nlayers
@@ -190,7 +179,6 @@ module mesh_mod
 
     procedure, public :: get_reference_element
     procedure, public :: get_mesh_name
-    procedure, public :: get_global_mesh_id
     procedure, public :: get_partition
     procedure, public :: get_local_mesh
     procedure, public :: get_nlayers
@@ -300,23 +288,14 @@ contains
   !> @brief Constructor for the mesh object
   !> @param [in] local_mesh    A pointer to a local mesh object holding 2d
   !>                           information about the partitioned mesh
-  !> @param [in] global_mesh   A pointer to a global mesh object on which the
-  !>                           partition is applied
-  !> @param [in] partition     Partition object to base 3D-Mesh on (This is no
-  !>                           longer used or required, but is left here to
-  !>                           maintain the API. It will be removed when the
-  !>                           final changes are made and the API can be updated
-  !>                           in one change)
   !> @param [in] extrusion     Mechnism by which extrusion is to be achieved.
   !> @param [in, optional]
   !>             mesh_name     Mesh tag name to use for this mesh. If omitted,
-  !>                           the global mesh name it is based on will be used.
+  !>                           the mesh name from the local mesh will be used.
   !> @return                   3D-Mesh object based on the list of partitioned
-  !>                           cells on the given global mesh
+  !>                           cells on the given local mesh
   !============================================================================
   function mesh_constructor ( local_mesh,    &
-                              global_mesh,   &
-                              partition,     &
                               extrusion,     &
                               mesh_name )    &
                               result( self )
@@ -324,8 +303,6 @@ contains
     implicit none
 
     type(local_mesh_type),  intent(in), pointer  :: local_mesh
-    type(global_mesh_type), intent(in), pointer  :: global_mesh
-    type(partition_type),   intent(in)           :: partition
     class(extrusion_type),  intent(in)           :: extrusion
     character(str_def),     intent(in), optional :: mesh_name
 
@@ -344,9 +321,6 @@ contains
 
     ! Local 2d cell connectivity.
     integer(i_def), allocatable :: cell_next_2d (:,:)
-
-    ! Id of the Global mesh use to create mesh
-    integer(i_def) :: global_mesh_id
 
     ! Surface Coordinates in [long, lat, radius] (Units: Radians/metres)
     real(r_def), allocatable :: vertex_coords_2d(:,:)
@@ -385,9 +359,6 @@ contains
     self%nverts_per_2d_cell = local_mesh%get_nverts_per_cell()
     self%nverts_per_edge = local_mesh%get_nverts_per_edge()
     self%nedges_per_2d_cell = local_mesh%get_nedges_per_cell()
-
-    global_mesh_id  = global_mesh%get_id()
-    self%global_mesh_id = global_mesh_id
 
     self%local_mesh           => local_mesh
     self%ncells_2d            = local_mesh%get_num_cells_in_layer()
@@ -735,24 +706,6 @@ contains
     end do
 
   end subroutine get_column_coords
-
-  !> @details This function returns the id number of the global_mesh which
-  !> was used to create this mesh
-  !> @return  Global mesh object id number
-  !============================================================================
-  function get_global_mesh_id(self) result (global_mesh_id)
-
-    ! Function returns the id number of the mesh, this
-    ! number is assigned when the object is first instatiated.
-
-    implicit none
-    class(mesh_type), intent(in) :: self
-    integer(i_def)               :: global_mesh_id
-
-    global_mesh_id = self%global_mesh_id
-
-  end function get_global_mesh_id
-
 
   !> @details This function returns the number of 3d-cell layers in the mesh
   !>          object
@@ -2102,8 +2055,6 @@ contains
 
     mesh_id_counter = mesh_id_counter+1
     call self%set_id( mesh_id_counter )
-
-    self%global_mesh_id = 0
 
     ! The unit test mesh is quadrilateral, not prismatic
     allocate( self%reference_element, source=reference_cube_type() )

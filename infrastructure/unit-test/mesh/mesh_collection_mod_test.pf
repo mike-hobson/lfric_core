@@ -133,10 +133,7 @@ contains
     local_mesh_ptr => this%get_local_mesh_ptr()
 
     ! Add a couple of meshes to the collection
-    mesh = mesh_type( local_mesh_ptr,   &
-                      this%global_mesh, &
-                      this%partition,   &
-                      this%extrusion )
+    mesh = mesh_type( local_mesh_ptr, this%extrusion )
     mesh_id = mesh_collection%add_new_mesh( mesh )
 
     unit_test_mesh = mesh_type( PLANE_BI_PERIODIC, local_mesh_ptr )

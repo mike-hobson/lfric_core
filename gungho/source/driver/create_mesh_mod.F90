@@ -1046,11 +1046,7 @@ subroutine create_3d_mesh( local_rank, total_ranks, &
                               max_stencil_depth, &
                               local_rank, total_ranks )
 
-  mesh = mesh_type( local_mesh_ptr, &
-                    base_global_mesh, &
-                    partition,        &
-                    extrusion,        &
-                    mesh_name=name )
+  mesh = mesh_type( local_mesh_ptr, extrusion, mesh_name=name )
 
   mesh_id = mesh_collection%add_new_mesh( mesh )
   call mesh%clear()

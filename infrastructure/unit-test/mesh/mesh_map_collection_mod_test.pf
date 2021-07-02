@@ -111,10 +111,7 @@ contains
     call coarse_local_mesh%init_cell_owner()
     coarse_local_mesh_ptr => coarse_local_mesh
 
-    this%coarse_mesh = mesh_type( coarse_local_mesh_ptr,  &
-                                  coarse_global_mesh_ptr, &
-                                  coarse_partition,       &
-                                  extrusion )
+    this%coarse_mesh = mesh_type( coarse_local_mesh_ptr, extrusion )
     ! Get fine mesh
     name = 'C8'
     call ugrid_mesh_data%read_from_file(trim(filename), name)
@@ -133,10 +130,7 @@ contains
     call fine_local_mesh%init_cell_owner()
     fine_local_mesh_ptr => fine_local_mesh
 
-    this%fine_mesh = mesh_type( fine_local_mesh_ptr,  &
-                                fine_global_mesh_ptr, &
-                                fine_partition,       &
-                                extrusion )
+    this%fine_mesh = mesh_type( fine_local_mesh_ptr, extrusion )
 
   end subroutine setUp
 

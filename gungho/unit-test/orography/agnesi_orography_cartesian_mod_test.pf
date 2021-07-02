@@ -198,7 +198,7 @@ contains
     extrusion = uniform_extrusion_type( domain_bottom, domain_top, nlayers )
 
     ! Construct a mesh which is uniform in vertical for purpose of the test
-    mesh = mesh_type( local_mesh_ptr, global_mesh_ptr, partition, extrusion )
+    mesh = mesh_type( local_mesh_ptr, extrusion )
 
     ! Get domain size required for the biperiodic coordinate transform
     domain_size = mesh%get_domain_size()

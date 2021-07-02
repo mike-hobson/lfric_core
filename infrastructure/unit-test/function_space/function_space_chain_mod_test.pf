@@ -204,7 +204,7 @@ do i=1, size(mesh_names)
   partition =  partition_type( global_mesh_ptr, partitioner_ptr, &
                                xproc, yproc, max_stencil_depth,  &
                                local_rank, total_ranks )
-  mesh = mesh_type( source_local_mesh_ptr, global_mesh_ptr, partition, extrusion )
+  mesh = mesh_type( source_local_mesh_ptr, extrusion )
   mesh_id(i) =  mesh_collection % add_new_mesh( mesh )
   call mesh%clear()
 end do

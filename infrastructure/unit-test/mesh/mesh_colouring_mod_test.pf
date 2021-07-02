@@ -139,7 +139,7 @@ subroutine test_compute_colours_cubedsphere(this)
                                       this%num_layers )
 
   ! Construct a mesh which is  uniform in vertical for purpose of the test
-  mesh = mesh_type( local_mesh_ptr, global_mesh_ptr, partition, extrusion )
+  mesh = mesh_type( local_mesh_ptr, extrusion )
   @assertTrue(mesh%is_coloured(), "Mesh uncoloured")
 
   num_cells = partition%get_num_cells_in_layer()
@@ -235,7 +235,7 @@ subroutine test_compute_colours_biperiodic(this)
                                       this%num_layers )
 
   ! Construct a mesh which is  uniform in vertical for purpose of the test
-  mesh = mesh_type( local_mesh_ptr, global_mesh_ptr, partition, extrusion )
+  mesh = mesh_type( local_mesh_ptr, extrusion )
   @assertTrue(mesh%is_coloured(), "Mesh uncoloured")
 
   num_cells = partition%get_num_cells_in_layer()
@@ -334,7 +334,7 @@ subroutine test_compute_colours_generic(this)
                                       this%num_layers )
 
   ! Construct a mesh which is  uniform in vertical for purpose of the test
-  mesh = mesh_type( local_mesh_ptr, global_mesh_ptr, partition, extrusion )
+  mesh = mesh_type( local_mesh_ptr, extrusion )
   @assertTrue(mesh%is_coloured(), "Mesh uncoloured")
 
   num_cells = partition%get_num_cells_in_layer()

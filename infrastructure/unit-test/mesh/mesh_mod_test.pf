@@ -44,8 +44,7 @@ module mesh_mod_test
             test_get_scalar,   test_get_integer,  test_get_boolean,  &
             test_get_1d_array, test_get_2d_array, test_get_3d_array, &
             test_get_domain,                                         &
-            test_get_local_mesh, test_get_global_mesh_id,            &
-            test_mesh_map_retrieval
+            test_get_local_mesh, test_mesh_map_retrieval
 
   @testCase
   type, extends( MPITestCase ) :: mesh_test_type
@@ -63,7 +62,6 @@ module mesh_mod_test
     procedure :: test_get_2d_array
     procedure :: test_get_3d_array
     procedure :: test_get_local_mesh
-    procedure :: test_get_global_mesh_id
     procedure :: test_mesh_map_retrieval
 
   end type mesh_test_type
@@ -240,10 +238,7 @@ contains
 
     local_mesh_ptr => this%get_local_mesh_ptr()
 
-    mesh_1 = mesh_type( local_mesh_ptr,  &
-                        this%global_mesh, &
-                        this%partition,   &
-                        this%extrusion )
+    mesh_1 = mesh_type( local_mesh_ptr, this%extrusion )
 
     !-------------------------------------------------------------------
     ! Test get_nlayers
@@ -381,10 +376,7 @@ contains
 
     local_mesh_ptr => this%get_local_mesh_ptr()
 
-    mesh_1 = mesh_type( local_mesh_ptr,   &
-                        this%global_mesh, &
-                        this%partition,   &
-                        this%extrusion )
+    mesh_1 = mesh_type( local_mesh_ptr, this%extrusion )
 
     !-------------------------------------------------------------------
     ! Test get_vert_coords
@@ -442,10 +434,7 @@ contains
 
     local_mesh_ptr => this%get_local_mesh_ptr()
 
-    mesh_1 = mesh_type( local_mesh_ptr,   &
-                        this%global_mesh, &
-                        this%partition,   &
-                        this%extrusion )
+    mesh_1 = mesh_type( local_mesh_ptr, this%extrusion )
     !-------------------------------------------------------------------
     ! Test get_cell_coords
     ! Note: Returns coords in cartesian coords [x,y,z]
@@ -499,10 +488,7 @@ contains
 
     local_mesh_ptr => this%get_local_mesh_ptr()
 
-    mesh_1 = mesh_type( local_mesh_ptr,   &
-                        this%global_mesh, &
-                        this%partition,   &
-                        this%extrusion )
+    mesh_1 = mesh_type( local_mesh_ptr, this%extrusion )
 
     !-------------------------------------------------------------------
     ! Test get_column_coords
@@ -577,10 +563,7 @@ contains
 
     local_mesh_ptr => this%get_local_mesh_ptr()
 
-    mesh_1 = mesh_type( local_mesh_ptr,   &
-                        this%global_mesh, &
-                        this%partition,   &
-                        this%extrusion )
+    mesh_1 = mesh_type( local_mesh_ptr, this%extrusion )
 
      !-------------------------------------------------------------------
     ! Test get_vert_cell_owner
@@ -650,10 +633,7 @@ contains
 
     local_mesh_ptr => this%get_local_mesh_ptr()
 
-    mesh_1 = mesh_type( local_mesh_ptr,  &
-                        this%global_mesh, &
-                        this%partition,   &
-                        this%extrusion )
+    mesh_1 = mesh_type( local_mesh_ptr, this%extrusion )
 
     !-------------------------------------------------------------------
     ! Test is_vertex_owned
@@ -684,10 +664,7 @@ contains
 
     local_mesh_ptr => this%get_local_mesh_ptr()
 
-    mesh_1 = mesh_type( local_mesh_ptr,   &
-                        this%global_mesh, &
-                        this%partition,   &
-                        this%extrusion )
+    mesh_1 = mesh_type( local_mesh_ptr, this%extrusion )
 
     !-------------------------------------------------------------------
     ! Test get_domain_size
@@ -723,10 +700,7 @@ contains
 
     local_mesh_ptr => this%get_local_mesh_ptr()
 
-    mesh_1 = mesh_type( local_mesh_ptr,  &
-                        this%global_mesh, &
-                        this%partition,   &
-                        this%extrusion )
+    mesh_1 = mesh_type( local_mesh_ptr, this%extrusion )
 
 
     test_local_mesh => mesh_1%get_local_mesh()
@@ -737,27 +711,6 @@ contains
 
   end subroutine test_get_local_mesh
 
-
-!==============================================================================
-  @Test( npes=[1] )
-  subroutine test_get_global_mesh_id( this )
-
-    implicit none
-
-    class( mesh_test_type ), intent( inout ) :: this
-    type(mesh_type) :: mesh_1
-    type(local_mesh_type), pointer :: local_mesh_ptr
-
-    local_mesh_ptr => this%get_local_mesh_ptr()
-
-    mesh_1 = mesh_type( local_mesh_ptr,  &
-                        this%global_mesh, &
-                        this%partition,   &
-                        this%extrusion )
-
-    @assertEqual (mesh_1%get_global_mesh_id(),this%global_mesh%get_id())
-
-  end subroutine test_get_global_mesh_id
 
 !==============================================================================
   @Test( npes=[1] )
@@ -881,7 +834,7 @@ contains
       global_mesh_ptr => global_mesh_collection % get_global_mesh (mesh_names(i))
       source_local_mesh_ptr => local_mesh_collection % get_local_mesh (mesh_names(i))
       partition = partition_type(global_mesh_ptr, partitioner_ptr,1,1,1,0,1)
-      mesh = mesh_type( source_local_mesh_ptr, global_mesh_ptr, partition, extrusion )
+      mesh = mesh_type( source_local_mesh_ptr, extrusion )
       mesh_id =  mesh_collection % add_new_mesh( mesh )
       call mesh%clear()
     end do

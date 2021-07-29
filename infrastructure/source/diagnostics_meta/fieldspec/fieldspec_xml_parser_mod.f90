@@ -28,6 +28,7 @@ module fieldspec_xml_parser_mod
   use constants_mod,                only: i_def, str_def, l_def, r_def
   use axisspec_collection_mod,      only: axisspec_collection_type
   use field_type_enum_mod,          only: field_type_from_name
+  use fieldspec_mod,                only: fieldspec_type
   use fieldspec_collection_mod,     only: fieldspec_collection_type
   use fieldspec_factory_mod,        only: fieldspec_factory_type
   use fs_continuity_mod,            only: functionspace_from_name
@@ -66,8 +67,10 @@ module fieldspec_xml_parser_mod
 
   ! Stores the name of the current XML "field" element's
   ! "variable" while it is processed by the XML event handlers
-  character(str_def) :: xml_field_variable = ""
-  character(str_def) :: field_group_id = ""
+  character(str_def) :: xml_field_variable
+  character(str_def) :: field_group_id
+  character(str_def) :: field_id
+  character(str_def), allocatable :: axis_ids(:)
 
 contains
 
@@ -234,16 +237,14 @@ contains
           ! Clear the fieldspec factory of any previous data
           call fieldspec_factory%initialise()
           fieldspec_factory_initialised = .true.
-          call fieldspec_factory%set_unique_id( getValue(attributes, "id") )
+          field_id = getValue(attributes, "id")
+          call fieldspec_factory%set_unique_id( field_id )
           call fieldspec_factory%set_field_group_id( field_group_id )
 
-          ! Set vertical axis
+          ! Get axis ids from grid id
           grid_id = getValue(attributes, "grid_ref")
-          axis_id = vert_axis_id_from_grid_id(grid_id)
-          if (axis_id /= '') then
-            call fieldspec_factory%set_vertical_axis( &
-                    axisspec_collection%get_axisspec( axis_id ) )
-          end if
+          axis_ids = axis_ids_from_grid_id(grid_id)
+
         end if
 
         ! Store name of variable while it is processed by text_handler
@@ -335,6 +336,9 @@ contains
     character(len = *),              intent(in)  :: localname
     character(len = *),              intent(in)  :: name
 
+    type(fieldspec_type), pointer :: fieldspec
+    integer(i_def) :: i
+
     ! Stop parser ignoring lines now that it has finished reading the disabled
     ! field_group
     if (ignore_element .and. name == "field_group") then
@@ -347,7 +351,19 @@ contains
             .and. fieldspec_factory_initialised) then
 
       call fieldspec_collection%add_fieldspec( fieldspec_factory%finalise() )
+      fieldspec => fieldspec_collection%get_fieldspec(field_id)
+      ! Set each axis in the fieldspec
+      do i = 1, size(axis_ids)
+        if (axis_ids(i)(7:15) == 'vert_axis') then
+          call fieldspec%set_vertical_axis( &
+                  axisspec_collection%get_axisspec(axis_ids(i)))
+        else
+          call fieldspec%add_non_spatial_dimension( &
+                  axisspec_collection%get_axisspec(axis_ids(i)))
+        end if
+      end do
       fieldspec_factory_initialised = .false.
+      deallocate(axis_ids)
 
     end if
 
@@ -468,41 +484,63 @@ contains
 
   end function label_axis_from_string
 
-
   !===========================================================================
-  !> Determine vertical axis id from grid id
-  !> @param[in] grid_id The XIOS id for the grid
-  !> @return The vertical axis id
-  function vert_axis_id_from_grid_id(grid_id) result(vert_axis_id)
+  !> Get an array of all ids of the axes that make up a grid from its id
+  !>
+  !> Assumes a grid id with n axes of the form:
+  !>     <axis_1_id>__<axis_2_id>__ ... <axis_n_id>__<domain_id>_grid
+  !>
+  !> @param[in] grid_id The id of the grid
+  !> @return Character array of the id of each axis in the grid
+  function axis_ids_from_grid_id(grid_id) result(axis_ids)
 
     implicit none
 
-    character(str_def)   :: vert_axis_id
-    character(str_def)   :: grid_id
-    integer(i_def)       :: char_index
+    character(str_def)              :: grid_id
+    character(str_def), allocatable :: axis_ids(:)
 
-    ! Grid id matches model_vert_axis_x_full_levels_... or
-    !                 model_vert_axis_x_half_levels_...
-    if (grid_id(1:16) == "model_vert_axis_") then
-      do char_index = 16, 100
-        if (grid_id(char_index+1: char_index+1) == '_') exit
-      end do
-      ! Add length of "_half_levels" or "_full_levels"
-      char_index = char_index + 12
-      vert_axis_id = grid_id(1:char_index)
+    integer(i_def)                  :: array_size
+    integer(i_def)                  :: char_index
+    integer(i_def)                  :: array_index
+    character(str_def)              :: current_value
 
-    ! Grid id matches fixed_vert_axis_x...
-    else if (grid_id(1:16) == "fixed_vert_axis_") then
-      do char_index = 16, 100
-        if (grid_id(char_index+1: char_index+1) == '_') exit
-      end do
-      vert_axis_id = grid_id(1:char_index)
+    array_size = 0
+    array_index = 1
+    current_value = ''
 
-    ! Grid id does not contain vertical axis
-    else
-      vert_axis_id = ''
-    end if
+    ! Loop through string to count how many axes are in name
+    do char_index = 1, len(trim(grid_id)) - 1
+      if (grid_id(char_index:char_index+1) == '__') then
+        array_size = array_size + 1
+      end if
+    end do
 
-  end function vert_axis_id_from_grid_id
+    allocate(axis_ids(array_size))
+
+    ! Loop through string representing axis
+    do char_index = 1, len(trim(grid_id)) - 1
+
+      ! Append character to current value of axis id
+      if (grid_id(char_index:char_index+1) /= '__') then
+        ! Ignore underscore at start of axis id from '__' separator
+        if (current_value == '_') then
+          current_value = grid_id(char_index:char_index)
+        else
+          current_value = trim(current_value) // grid_id(char_index:char_index)
+        end if
+
+      ! Double underscores separate axis ids so add current value to array
+      else
+        axis_ids(array_index) = current_value
+        array_index =  array_index + 1
+        current_value = ''
+
+        ! Exit loop when we have added all the axis ids
+        if (array_index > array_size) exit
+
+      end if
+    end do
+
+  end function axis_ids_from_grid_id
 
 end module fieldspec_xml_parser_mod

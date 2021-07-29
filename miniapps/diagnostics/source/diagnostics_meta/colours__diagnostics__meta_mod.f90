@@ -36,10 +36,11 @@ module colours__diagnostics__meta_mod
     !> The name of the type uses the same format as the module name
     !> (with _mod replaced with _type)
     !> The type contains an instance of field_meta_data_type for each
-    !> field in the field group
+    !> field in the field group and a string containing the field group name,
+    !> in the form <section>__<group>
     type, public :: colours__diagnostics__meta_type
         type(field_meta_data_type), public :: hex
-        character(str_def) :: name = "colours__prognostics"
+        character(str_def) :: name = "colours__diagnostics"
     end type colours__diagnostics__meta_type
 
     interface colours__diagnostics__meta_type
@@ -76,6 +77,6 @@ contains
                     top = TOP_ATMOSPHERIC_LEVEL), &
             standard_name = "hex")
 
-        end function colours__diagnostics__meta_constructor
+    end function colours__diagnostics__meta_constructor
 
 end module colours__diagnostics__meta_mod

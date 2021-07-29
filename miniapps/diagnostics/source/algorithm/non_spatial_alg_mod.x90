@@ -1,0 +1,89 @@
+!-----------------------------------------------------------------------------
+! (c) Crown copyright 2021 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+
+!> @brief Barebones algorithm to set diagnostics with non-spatial dimensions
+!> to known values to test that they are correctly handled by the diagnostics
+!> miniapp
+!>
+!> @details Sets each dof in the fields to a value corresponding to how far it
+!> is along the non-spatial axis so that the result can be compared with a KGO
+module non_spatial_alg_mod
+
+    use log_mod,                       only : log_event, &
+                                              LOG_LEVEL_INFO
+    use field_mod,                     only : field_type, field_proxy_type
+    use non_spatial_kernel_mod,        only : non_spatial_kernel_type
+    use double_non_spatial_kernel_mod, only : double_non_spatial_kernel_type
+    use constants_mod,                 only : i_def, str_def
+    use fieldspec_mod,                 only : fieldspec_type
+    use fieldspec_collection_mod,      only : fieldspec_collection
+    use axisspec_mod,                  only : axisspec_type
+
+    implicit none
+
+    private
+
+    public :: non_spatial_alg
+
+contains
+
+    !> @details An algorithm for setting diagnostics with non-spatial dimensions
+    !> to known values
+    !> @param[inout] mutable_numbers  A field with a mutable numeric non-spatial axis
+    !> @param[inout] mutable_categories  A field with a mutable categorical non-spatial axis
+    !> @param[inout] immutable_both  A field with both a numeric and categorical non-spatial axis
+    subroutine non_spatial_alg(mutable_categories, mutable_numbers, immutable_both)
+
+        implicit none
+
+        ! Diagnostic fields
+        type(field_type), pointer, intent(inout) :: mutable_categories
+        type(field_type), pointer, intent(inout) :: mutable_numbers
+        type(field_type), pointer, intent(inout) :: immutable_both
+        type(field_proxy_type) :: proxy
+        integer(i_def) :: categories_ndata
+        integer(i_def) :: numbers_ndata
+
+        type(fieldspec_type),     pointer :: immutable_both_fieldspec
+        type(axisspec_type),      pointer :: axisspec
+        integer(i_def)                    :: immutable_categories_length
+        integer(i_def)                    :: immutable_numbers_length
+
+        ! IDs of the two non-spatial axes from the test field 'immutable_both'
+        character(str_def)       :: immutable_categories_axis_id = "immutable_categories"
+        character(str_def)       :: immutable_numbers_axis_id = "immutable_numbers"
+
+        proxy = mutable_categories%get_proxy()
+        categories_ndata = proxy%vspace%get_ndata()
+        proxy = mutable_numbers%get_proxy()
+        numbers_ndata = proxy%vspace%get_ndata()
+
+        ! Get length of immutable_both's first non-spatial axis
+        immutable_both_fieldspec => fieldspec_collection%get_fieldspec( &
+                immutable_both%get_name() )
+        axisspec => immutable_both_fieldspec%get_non_spatial_dimension( &
+                immutable_categories_axis_id )
+        immutable_categories_length = axisspec%get_size()
+        ! Get length of immutable_both's second non-spatial axis
+        axisspec => immutable_both_fieldspec%get_non_spatial_dimension( &
+                immutable_numbers_axis_id )
+        immutable_numbers_length = axisspec%get_size()
+
+        call log_event("diagnostics: calculating nsds", LOG_LEVEL_INFO)
+
+        call invoke(non_spatial_kernel_type(mutable_categories, categories_ndata))
+        call invoke(non_spatial_kernel_type(mutable_numbers, numbers_ndata))
+
+        call invoke(double_non_spatial_kernel_type(immutable_both, &
+                                                   immutable_categories_length, &
+                                                   immutable_numbers_length))
+
+
+        call log_event("diagnostics: finished non-spatial algorithm", LOG_LEVEL_INFO)
+
+    end subroutine non_spatial_alg
+
+end module non_spatial_alg_mod

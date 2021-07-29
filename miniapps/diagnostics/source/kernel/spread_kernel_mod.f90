@@ -12,14 +12,16 @@
 
 module spread_kernel_mod
 
-    use argument_mod, only : arg_type,              &
-                             GH_FIELD, GH_REAL,     &
-                             GH_READ, GH_READWRITE, &
-                             STENCIL, CROSS, CELL_COLUMN
-    use constants_mod, only : r_def, i_def
-    use fs_continuity_mod, only : W3
-    use kernel_mod, only : kernel_type
+    use argument_mod,                   only: arg_type,              &
+                                              GH_FIELD, GH_SCALAR,   &
+                                              GH_REAL, GH_INTEGER,   &
+                                              GH_READ, GH_READWRITE, &
+                                              STENCIL, CROSS, CELL_COLUMN
+    use constants_mod,                  only: r_def, i_def
+    use fs_continuity_mod,              only: W3
+    use kernel_mod,                     only: kernel_type
     use diagnostics_miniapp_config_mod, only: blending_percentage
+    use log_mod,                        only: log_event, LOG_LEVEL_ERROR
 
     implicit none
 
@@ -31,9 +33,10 @@ module spread_kernel_mod
 
     type, public, extends(kernel_type) :: spread_kernel_type
         private
-        type(arg_type) :: meta_args(2) = (/                                 &
+        type(arg_type) :: meta_args(3) = (/                                 &
              arg_type(GH_FIELD, GH_REAL, GH_READ,      W3, STENCIL(CROSS)), &
-             arg_type(GH_FIELD, GH_REAL, GH_READWRITE, W3)                  &
+             arg_type(GH_FIELD, GH_REAL, GH_READWRITE, W3),                 &
+             arg_type(GH_SCALAR, GH_INTEGER, GH_READ)                       &
              /)
         integer :: operates_on = CELL_COLUMN
     contains
@@ -56,6 +59,8 @@ contains
     !> @param[in] stencil_map:
     !> @param[in,out] field_variance: the outcome change to apply to the field later
     !>                                on - note because of the stencil the field is read only
+    !> @param[in] ndata: The size of the ndata axis for multidata fields used
+    !>                   to represent immutable vertical axes
     !> @param[in] degrees_of_freedom: degrees of freededom
     !> @param[in] unique_degrees_of_freedom: total number of degrees of freedom across the column
     !> @param[in] field_dof_map: dof map for bottom cell of field
@@ -67,6 +72,7 @@ contains
             stencil_size, &
             stencil_map, &
             field_variance, &
+            ndata, &
             degrees_of_freedom, &
             unique_degrees_of_freedom, &
             field_dof_map, &
@@ -78,6 +84,7 @@ contains
 
         integer(kind = i_def), intent(in) :: number_of_layers
         integer(kind = i_def), intent(in) :: stencil_size
+        integer(kind = i_def), intent(in) :: ndata
         integer(kind = i_def), intent(in) :: degrees_of_freedom
         integer(kind = i_def), intent(in) :: unique_degrees_of_freedom
         integer(kind = i_def), dimension(degrees_of_freedom, stencil_size), intent(in) :: stencil_map
@@ -90,7 +97,8 @@ contains
         !> Internal Vars
 
         integer(kind = i_def) :: field_max = 0
-        integer(kind = i_def) :: df, current_layer, cell, field_max_scaled, field_scaled
+        integer(kind = i_def) :: df, current_layer, cell, field_max_scaled, &
+                field_scaled, immutable_layer
         real(kind = r_def) :: real_blend_percentage = 0
 
         !> preprocessing
@@ -101,35 +109,48 @@ contains
              real_blend_percentage = blending_percentage
          end if
 
+        if (number_of_layers > 1 .and. ndata > 1) then
+            call log_event("Field should not have both a vertical axis and an &
+                    &ndata axis", LOG_LEVEL_ERROR)
+        end if
+
         !> processing
 
-        do current_layer = 0, number_of_layers - 1
-            !> get the max value from the stencil
-            ! get the cells beside (by starting at 1 you can include the current cell from the stencil)
-            field_max = 0
+        ! immutable vertical axes implemented using multidata fields
+        do immutable_layer = 0, ndata - 1
+            do current_layer = 0, number_of_layers - 1
+                !> get the max value from the stencil
+                ! get the cells beside (by starting at 1 you can include the current cell from the stencil)
+                field_max = 0
 
-            do df = 1, degrees_of_freedom
-                do cell = 1, stencil_size !get the cells beside
-                    field_max = max(field_max, nint(field(stencil_map(df, cell) + current_layer)))
+                do df = 1, degrees_of_freedom
+                    do cell = 1, stencil_size !get the cells beside
+                        field_max = max(field_max, nint(field(stencil_map(df, cell) + &
+                                immutable_layer * number_of_layers + current_layer)))
+                    end do
+                    ! get the cells below if appropriate
+                    if (immutable_layer * number_of_layers + current_layer > 0) then
+                        field_max = max(field_max, nint(field(field_dof_map(df) + &
+                                immutable_layer * number_of_layers + current_layer - 1)))
+                    end if
+                    ! get the cells above if appropriate
+                    if ( (current_layer < number_of_layers - 1) .or. &
+                            (immutable_layer < ndata -1) ) then
+                        field_max = max(field_max, nint(field(field_dof_map(df) + &
+                                immutable_layer * number_of_layers + current_layer + 1)))
+                    end if
+                    field_max = max(field_max, nint(field(field_dof_map(df) + &
+                            immutable_layer * number_of_layers + current_layer)))
                 end do
-                ! get the cells below if appropriate
-                if (current_layer > 0) then
-                    field_max = max(field_max, nint(field(field_dof_map(df) + current_layer - 1)))
-                end if
-                ! get the cells above if appropriate
-                if (current_layer < number_of_layers - 1) then
-                    field_max = max(field_max, nint(field(field_dof_map(df) + current_layer + 1)))
-                end if
-                field_max = max(field_max, nint(field(field_dof_map(df) + current_layer)))
-            end do
-            !> field_max should now be the biggest value from dof within self / neighbouring cells
-            do df = 1, degrees_of_freedom
-                field_max_scaled = field_max * 100
-                field_scaled = nint(field(field_dof_map(df)+current_layer))*100
-                field_variance(field_dof_map(df)+current_layer) = &
-                        ! round it first to kill any floating point error, then ceiling it off to a whole hex
-                        ! value that should eventually reach 255...
-                        CEILING(FLOOR((field_max_scaled - field_scaled )* real_blend_percentage)/100.0)
+                !> field_max should now be the biggest value from dof within self / neighbouring cells
+                do df = 1, degrees_of_freedom
+                    field_max_scaled = field_max * 100
+                    field_scaled = nint(field(field_dof_map(df)+immutable_layer * number_of_layers + current_layer))*100
+                    field_variance(field_dof_map(df)+immutable_layer * number_of_layers + current_layer) = &
+                            ! round it first to kill any floating point error, then ceiling it off to a whole hex
+                            ! value that should eventually reach 255...
+                            CEILING(FLOOR((field_max_scaled - field_scaled )* real_blend_percentage)/100.0)
+                end do
             end do
         end do
 

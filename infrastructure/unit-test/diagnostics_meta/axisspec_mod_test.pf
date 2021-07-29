@@ -59,27 +59,31 @@ contains
 
         type(axisspec_type)       :: numerical_axisspec
         type(axisspec_type)       :: categorical_axisspec
-        character(str_def)        :: returned_labels(3)
-        character(str_def)        :: expected_labels(3) = ['a', 'b', 'c']
+        character(str_def)        :: returned_labels(4)
+        character(str_def)        :: expected_labels(4) = ['a', 'b', 'c', 'd']
         integer(i_def)            :: i
 
         numerical_axisspec = axisspec_type( &
-                "numerical", &
+                "model_vert_axis_numerical", &
                 NUMERICAL, &
                 numeric_axis_def=[real(r_def) :: 1,2,3])
         categorical_axisspec = axisspec_type( &
-                "categorical", &
+                "fixed_vert_axis_categorical", &
                 CATEGORICAL, &
-                label_axis_def=[character(str_def) :: 'a','b','c'])
+                label_axis_def=[character(str_def) :: 'a','b','c','d'])
 
         returned_labels = categorical_axisspec%get_label_axis_def()
 
-        @assertEqual("numerical", numerical_axisspec%get_unique_id())
-        @assertEqual("categorical", categorical_axisspec%get_unique_id())
+        @assertEqual("model_vert_axis_numerical", numerical_axisspec%get_unique_id())
+        @assertEqual("fixed_vert_axis_categorical", categorical_axisspec%get_unique_id())
         @assertEqual(NUMERICAL, numerical_axisspec%get_axis_category())
         @assertEqual(CATEGORICAL, categorical_axisspec%get_axis_category())
+        @assertEqual(3, numerical_axisspec%get_size())
+        @assertEqual(4, categorical_axisspec%get_size())
+        @assertEqual(.true., numerical_axisspec%get_is_primary_axis())
+        @assertEqual(.false., categorical_axisspec%get_is_primary_axis())
         @assertEqual([real(r_def) :: 1,2,3], numerical_axisspec%get_numeric_axis_def())
-        do i=1, 3
+        do i=1, 4
             @assertEqual(expected_labels(i), returned_labels(i))
         end do
 

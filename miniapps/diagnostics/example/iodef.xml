@@ -12,8 +12,12 @@
           positive="up" unit="m" value="(0, 2) [0.5 1.5 2.5]"/>
     <axis id="fixed_vert_axis_1" n_glo="3" name="fixed_axis"
           positive="up" unit="m" value="(0, 2) [10.5 11.5 12.5]"/>
-    <axis id="fixed_vert_axis_2" n_glo="3" name="fixed_label"
-          positive="up" unit="m" label="(0, 2) [a b c]"/>
+    <axis id="mutable_categories" label="(0, 2) [b g r]" n_glo="3" name="mutable_categories"/>
+    <axis id="mutable_numbers" label="(0, 1) [1 2]" n_glo="2"
+          name="mutable_numbers" unit="other units"/>
+    <axis id="immutable_categories" label="(0, 2) [a b c]" n_glo="3" name="immutable_categories"/>
+    <axis id="immutable_numbers" label="(0, 2) [1 2 3]" n_glo="3"
+          name="immutable_numbers" unit="other units"/>
    </axis_definition>
 
    <domain_definition>
@@ -51,17 +55,26 @@
       <domain domain_ref="edge"/>
       <axis axis_ref="vert_axis_half_levels"/>
     </grid>
-    <grid id="model_vert_axis_1_half_levels_face_grid">
+    <grid id="model_vert_axis_1_half_levels__face_grid">
       <domain domain_ref="face" />
       <axis axis_ref="model_vert_axis_1_half_levels" />
     </grid>
-     <grid id="fixed_vert_axis_1_face_grid">
+    <grid id="fixed_vert_axis_1__face_grid">
       <domain domain_ref="face" />
       <axis axis_ref="fixed_vert_axis_1" />
     </grid>
-     <grid id="fixed_vert_axis_2_face_grid">
-      <domain domain_ref="face" />
-      <axis axis_ref="fixed_vert_axis_2" />
+    <grid id="mutable_categories__face_grid">
+      <domain domain_ref="face"/>
+      <axis axis_ref="mutable_categories"/>
+    </grid>
+    <grid id="mutable_numbers__face_grid">
+      <domain domain_ref="face"/>
+      <axis axis_ref="mutable_numbers"/>
+    </grid>
+    <grid id="immutable_categories__immutable_numbers__face_grid">
+      <domain domain_ref="face"/>
+      <axis axis_ref="immutable_categories"/>
+      <axis axis_ref="immutable_numbers"/>
     </grid>
    </grid_definition>
 
@@ -69,8 +82,43 @@
       <field_group enabled=".TRUE." freq_op="1ts"
                    id="colours__diagnostics"
                    operation="instant">
-        <field grid_ref="model_vert_axis_1_half_levels_face_grid" id="colours__hex"
-               standard_name="hex" unit="1">
+        <field grid_ref="fixed_vert_axis_1__face_grid"
+               id="colours__hex"
+               standard_name="hex" unit="arbitrary units">
+          <variable name="checksum" type="bool">false</variable>
+          <variable name="element_order" type="int">0</variable>
+          <variable name="field_type" type="string">REAL_TYPE</variable>
+          <variable name="function_space" type="string">W3</variable>
+          <variable name="io_driver" type="string">WRITE_FIELD_FACE</variable>
+          <variable name="mesh_id" type="int">1</variable>
+        </field>
+      </field_group>
+      <field_group enabled=".TRUE." freq_op="1ts"
+                   id="colours__non_spatial"
+                   operation="instant">
+        <field grid_ref="mutable_categories__face_grid"
+               id="colours__mutable_categories"
+               standard_name="mutable_categories" unit="arbitrary units">
+          <variable name="checksum" type="bool">false</variable>
+          <variable name="element_order" type="int">0</variable>
+          <variable name="field_type" type="string">REAL_TYPE</variable>
+          <variable name="function_space" type="string">W3</variable>
+          <variable name="io_driver" type="string">WRITE_FIELD_FACE</variable>
+          <variable name="mesh_id" type="int">1</variable>
+        </field>
+        <field grid_ref="mutable_numbers__face_grid"
+               id="colours__mutable_numbers"
+               standard_name="mutable_numbers" unit="arbitrary units">
+          <variable name="checksum" type="bool">false</variable>
+          <variable name="element_order" type="int">0</variable>
+          <variable name="field_type" type="string">REAL_TYPE</variable>
+          <variable name="function_space" type="string">W3</variable>
+          <variable name="io_driver" type="string">WRITE_FIELD_FACE</variable>
+          <variable name="mesh_id" type="int">1</variable>
+        </field>
+        <field grid_ref="immutable_categories__immutable_numbers__face_grid"
+               id="colours__immutable_both"
+               standard_name="immutable_both" unit="arbitrary units">
           <variable name="checksum" type="bool">false</variable>
           <variable name="element_order" type="int">0</variable>
           <variable name="field_type" type="string">REAL_TYPE</variable>
@@ -82,7 +130,7 @@
       <field_group enabled=".TRUE." freq_op="1ts"
                    id="colours__prognostics"
                    operation="instant">
-        <field grid_ref="model_vert_axis_1_half_levels_face_grid" id="colours__blue"
+        <field grid_ref="fixed_vert_axis_1__face_grid" id="colours__blue"
                standard_name="blue" unit="1">
           <variable name="checksum" type="bool">false</variable>
           <variable name="element_order" type="int">0</variable>
@@ -91,7 +139,7 @@
           <variable name="io_driver" type="string">WRITE_FIELD_FACE</variable>
           <variable name="mesh_id" type="int">1</variable>
         </field>
-        <field grid_ref="fixed_vert_axis_1_face_grid" id="colours__green"
+        <field grid_ref="fixed_vert_axis_1__face_grid" id="colours__green"
                standard_name="green" unit="1">
           <variable name="checksum" type="bool">false</variable>
           <variable name="element_order" type="int">0</variable>
@@ -100,7 +148,7 @@
           <variable name="io_driver" type="string">WRITE_FIELD_FACE</variable>
           <variable name="mesh_id" type="int">1</variable>
         </field>
-        <field grid_ref="fixed_vert_axis_2_face_grid" id="colours__red"
+        <field grid_ref="model_vert_axis_1_half_levels__face_grid" id="colours__red"
                standard_name="red" unit="1">
           <variable name="checksum" type="bool">false</variable>
           <variable name="element_order" type="int">0</variable>
@@ -129,6 +177,18 @@
             name="Diagnostics" output_freq="1ts">
         <field field_ref="colours__hex"
                name="colours__hex__instant_1ts"
+               operation="instant"/>
+      </file>
+      <file convention="UGRID" enabled=".TRUE." id="NonSpatialDimensions"
+            name="NonSpatialDimensions" output_freq="1ts">
+        <field field_ref="colours__mutable_categories"
+               name="colours__mutable_categories__instant_1ts"
+               operation="instant"/>
+        <field field_ref="colours__mutable_numbers"
+               name="colours__mutable_numbers__instant_1ts"
+               operation="instant"/>
+        <field field_ref="colours__immutable_both"
+               name="colours__immutable_both__instant_1ts"
                operation="instant"/>
       </file>
     </file_definition>

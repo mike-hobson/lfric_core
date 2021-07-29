@@ -20,7 +20,7 @@ module spread_kernel_mod_test
     implicit none
 
     private
-    public :: spread_kernel_test
+    public :: spread_kernel_mutable_test, spread_kernel_immutable_test
 
     ! The test case type, containing procedures to setup, run
     ! and clean up after a test.
@@ -32,7 +32,8 @@ module spread_kernel_mod_test
     contains
         procedure setUp
         procedure tearDown
-        procedure spread_kernel_test
+        procedure spread_kernel_mutable_test
+        procedure spread_kernel_immutable_test
     end type spread_kernel_mod_test_type
 
 
@@ -68,7 +69,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! pfUnit will run each subroutine preceded by the @test line
     @test
-    subroutine spread_kernel_test(this)
+    subroutine spread_kernel_mutable_test(this)
 
         ! This section is where the code for a self-contained test should be put
 
@@ -79,6 +80,7 @@ contains
         class(spread_kernel_mod_test_type), intent(inout) :: this
         integer(kind = i_def) :: dof = 1 ! can be changed but update dimensions below
         integer(kind = i_def) :: layers = 3 ! hardcoded later in layer checking
+        integer(kind = i_def) :: ndata = 1 ! number of immutable layers
         integer(kind = i_def) :: stencil_size = 4 ! can be changed but update dimensions below
         integer(kind = i_def) :: i, j
         integer(kind = i_def) :: counter = 1
@@ -115,6 +117,7 @@ contains
                 stencil_size, & ! set
                 stencil_map, & ! calculated
                 field_variance, & !blank
+                ndata, &
                 dof, & !set
                 dof * layers * (stencil_size+1), & !set
                 field_dof_map, & !calculated
@@ -147,6 +150,7 @@ contains
                 stencil_size, & ! set
                 stencil_map, & ! calculated
                 field_variance, & !blank
+                ndata, &
                 dof, & !set
                 dof * layers * (stencil_size+1), & !set
                 field_dof_map, & !calculated
@@ -161,6 +165,106 @@ contains
             @assertEqual(0, field(i+1), tol)
         end do
 
-    end subroutine spread_kernel_test
+    end subroutine spread_kernel_mutable_test
+
+
+    @test
+    subroutine spread_kernel_immutable_test(this)
+
+        ! This section is where the code for a self-contained test should be put
+
+        use spread_kernel_mod, only : spread_code
+
+        implicit none
+
+        class(spread_kernel_mod_test_type), intent(inout) :: this
+        integer(kind = i_def) :: dof = 1 ! can be changed but update dimensions below
+        integer(kind = i_def) :: layers = 1 ! hardcoded later in layer checking
+        integer(kind = i_def) :: ndata = 3 ! number of immutable layers
+        integer(kind = i_def) :: stencil_size = 4 ! can be changed but update dimensions below
+        integer(kind = i_def) :: i, j
+        integer(kind = i_def) :: counter = 1
+        integer(kind = i_def) :: max_field = 255
+        integer(kind = i_def), dimension(1) :: field_dof_map ! dof
+        integer(kind = i_def), dimension (1, 4) :: stencil_map !dof, stencil_size
+        real(kind = r_def) :: percentage = 100.0
+        real(kind = r_def) :: tol
+        real(kind = r_def), dimension(15) :: field ! include halo (stencil_size + 1) * dof * layers
+        real(kind = r_def), dimension(15) :: field_variance ! include halo (stencil_size + 1) * dof * layers
+
+        field = 0.0_r_def
+        field_variance = 0.0_r_def
+
+        ! seed the first dof in the first field. This should fill the first field and the one immediately above (it would
+        ! travel sideways to adjacent columns when they are processed.
+
+        field(1) = max_field
+
+        ! build up the doff maps
+        do i = 1, dof
+            field_dof_map(i) = counter
+            counter = counter + ndata ! advancce the counter ready for the next column
+        end do
+        do i = 1, dof
+            do j = 1, stencil_size
+                stencil_map(i, j) = counter
+                counter = counter + ndata ! advancce the counter ready for the next column
+            end do
+        end do
+        !do it!
+        call spread_code(layers, & !set
+                field, & !calculated
+                stencil_size, & ! set
+                stencil_map, & ! calculated
+                field_variance, & !blank
+                ndata, & !set
+                dof, & !set
+                dof * layers * (stencil_size+1) * ndata, & !set
+                field_dof_map, & !calculated
+                percentage)
+
+        tol = 1.0e-14_r_def
+        field = field + field_variance
+
+        ! loop through all the dof on the base cell of the column
+        do i = 1, dof
+            ! check the whole base cell has now picked up the maximum from within it
+            @assertEqual(max_field*percentage/100, field(field_dof_map(i)), tol)
+            ! check the field immediately above has propogated
+            @assertEqual(max_field*percentage/100, field(field_dof_map(i)+1), tol)
+            ! check that it's not propogated beyond where it should
+            @assertEqual(0, field(field_dof_map(i)+2), tol)
+        end do
+
+        ! reset field
+        field = 0.0_r_def
+        field_variance = 0.0_r_def
+
+
+        ! repeat but checking it migrates sideways from the stencil
+        field(stencil_map(1, 1)) = 255
+        ! change the percentage
+        percentage = 50.0
+        call spread_code(layers, & !set
+                field, & !calculated
+                stencil_size, & ! set
+                stencil_map, & ! calculated
+                field_variance, & !blank
+                ndata, & !set
+                dof, & !set
+                dof * layers * (stencil_size+1) * ndata, & !set
+                field_dof_map, & !calculated
+                percentage)
+
+        field = field + field_variance
+
+        do i = 1, dof
+            ! check the whole original cell, also testing that the 50% has worked
+            @assertEqual(CEILING(max_field*percentage/100), field(field_dof_map(i)), tol)
+            ! check that it's not propogated beyond where it should
+            @assertEqual(0, field(i+1), tol)
+        end do
+
+    end subroutine spread_kernel_immutable_test
 
 end module spread_kernel_mod_test

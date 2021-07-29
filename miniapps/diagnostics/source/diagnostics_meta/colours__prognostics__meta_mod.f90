@@ -22,7 +22,8 @@ module colours__prognostics__meta_mod
     use fs_continuity_mod,              only: W3
     use time_step_enum_mod,             only: STANDARD_TIMESTEP
     use interpolation_enum_mod,         only: BILINEAR
-    use vertical_dimensions_mod,        only: model_height_dimension
+    use vertical_dimensions_mod,        only: model_height_dimension, &
+                                              fixed_height_dimension
     use non_spatial_dimension_mod,      only: non_spatial_dimension_type, &
                                               NUMERICAL, &
                                               CATEGORICAL
@@ -76,9 +77,8 @@ contains
             time_step = STANDARD_TIMESTEP, &
             recommended_interpolation = BILINEAR, &
             packing = 0, &
-            vertical_dimension = model_height_dimension( &
-                    bottom = BOTTOM_ATMOSPHERIC_LEVEL, &
-                    top = TOP_ATMOSPHERIC_LEVEL), &
+            vertical_dimension = fixed_height_dimension( &
+                    level_definition = real([0.5,1.5,2.5], r_def)), &
             standard_name = "red")
 
         self%green = field_meta_data_type(&

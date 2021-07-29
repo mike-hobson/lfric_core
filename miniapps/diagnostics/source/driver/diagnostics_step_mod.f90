@@ -7,18 +7,20 @@
 !>
 module diagnostics_step_mod
 
-    use clock_mod,                only : clock_type
-    use constants_mod,            only : i_def, str_def, r_def
-    use diagnostics_alg_mod,      only : diagnostics_alg
-    use field_mod,                only : field_type
-    use field_parent_mod,         only : field_parent_type
-    use field_collection_mod,     only : field_collection_type, &
-                                         field_collection_iterator_type
-    use io_config_mod,            only : write_diag
-    use gungho_model_data_mod,    only : model_data_type
+    use clock_mod,                      only : clock_type
+    use constants_mod,                  only : i_def, str_def, r_def
+    use diagnostics_alg_mod,            only : diagnostics_alg
+    use field_mod,                      only : field_type
+    use field_parent_mod,               only : field_parent_type
+    use field_collection_mod,           only : field_collection_type, &
+                                               field_collection_iterator_type
+    use io_config_mod,                  only : write_diag
+    use gungho_model_data_mod,          only : model_data_type
     use colours__prognostics__meta_mod, only : colours__prognostics__meta_type
     use colours__diagnostics__meta_mod, only : colours__diagnostics__meta_type
-    use log_mod, only : log_event, log_scratch_space, LOG_LEVEL_INFO
+    use colours__non_spatial__meta_mod, only : colours__non_spatial__meta_type
+    use log_mod,                        only : log_event, LOG_LEVEL_INFO
+    use non_spatial_alg_mod,            only : non_spatial_alg
 
     implicit none
 
@@ -48,10 +50,15 @@ contains
         type(field_type), pointer :: green => null()
         type(field_type), pointer :: blue => null()
         type(field_type), pointer :: hex => null()
+        type(field_type), pointer :: mutable_categories => null()
+        type(field_type), pointer :: mutable_numbers => null()
+        type(field_type), pointer :: immutable_both => null()
 
         type(colours__prognostics__meta_type) :: prognostics_meta
         type(colours__diagnostics__meta_type) :: diagnostics_meta
+        type(colours__non_spatial__meta_type) :: non_spatial_meta
         type(field_collection_type), pointer :: prognostic_fields => null()
+        type(field_collection_type), pointer :: non_spatial_fields => null()
         character(str_def) :: hex_id
 
         ! Demonstrate here that fields can be obtained from their field
@@ -88,6 +95,35 @@ contains
             call blue%write_field(blue%get_name())
             call log_event("Writing " // hex%get_name(), LOG_LEVEL_INFO)
             call hex%write_field(hex%get_name())
+        end if
+
+        ! Check non-spatial fields are present
+        non_spatial_meta = colours__non_spatial__meta_type()
+        if (model_data%field_collection_exists(non_spatial_meta%name)) then
+            non_spatial_fields => model_data%get_field_collection( non_spatial_meta%name )
+
+            ! Get fields
+            if (non_spatial_fields%field_exists(non_spatial_meta%mutable_categories%get_unique_id()) .and. &
+                    non_spatial_fields%field_exists(non_spatial_meta%mutable_numbers%get_unique_id()) .and. &
+                    non_spatial_fields%field_exists(non_spatial_meta%immutable_both%get_unique_id())) then
+                mutable_categories => non_spatial_fields%get_field( non_spatial_meta%mutable_categories%get_unique_id() )
+                mutable_numbers => non_spatial_fields%get_field( non_spatial_meta%mutable_numbers%get_unique_id() )
+                immutable_both => non_spatial_fields%get_field( non_spatial_meta%immutable_both%get_unique_id() )
+
+                ! Call the algorithm
+                call non_spatial_alg(&
+                    mutable_categories, &
+                    mutable_numbers, &
+                    immutable_both)
+
+                ! Write the fields
+                call log_event("Writing " // mutable_categories%get_name(), LOG_LEVEL_INFO)
+                call mutable_categories%write_field(mutable_categories%get_name())
+                call log_event("Writing " // mutable_numbers%get_name(), LOG_LEVEL_INFO)
+                call mutable_numbers%write_field(mutable_numbers%get_name())
+                call log_event("Writing " // immutable_both%get_name(), LOG_LEVEL_INFO)
+                call immutable_both%write_field(immutable_both%get_name())
+            end if
         end if
 
     end subroutine diagnostics_step

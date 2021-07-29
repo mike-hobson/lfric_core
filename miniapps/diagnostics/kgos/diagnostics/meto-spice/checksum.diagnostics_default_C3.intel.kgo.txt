@@ -1,1 +1,4 @@
 Inner product checksum colours__hex = 4357F08D960A6F83
+Inner product checksum colours__mutable_numbers = 4087A00000000000
+Inner product checksum colours__mutable_categories = 4087A00000000000
+Inner product checksum colours__immutable_both = 41105AB000000000

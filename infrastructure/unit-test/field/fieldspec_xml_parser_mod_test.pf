@@ -10,7 +10,8 @@ module fieldspec_xml_parser_mod_test
 
   use constants_mod,                only: i_def, r_def, str_def
   use field_type_enum_mod,          only: integer_type, real_type
-  use fieldspec_mod,                only: fieldspec_type
+  use fieldspec_mod,                only: fieldspec_type, &
+                                          non_spatial_dimension_iterator_type
   use axisspec_mod,                 only: axisspec_type
   use fieldspec_collection_mod,     only: fieldspec_collection_type
   use axisspec_collection_mod,      only: axisspec_collection_type
@@ -64,10 +65,10 @@ contains
 
     class(fieldspec_collection_test_type), intent(inout)    :: self
     type(fieldspec_collection_type),       pointer          :: f_collection => null()
-    type(axisspec_collection_type),        pointer          :: d_collection => null()
-    type(fieldspec_type)                                    :: current_fieldspec
+    type(axisspec_collection_type),        pointer          :: a_collection => null()
+    type(fieldspec_type), pointer                           :: current_fieldspec
     integer(i_def),                        parameter        :: no_of_fields = 6
-    integer                                                 :: field_index
+    integer(i_def)                                          :: field_index
 
     ! IDs of fields from test_iodef*.xml files to check they are all being put in the collection
     character(len = 14), dimension(no_of_fields * 3) :: test_IDs = [character(len = 14) :: &
@@ -76,7 +77,7 @@ contains
             "dmv_conv", "area_fraction", "divergence", "gamma", "beta", "raidillon"]   ! IDs from test_iodef3.xml IDs
 
     f_collection => fieldspec_collection_type()
-    d_collection => axisspec_collection_type()
+    a_collection => axisspec_collection_type()
 
     call populate_fieldspec_collection('data/test_iodef1.xml')
     ! check the collection wasn't populated with fewer/more objects than there should be
@@ -85,7 +86,7 @@ contains
     ! only look for the first six of the test_IDs - i.e ones from test_iodef1.xml
     ! get_fieldspec will throw an error if the given ID is not found in the collection
     do field_index = 1, no_of_fields
-      current_fieldspec = f_collection%get_fieldspec(test_IDs(field_index))
+      current_fieldspec => f_collection%get_fieldspec(test_IDs(field_index))
     end do
 
     ! now append objects made from test_iodef2.xml
@@ -94,20 +95,20 @@ contains
 
     ! now checking that the 12 objects made from BOTH first & second file are present
     do field_index = 1, no_of_fields * 2
-      current_fieldspec = f_collection%get_fieldspec( test_IDs(field_index) )
+      current_fieldspec => f_collection%get_fieldspec( test_IDs(field_index) )
     end do
 
     call populate_fieldspec_collection('data/test_iodef3.xml')
     @assertEqual(no_of_fields * 3, f_collection%get_length())
 
     do field_index = 1, no_of_fields * 3
-      current_fieldspec = f_collection%get_fieldspec( test_IDs(field_index) )
+      current_fieldspec => f_collection%get_fieldspec( test_IDs(field_index) )
     end do
 
     ! if referencing the fieldspec_collection with a pointer instead of
     ! creating an object of it, must clear it afterwards for next usage/test
     call f_collection%clear()
-    call d_collection%clear()
+    call a_collection%clear()
 
   end subroutine test_populate_multiple_files
 
@@ -121,11 +122,14 @@ contains
 
     class(fieldspec_collection_test_type), intent(inout) :: self
     type(fieldspec_collection_type),       pointer       :: f_collection => null()
-    type(axisspec_collection_type),        pointer       :: d_collection => null()
-    type(fieldspec_type)                                 :: current_fieldspec
-    type(axisspec_type)                                  :: current_axisspec
+    type(axisspec_collection_type),        pointer       :: a_collection => null()
+    type(fieldspec_type), pointer                        :: current_fieldspec
+    type(axisspec_type), pointer                         :: current_vert_axis
+    type(axisspec_type), pointer                         :: non_spatial_axis
     integer, parameter                                   :: no_of_fields = 6
-    integer                                              :: field_index
+    integer(i_def)                                       :: field_index, dimension_index
+    type(non_spatial_dimension_iterator_type)            :: iterator
+
     character(len = 11), dimension(no_of_fields)         :: test_IDs = &
             [character(len = 11) :: "theta", "rho", "u1", "net_lw_rad", "net_sw_rad", "alpha"]
     character(len = 17), dimension(no_of_fields)         :: test_groups = &
@@ -147,8 +151,8 @@ contains
                                                           .true., .false., &
                                                           .false., .false.]
 
-    ! Properties of vertical axiss of fields in test_iodef1.xml to test
-    character(str_def) :: test_vert_axis_ids(no_of_fields) = ["model_vert_axis_1_full_levels", &
+    ! Properties of vertical axes of fields in test_iodef1.xml to test
+    character(str_def) :: test_vert_axis_ids(no_of_fields) = ["                             ", &
                                                               "model_vert_axis_1_half_levels", &
                                                               "model_vert_axis_1_half_levels", &
                                                               "model_vert_axis_1_full_levels", &
@@ -159,13 +163,13 @@ contains
     real(r_def) :: fixed_axis(3) = [10.5, 11.5, 12.5]
 
     f_collection => fieldspec_collection_type()
-    d_collection => axisspec_collection_type()
+    a_collection => axisspec_collection_type()
 
     call populate_fieldspec_collection('data/test_iodef1.xml')
 
     do field_index = 1, no_of_fields
-      current_fieldspec = f_collection%get_fieldspec( test_IDs(field_index) )
-      current_axisspec = current_fieldspec%get_vertical_axis()
+      current_fieldspec => f_collection%get_fieldspec( test_IDs(field_index) )
+      current_vert_axis => current_fieldspec%get_vertical_axis()
 
       @assertEqual(test_IDs(field_index), current_fieldspec%get_unique_id())
       @assertEqual(test_groups(field_index), current_fieldspec%get_field_group_id())
@@ -176,18 +180,34 @@ contains
       @assertEqual(test_field_types(field_index), current_fieldspec%get_type())
       @assertEqual(test_io_drivers(field_index), current_fieldspec%get_io_driver())
       @assertEqual(test_checksums(field_index), current_fieldspec%get_checksum())
-      @assertEqual(test_vert_axis_ids(field_index), current_axisspec%get_unique_id())
-      if (current_axisspec%get_unique_id() == 'model_vert_axis_1_half_levels') then
-        @assertEqual(half_levels, current_axisspec%get_numeric_axis_def())
-      else if (current_axisspec%get_unique_id() == 'model_vert_axis_1_full_levels') then
-        @assertEqual(full_levels, current_axisspec%get_numeric_axis_def())
-      else if (current_axisspec%get_unique_id() == 'fixed_vert_axis_1') then
-        @assertEqual(fixed_axis, current_axisspec%get_numeric_axis_def())
+
+      ! First field has 2 non-spatial axes and no vertical axes
+      if (field_index == 1) then
+        @assertNotAssociated(current_vert_axis)
+        iterator = current_fieldspec%get_non_spatial_dimension_iterator()
+        do dimension_index = 1, 10
+          if (.not. iterator%has_next()) exit
+          non_spatial_axis => iterator%next()
+          @assertEqual([real(r_def) :: 1,2,3], non_spatial_axis%get_numeric_axis_def())
+        end do
+        ! There are 2 axes, so dimension_index should equal 3
+        @assertEqual(3, dimension_index)
+
+      ! Other fields only have a vertical axis
+      else
+        @assertEqual(test_vert_axis_ids(field_index), current_vert_axis%get_unique_id())
+        if (current_vert_axis%get_unique_id() == 'model_vert_axis_1_half_levels') then
+          @assertEqual(half_levels, current_vert_axis%get_numeric_axis_def())
+        else if (current_vert_axis%get_unique_id() == 'model_vert_axis_1_full_levels') then
+          @assertEqual(full_levels, current_vert_axis%get_numeric_axis_def())
+        else if (current_vert_axis%get_unique_id() == 'fixed_vert_axis_1') then
+          @assertEqual(fixed_axis, current_vert_axis%get_numeric_axis_def())
+        end if
       end if
     end do
 
     call f_collection%clear()
-    call d_collection%clear()
+    call a_collection%clear()
 
   end subroutine test_populate_fieldspec_properties
 

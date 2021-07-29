@@ -7,12 +7,14 @@
 !> @brief A module for the class to hold information about LFRic axes
 !>
 !> @details Contains information about all of the axes used in an LFRic
-!> model run so that it can be pointed to in the fieldspec for each diagnostic
+!> model run. Pointers to axisspec objects are included in the fieldspec for
+!> each dimension for every diagnostic. These axisspecs are used to describe
+!> both vertical and any non-spatial axes that a diagnostic may have
 
 
 module axisspec_mod
 
-  use constants_mod,             only: i_def, str_def, r_def, i_native
+  use constants_mod,             only: i_def, str_def, r_def, i_native, l_def
   use linked_list_data_mod,      only: linked_list_data_type
   use non_spatial_dimension_mod, only: NUMERICAL, CATEGORICAL
 
@@ -26,8 +28,12 @@ module axisspec_mod
 
     !> Unique id used by the diagnostic system to identify the field
     character(str_def)              :: unique_id
+    !> Length of axis definition array
+    integer(i_def)                  :: size
     !> Type of axis definition, either NUMERICAL or CATEGORICAL
     integer(i_native)               :: axis_category
+    !> Whether axis defines vertical extrusion of lfric model
+    logical(l_def)                  :: is_primary_axis
     !> Array containing numerical definition of axis, only for NUMERICAL axes
     real(r_def),        allocatable :: numeric_axis_def(:)
     !> Array containing strings describing categories on axis, only for
@@ -40,6 +46,9 @@ module axisspec_mod
     !> Getter to return the unique_id
     procedure, public :: get_unique_id
 
+    !> Getter to return the size
+    procedure, public :: get_size
+
     !> Getter to return the numeric_axis_def
     procedure, public :: get_numeric_axis_def
 
@@ -48,6 +57,9 @@ module axisspec_mod
 
     !> Getter to return the axis_category
     procedure, public :: get_axis_category
+
+    !> Getter to return is_primary_axis
+    procedure, public :: get_is_primary_axis
 
   end type axisspec_type
 
@@ -90,10 +102,15 @@ contains
 
     self%unique_id = trim(unique_id)
     self%axis_category = axis_category
+    if (unique_id(1:15) == "model_vert_axis") then
+      self%is_primary_axis = .true.
+    else
+      self%is_primary_axis = .false.
+    end if
 
     if (present(numeric_axis_def) .and. present(label_axis_def)) then
-      call log_event("Axis cannot have both a 'numeric' and a 'label' &
-              &axis_def", LOG_LEVEL_ERROR)
+      call log_event("Axis cannot have both a 'numeric' and a 'label'" // &
+              "axis_def", LOG_LEVEL_ERROR)
     end if
 
     if (axis_category == NUMERICAL) then
@@ -102,6 +119,7 @@ contains
                        LOG_LEVEL_ERROR)
       else
         self%numeric_axis_def = numeric_axis_def
+        self%size = size(numeric_axis_def)
       end if
 
     else if (axis_category == CATEGORICAL) then
@@ -110,6 +128,7 @@ contains
                        LOG_LEVEL_ERROR)
       else
         self%label_axis_def = label_axis_def
+        self%size = size(label_axis_def)
       end if
 
     else
@@ -132,6 +151,20 @@ contains
     unique_id = trim(self%unique_id)
 
   end function get_unique_id
+
+  !> Getter for size
+  !> @param[in]  self axisspec_type
+  !> @return size
+  function get_size(self) result(size)
+
+    implicit none
+
+    class(axisspec_type), intent(in) :: self
+    integer(i_def) :: size
+
+    size = self%size
+
+  end function get_size
 
   !> Getter for numeric_axis_def, which is only set for NUMERICAL axes
   !> @param[in]  self  axisspec_type
@@ -174,5 +207,19 @@ contains
     axis_category = self%axis_category
 
   end function get_axis_category
+
+  !> Getter for is_primary_axis
+  !> @param[in]  self  axisspec_type
+  !> @return is_primary_axis
+  function get_is_primary_axis(self) result(is_primary_axis)
+
+    implicit none
+
+    class(axisspec_type), intent(in) :: self
+    logical(l_def)                   :: is_primary_axis
+
+    is_primary_axis = self%is_primary_axis
+
+  end function get_is_primary_axis
 
 end module axisspec_mod

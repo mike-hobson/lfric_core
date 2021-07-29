@@ -40,11 +40,11 @@
                 <domain domain_ref="edge"/>
                 <axis axis_ref="vert_axis_half_levels"/>
             </grid>
-            <grid id="model_vert_axis_2_half_levels_face_grid">
+            <grid id="model_vert_axis_2_half_levels__face_grid">
               <domain domain_ref="face"/>
               <axis axis_ref="model_vert_axis_2_half_levels"/>
             </grid>
-            <grid id="model_vert_axis_2_full_levels_face_grid">
+            <grid id="model_vert_axis_2_full_levels__face_grid">
               <domain domain_ref="face"/>
               <axis axis_ref="model_vert_axis_2_full_levels"/>
             </grid>
@@ -54,19 +54,19 @@
             <field_group id="diagnostic_fields" freq_op="1ts" operation="instant" enabled=".TRUE.">
                 <!-- V component of wind after timestep (STASH sec 0, item 3) -->
                 <field id="u2" name="u2" long_name="northward_wind" standard_name="northward_wind" unit="m s-1"
-                       grid_ref="model_vert_axis_2_half_levels_face_grid"/>
+                       grid_ref="model_vert_axis_2_half_levels__face_grid"/>
                 <!-- W component of wind after timestep (STASH sec 0, item 150) -->
                 <field id="u3" name="u3" long_name="upward_air_velocity" standard_name="upward_air_velocity"
-                       unit="m s-1" grid_ref="model_vert_axis_2_full_levels_face_grid"/>
+                       unit="m s-1" grid_ref="model_vert_axis_2_full_levels__face_grid"/>
                 <!-- Exner pressure after timestep (STASH sec 0, item 255) -->
-                <field id="exner" name="exner" long_name="exner_pressure" unit="1" grid_ref="model_vert_axis_2_half_levels_face_grid"/>
+                <field id="exner" name="exner" long_name="exner_pressure" unit="1" grid_ref="model_vert_axis_2_half_levels__face_grid"/>
             </field_group>
             <field_group enabled=".TRUE." freq_op="1ts" id="test_fields" operation="instant">
-                <field grid_ref="model_vert_axis_2_full_levels_face_grid" id="dt_bl" long_name="BL temperature increment" name="dt_bl"
+                <field grid_ref="model_vert_axis_2_full_levels__face_grid" id="dt_bl" long_name="BL temperature increment" name="dt_bl"
                        unit="K"/>
-                <field grid_ref="model_vert_axis_2_full_levels_face_grid" id="dmv_bl" long_name="BL vapour increment" name="dmv_bl"
+                <field grid_ref="model_vert_axis_2_full_levels__face_grid" id="dmv_bl" long_name="BL vapour increment" name="dmv_bl"
                        unit="kg/kg"/>
-                <field grid_ref="model_vert_axis_2_full_levels_face_grid" id="dt_conv" long_name="Convection temperature increment"
+                <field grid_ref="model_vert_axis_2_full_levels__face_grid" id="dt_conv" long_name="Convection temperature increment"
                        name="dt_conv" unit="K"/>
             </field_group>
         </field_definition>

@@ -248,11 +248,10 @@ contains
     implicit none
 
     type(field_collection_type), pointer :: depository
-    class(field_parent_type), pointer :: tmp_field
-    class(fieldspec_type), pointer :: fieldspec
-    ! Iterator for field collection
-    type(field_collection_iterator_type) :: iterator
-    character(str_def) :: name
+    class(field_type), pointer :: hex
+    class(field_type), pointer :: mutable_numbers
+    class(field_type), pointer :: mutable_categories
+    class(field_type), pointer :: immutable_both
 
     !----------------------------------------------------------------------
     ! Model finalise
@@ -261,23 +260,18 @@ contains
                     LOG_LEVEL_ALWAYS )
 
     depository => model_data%depository
-    iterator = depository%get_iterator()
     ! as with the run step this could use a specific checksum collection to
     ! control if it outputs a checksum for a given field
-    do
-        if (.not.iterator%has_next()) exit
-        tmp_field => iterator%next()
-        select type(tmp_field)
-        type is (field_type)
-            name = trim(adjustl(tmp_field%get_name()))
+    hex => depository%get_field("colours__hex")
+    mutable_numbers => depository%get_field("colours__mutable_numbers")
+    mutable_categories => depository%get_field("colours__mutable_categories")
+    immutable_both => depository%get_field("colours__immutable_both")
+    call checksum_alg('diagnostics', &
+            hex, trim(hex%get_name()), &
+            mutable_numbers, trim(mutable_numbers%get_name()), &
+            mutable_categories, trim(mutable_categories%get_name()), &
+            immutable_both, trim(immutable_both%get_name()))
 
-            fieldspec => fieldspec_collection%get_fieldspec(name)
-            if (fieldspec%get_checksum()) then
-                call checksum_alg('diagnostics', tmp_field, name)
-            end if
-
-        end select
-    end do
     !----------------------------------------------------------------------
     ! Driver layer finalise
     !----------------------------------------------------------------------

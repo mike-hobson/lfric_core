@@ -15,6 +15,10 @@
                     positive="up" unit="m" value="(0, 2) [1 2 3]"/>
             <axis id="fixed_vert_axis_1" n_glo="3" name="fixed_axis"
                   positive="up" unit="m" value="(0, 2) [10.5 11.5 12.5]"/>
+            <axis id="non_spatial_1" n_glo="3" name="non_spatial_1"
+                  unit="unit1" value="(0, 2) [1 2 3]"/>
+            <axis id="non_spatial_2" n_glo="3" name="non_spatial_2"
+                  unit="unit2" value="(0, 2) [1 2 3]"/>
         </axis_definition>
 
         <domain_definition>
@@ -46,24 +50,29 @@
                 <domain domain_ref="edge"/>
                 <axis axis_ref="vert_axis_half_levels"/>
             </grid>
-            <grid id="model_vert_axis_1_half_levels_face_grid">
+            <grid id="model_vert_axis_1_half_levels__face_grid">
               <domain domain_ref="face"/>
               <axis axis_ref="model_vert_axis_1_half_levels"/>
             </grid>
-            <grid id="model_vert_axis_1_full_levels_face_grid">
+            <grid id="model_vert_axis_1_full_levels__face_grid">
               <domain domain_ref="face"/>
               <axis axis_ref="model_vert_axis_1_full_levels"/>
             </grid>
-            <grid id="fixed_vert_axis_1_face_grid">
+            <grid id="fixed_vert_axis_1__face_grid">
                 <domain domain_ref="face" />
                 <axis axis_ref="fixed_vert_axis_1" />
+            </grid>
+            <grid id="non_spatial_1__non_spatial_2__face_grid">
+                <domain domain_ref="face" />
+                <axis axis_ref="non_spatial_1" />
+                <axis axis_ref="non_spatial_2" />
             </grid>
         </grid_definition>
         <field_definition prec="8">
             <!-- Main diagnostic group -->
             <field_group id="diagnostic_fields" freq_op="1ts" operation="instant" enabled=".TRUE.">
                 <!-- Theta after timestep (STASH sec 0, item 4) -->
-                <field id="theta" name="theta" long_name="air_potential_temperature" standard_name="air_potential_temperature" unit="K" grid_ref="model_vert_axis_1_full_levels_face_grid">
+                <field id="theta" name="theta" long_name="air_potential_temperature" standard_name="air_potential_temperature" unit="K" grid_ref="non_spatial_1__non_spatial_2__face_grid">
                     <variable name="mesh_id" type="int">1</variable>
                     <variable name="function_space" type="string">W0<!-- relates to fs_continuity_mod  --></variable>
                     <variable name="element_order" type="int">0</variable>
@@ -75,7 +84,7 @@
                 </field>
                 <!-- Dry Rho after timestep (STASH sec 0, item 389) -->
                 <field id="rho" name="rho" long_name="air_density" standard_name="air_density" unit="kg m-3"
-                       grid_ref="model_vert_axis_1_half_levels_face_grid">
+                       grid_ref="model_vert_axis_1_half_levels__face_grid">
                     <variable name="mesh_id" type="int">3</variable>
                     <variable name="function_space" type="string">W1</variable>
                     <variable name="element_order" type="int">1</variable>
@@ -88,7 +97,7 @@
                 </field>
                 <!-- U component of wind after timestep (STASH sec 0, item 2) -->
                 <field id="u1" name="u1" long_name="eastward_wind" standard_name="eastward_wind" unit="m s-1"
-                       grid_ref="model_vert_axis_1_half_levels_face_grid">
+                       grid_ref="model_vert_axis_1_half_levels__face_grid">
                     <variable name="mesh_id" type="int">0</variable>
                     <variable name="function_space" type="string">W3</variable>
                     <variable name="element_order" type="int">3</variable>
@@ -102,7 +111,7 @@
             </field_group>
             <field_group enabled=".TRUE." freq_op="1ts" id="test_fields" operation="instant">
                 <field id="net_lw_rad" long_name="longwave_radiation" name="lw_rad" unit="Wm-2"
-                grid_ref="model_vert_axis_1_full_levels_face_grid">
+                grid_ref="model_vert_axis_1_full_levels__face_grid">
                     <variable name="mesh_id" type="int">2</variable>
                     <variable name="function_space" type="string">Wtheta</variable>
                     <variable name="element_order" type="int">2</variable>
@@ -111,7 +120,7 @@
                     <variable name="checksum" type="bool">false</variable>
                 </field>
 
-                <field id="net_sw_rad" long_name="shortwave_radiation" name="sw_rad" unit="Wm-2" grid_ref="model_vert_axis_1_full_levels_face_grid">
+                <field id="net_sw_rad" long_name="shortwave_radiation" name="sw_rad" unit="Wm-2" grid_ref="model_vert_axis_1_full_levels__face_grid">
                     <variable name="mesh_id" type="int">4</variable>
                     <variable name="function_space" type="string">Wtheta</variable>
                     <variable name="element_order" type="int">4</variable>
@@ -119,7 +128,7 @@
                     <variable name="field_type" type="string">REAL_TYPE</variable>
                     <variable name="checksum" type="bool">false</variable>
                 </field>
-                <field grid_ref="fixed_vert_axis_1_face_grid" id="alpha" long_name="air_potential_temperature" name="alpha"
+                <field grid_ref="fixed_vert_axis_1__face_grid" id="alpha" long_name="air_potential_temperature" name="alpha"
                        standard_name="air_potential_temperature" unit="K">
                     <variable name="mesh_id" type="int">3</variable>
                     <variable name="function_space" type="int">W2</variable>

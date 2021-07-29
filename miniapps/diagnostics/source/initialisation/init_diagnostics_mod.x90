@@ -16,7 +16,8 @@ module init_diagnostics_mod
     use field_mod,                     only : field_type
     use field_parent_mod,              only : write_interface
     use field_collection_mod,          only : field_collection_type
-    use fieldspec_mod,                 only : fieldspec_type
+    use fieldspec_mod,                 only : fieldspec_type, &
+                                              non_spatial_dimension_iterator_type
     use fieldspec_collection_mod,      only : fieldspec_collection_type, &
                                               fieldspec_collection_iterator_type
     use function_space_collection_mod, only : function_space_collection
@@ -24,7 +25,10 @@ module init_diagnostics_mod
     use io_config_mod,                 only : write_diag, &
                                               use_xios_io
     use io_driver_enum_mod,            only : name_from_io_driver
-    use lfric_xios_write_mod,          only : write_field_face
+    use lfric_xios_write_mod,          only : write_field_face, &
+                                              write_field_edge, &
+                                              write_field_node, &
+                                              write_field_single_face
     use log_mod,                       only : log_event, &
                                               log_scratch_space , &
                                               LOG_LEVEL_INFO, &
@@ -32,6 +36,7 @@ module init_diagnostics_mod
     use non_spatial_dimension_mod,     only : NUMERICAL, CATEGORICAL
     use pure_abstract_field_mod,       only : pure_abstract_field_type
     use runtime_constants_mod,         only : create_runtime_constants
+    use fs_continuity_mod,             only : W0, W2H, W3, Wtheta
 
     implicit none
 
@@ -66,7 +71,10 @@ contains
 
         procedure(write_interface), pointer :: tmp_ptr => null()
 
-        type(axisspec_type), pointer :: axisspec => null()
+        type(axisspec_type), pointer :: vert_axis => null()
+        type(axisspec_type), pointer :: non_spatial_axis => null()
+        type(non_spatial_dimension_iterator_type) :: nsd_iterator
+        integer(i_def) :: length_ndata
 
         allocate(new_field)
 
@@ -75,18 +83,67 @@ contains
 
         call log_event('diagnostics: Initialising miniapp ...', LOG_LEVEL_INFO)
 
+        ! Iterate through fieldspec collection
         iterator = fieldspec_collection%get_iterator()
         do
-            if (.not.iterator%has_next()) exit
+            if (.not. iterator%has_next()) exit
             fieldspec => iterator%next()
+            vert_axis => fieldspec%get_vertical_axis()
+            non_spatial_axis => null()
+            nsd_iterator = fieldspec%get_non_spatial_dimension_iterator()
+            length_ndata = 1
+            do
+                if (.not. nsd_iterator%has_next()) exit
+                non_spatial_axis => nsd_iterator%next()
+                length_ndata = length_ndata * non_spatial_axis%get_size()
+            end do
 
-            ! Initialise field
-            call new_field%initialise(vector_space = &
-                    function_space_collection%get_fs( &
-                            fieldspec%get_mesh_id(), &
-                            fieldspec%get_order(), &
-                            fieldspec%get_function_space()), &
-                    name = trim(fieldspec%get_unique_id()))
+            ! This needs updating when support for diagnostics to have both
+            ! vertical and non-spatial dimensions is required
+            if (associated(vert_axis) .and. associated(non_spatial_axis)) then
+                call log_event("Diagnostics with both vert and non-spatial axes &
+                        &is currently unsupported", LOG_LEVEL_ERROR)
+
+            ! Initialise fields with non-spatial dimensions
+            else if (associated(non_spatial_axis)) then
+                call new_field%initialise(vector_space = &
+                        function_space_collection%get_fs( &
+                                twod_mesh_id, &
+                                fieldspec%get_order(), &
+                                fieldspec%get_function_space(), &
+                                length_ndata), &
+                        name = trim(fieldspec%get_unique_id()))
+
+            ! Initialise fields with vertical axis
+            else if (associated(vert_axis)) then
+                ! Mutable vertical axes use 3d mesh
+                if (vert_axis%get_is_primary_axis()) then
+                    call new_field%initialise(vector_space = &
+                            function_space_collection%get_fs( &
+                                    mesh_id, &
+                                    fieldspec%get_order(), &
+                                    fieldspec%get_function_space()), &
+                            name = trim(fieldspec%get_unique_id()))
+                ! Immutable vertical axes use multi-data field with 2d mesh
+                else
+                    call new_field%initialise(vector_space = &
+                            function_space_collection%get_fs( &
+                                    twod_mesh_id, &
+                                    fieldspec%get_order(), &
+                                    fieldspec%get_function_space(), &
+                                    vert_axis%get_size()), &
+                            name = trim(fieldspec%get_unique_id()))
+                end if
+
+            ! Initialise 2-d fields
+            else
+                call new_field%initialise(vector_space = &
+                        function_space_collection%get_fs( &
+                                twod_mesh_id, &
+                                fieldspec%get_order(), &
+                                fieldspec%get_function_space()), &
+                        name = trim(fieldspec%get_unique_id()))
+            end if
 
             call log_event("Add to depository", LOG_LEVEL_INFO)
             call model_data%depository%add_field(new_field)
@@ -110,25 +167,24 @@ contains
             ! Set field to 0
             call invoke(setval_c(tmp_field, 0.0_r_def))
 
-            ! Check axisspec objects can be retrieved from collection
-            axisspec => fieldspec%get_vertical_axis()
-            call log_event("--------------------",LOG_LEVEL_INFO)
-            call log_event("axisspec: " // axisspec%get_unique_id(), LOG_LEVEL_INFO)
-            if (axisspec%get_axis_category() == NUMERICAL) then
-                write(log_scratch_space, *) axisspec%get_numeric_axis_def()
-                call log_event(log_scratch_space, LOG_LEVEL_INFO)
-            else if (axisspec%get_axis_category() == CATEGORICAL) then
-                write(log_scratch_space, *) axisspec%get_label_axis_def()
-                call log_event(log_scratch_space, LOG_LEVEL_INFO)
-            end if
-            call log_event("--------------------",LOG_LEVEL_INFO)
-
             ! Set write behaviour
             if (write_diag .and. use_xios_io) then
 
-                select case(name_from_io_driver(fieldspec%get_io_driver()))
-                    case("WRITE_FIELD_FACE")
+                select case(fieldspec%get_function_space())
+                    case(W0)
+                        tmp_ptr => write_field_node
+                    case(W2H)
+                        tmp_ptr => write_field_edge
+                    case(Wtheta)
                         tmp_ptr => write_field_face
+                    case(W3)
+                        if (length_ndata > 1) then
+                            tmp_ptr => write_field_single_face
+                        else
+                            tmp_ptr => write_field_face
+                        end if
+                    case default
+                        call log_event("Invalid function space", LOG_LEVEL_ERROR)
                 end select
 
                 call tmp_field%set_write_behaviour(tmp_ptr)

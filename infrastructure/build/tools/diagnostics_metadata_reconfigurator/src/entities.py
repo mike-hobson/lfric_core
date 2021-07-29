@@ -284,7 +284,7 @@ class Grid:
         """
         self.domain = domain
         self.axes = axes
-        self.unique_id = f"{'_'.join(axis for axis in axes)}_{domain}_grid"
+        self.unique_id = f"{'__'.join(axis for axis in axes)}__{domain}_grid"
 
     def __eq__(self, other):
         return self.domain == other.domain and self.axes == other.axes

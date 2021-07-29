@@ -15,7 +15,6 @@ module fieldspec_collection_mod
   use constants_mod,             only: i_def, l_def
   use fieldspec_mod,             only: fieldspec_type
   use linked_list_mod,           only: linked_list_type, linked_list_item_type
-  use axisspec_mod,              only: axisspec_type
   use log_mod,                   only: log_event, log_scratch_space, &
                                        LOG_LEVEL_ERROR
 
@@ -144,12 +143,16 @@ contains
   !> @param[in] field_type The data type of the field
   !> @param[in] io_driver The io driver used for the field
   !> @param[in] checksum Whether a checksum will be written for the field
-  !> @param[in] vertical_axis Axisspec object describing vertical axis
-  !>
-  subroutine generate_and_add_fieldspec( self, unique_id, field_group_id, &
-                                        mesh_id, function_space, order, &
-                                        field_kind, field_type, io_driver, &
-                                        checksum, vertical_axis )
+  subroutine generate_and_add_fieldspec( self,            &
+                                         unique_id,       &
+                                         field_group_id,  &
+                                         mesh_id,         &
+                                         function_space,  &
+                                         order,           &
+                                         field_kind,      &
+                                         field_type,      &
+                                         io_driver,       &
+                                         checksum )
 
     implicit none
 
@@ -163,7 +166,6 @@ contains
     integer(i_def),                    intent(in)    :: field_type
     integer(i_def),                    intent(in)    :: io_driver
     logical(l_def),                    intent(in)    :: checksum
-    type(axisspec_type),      pointer, intent(in)    :: vertical_axis
 
     type(fieldspec_type) :: new_fieldspec
 
@@ -176,8 +178,7 @@ contains
                                     field_kind,      &
                                     field_type,      &
                                     io_driver,       &
-                                    checksum,        &
-                                    vertical_axis )
+                                    checksum )
 
     call self%add_fieldspec( new_fieldspec )
 

@@ -14,7 +14,6 @@ module fieldspec_factory_mod
   use constants_mod,        only: i_def, str_def, l_def
   use fieldspec_mod,        only: fieldspec_type
   use io_driver_enum_mod,   only: WRITE_FIELD_FACE
-  use axisspec_mod,         only: axisspec_type
 
   implicit none
 
@@ -37,7 +36,6 @@ module fieldspec_factory_mod
     integer(i_def)                    :: field_type
     integer(i_def)                    :: io_driver
     logical(l_def)                    :: checksum
-    type(axisspec_type),      pointer :: vertical_axis => null()
 
   contains
 
@@ -73,9 +71,6 @@ module fieldspec_factory_mod
 
     !> setter to return checksum
     procedure, public :: set_checksum
-
-    !> setter to return vertical_axis
-    procedure, public :: set_vertical_axis
 
   end type fieldspec_factory_type
 
@@ -118,7 +113,6 @@ contains
     self%field_type          = 0_i_def
     self%io_driver           = WRITE_FIELD_FACE  ! default to write_field_face
     self%checksum            = .false.
-    self%vertical_axis      => null()
 
     return
   end subroutine initialise
@@ -141,8 +135,7 @@ contains
                                     self%field_kind,     &
                                     self%field_type,     &
                                     self%io_driver,      &
-                                    self%checksum,       &
-                                    self%vertical_axis )
+                                    self%checksum)
   end function finalise
 
 
@@ -153,7 +146,7 @@ contains
     implicit none
 
     class(fieldspec_factory_type),    intent(inout)    :: self
-    character(len=*),               intent(in)       :: unique_id
+    character(len=*),                 intent(in)       :: unique_id
 
     self%unique_id = unique_id
 
@@ -167,7 +160,7 @@ contains
     implicit none
 
     class(fieldspec_factory_type),    intent(inout)    :: self
-    character(len=*),               intent(in)       :: field_group_id
+    character(len=*),                 intent(in)       :: field_group_id
 
     self%field_group_id = field_group_id
 
@@ -271,20 +264,5 @@ contains
 
     return
   end subroutine set_checksum
-
-  !> Setter for vertical_axis
-  !> @param[in] vertical_axis
-  subroutine set_vertical_axis( self, vertical_axis )
-
-    implicit none
-
-    class(fieldspec_factory_type),     intent(inout)   :: self
-    type(axisspec_type),      pointer, intent(in)      :: vertical_axis
-
-    self%vertical_axis => vertical_axis
-
-    return
-  end subroutine set_vertical_axis
-
 
 end module fieldspec_factory_mod

@@ -7,11 +7,13 @@
 !>@brief Barebones algorithm to help the development of miniapps
 module diagnostics_alg_mod
 
-    use log_mod, only : log_event, &
-            LOG_LEVEL_INFO
-    use field_mod, only : field_type
-    use spread_kernel_mod, only : spread_kernel_type
-    use rgb_to_hex_kernel_mod, only : rgb_to_hex_kernel_type
+    use constants_mod,                 only: i_def
+    use log_mod,                       only: log_event, &
+                                             LOG_LEVEL_INFO
+    use field_mod,                     only: field_type, &
+                                             field_proxy_type
+    use spread_kernel_mod,             only: spread_kernel_type
+    use rgb_to_hex_kernel_mod,         only: rgb_to_hex_kernel_type
     use psykal_lite_integer_maths_mod, only: invoke_integer_inc_X_plus_Y
 
     implicit none
@@ -38,8 +40,9 @@ contains
         type(field_type), pointer, intent(inout) :: hex
 
         ! local fields
-
-        type(field_type) :: red_var, green_var, blue_var
+        type(field_type)       :: red_var, green_var, blue_var
+        type(field_proxy_type) :: red_proxy, green_proxy, blue_proxy
+        integer(i_def)         :: red_ndata, green_ndata, blue_ndata
 
         ! setup
         call log_event("diagnostics: Initialising variance fields", LOG_LEVEL_INFO)
@@ -48,12 +51,20 @@ contains
         call green%copy_field_properties(green_var, 'green_var')
         call blue%copy_field_properties(blue_var, 'blue_var')
 
+        ! Get ndata for each field
+        red_proxy = red%get_proxy()
+        red_ndata = red_proxy%vspace%get_ndata()
+        green_proxy = green%get_proxy()
+        green_ndata = green_proxy%vspace%get_ndata()
+        blue_proxy = blue%get_proxy()
+        blue_ndata = blue_proxy%vspace%get_ndata()
+
         ! Process
         call log_event("diagnostics: Running algorithm", LOG_LEVEL_INFO)
 
-        call invoke(spread_kernel_type(red, 1, red_var), &
-                    spread_kernel_type(green, 1, green_var), &
-                    spread_kernel_type(blue, 1, blue_var))
+        call invoke(spread_kernel_type(red, 1, red_var, red_ndata))
+        call invoke(spread_kernel_type(green, 1, green_var, green_ndata))
+        call invoke(spread_kernel_type(blue, 1, blue_var, blue_ndata))
 
         ! apply the variances to the field - use a custom kernel to handle integer maths
         ! (std kernel was erroring due to adding near 0 values)

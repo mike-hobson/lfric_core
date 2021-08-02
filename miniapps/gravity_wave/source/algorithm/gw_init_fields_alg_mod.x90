@@ -16,7 +16,6 @@ module gw_init_fields_alg_mod
 
   use mass_matrix_solver_alg_mod,        only: mass_matrix_solver_alg
   use geometric_constants_mod,           only: get_coordinates, &
-                                               get_coordinates_xyz, &
                                                get_panel_id
 
   ! Configuration options
@@ -64,8 +63,7 @@ contains
     type( field_type )                    :: r_u
 
     ! Coordinate fields
-    type( field_type ), pointer :: chi_xyz(:) => null()
-    type( field_type ), pointer :: chi_sph(:) => null()
+    type( field_type ), pointer :: chi(:) => null()
     type( field_type ), pointer :: panel_id => null()
 
     real(kind=r_def), parameter        :: initial_time = 0.0_r_def
@@ -76,8 +74,7 @@ contains
 
     mesh_id = wind%get_mesh_id()
 
-    chi_xyz  => get_coordinates_xyz(mesh_id)
-    chi_sph  => get_coordinates(mesh_id)
+    chi => get_coordinates(mesh_id)
     panel_id => get_panel_id(mesh_id)
 
     qr = quadrature_xyoz_type(element_order+3, quadrature_rule)
@@ -86,14 +83,14 @@ contains
 
     call log_event( 'gravity_wave: Initialising prognostic fields', LOG_LEVEL_INFO )
 
-    call invoke( initial_buoyancy_kernel_type(buoyancy, chi_sph, panel_id) )
+    call invoke( initial_buoyancy_kernel_type(buoyancy, chi, panel_id) )
     ! Initialise U and p according to formulation
     call r_u % initialise( vector_space = wind%get_function_space() )
     call invoke( name = 'Initialise U and p',     &
                  setval_c( wind,     0.0_r_def ), &
                  setval_c( r_u,      0.0_r_def ), &
                  setval_c( pressure, 0.0_r_def ), &
-                 initial_u_kernel_type( r_u, chi_sph, panel_id, initial_time, qr ) )
+                 initial_u_kernel_type( r_u, chi, panel_id, initial_time, qr ) )
     call mass_matrix_solver_alg(wind, r_u)
 
     call log_event( 'gravity_wave: Initialised prognostic fields', LOG_LEVEL_INFO )

@@ -81,10 +81,8 @@ contains
   !>                              (not XIOS' communicator)
   !> @param[in,out] mesh_id      The identifier given to the current 3d mesh
   !> @param[in,out] twod_mesh_id The identifier given to the current 2d mesh
-  !> @param[in,out] chi_xyz      A size 3 array of fields holding the
-  !>                             (X,Y,Z) coordinates of the mesh
-  !> @param[in,out] chi_sph      A size 3 array of fields holding the
-  !>                             spherical coordinates of the mesh
+  !> @param[in,out] chi          A size 3 array of fields holding the
+  !>                             coordinates of the mesh
   !> @param[in,out] panel_id     A 2D field holding the cubed sphere panel id
   !> @param[out]    io_context   Initialise context for interacting with I/O.
   !>
@@ -93,8 +91,7 @@ contains
                                         communicator, &
                                         mesh_id,      &
                                         twod_mesh_id, &
-                                        chi_xyz,      &
-                                        chi_sph,      &
+                                        chi,          &
                                         panel_id,     &
                                         io_context )
 
@@ -114,8 +111,7 @@ contains
     integer(i_native),      intent(in)    :: communicator
     integer(i_def),         intent(inout) :: mesh_id
     integer(i_def),         intent(inout) :: twod_mesh_id
-    type(field_type),       intent(inout) :: chi_xyz(3)
-    type(field_type),       intent(inout) :: chi_sph(3)
+    type(field_type),       intent(inout) :: chi(3)
     type(field_type),       intent(inout) :: panel_id
     class(io_context_type), intent(out), &
                             allocatable   :: io_context
@@ -184,7 +180,7 @@ contains
     call init_mesh( local_rank, total_ranks, mesh_id, twod_mesh_id )
 
     ! Create FEM specifics (function spaces and chi field)
-    call init_fem( mesh_id, chi_xyz, chi_sph, panel_id )
+    call init_fem( mesh_id, chi, panel_id )
 
     ! Set up XIOS domain and context
     init_context_ptr => initialise_context
@@ -194,7 +190,7 @@ contains
                           communicator,                      &
                           mesh_id,                           &
                           twod_mesh_id,                      &
-                          chi_sph,                           &
+                          chi,                               &
                           panel_id,                          &
                           timestep_start,                    &
                           timestep_end,                      &

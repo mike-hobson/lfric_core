@@ -78,9 +78,9 @@ contains
 !! @param[in] exner Reference pressure
 !! @param[in] rho Reference density
 !! @param[in] theta Reference potential temperature
-!! @param[in] chi1 1st (spherical) coordinate field in Wchi
-!! @param[in] chi2 2nd (spherical) coordinate field in Wchi
-!! @param[in] chi3 3rd (spherical) coordinate field in Wchi
+!! @param[in] chi1 1st coordinate field in Wchi
+!! @param[in] chi2 2nd coordinate field in Wchi
+!! @param[in] chi3 3rd coordinate field in Wchi
 !! @param[in] panel_id Field giving the ID for mesh panels
 !! @param[in] scalar Scalar weight for the operator
 !! @param[in] ndf_w3 Number of degrees of freedom per cell for the operator space

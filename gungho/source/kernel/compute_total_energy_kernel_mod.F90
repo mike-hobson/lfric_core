@@ -70,9 +70,9 @@ contains
 !! @param[in] exner The Exner Pressure
 !! @param[in] theta Potential temperature
 !! @param[in] phi The geopotential
-!! @param[in] chi_1 1st spherical coordinate field in Wchi
-!! @param[in] chi_2 2nd spherical coordinate field in Wchi
-!! @param[in] chi_3 3rd spherical coordinate field in Wchi
+!! @param[in] chi_1 1st coordinate field in Wchi
+!! @param[in] chi_2 2nd coordinate field in Wchi
+!! @param[in] chi_3 3rd coordinate field in Wchi
 !! @param[in] panel_id A field giving the ID for mesh panels
 !! @param[in] cv Specific heat of dry air at constant volume
 !! @param[in] ndf_w3 The number of degrees of freedom per cell for w3

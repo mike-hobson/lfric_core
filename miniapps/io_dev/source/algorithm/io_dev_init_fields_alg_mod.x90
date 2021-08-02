@@ -15,7 +15,7 @@ module io_dev_init_fields_alg_mod
                                            field_collection_iterator_type
   use io_dev_init_kernel_mod,       only : io_dev_init_kernel_type
   use io_dev_init_int_kernel_mod,   only : io_dev_init_int_kernel_type
-  use log_mod,                         only : LOG_LEVEL_INFO
+  use log_mod,                      only : LOG_LEVEL_INFO
 
   implicit none
 
@@ -25,14 +25,14 @@ module io_dev_init_fields_alg_mod
 contains
   !> @details An algorithm for initialising IO_Dev fields analytically
   !> @param[in,out] core_fields The core model field collection
-  !> @param[in]     chi_sph     A size 3 array of fields holding the mesh coordinates
+  !> @param[in]     chi         A size 3 array of fields holding the mesh coordinates
   !> @param[in]     panel_id    Field holding the IDs of mesh panels
-subroutine io_dev_init_fields_alg(core_fields, chi_sph, panel_id)
+subroutine io_dev_init_fields_alg(core_fields, chi, panel_id)
 
     implicit none
 
     type(field_collection_type), intent(inout) :: core_fields
-    type(field_type),            intent(in)    :: chi_sph(3)
+    type(field_type),            intent(in)    :: chi(3)
     type(field_type),            intent(in)    :: panel_id
 
     type(field_collection_iterator_type) :: iter
@@ -47,8 +47,8 @@ subroutine io_dev_init_fields_alg(core_fields, chi_sph, panel_id)
         type is (field_type)
           ! Initialise fields to default analytic value (product of x, y and z
           ! coordinates)
-          call invoke ( setval_c(fld, 0.0_r_def),                       &
-                        io_dev_init_kernel_type(fld, chi_sph, panel_id) )
+          call invoke ( setval_c(fld, 0.0_r_def),                   &
+                        io_dev_init_kernel_type(fld, chi, panel_id) )
 
         type is (integer_field_type)
           ! Initialise fields to default analytic value (dof ID)

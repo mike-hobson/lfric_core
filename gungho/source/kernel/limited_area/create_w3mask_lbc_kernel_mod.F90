@@ -22,8 +22,8 @@ module create_w3mask_lbc_kernel_mod
   use kernel_mod,                only : kernel_type
   use base_mesh_config_mod,      only : geometry,            &
                                         geometry_spherical
-  use finite_element_config_mod, only : spherical_coord_system, &
-                                        spherical_coord_system_xyz
+  use finite_element_config_mod, only : coord_system, &
+                                        coord_system_xyz
 
   implicit none
 
@@ -161,7 +161,7 @@ subroutine create_w3mask_lbc_code( nlayers,    &
 
     ! Change of coordinates for spherical geometry
     if ( geometry == geometry_spherical .and. &
-         spherical_coord_system == spherical_coord_system_xyz ) then
+         coord_system == coord_system_xyz ) then
       ! in alpha beta space - and only pick the face where x(2)>0
       if ( x(2) > 0.0_r_def ) then
         query_value_ns = atan2(x(3),x(2))

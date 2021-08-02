@@ -80,9 +80,8 @@ contains
       ! Use the surface altitude to introduce orography on the multigrid meshes
       !------------------------------------------------------------------------!
 
-      call assign_orography_field(chi_mg(:,level), panel_id_mg(level),    &
-                                  mg_mesh_id, surface_altitude_mg(level), &
-                                  spherical_coords=.true. )
+      call assign_orography_field(chi_mg(:,level), panel_id_mg(level), &
+                                  mg_mesh_id, surface_altitude_mg(level))
     end do
 
     deallocate(surface_altitude_mg)

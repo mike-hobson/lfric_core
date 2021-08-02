@@ -60,9 +60,9 @@ contains
 !! @param[in] nlayers  Number of layers
 !! @param[in] ncell_3d ncell*ndf
 !! @param[in,out] mm   Local stencil or mass matrix
-!! @param[in] chi1     1st (spherical) coordinate field in Wchi
-!! @param[in] chi2     2nd (spherical) coordinate field in Wchi
-!! @param[in] chi3     3rd (spherical) coordinate field in Wchi
+!! @param[in] chi1     1st coordinate field in Wchi
+!! @param[in] chi2     2nd coordinate field in Wchi
+!! @param[in] chi3     3rd coordinate field in Wchi
 !! @param[in] panel_id Field giving the ID for mesh panels
 !! @param[in] ndf_w2   Degrees of freedom per cell
 !! @param[in] basis_w2 Vector basis functions evaluated at quadrature points

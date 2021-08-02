@@ -46,34 +46,27 @@ contains
   !>                 multigrid
   !> @param [in,out] multigrid_2D_mesh_ids A list of identifiers for all 2d
   !>                 meshes used for multigrid
-  !> @param [in,out] prime_chi_xyz (X,Y,Z) coordinate fields
-  !> @param [in,out] prime_chi_sph Spherical coordinate fields
+  !> @param [in,out] prime_chi Coordinate fields
   !> @param [in,out] prime_panel_id 2D field giving cubed sphere panel ids
-  !> @param [in,out] prime_shifted_chi_xyz (X,Y,Z) coordinate fields on shifted mesh
-  !> @param [in,out] prime_shifted_chi_sph Spherical coordinate fields on shifted mesh
-  !> @param [in,out] prime_double_level_chi_xyz (X,Y,Z) coordinate fields on
+  !> @param [in,out] prime_shifted_chi Coordinate fields on shifted mesh
+  !> @param [in,out] prime_double_level_chi Coordinate fields on
   !>                 double level mesh
-  !> @param [in,out] prime_double_level_chi_sph Spherical coordinate fields on
-  !>                 double level mesh
-  !> @param [in,out] chi_xyz_fields All (X,Y,Z) coordinate fields for the multires_coupling Miniapp
-  !> @param [in,out] chi_sph_fields All spherical coordinate fields for the multires_coupling Miniapp
+  !> @param [in,out] chi_fields All coordinate fields for the multires_coupling miniapp
   !> @param [in,out] panel_id_fields 2D field giving cubed sphere panel id fields
-  !>                 for multires_coupling Miniapp
+  !>                 for multires_coupling miniapp
   !> @param [in,out] chi_mg_sph Spherical coordinate fields for multigrid
   !> @param [in,out] panel_id_mg 2D fields giving cubed sphere panel ids for multigrid
-  subroutine initialise_multires_coupling_model(                                     &
-                                       prime_mesh_id, prime_2D_mesh_id,              &
-                                       prime_shifted_mesh_id,                        &
-                                       prime_double_level_mesh_id,                   &
-                                       multires_coupling_mesh_ids,                   &
-                                       multires_coupling_2D_mesh_ids,                &
-                                       multigrid_mesh_ids, multigrid_2D_mesh_ids,    &
-                                       prime_chi_xyz, prime_chi_sph, prime_panel_id, &
-                                       prime_shifted_chi_xyz,                        &
-                                       prime_shifted_chi_sph,                        &
-                                       prime_double_level_chi_xyz,                   &
-                                       prime_double_level_chi_sph,                   &
-                                       chi_xyz_fields, chi_sph_fields,               &
+  subroutine initialise_multires_coupling_model(                                  &
+                                       prime_mesh_id, prime_2D_mesh_id,           &
+                                       prime_shifted_mesh_id,                     &
+                                       prime_double_level_mesh_id,                &
+                                       multires_coupling_mesh_ids,                &
+                                       multires_coupling_2D_mesh_ids,             &
+                                       multigrid_mesh_ids, multigrid_2D_mesh_ids, &
+                                       prime_chi, prime_panel_id,                 &
+                                       prime_shifted_chi,                         &
+                                       prime_double_level_chi,                    &
+                                       chi_fields,                                &
                                        panel_id_fields, chi_mg_sph, panel_id_mg )
 
     implicit none
@@ -87,15 +80,11 @@ contains
     integer(kind=i_def), allocatable, intent(inout) :: multigrid_mesh_ids(:)
     integer(kind=i_def), allocatable, intent(inout) :: multigrid_2D_mesh_ids(:)
 
-    type(field_type),              intent(inout) :: prime_chi_xyz(3)
-    type(field_type),              intent(inout) :: prime_chi_sph(3)
-    type(field_type),              intent(inout) :: prime_shifted_chi_xyz(3)
-    type(field_type),              intent(inout) :: prime_shifted_chi_sph(3)
-    type(field_type),              intent(inout) :: prime_double_level_chi_xyz(3)
-    type(field_type),              intent(inout) :: prime_double_level_chi_sph(3)
+    type(field_type),              intent(inout) :: prime_chi(3)
+    type(field_type),              intent(inout) :: prime_shifted_chi(3)
+    type(field_type),              intent(inout) :: prime_double_level_chi(3)
     type(field_type),              intent(inout) :: prime_panel_id
-    type(field_type), allocatable, intent(inout) :: chi_xyz_fields(:,:)
-    type(field_type), allocatable, intent(inout) :: chi_sph_fields(:,:)
+    type(field_type), allocatable, intent(inout) :: chi_fields(:,:)
     type(field_type), allocatable, intent(inout) :: panel_id_fields(:)
     type(field_type), allocatable, intent(inout) :: chi_mg_sph(:,:)
     type(field_type), allocatable, intent(inout) :: panel_id_mg(:)
@@ -126,35 +115,33 @@ contains
                     use_multires_coupling )
 
     ! Create FEM specifics (function spaces and chi field)
-    call init_fem( prime_mesh_id, prime_chi_xyz, prime_chi_sph,            &
+    call init_fem( prime_mesh_id, prime_chi,                               &
                    prime_panel_id, prime_shifted_mesh_id,                  &
-                   prime_shifted_chi_xyz, prime_shifted_chi_sph,           &
-                   prime_double_level_mesh_id, prime_double_level_chi_xyz, &
-                   prime_double_level_chi_sph,                             &
+                   prime_shifted_chi,                                      &
+                   prime_double_level_mesh_id,                             &
+                   prime_double_level_chi,                                 &
                    multigrid_mesh_ids, multigrid_2D_mesh_ids,              &
                    chi_mg_sph, panel_id_mg,                                &
                    l_multigrid,                                            &
                    multires_coupling_mesh_ids,                             &
                    multires_coupling_2D_mesh_ids,                          &
-                   chi_sph_fields, chi_xyz_fields, panel_id_fields,        &
+                   chi_fields, panel_id_fields,                            &
                    use_multires_coupling )
 
     ! Create runtime_constants object. This in turn creates various things
     ! needed by the fem algorithms such as mass matrix operators, mass
     ! matrix diagonal fields and the geopotential field
     call create_runtime_constants( prime_mesh_id, prime_2D_mesh_id,           &
-                                   prime_chi_xyz, prime_chi_sph,              &
+                                   prime_chi,                                 &
                                    prime_panel_id, prime_shifted_mesh_id,     &
-                                   prime_shifted_chi_xyz,                     &
-                                   prime_shifted_chi_sph,                     &
+                                   prime_shifted_chi,                         &
                                    prime_double_level_mesh_id,                &
-                                   prime_double_level_chi_xyz,                &
-                                   prime_double_level_chi_sph,                &
+                                   prime_double_level_chi,                    &
                                    multigrid_mesh_ids, multigrid_2D_mesh_ids, &
                                    chi_mg_sph, panel_id_mg,                   &
                                    multires_coupling_mesh_ids,                &
                                    multires_coupling_2D_mesh_ids,             &
-                                   chi_sph_fields, panel_id_fields )
+                                   chi_fields, panel_id_fields )
 
   end subroutine initialise_multires_coupling_model
 

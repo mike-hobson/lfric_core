@@ -20,8 +20,8 @@ module compute_geopotential_kernel_mod
   use constants_mod,             only : r_def, i_def
   use coord_transform_mod,       only : xyz2llr
   use formulation_config_mod,    only : shallow
-  use finite_element_config_mod, only : spherical_coord_system, &
-                                        spherical_coord_system_xyz
+  use finite_element_config_mod, only : coord_system, &
+                                        coord_system_xyz
   use fs_continuity_mod,         only : W3
   use kernel_mod,                only : kernel_type
 
@@ -114,7 +114,7 @@ subroutine compute_geopotential_code(nlayers, phi,               &
       shallow_switch = 0.0_r_def
     end if
     ! For Cartesian coordinate system, obtain radius from (X,Y,Z)
-    if (spherical_coord_system == spherical_coord_system_xyz) then
+    if (coord_system == coord_system_xyz) then
       do k = 0, nlayers-1
         do dfc = 1, ndf_chi
           chi_1_e(dfc) = chi_1( map_chi(dfc) + k)

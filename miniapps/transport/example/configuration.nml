@@ -21,11 +21,10 @@ checkpoint_stem_name      = 'restartTransport'
 /
 &finite_element
 cellshape='quadrilateral',
-coordinate_order=2,
 element_order=0,
 rehabilitate=.true.,
-spherical_coord_order=1,
-spherical_coord_system='abh'
+coord_order=1,
+coord_system='alphabetaz'
 vorticity_in_w1=.true.,
 /
 &initial_temperature

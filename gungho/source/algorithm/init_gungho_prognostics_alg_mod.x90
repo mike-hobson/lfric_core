@@ -108,7 +108,7 @@ contains
     type( quadrature_rule_gaussian_type ) :: quadrature_rule
     type( field_type )                    :: r_u, r_psi, psi, r_rho
     ! Coordinate fields
-    type( field_type ), pointer           :: chi_sph(:) => null()
+    type( field_type ), pointer           :: chi(:) => null()
     type( field_type ), pointer           :: panel_id => null()
     type( field_type ), pointer           :: height_wth => null()
     type( field_type ), pointer           :: height_w3 => null()
@@ -135,7 +135,7 @@ contains
     call r_rho%initialise( vector_space =  rho%get_function_space() )
 
     qr = quadrature_xyoz_type(nqp_exact, quadrature_rule)
-    chi_sph => get_coordinates(mesh_id)
+    chi => get_coordinates(mesh_id)
     panel_id => get_panel_id(mesh_id)
     m3_inv => get_inverse_w3_mass_matrix(mesh_id)
 
@@ -154,7 +154,7 @@ contains
       end if
       call invoke( name = "get_u_from_sampling", &
                    setval_c( u, 0.0_r_def ),     &
-                   sample_initial_u_kernel_type( u, chi_sph, u0, v0 ) )
+                   sample_initial_u_kernel_type( u, chi, u0, v0 ) )
     else
       if ( profile == profile_sbr_streamfunction .or.  &
            profile == profile_dcmip301_streamfunction .or. &
@@ -169,7 +169,7 @@ contains
         call invoke( name = "initialise_streamfunction",                         &
                      setval_c(psi, 0.0_r_def),                                   &
                      setval_c(r_psi, 0.0_r_def),                                 &
-                     initial_streamfunc_kernel_type(r_psi, chi_sph, panel_id,    &
+                     initial_streamfunc_kernel_type(r_psi, chi, panel_id,        &
                                                     initial_time, sbr_angle_lat, &
                                                     sbr_angle_lon, u0, v0, qr ) )
         ! We do not want to force zero stream function at boundaries
@@ -190,7 +190,7 @@ contains
         call invoke( name = "get_u_from_projection",  &
                      setval_c( u,   0.0_r_def ),      &
                      setval_c( r_u, 0.0_r_def ),      &
-                     initial_u_kernel_type( r_u, chi_sph, panel_id, initial_time, qr ), &
+                     initial_u_kernel_type( r_u, chi, panel_id, initial_time, qr ), &
                      enforce_bc_kernel_type( r_u ) )
         call mass_matrix_solver_alg(u, r_u)
       end if
@@ -201,7 +201,7 @@ contains
     if ( test == test_specified_profiles ) then
       call init_thermo_profile_alg( theta, mr(imr_v) )
     else
-      call invoke( initial_theta_kernel_type( theta, chi_sph, panel_id ) )
+      call invoke( initial_theta_kernel_type( theta, chi, panel_id ) )
     end if
     call invoke( moist_dyn_factors_kernel_type( moist_dyn, mr, recip_epsilon ) )
 
@@ -214,14 +214,14 @@ contains
         ! Initialise exner assuming hydrostatic balance
         call invoke( hydrostatic_exner_kernel_type( exner, theta, moist_dyn, &
                                                     height_wth, height_w3,   &
-                                                    chi_sph, panel_id,       &
+                                                    chi, panel_id,           &
                                                     gravity, p_zero, rd, cp ) )
       case(method_sampled)
         ! Initialise exner through sampling analytic solution
-        call invoke (initial_exner_sample_kernel_type( exner, chi_sph, panel_id, initial_time ) )
+        call invoke (initial_exner_sample_kernel_type( exner, chi, panel_id, initial_time ) )
       case(method_projected)
         ! Initialise exner by projecting analytic solution
-        call invoke( set_exner_kernel_type ( exner, chi_sph, panel_id, initial_time, qr ) )
+        call invoke( set_exner_kernel_type ( exner, chi, panel_id, initial_time, qr ) )
       case default
         call log_event( "Gungho: Unrecognised method in initial_pressure", LOG_LEVEL_ERROR )
     end select
@@ -231,10 +231,10 @@ contains
       select case(method)
         case(method_sampled, &
              method_balanced)
-          call invoke( initial_rho_sample_kernel_type( rho, chi_sph, panel_id, initial_time ) )
+          call invoke( initial_rho_sample_kernel_type( rho, chi, panel_id, initial_time ) )
         case(method_projected)
           qr = quadrature_xyoz_type( nqp_exact, quadrature_rule )
-          call invoke( set_rho_kernel_type( rho, chi_sph, panel_id, initial_time, qr ) )
+          call invoke( set_rho_kernel_type( rho, chi, panel_id, initial_time, qr ) )
         case default
           call log_event( "Gungho: Unrecognised method in initial_pressure", LOG_LEVEL_ERROR )
       end select
@@ -251,7 +251,7 @@ contains
           ! Diagnose density from equation of state by projection
           call invoke(   setval_c( r_rho, 0.0_r_def ),                           &
                          project_eos_rho_kernel_type( r_rho, exner, theta,       &
-                                                    moist_dyn(gas_law), chi_sph, &
+                                                    moist_dyn(gas_law), chi,     &
                                                     panel_id, kappa, rd, p_zero, &
                                                     qr ),                        &
                          dg_matrix_vector_kernel_type(rho, r_rho, m3_inv) )
@@ -277,7 +277,7 @@ contains
         height_wth => get_height(Wtheta, mesh_id)
         call invoke( hydrostatic_exner_kernel_type( exner, theta, moist_dyn, &
                                                     height_wth, height_w3,   &
-                                                    chi_sph, panel_id,       &
+                                                    chi, panel_id,           &
                                                     gravity, p_zero, rd, cp ) )
         select case(eos_method)
           case(eos_method_sampled)
@@ -288,7 +288,7 @@ contains
             qr = quadrature_xyoz_type( nqp_exact, quadrature_rule )
             call invoke(   setval_c( r_rho, 0.0_r_def ),                           &
                            project_eos_rho_kernel_type( r_rho, exner, theta,       &
-                                                      moist_dyn(gas_law), chi_sph, &
+                                                      moist_dyn(gas_law), chi,     &
                                                       panel_id, kappa, rd, p_zero, &
                                                       qr ),                        &
                            dg_matrix_vector_kernel_type(rho, r_rho, m3_inv) )
@@ -303,7 +303,7 @@ contains
     call log_event( "Gungho: Initialised prognostic fields", LOG_LEVEL_INFO )
 
     !==========================================================================!
-    nullify( m3_inv, chi_sph, panel_id, height_wth, height_w3 )
+    nullify( m3_inv, chi, panel_id, height_wth, height_w3 )
     nullify( theta, rho, u, exner)
 
   end subroutine init_gungho_prognostics_alg

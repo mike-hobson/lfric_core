@@ -62,8 +62,7 @@ module geometric_constants_mod
   type(field_type), allocatable, target :: panel_id_list(:)
 
   ! Coordinate fields
-  type(field_type), allocatable, target :: chi_xyz_list(:,:)
-  type(field_type), allocatable, target :: chi_sph_list(:,:)
+  type(field_type), allocatable, target :: chi_list(:,:)
 
   ! Other geometric objects
   type(field_type), allocatable, target :: cell_orientation_list(:)
@@ -81,7 +80,6 @@ module geometric_constants_mod
   public :: final_geometric_constants
   public :: get_panel_id
   public :: get_coordinates
-  public :: get_coordinates_xyz
   public :: get_cell_orientation
   public :: get_dA_at_w2
   public :: get_height
@@ -92,21 +90,18 @@ contains
 
   !>@brief Subroutine to create the geometric constants
   !> @param[in] mesh_id_list         List of mesh_ids
-  !> @param[in] chi_xyz_in           List of (X,Y,Z) chi fields
-  !> @param[in] chi_sph_in           List of spherically-based chi fields
+  !> @param[in] chi_in               List of coordinate fields
   !> @param[in] panel_id_in          List of panel_id fields
   !> @param[in] label_list           List of labels for meshes
   subroutine create_geometric_constants(mesh_id_list,      &
-                                        chi_xyz_in,        &
-                                        chi_sph_in,        &
+                                        chi_in,            &
                                         panel_id_in,       &
                                         label_list         )
     implicit none
 
     ! Arguments
     integer(kind=i_def),    intent(in) :: mesh_id_list(:)
-    type(field_type),       intent(in) :: chi_xyz_in(:,:)
-    type(field_type),       intent(in) :: chi_sph_in(:,:)
+    type(field_type),       intent(in) :: chi_in(:,:)
     type(field_type),       intent(in) :: panel_id_in(:)
     integer(kind=i_def),    intent(in) :: label_list(:)
 
@@ -130,8 +125,7 @@ contains
 
     num_meshes = size(mesh_id_list)
 
-    allocate(chi_xyz_list(3,num_meshes))
-    allocate(chi_sph_list(3,num_meshes))
+    allocate(chi_list(3,num_meshes))
     allocate(panel_id_list(num_meshes))
     allocate(cell_orientation_list(num_meshes))
     allocate(height_w1_list(num_meshes))
@@ -166,8 +160,7 @@ contains
       !================ Set coordinates field and panel ID ====================!
 
       do j = 1, 3
-        call chi_xyz_in(j,i)%copy_field(chi_xyz_list(j,i))
-        call chi_sph_in(j,i)%copy_field(chi_sph_list(j,i))
+        call chi_in(j,i)%copy_field(chi_list(j,i))
       end do
 
       call panel_id_in(i)%copy_field(panel_id_list(i))
@@ -208,16 +201,16 @@ contains
         call height_w3_list(i)%initialise( vector_space = w3_k0_fs )
         call height_wth_list(i)%initialise( vector_space = wth_k0_fs )
         call invoke( get_height_kernel_type( height_w1_list(i),  &
-                                             chi_sph_in(:,i),    &
+                                             chi_in(:,i),        &
                                              scaled_radius ),    &
                      get_height_kernel_type( height_w2_list(i),  &
-                                             chi_sph_in(:,i),    &
+                                             chi_in(:,i),        &
                                              scaled_radius ),    &
                      get_height_kernel_type( height_w3_list(i),  &
-                                             chi_sph_in(:,i),    &
+                                             chi_in(:,i),        &
                                              scaled_radius ),    &
                      get_height_kernel_type( height_wth_list(i), &
-                                             chi_sph_in(:,i),    &
+                                             chi_in(:,i),        &
                                              scaled_radius )     )
       end if
 
@@ -229,7 +222,7 @@ contains
         if ( geometry == geometry_spherical ) then
           call invoke( compute_latlon_kernel_type( lat_w3_list(i),   &
                                                    long_w3_list(i),  &
-                                                   chi_sph_in(:,i),  &
+                                                   chi_in(:,i),      &
                                                    panel_id_in(i) )  )
         else
           call invoke( setval_c(lat_w3_list(i), f_lat),  &
@@ -244,7 +237,7 @@ contains
         call dA_at_w2_list(i)%initialise( vector_space = w2_fs )
         call invoke( setval_c(dA_at_w2_list(i), 0.0_r_def),&
                      calc_dA_at_w2_kernel_type(dA_at_w2_list(i), &
-                                               chi_sph_in(:,i),  &
+                                               chi_in(:,i),      &
                                                panel_id_in(i)  ) )
       end if
 
@@ -278,7 +271,7 @@ contains
     panel_id_ptr => panel_id_list(mesh_index)
   end function get_panel_id
 
-  !> @brief Returns a pointer to the spherical coordinate array on the finest level
+  !> @brief Returns a pointer to the coordinate field array on the finest level
   !> @param[in] mesh_id the ID of the mesh to get the object for
   !> @return The coordinate field array
   function get_coordinates(mesh_id) result(coords_ptr)
@@ -288,23 +281,9 @@ contains
     type(field_type),       pointer :: coords_ptr(:)
 
     mesh_index = find_mesh_index(mesh_id)
-    coords_ptr => chi_sph_list(:,mesh_index)
+    coords_ptr => chi_list(:,mesh_index)
 
   end function get_coordinates
-
-  !> @brief Function to return a pointer to the (X,Y,Z) coordinate array
-  !> @param[in] mesh_id the ID of the mesh to get the object for
-  !> @return The coordinate field array
-  function get_coordinates_xyz(mesh_id) result(coords_ptr)
-    implicit none
-    integer(kind=i_def), intent(in) :: mesh_id
-    integer(kind=i_def)             :: mesh_index
-    type(field_type),       pointer :: coords_ptr(:)
-
-    mesh_index = find_mesh_index(mesh_id)
-    coords_ptr => chi_xyz_list(:,mesh_index)
-
-  end function get_coordinates_xyz
 
   !> @brief Returns a pointer to the cell_orientation field
   !> @param[in] mesh_id the ID of the mesh to get the object for
@@ -413,8 +392,7 @@ contains
     if (allocated(height_w1_list)) deallocate(height_w1_list)
     if (allocated(cell_orientation_list)) deallocate(cell_orientation_list)
     if (allocated(panel_id_list)) deallocate(panel_id_list)
-    if (allocated(chi_sph_list)) deallocate(chi_sph_list)
-    if (allocated(chi_xyz_list)) deallocate(chi_xyz_list)
+    if (allocated(chi_list)) deallocate(chi_list)
 
   end subroutine final_geometric_constants
 

@@ -69,14 +69,14 @@ contains
   !> Construct a <code>dense_operator</code> object.
   !>
   !> @param [in] fv a field_vector of size 2
-  !> @param [in] chi_sph the coordinate field
+  !> @param [in] chi the coordinate field
   !> @param [in] panel_id the field with mesh panel IDs
   !> @param [in] qr the quadrature object
   !> @return self the constructed dense operator
-  function dense_operator_constructor( fv, qr, chi_sph, panel_id ) result(self)
+  function dense_operator_constructor( fv, qr, chi, panel_id ) result(self)
     implicit none
     class(abstract_vector_type),      intent(in) :: fv
-    type( field_type ), dimension(3), intent(in) :: chi_sph
+    type( field_type ), dimension(3), intent(in) :: chi
     type( field_type ),               intent(in) :: panel_id
     type(quadrature_xyoz_type),       intent(in) :: qr
 
@@ -106,9 +106,9 @@ contains
        self%mass_w0 = operator_type(fs_wa, fs_wa)
        self%mass_w3 = operator_type(fs_wb, fs_wb)
 
-       call invoke(                                                                     &
-         compute_mass_matrix_kernel_w_scalar_type(self%mass_w0, chi_sph, panel_id, qr), &
-         compute_mass_matrix_kernel_w3_type(self%mass_w3, chi_sph, panel_id, qr) )
+       call invoke(                                                                 &
+         compute_mass_matrix_kernel_w_scalar_type(self%mass_w0, chi, panel_id, qr), &
+         compute_mass_matrix_kernel_w3_type(self%mass_w3, chi, panel_id, qr) )
 
    class default
        write(log_scratch_space, '(A)') "dense_operator_alg_mod: incorrect vector_type as argument fv"

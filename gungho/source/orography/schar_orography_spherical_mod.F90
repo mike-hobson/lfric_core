@@ -4,13 +4,13 @@
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
 
-!> @brief Calculates Schar mountain orography profile in spherical coordinates.
+!> @brief Calculates Schar mountain orography profile in (lon,lat) coordinates.
 !>
 !> @details This module contains type definition and routines to calculate
 !>          analytic orography profile of Schar mountain function from spherical
-!>          coordinates: longitude (lambda) and latitude (phi).
+!>          polar coordinates: longitude (lambda) and latitude (phi).
 !>          Reference: Wood et al. (2013), Section 7.1.
-!>          Schar mountain parameters in spherical coordinates are:
+!>          Schar mountain parameters in (lon,lat) coordinates are:
 !>          mountain_height - Height of Schar mountain function (m),
 !>          half_width - Half-width of Schar mountain function (m),
 !>          wavelength - Wavelength of cosine part of Schar mountain function (m),
@@ -26,11 +26,11 @@ module schar_orography_spherical_mod
 
   private
   !> @brief Holds parameters and methods used to calculate Schar orography
-  !>        profile in spherical coordinates.
+  !>        profile in (lon,lat) coordinates.
   type, public, extends(analytic_orography_type) :: schar_spherical_type
 
     private
-    ! Schar mountain function parameters in spherical coordinates
+    ! Schar mountain function parameters in (lon,lat) coordinates
     real(kind=r_def) :: mountain_height
     real(kind=r_def) :: half_width
     real(kind=r_def) :: wavelength
@@ -53,7 +53,7 @@ module schar_orography_spherical_mod
 contains
 
   !=============================================================================
-  !> @brief Constructor for Schar mountain function in spherical coordinates.
+  !> @brief Constructor for Schar mountain function in (lon,lat) coordinates.
   !> @param[in] mountain_height Height of mountain function read from
   !>                            namelist (m)
   !> @param[in] half_width      Half-width of mountain function read from
@@ -96,7 +96,7 @@ contains
   end function schar_spherical_constructor
 
   !=============================================================================
-  !> @brief Calculates Schar mountain function in spherical coordinates.
+  !> @brief Calculates Schar mountain function in (lon,lat) coordinates.
   !> @param[in] self      An object of type schar_spherical_type
   !> @param[in] chi_1     Longitude (lambda) (radian)
   !> @param[in] chi_2     Latitude (phi) (radian)
@@ -183,7 +183,7 @@ contains
     ! Temporary write
     open(funit, file = trim(fname), status = 'replace')
     write(funit,'(A)') &
-          "Schar mountain parameters in spherical coordinates: "
+          "Schar mountain parameters in (lon,lat) coordinates: "
     write(funit, fmtreal) "mountain_height = ", self%mountain_height
     write(funit, fmtreal) "half_width      = ", self%half_width
     write(funit, fmtreal) "wavelength      = ", self%wavelength

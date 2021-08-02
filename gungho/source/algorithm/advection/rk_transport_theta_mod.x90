@@ -122,7 +122,7 @@ contains
     ! The quadrature object
     type(quadrature_xyoz_type ), pointer :: qr => null()
     ! Coordinate fields
-    type(field_type), pointer :: chi_sph(:) => null()
+    type( field_type ), pointer         :: chi(:) => null()
     type(field_type), pointer :: adv_coeffs => null()
     type(field_type), pointer :: vert_adv_coeffs => null()
     type(field_type), pointer :: chi3_at_wt => null()
@@ -153,7 +153,7 @@ contains
     w1_multiplicity => get_multiplicity(W1, mesh_id)
 
     qr => get_qr()
-    chi_sph => get_coordinates(mesh_id)
+    chi => get_coordinates(mesh_id)
     call theta%copy_field(theta_n)
 
     ! Runge-Kutta algorithm
@@ -229,8 +229,7 @@ contains
             ! Modify advecting wind
                          consistent_wind_kernel_type(                          &
                                               consistent_wind, u,              &
-                                              theta_metrics(mesh_index),       &
-                                              chi_sph) )
+                                              theta_metrics(mesh_index), chi) )
           end if
           call invoke( poly1d_vert_adv_kernel_type(                            &
                                               rt_prediction(stage,mesh_index), &
@@ -273,7 +272,7 @@ contains
       end select
     end do
 
-    nullify( chi_sph )
+    nullify( chi )
     if ( subroutine_timers ) call timer('rk_transport_theta_alg')
 
   end subroutine rk_transport_theta_step

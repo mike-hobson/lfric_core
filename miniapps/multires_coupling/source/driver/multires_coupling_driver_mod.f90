@@ -18,7 +18,6 @@ module multires_coupling_driver_mod
                                                        multires_coupling_mode,      &
                                                        multires_coupling_mode_test
   use geometric_constants_mod,                  only : get_coordinates,     &
-                                                       get_coordinates_xyz, &
                                                        get_panel_id
   use checksum_alg_mod,                         only : checksum_alg
   use clock_mod,                                only : clock_type
@@ -63,26 +62,21 @@ module multires_coupling_driver_mod
   type( field_collection_type ) :: physics_prognostic_fields
 
   ! Primary coordinate field
-  type(field_type), target, dimension(3) :: prime_chi_xyz
-  type(field_type), target, dimension(3) :: prime_chi_sph
+  type(field_type), target, dimension(3) :: prime_chi
   type(field_type), target               :: prime_panel_id
-  type(field_type), target, dimension(3) :: prime_shifted_chi_xyz
-  type(field_type), target, dimension(3) :: prime_shifted_chi_sph
-  type(field_type), target, dimension(3) :: prime_double_level_chi_xyz
-  type(field_type), target, dimension(3) :: prime_double_level_chi_sph
+  type(field_type), target, dimension(3) :: prime_shifted_chi
+  type(field_type), target, dimension(3) :: prime_double_level_chi
 
   ! Output Coordiante Fields
-  type(field_type), pointer :: output_chi_xyz(:)
-  type(field_type), pointer :: output_chi_sph(:)
+  type(field_type), pointer :: output_chi(:)
   type(field_type), pointer :: output_panel_id
 
   ! Multires Coupling coordinate fields
-  type(field_type), target, allocatable  :: chi_xyz_fields(:,:)
-  type(field_type), target, allocatable  :: chi_sph_fields(:,:)
+  type(field_type), target, allocatable  :: chi_fields(:,:)
   type(field_type), target, allocatable  :: panel_id_fields(:)
 
   ! Multigrid coordinate fields
-  type(field_type), allocatable :: chi_mg_sph(:,:)
+  type(field_type), allocatable :: chi_mg(:,:)
   type(field_type), allocatable :: panel_id_mg(:)
 
   ! Primary mesh ids
@@ -144,15 +138,13 @@ contains
                                              multires_coupling_mesh_ids,                &
                                              multires_coupling_2D_mesh_ids,             &
                                              multigrid_mesh_ids, multigrid_2D_mesh_ids, &
-                                             prime_chi_xyz, prime_chi_sph,              &
+                                             prime_chi,                                 &
                                              prime_panel_id,                            &
-                                             prime_shifted_chi_xyz,                     &
-                                             prime_shifted_chi_sph,                     &
-                                             prime_double_level_chi_xyz,                &
-                                             prime_double_level_chi_sph,                &
-                                             chi_xyz_fields, chi_sph_fields,            &
+                                             prime_shifted_chi,                         &
+                                             prime_double_level_chi,                    &
+                                             chi_fields,                                &
                                              panel_id_fields,                           &
-                                             chi_mg_sph, panel_id_mg )
+                                             chi_mg, panel_id_mg )
 
     ! Assign mesh ids panel id fields and coordinate fields
     output_2D_mesh_name = trim(output_mesh_name)//'_2d'
@@ -161,8 +153,7 @@ contains
     dynamics_mesh_id = mesh_collection%get_mesh_id(dynamics_mesh_name)
     physics_mesh_id = mesh_collection%get_mesh_id(physics_mesh_name)
 
-    output_chi_sph => get_coordinates(output_mesh_id)
-    output_chi_xyz => get_coordinates_xyz(output_mesh_id)
+    output_chi => get_coordinates(output_mesh_id)
     output_panel_id => get_panel_id(output_mesh_id)
 
     !-------------------------------------------------------------------------
@@ -176,7 +167,7 @@ contains
                             model_communicator,  &
                             output_mesh_id,      &
                             output_2D_mesh_id,   &
-                            output_chi_xyz,      &
+                            output_chi,          &
                             output_panel_id,     &
                             timestep_start,      &
                             timestep_end,        &

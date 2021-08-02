@@ -70,9 +70,9 @@ contains
 !! @param[in] nlayers Number of layers
 !! @param[in,out] r_u Right hand side of momentum equation
 !! @param[in] u Velocity
-!! @param[in] chi_1 1st (spherical) coordinate field in Wchi
-!! @param[in] chi_2 2nd (spherical) coordinate field in Wchi
-!! @param[in] chi_3 3rd (spherical) coordinate field in Wchi
+!! @param[in] chi_1 1st coordinate field in Wchi
+!! @param[in] chi_2 2nd coordinate field in Wchi
+!! @param[in] chi_3 3rd coordinate field in Wchi
 !! @param[in] panel_id Field giving the ID for mesh panels
 !! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
 !! @param[in] undf_w2 Number of unique degrees of freedom  for w2

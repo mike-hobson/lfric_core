@@ -58,29 +58,29 @@ module intermesh_constants_mod
 contains
   !>@brief Subroutine to create the intermesh mapping constants
   !> @param[in] mesh_id              Mesh_id
-  !> @param[in] chi_sph              spherically-based chi field
+  !> @param[in] chi                  Coordinate field
   !> @param[in] panel_id             panel id
-  !> @param[in] shifted_mesh_id      Mesh_id for vertically shifted field
-  !> @param[in] shifted_chi          chi field for vertically shifted field
-  !> @param[in] double_level_mesh_id Mesh_id for double level field
-  !> @param[in] double_level_chi     chi field for double level field
+  !> @param[in] shifted_mesh_id      Mesh_id for vertically shifted mesh
+  !> @param[in] shifted_chi          Coordinate field for vertically shifted mesh
+  !> @param[in] double_level_mesh_id Mesh_id for double level mesh
+  !> @param[in] double_level_chi     Coordinate field for double level mesh
   subroutine create_intermesh_constants(mesh_id,               &
-                                        chi_sph,               &
+                                        chi,                   &
                                         panel_id,              &
                                         shifted_mesh_id,       &
-                                        shifted_chi_sph,       &
+                                        shifted_chi,           &
                                         double_level_mesh_id,  &
-                                        double_level_chi_sph)
+                                        double_level_chi)
     implicit none
 
     ! Arguments
     integer(i_def),    intent(in) :: mesh_id
-    type(field_type),  intent(in) :: chi_sph(:)
+    type(field_type),  intent(in) :: chi(:)
     type(field_type),  intent(in) :: panel_id
     integer(i_def),    intent(in) :: shifted_mesh_id
-    type(field_type),  intent(in) :: shifted_chi_sph(:)
+    type(field_type),  intent(in) :: shifted_chi(:)
     integer(i_def),    intent(in) :: double_level_mesh_id
-    type(field_type),  intent(in) :: double_level_chi_sph(:)
+    type(field_type),  intent(in) :: double_level_chi(:)
 
     ! Internal variables
     type(function_space_type),  pointer :: w3_fs       => null()
@@ -113,7 +113,7 @@ contains
 
     call dummy_theta%initialise( vector_space = wtheta_fs )
     call invoke( mr_to_sh_mass_ints_kernel_type( mr_to_sh_mass_integrals, &
-                                                 double_level_chi_sph,    &
+                                                 double_level_chi,        &
                                                  panel_id,                &
                                                  dummy_theta,             &
                                                  qr                       &
@@ -129,7 +129,7 @@ contains
     call dummy_w3_shifted%initialise( vector_space = w3_shift_fs )
     call invoke( w3_to_sh_w3_ints_kernel_type( w3_to_sh_w3_integrals,     &
                                                dummy_w3_shifted,          &
-                                               double_level_chi_sph,      &
+                                               double_level_chi,          &
                                                panel_id,                  &
                                                qr                         &
                                               ) )

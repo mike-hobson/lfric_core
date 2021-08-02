@@ -25,10 +25,10 @@ contains
                                            cellshape_triangle,                 &
                                            element_order,                      &
                                            rehabilitate,                       &
-                                           coordinate_order,                   &
-                                           spherical_coord_system,             &
-                                           spherical_coord_system_abh,         &
-                                           spherical_coord_system_llh
+                                           coord_order,                        &
+                                           coord_system,                       &
+                                           coord_system_alphabetaz,            &
+                                           coord_system_lonlatz
     use formulation_config_mod,      only: use_physics,                        &
                                            use_wavedynamics,                   &
                                            transport_only,                     &
@@ -52,7 +52,8 @@ contains
                                            geometry_spherical,                 &
                                            geometry_planar,                    &
                                            topology,                           &
-                                           topology_fully_periodic
+                                           topology_fully_periodic,            &
+                                           topology_non_periodic
     use transport_config_mod,        only: scheme,                             &
                                            scheme_horz_cosmic,                 &
                                            scheme_method_of_lines,             &
@@ -88,28 +89,30 @@ contains
         write( log_scratch_space, '(A)' ) 'Only rehabilitated W3 function space is allowed'
         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
-      if ( coordinate_order < 0 ) then
+      if ( coord_order < 0 ) then
         write( log_scratch_space, '(A,I4,A)' ) 'Invalid choice: coordinate order ', &
-          coordinate_order, ' must be non-negative'
+          coord_order, ' must be non-negative'
         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
-      if ( geometry == geometry_planar .and.  coordinate_order == 0 ) then
-        write( log_scratch_space, '(A)' ) 'Coordinate order must be positive for planar geometries'
+      if ( coord_order == 0 .and. &
+           ( topology /= topology_non_periodic .or. geometry == geometry_planar ) ) then
+        write( log_scratch_space, '(A)' ) 'For planar geometry or periodic meshes, coordinate order must be positive'
         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
-      if ( spherical_coord_system == spherical_coord_system_abh .and. geometry /= geometry_spherical ) then
+      if ( coord_system == coord_system_alphabetaz .and. geometry /= geometry_spherical ) then
         write( log_scratch_space, '(A)' ) '(alpha,beta) coordinate system is only valid with spherical geometry'
         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
-      if ( spherical_coord_system == spherical_coord_system_abh .and. topology /= topology_fully_periodic ) then
+      if ( coord_system == coord_system_alphabetaz .and. topology /= topology_fully_periodic ) then
+        ! This could change in future if we were to add meshes that were a single panel
         write( log_scratch_space, '(A)' ) '(alpha,beta) coordinate system is only valid with fully-periodic topology'
         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
-      if ( spherical_coord_system == spherical_coord_system_llh .and. geometry /= geometry_spherical ) then
+      if ( coord_system == coord_system_lonlatz .and. geometry /= geometry_spherical ) then
         write( log_scratch_space, '(A)' ) '(longitude,latitude) coordinate system is only valid with spherical geometry'
         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
-      if ( spherical_coord_system == spherical_coord_system_llh .and. topology == topology_fully_periodic ) then
+      if ( coord_system == coord_system_lonlatz .and. topology == topology_fully_periodic ) then
         write( log_scratch_space, '(A)' ) '(longitude,latitude) coordinate system is not valid with fully-periodic topology'
         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if

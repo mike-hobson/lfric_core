@@ -112,7 +112,6 @@ contains
     use nodal_xyz_coordinates_kernel_mod, only: nodal_xyz_coordinates_kernel_type
     use psykal_builtin_light_mod,         only: invoke_convert_cart2sphere_vector
     use geometric_constants_mod,          only: get_coordinates, &
-                                                get_coordinates_xyz, &
                                                 get_panel_id
 
     implicit none
@@ -121,8 +120,7 @@ contains
     type( field_type ), intent( inout ) :: u1_field, u2_field, u3_field
     type( field_type ), intent( in )    :: source_field
     type( field_type )                  :: wind_map(3), physical_chi(3)
-    type( field_type ), pointer         :: chi_sph(:) => null()
-    type( field_type ), pointer         :: chi_xyz(:) => null()
+    type( field_type ), pointer         :: chi(:) => null()
     type( field_type ), pointer         :: panel_id => null()
     ! quatrature rule
     type( quadrature_xyoz_type )          :: qr
@@ -134,8 +132,7 @@ contains
     mesh_id =  source_field%get_mesh_id()
 
     ! get chi field
-    chi_sph => get_coordinates(mesh_id)
-    chi_xyz => get_coordinates_xyz(mesh_id)
+    chi => get_coordinates(mesh_id)
     panel_id => get_panel_id(mesh_id)
 
     if (sample_physics_winds) then
@@ -148,13 +145,13 @@ contains
                    setval_c(wind_map(3), 0.0_r_def)  &
                    )
 
-      call invoke( convert_hdiv_field_kernel_type(wind_map, source_field, chi_sph, panel_id) )
+      call invoke( convert_hdiv_field_kernel_type(wind_map, source_field, chi, panel_id) )
 
       if ( geometry == geometry_spherical ) then
         call u1_field%copy_field_properties(physical_chi(1))
         call u1_field%copy_field_properties(physical_chi(2))
         call u1_field%copy_field_properties(physical_chi(3))
-        call invoke( nodal_xyz_coordinates_kernel_type(physical_chi, chi_sph, panel_id) )
+        call invoke( nodal_xyz_coordinates_kernel_type(physical_chi, chi, panel_id) )
         call invoke_convert_cart2sphere_vector( wind_map, physical_chi )
       end if
 

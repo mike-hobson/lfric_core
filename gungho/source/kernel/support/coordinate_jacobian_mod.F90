@@ -11,10 +11,10 @@
 module coordinate_jacobian_mod
 
   use constants_mod,             only: i_def, r_double, r_single
-  use finite_element_config_mod, only: spherical_coord_system,     &
-                                       spherical_coord_system_xyz, &
-                                       spherical_coord_system_abh, &
-                                       spherical_coord_system_llh
+  use finite_element_config_mod, only: coord_system,            &
+                                       coord_system_xyz,        &
+                                       coord_system_alphabetaz, &
+                                       coord_system_lonlatz
   use coord_transform_mod,       only: PANEL_ROT_MATRIX
   use planet_config_mod,         only: scaled_radius
 
@@ -85,9 +85,9 @@ contains
   !! @param[in] ndf        Size of the chi arrays
   !! @param[in] ngp_h      Number of quadrature points in horizontal direction
   !! @param[in] ngp_v      Number of quadrature points in vertical direction
-  !! @param[in] chi_1      1st component of the (spherical) coordinate field
-  !! @param[in] chi_2      2nd component of the (spherical) coordinate field
-  !! @param[in] chi_3      3rd component of the (spherical) coordinate field
+  !! @param[in] chi_1      1st component of the coordinate field
+  !! @param[in] chi_2      2nd component of the coordinate field
+  !! @param[in] chi_3      3rd component of the coordinate field
   !! @param[in] panel_id   An integer identifying the mesh panel
   !! @param[in] basis      Wchi basis functions
   !! @param[in] diff_basis Grad of Wchi basis functions
@@ -139,10 +139,10 @@ contains
       end do
     end do
 
-    if (spherical_coord_system == spherical_coord_system_xyz) then
+    if (coord_system == coord_system_xyz) then
       jac = jac_ref2sph
 
-    else if (spherical_coord_system == spherical_coord_system_abh) then
+    else if (coord_system == coord_system_alphabetaz) then
       do j = 1,ngp_v
         do i = 1,ngp_h
           alpha  = 0.0_r_single
@@ -158,7 +158,7 @@ contains
         end do
       end do
 
-    else if (spherical_coord_system == spherical_coord_system_llh) then
+    else if (coord_system == coord_system_lonlatz) then
       do j = 1,ngp_v
         do i = 1,ngp_h
           longitude = 0.0_r_single
@@ -234,10 +234,10 @@ contains
       end do
     end do
 
-    if (spherical_coord_system == spherical_coord_system_xyz) then
+    if (coord_system == coord_system_xyz) then
       jac = jac_ref2sph
 
-    else if (spherical_coord_system == spherical_coord_system_abh) then
+    else if (coord_system == coord_system_alphabetaz) then
       do j = 1,ngp_v
         do i = 1,ngp_h
           alpha  = 0.0_r_double
@@ -253,7 +253,7 @@ contains
         end do
       end do
 
-    else if (spherical_coord_system == spherical_coord_system_llh) then
+    else if (coord_system == coord_system_lonlatz) then
       do j = 1,ngp_v
         do i = 1,ngp_h
           longitude = 0.0_r_double
@@ -295,9 +295,9 @@ contains
   !> and the determinant det(J)
   !! @param[in] ndf          Size of the chi arrays
   !! @param[in] neval_points Number of points basis functions are evaluated on
-  !! @param[in] chi_1        1st component of the (spherical) coordinate field
-  !! @param[in] chi_2        2nd component of the (spherical) coordinate field
-  !! @param[in] chi_3        3rd component of the (spherical) coordinate field
+  !! @param[in] chi_1        1st component of the coordinate field
+  !! @param[in] chi_2        2nd component of the coordinate field
+  !! @param[in] chi_3        3rd component of the coordinate field
   !! @param[in] panel_id     An integer identifying the mesh panel
   !! @param[in] basis        Wchi basis functions
   !! @param[in] diff_basis   Grad of Wchi basis functions
@@ -344,10 +344,10 @@ contains
       end do
     end do
 
-    if (spherical_coord_system == spherical_coord_system_xyz) then
+    if (coord_system == coord_system_xyz) then
       jac = jac_ref2sph
 
-    else if (spherical_coord_system == spherical_coord_system_abh) then
+    else if (coord_system == coord_system_alphabetaz) then
       do i = 1,neval_points
         alpha  = 0.0_r_single
         beta   = 0.0_r_single
@@ -361,7 +361,7 @@ contains
         jac(:,:,i) = matmul(jac_sph2XYZ, jac_ref2sph(:,:,i))
       end do
 
-    else if (spherical_coord_system == spherical_coord_system_llh) then
+    else if (coord_system == coord_system_lonlatz) then
       do i = 1,neval_points
         longitude = 0.0_r_single
         latitude  = 0.0_r_single
@@ -429,10 +429,10 @@ contains
       end do
     end do
 
-    if (spherical_coord_system == spherical_coord_system_xyz) then
+    if (coord_system == coord_system_xyz) then
       jac = jac_ref2sph
 
-    else if (spherical_coord_system == spherical_coord_system_abh) then
+    else if (coord_system == coord_system_alphabetaz) then
       do i = 1,neval_points
         alpha  = 0.0_r_double
         beta   = 0.0_r_double
@@ -446,7 +446,7 @@ contains
         jac(:,:,i) = matmul(jac_sph2XYZ, jac_ref2sph(:,:,i))
       end do
 
-    else if (spherical_coord_system == spherical_coord_system_llh) then
+    else if (coord_system == coord_system_lonlatz) then
       do i = 1,neval_points
         longitude = 0.0_r_double
         latitude  = 0.0_r_double
@@ -662,10 +662,10 @@ contains
       end do
     end do
 
-    if (spherical_coord_system == spherical_coord_system_xyz) then
+    if (coord_system == coord_system_xyz) then
       jac = jac_ref2sph
 
-    else if (spherical_coord_system == spherical_coord_system_abh) then
+    else if (coord_system == coord_system_alphabetaz) then
       alpha  = 0.0_r_single
       beta   = 0.0_r_single
       radius = real(scaled_radius, kind=r_single)
@@ -677,7 +677,7 @@ contains
       jac_sph2XYZ = jacobian_abr2XYZ(alpha, beta, radius, panel_id)
       jac = matmul(jac_sph2XYZ, jac_ref2sph)
 
-    else if (spherical_coord_system == spherical_coord_system_llh) then
+    else if (coord_system == coord_system_lonlatz) then
       longitude = 0.0_r_single
       latitude  = 0.0_r_single
       radius    = real(scaled_radius, kind=r_single)
@@ -733,10 +733,10 @@ contains
       end do
     end do
 
-    if (spherical_coord_system == spherical_coord_system_xyz) then
+    if (coord_system == coord_system_xyz) then
       jac = jac_ref2sph
 
-    else if (spherical_coord_system == spherical_coord_system_abh) then
+    else if (coord_system == coord_system_alphabetaz) then
       alpha  = 0.0_r_double
       beta   = 0.0_r_double
       radius = real(scaled_radius, kind=r_double)
@@ -748,7 +748,7 @@ contains
       jac_sph2XYZ = jacobian_abr2XYZ(alpha, beta, radius, panel_id)
       jac = matmul(jac_sph2XYZ, jac_ref2sph)
 
-    else if (spherical_coord_system == spherical_coord_system_llh) then
+    else if (coord_system == coord_system_lonlatz) then
       longitude = 0.0_r_double
       latitude  = 0.0_r_double
       radius    = real(scaled_radius, kind=r_double)

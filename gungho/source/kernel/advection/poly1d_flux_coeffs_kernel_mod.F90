@@ -194,7 +194,7 @@ subroutine poly1d_flux_coeffs_code(nlayers,                    &
                          m, face, stencil_depth, depth, face_mod, ijkp
   integer(kind=i_def),           dimension(order+1,nfaces_qr) :: map1d
   real(kind=r_def)                                           :: xx, fn
-  real(kind=r_def),              dimension(3)                :: x0, x1, xq, xn1, chi_sph, r0
+  real(kind=r_def),              dimension(3)                :: x0, x1, xq, xn1, chi, r0
   real(kind=r_def), allocatable, dimension(:,:)              :: int_monomial, inv_int_monomial
   real(kind=r_def),              dimension(order+1)          :: beta, delta, monomial
   real(kind=r_def),              dimension(order+1)          :: area
@@ -262,8 +262,8 @@ subroutine poly1d_flux_coeffs_code(nlayers,                    &
 
     ! Convert x0 to XYZ coordinate system
     ipanel = int(panel_id(smap_pid(1,1)), i_def)
-    chi_sph = x0 + r0
-    call chir2xyz(chi_sph(1), chi_sph(2), chi_sph(3), &
+    chi = x0 + r0
+    call chir2xyz(chi(1), chi(2), chi(3), &
                   ipanel, x0(1), x0(2), x0(3))
 
     ! Initialise polynomial coefficients to zero
@@ -287,8 +287,8 @@ subroutine poly1d_flux_coeffs_code(nlayers,                    &
 
       ! Convert x1 to XYZ coordinate system
       ipanel = int(panel_id(smap_pid(1,face+1)), i_def)
-      chi_sph = x1 + r0
-      call chir2xyz(chi_sph(1), chi_sph(2), chi_sph(3), &
+      chi = x1 + r0
+      call chir2xyz(chi(1), chi(2), chi(3), &
                     ipanel, x1(1), x1(2), x1(3))
 
       x1(3) = ispherical*x1(3) + (1_i_def-ispherical)*x0(3)
@@ -310,8 +310,8 @@ subroutine poly1d_flux_coeffs_code(nlayers,                    &
 
           ! Convert xq to XYZ coordinate system
           ipanel = int(panel_id(smap_pid(1, map1d(stencil,face))), i_def)
-          chi_sph = xq + r0
-          call chir2xyz(chi_sph(1), chi_sph(2), chi_sph(3), &
+          chi = xq + r0
+          call chir2xyz(chi(1), chi(2), chi(3), &
                         ipanel, xq(1), xq(2), xq(3))
 
           ! Second: Compute the local coordinate of each quadrature point from the
@@ -342,8 +342,8 @@ subroutine poly1d_flux_coeffs_code(nlayers,                    &
 
         ! Convert xq to XYZ coordinate system
         ipanel = int(panel_id(smap_pid(1,1)), i_def)
-        chi_sph = xq + r0
-        call chir2xyz(chi_sph(1), chi_sph(2), chi_sph(3), &
+        chi = xq + r0
+        call chir2xyz(chi(1), chi(2), chi(3), &
                       ipanel, xq(1), xq(2), xq(3))
 
         ! Obtain local coordinates of gauss points on this face

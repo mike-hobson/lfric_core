@@ -79,14 +79,14 @@ module physical_op_constants_mod
 contains
   !>@brief Subroutine to create the physical operator constants
   !> @param[in] mesh_id         Mesh_id
-  !> @param[in] chi_sph         spherically-based chi field
+  !> @param[in] chi             coordinate field
   !> @param[in] panel_id        panel id
-  subroutine create_physical_op_constants(mesh_id, chi_sph, panel_id)
+  subroutine create_physical_op_constants(mesh_id, chi, panel_id)
     implicit none
 
     ! Arguments
     integer(i_def),   intent(in) :: mesh_id
-    type(field_type), intent(in) :: chi_sph(:)
+    type(field_type), intent(in) :: chi(:)
     type(field_type), intent(in) :: panel_id
 
     ! Internal variables
@@ -131,7 +131,7 @@ contains
 
     call geopotential%initialise( vector_space = w3_fs )
     if ( rehabilitate ) then
-      call invoke( compute_geopotential_kernel_type( geopotential, chi_sph, &
+      call invoke( compute_geopotential_kernel_type( geopotential, chi, &
                                                      gravity, scaled_radius ) )
     else
       call log_event( "Geopotential computation needs modifying for standard &
@@ -142,7 +142,7 @@ contains
 
     if ( rotating ) then
       coriolis = operator_type( w2_fs, w2_fs )
-      call invoke( compute_coriolis_matrix_kernel_type(coriolis, chi_sph,      &
+      call invoke( compute_coriolis_matrix_kernel_type(coriolis, chi,          &
                                                        panel_id, scaled_omega, &
                                                        f_lat, qr) )
     end if

@@ -63,9 +63,9 @@ contains
 !! @param[in,out] rhs Field to contain the right hand side to be computed
 !! @param[in] u Advecting field
 !! @param[in] f Advected field
-!! @param[in] chi_1 1st (spherical) coordinate field in Wchi
-!! @param[in] chi_2 2nd (spherical) coordinate field in Wchi
-!! @param[in] chi_3 3rd (spherical) coordinate field in Wchi
+!! @param[in] chi_1 1st coordinate field in Wchi
+!! @param[in] chi_2 2nd coordinate field in Wchi
+!! @param[in] chi_3 3rd coordinate field in Wchi
 !! @param[in] panel_id Field giving the ID for mesh panels
 !! @param[in] ndf_u Number of degrees of freedom per cell for w2
 !! @param[in] undf_u Number of unique degrees of freedom for w2

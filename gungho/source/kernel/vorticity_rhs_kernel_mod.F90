@@ -61,9 +61,9 @@ contains
 !! @param[in] nlayers Number of layers
 !! @param[in,out] rhs Right hand side to be computed
 !! @param[in] u Velocity field
-!! @param[in] chi_1 1st (spherical) coordinate field in Wchi
-!! @param[in] chi_2 2nd (spherical) coordinate field in Wchi
-!! @param[in] chi_3 3rd (spherical) coordinate field in Wchi
+!! @param[in] chi_1 1st coordinate field in Wchi
+!! @param[in] chi_2 2nd coordinate field in Wchi
+!! @param[in] chi_3 3rd coordinate field in Wchi
 !! @param[in] panel_id Field giving the ID for mesh panels
 !! @param[in] ndf_xi Number of degrees of freedom per cell for W1
 !! @param[in] undf_xi Unique number of degrees of freedom for W1

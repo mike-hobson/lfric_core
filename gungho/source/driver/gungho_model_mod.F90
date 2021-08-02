@@ -190,18 +190,15 @@ contains
 
     type(field_type) :: surface_altitude
 
-    type(field_type), target :: chi_xyz(3)
-    type(field_type), target :: chi_sph(3)
+    type(field_type), target :: chi(3)
     type(field_type), target :: panel_id
-    type(field_type), target :: shifted_chi_xyz(3)
-    type(field_type), target :: shifted_chi_sph(3)
-    type(field_type), target :: double_level_chi_xyz(3)
-    type(field_type), target :: double_level_chi_sph(3)
+    type(field_type), target :: shifted_chi(3)
+    type(field_type), target :: double_level_chi(3)
 
 
     integer(i_def),   allocatable :: multigrid_mesh_ids(:)
     integer(i_def),   allocatable :: multigrid_2d_mesh_ids(:)
-    type(field_type), allocatable :: chi_mg_sph(:,:)
+    type(field_type), allocatable :: chi_mg(:,:)
     type(field_type), allocatable :: panel_id_mg(:)
 
     !-------------------------------------------------------------------------
@@ -283,16 +280,14 @@ contains
                     multigrid_2D_mesh_ids = multigrid_2D_mesh_ids,&
                     use_multigrid         = l_multigrid )
 
-    call init_fem( mesh_id, chi_xyz, chi_sph, panel_id,           &
+    call init_fem( mesh_id, chi, panel_id,                        &
                    shifted_mesh_id       = shifted_mesh_id,       &
-                   shifted_chi_xyz       = shifted_chi_xyz,       &
-                   shifted_chi_sph       = shifted_chi_sph,       &
+                   shifted_chi           = shifted_chi,           &
                    double_level_mesh_id  = double_level_mesh_id,  &
-                   double_level_chi_xyz  = double_level_chi_xyz,  &
-                   double_level_chi_sph  = double_level_chi_sph,  &
+                   double_level_chi      = double_level_chi,      &
                    multigrid_mesh_ids    = multigrid_mesh_ids,    &
                    multigrid_2D_mesh_ids = multigrid_2D_mesh_ids, &
-                   chi_mg_sph            = chi_mg_sph,            &
+                   chi_mg                = chi_mg,                &
                    panel_id_mg           = panel_id_mg,           &
                    use_multigrid         = l_multigrid )
 
@@ -309,7 +304,7 @@ contains
                             communicator,                  &
                             mesh_id,                       &
                             twod_mesh_id,                  &
-                            chi_sph,                       &
+                            chi,                           &
                             panel_id,                      &
                             timestep_start,                &
                             timestep_end,                  &
@@ -332,29 +327,16 @@ contains
     call init_altitude( twod_mesh_id, surface_altitude )
 
     ! Assignment of orography from surface_altitude
-    call assign_orography_field(chi_xyz, panel_id,                      &
-                                mesh_id, surface_altitude,              &
-                                spherical_coords=.false.)
-    call assign_orography_field(shifted_chi_xyz, panel_id,              &
-                                shifted_mesh_id, surface_altitude,      &
-                                spherical_coords=.false.)
-    call assign_orography_field(double_level_chi_xyz, panel_id,         &
-                                double_level_mesh_id, surface_altitude, &
-                                spherical_coords=.false.)
-    call assign_orography_field(chi_sph, panel_id,                      &
-                                mesh_id, surface_altitude,              &
-                                spherical_coords=.true.)
-    call assign_orography_field(shifted_chi_sph, panel_id,              &
-                                shifted_mesh_id, surface_altitude,      &
-                                spherical_coords=.true.)
-    call assign_orography_field(double_level_chi_sph, panel_id,         &
-                                double_level_mesh_id, surface_altitude, &
-                                spherical_coords=.true.)
+    call assign_orography_field(chi, panel_id, mesh_id, surface_altitude)
+    call assign_orography_field(shifted_chi, panel_id, &
+                                shifted_mesh_id, surface_altitude)
+    call assign_orography_field(double_level_chi, panel_id, &
+                                double_level_mesh_id, surface_altitude)
 
     ! Set up orography fields for multgrid meshes
     if ( l_multigrid ) then
       call mg_orography_alg(multigrid_mesh_ids, multigrid_2D_mesh_ids, &
-                            chi_mg_sph, panel_id_mg, surface_altitude)
+                            chi_mg, panel_id_mg, surface_altitude)
     end if
 
     !-------------------------------------------------------------------------
@@ -364,12 +346,11 @@ contains
     ! Create runtime_constants object. This in turn creates various things
     ! needed by the timestepping algorithms such as mass matrix operators, mass
     ! matrix diagonal fields and the geopotential field
-    call create_runtime_constants(mesh_id, twod_mesh_id, chi_xyz, chi_sph,    &
-                                  panel_id, shifted_mesh_id, shifted_chi_xyz, &
-                                  shifted_chi_sph, double_level_mesh_id,      &
-                                  double_level_chi_xyz, double_level_chi_sph, &
+    call create_runtime_constants(mesh_id, twod_mesh_id, chi,                 &
+                                  panel_id, shifted_mesh_id, shifted_chi,     &
+                                  double_level_mesh_id, double_level_chi,     &
                                   multigrid_mesh_ids, multigrid_2D_mesh_ids,  &
-                                  chi_mg_sph, panel_id_mg)
+                                  chi_mg, panel_id_mg)
 
 #ifdef UM_PHYSICS
     ! Set derived planet constants and presets

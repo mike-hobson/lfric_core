@@ -42,7 +42,7 @@ subroutine set_rho_alg( rho, timestep, dt )
     type( quadrature_xyoz_type ) :: qr
     type( quadrature_rule_gaussian_type ) :: quadrature_rule
     ! Coordinate fields
-    type( field_type ), pointer :: chi_sph(:) => null(), &
+    type( field_type ), pointer :: chi(:) => null(), &
                                    panel_id => null()
 
     real(kind=r_def)    :: time
@@ -51,13 +51,13 @@ subroutine set_rho_alg( rho, timestep, dt )
     mesh_id = rho%get_mesh_id()
 
     qr = quadrature_xyoz_type(nqp_exact, quadrature_rule)
-    chi_sph => get_coordinates(mesh_id)
+    chi => get_coordinates(mesh_id)
     panel_id => get_panel_id(mesh_id)
     ! Set rho according to formulation
     time = real(timestep,r_def)*dt
-    call invoke( set_rho_kernel_type ( rho, chi_sph, panel_id, time, qr ) )
+    call invoke( set_rho_kernel_type ( rho, chi, panel_id, time, qr ) )
 
-    nullify( chi_sph, panel_id )
+    nullify( chi, panel_id )
 
   end subroutine set_rho_alg
 

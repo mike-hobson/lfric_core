@@ -68,14 +68,14 @@ module limited_area_constants_mod
 
 contains
   !>@brief Subroutine to create the limited area constants
-  !> @param[in] mesh_id         Mesh_id
-  !> @param[in] chi_sph         Coordinate field
-  subroutine create_limited_area_constants(mesh_id, chi_sph)
+  !> @param[in] mesh_id     Mesh_id
+  !> @param[in] chi         Coordinate field
+  subroutine create_limited_area_constants(mesh_id, chi)
     implicit none
 
     ! Arguments
     integer(i_def),   intent(in) :: mesh_id
-    type(field_type), intent(in) :: chi_sph(:)
+    type(field_type), intent(in) :: chi(:)
 
     ! Internal variables
     type(function_space_type), pointer :: w2_fs     => null()
@@ -107,14 +107,14 @@ contains
     if (normal_only) then
       call log_event( "Using w2 dofs on boundary for LBC", &
            LOG_LEVEL_INFO )
-      call create_boundary_mask( w2boundary_mask, chi_sph )
-      call create_limited_area_mask( w2_mask, chi_sph )
+      call create_boundary_mask( w2boundary_mask, chi )
+      call create_limited_area_mask( w2_mask, chi )
     else
       call log_event( "Using w2 dofs on boundary and tangential 1 cell in", &
            LOG_LEVEL_INFO )
-      call create_boundary_mask( w2perp_mask, chi_sph )
-      call create_parallel_boundary_mask ( w2parallel_mask, chi_sph )
-      call create_limited_area_mask( w2interior_mask, chi_sph )
+      call create_boundary_mask( w2perp_mask, chi )
+      call create_parallel_boundary_mask ( w2parallel_mask, chi )
+      call create_limited_area_mask( w2interior_mask, chi )
 
       call invoke( &
          ! Add the W2parallel and W2perp masks together
@@ -133,14 +133,14 @@ contains
     call w3blend_mask%initialise( vector_space = w3_fs )
     call wthetablend_mask%initialise( vector_space = wtheta_fs )
 
-    call create_limited_area_mask( w3_mask, chi_sph )
-    call create_limited_area_mask( wtheta_mask, chi_sph )
-    call create_lbc_mask( w2lbc_mask, chi_sph )
-    call create_lbc_mask( w3lbc_mask, chi_sph )
-    call create_lbc_mask( wthetalbc_mask, chi_sph )
-    call create_blend_mask( w2blend_mask, chi_sph )
-    call create_blend_mask( w3blend_mask, chi_sph )
-    call create_blend_mask( wthetablend_mask, chi_sph )
+    call create_limited_area_mask( w3_mask, chi )
+    call create_limited_area_mask( wtheta_mask, chi )
+    call create_lbc_mask( w2lbc_mask, chi )
+    call create_lbc_mask( w3lbc_mask, chi )
+    call create_lbc_mask( wthetalbc_mask, chi )
+    call create_blend_mask( w2blend_mask, chi )
+    call create_blend_mask( w3blend_mask, chi )
+    call create_blend_mask( wthetablend_mask, chi )
 
     ! Check that the W2 boundary mask has the correct number of dofs
     call check_w2b_mask( w2boundary_mask )

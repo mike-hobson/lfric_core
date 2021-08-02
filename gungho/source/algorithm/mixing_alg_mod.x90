@@ -57,7 +57,7 @@ contains
     ! Increment fields
     type( field_type ) :: du, dtheta
 
-    type( field_type ), pointer :: chi_sph(:) => null()
+    type( field_type ), pointer :: chi(:) => null()
     type( field_type ), pointer :: panel_id => null()
 
     integer( i_def )   :: mesh_id
@@ -78,11 +78,11 @@ contains
       call dtheta%initialise( theta%get_function_space() )
       call du%initialise( u%get_function_space() )
 
-      chi_sph => get_coordinates(mesh_id)
+      chi => get_coordinates(mesh_id)
       panel_id => get_panel_id(mesh_id)
-      call invoke( tracer_viscosity_kernel_type( dtheta, theta, 1, chi_sph,   &
+      call invoke( tracer_viscosity_kernel_type( dtheta, theta, 1, chi,       &
                                                 panel_id, viscosity_mu ),     &
-                   momentum_viscosity_kernel_type( du, u, 1, chi_sph,         &
+                   momentum_viscosity_kernel_type( du, u, 1, chi,             &
                                                    panel_id, viscosity_mu ),  &
                    inc_X_plus_bY( theta, dt, dtheta ),                        &
                    inc_X_plus_bY( u,     dt, du ) )

@@ -58,7 +58,7 @@ contains
     integer(kind=i_def),          intent(in)    :: mesh
     type( quadrature_xyoz_type ), intent(in)    :: qr
 ! Coordinate fields
-    type( field_type ), pointer :: chi_sph(:) => null()
+    type( field_type ), pointer :: chi(:) => null()
     type( field_type ), pointer :: panel_id => null()
 
     integer( kind=i_def )            :: out_fs
@@ -66,7 +66,7 @@ contains
     type( field_type )               :: w2_field
     integer( kind=i_def )            :: dir
 
-    chi_sph => get_coordinates(mesh)
+    chi => get_coordinates(mesh)
     panel_id => get_panel_id(mesh)
 
 
@@ -88,7 +88,7 @@ contains
        if ( space_dimension == 1 ) then
           write( log_scratch_space, '(A)' ) '    scalar field ... '
           call log_event( log_scratch_space, LOG_LEVEL_INFO )
-          call invoke( gp_rhs_kernel_type(rhs(1), f_in, chi_sph, panel_id, qr) )
+          call invoke( gp_rhs_kernel_type(rhs(1), f_in, chi, panel_id, qr) )
        else
           write( log_scratch_space, '(A)' ) '    vector field ... '
           call log_event( log_scratch_space, LOG_LEVEL_INFO )
@@ -97,7 +97,7 @@ contains
           call w2_field%initialise( vector_space =  &
                               function_space_collection%get_fs(mesh, element_order, W2) )
 
-          call invoke( gp_vector_rhs_kernel_type(rhs, f_in, chi_sph, &
+          call invoke( gp_vector_rhs_kernel_type(rhs, f_in, chi, &
                                                  panel_id, w2_field, qr) )
        end if
        do dir = 1,space_dimension
@@ -105,7 +105,7 @@ contains
        end do
     end if
 
-    nullify(chi_sph, panel_id)
+    nullify(chi, panel_id)
 
   end subroutine galerkin_projection_algorithm
 

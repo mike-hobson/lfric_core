@@ -343,7 +343,7 @@ contains
     type(quadrature_xyoz_type)             :: qr
     type(quadrature_face_type)             :: qrf
     type(quadrature_rule_gaussian_type)    :: quadrature_rule
-    type(field_type),              pointer :: chi_sph(:) => null()
+    type(field_type),              pointer :: chi(:) => null()
     type(field_type),              pointer :: panel_id => null()
     type(operator_type),           pointer :: m3_inv => null(), div => null()
     type(field_type)                       :: ones
@@ -400,14 +400,14 @@ contains
        call log_event(log_scratch_space, LOG_LEVEL_INFO)
 
        mesh_id = rho_at_u(level)%get_mesh_id()
-       chi_sph  => get_coordinates(mesh_id)
+       chi => get_coordinates(mesh_id)
        panel_id =>  get_panel_id(mesh_id)
 
        ! Operators for the equation of state
        const1 = (1.0_r_def-kappa)/kappa
        call invoke( eos_operators_kernel_type(m3_exner_star(level), m3_rho_star(level), &
                     p3theta(level), &
-                    exner, rho, theta, chi_sph, panel_id, const1, qr) )
+                    exner, rho, theta, chi, panel_id, const1, qr) )
 
        ! The rest of the operators are topological and so do not need as high
        ! quadrature order
@@ -572,7 +572,7 @@ contains
 
     end do ! end of multigrid levels loop
 
-    nullify( chi_sph, panel_id, m3_inv, div, w2_rmultiplicity, &
+    nullify( chi, panel_id, m3_inv, div, w2_rmultiplicity, &
              mesh, reference_element, m2, u_normalisation, t_normalisation, &
              w2_mask )
 

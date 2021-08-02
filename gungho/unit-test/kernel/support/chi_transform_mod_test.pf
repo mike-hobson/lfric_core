@@ -205,10 +205,10 @@ contains
   subroutine setUp( this )
 
     use chi_transform_mod,         only : init_chi_transforms
-    use finite_element_config_mod, only : cellshape_quadrilateral,    &
-                                          spherical_coord_system_abh, &
-                                          spherical_coord_system_llh, &
-                                          spherical_coord_system_xyz
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          coord_system_alphabetaz, &
+                                          coord_system_lonlatz,   &
+                                          coord_system_xyz
     use feign_config_mod,          only : feign_finite_element_config, &
                                           feign_planet_config
 
@@ -216,15 +216,15 @@ contains
 
     class(chi_transform_mod_test_type), intent(inout) :: this
 
-    integer(i_native) :: spherical_coord_system
+    integer(i_native) :: coord_system
 
     select case ( this%source_coord_system )
     case ( XYZ )
-      spherical_coord_system = spherical_coord_system_xyz
+      coord_system = coord_system_xyz
     case ( LLH )
-      spherical_coord_system = spherical_coord_system_llh
+      coord_system = coord_system_lonlatz
     case ( ABH )
-      spherical_coord_system = spherical_coord_system_abh
+      coord_system = coord_system_alphabetaz
     end select
 
     ! Initialise YAXT
@@ -234,11 +234,10 @@ contains
 
     call feign_finite_element_config(           &
              cellshape=cellshape_quadrilateral, &
-             coordinate_order=0_i_def,          &
              element_order=0_i_def,             &
              rehabilitate=.true.,               &
-             spherical_coord_order = 0,         &
-             spherical_coord_system=spherical_coord_system, &
+             coord_order=0_i_def,               &
+             coord_system=coord_system,         &
              vorticity_in_w1=.false. )
 
     call feign_planet_config(                   &
@@ -279,7 +278,7 @@ contains
   subroutine test_all( this )
 
     use chi_transform_mod,         only : chi2abr, chi2llr, chi2xyz, chir2xyz
-    use finite_element_config_mod, only : spherical_coord_system
+    use finite_element_config_mod, only : coord_system
 
     implicit none
 

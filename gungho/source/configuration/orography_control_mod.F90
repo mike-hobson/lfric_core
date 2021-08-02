@@ -71,7 +71,7 @@ contains
       ! Schar orography
       case( profile_schar )
         if ( geometry == geometry_spherical ) then
-          ! Read parameters for Schar mountain in spherical coordinates and
+          ! Read parameters for Schar mountain in (lon,lat) coordinates and
           ! initialise the corresponding type
            call set_orography_schar_spherical()
         else
@@ -105,7 +105,7 @@ contains
 
   !=============================================================================
   !> @brief Initialises analytic orography type for Witch-of-Agnesi mountain in
-  !>        spherical coordinates using corresponding namelist parameters.
+  !>        (lon,lat) coordinates using corresponding namelist parameters.
   !=============================================================================
   subroutine set_orography_agnesi_spherical()
 
@@ -169,7 +169,7 @@ contains
 
   !=============================================================================
   !> @brief Initialises analytic orography type for Schar mountain in
-  !>        spherical coordinates using corresponding namelist parameters.
+  !>        (lon,lat) coordinates using corresponding namelist parameters.
   !=============================================================================
   subroutine set_orography_schar_spherical()
 
@@ -233,7 +233,7 @@ contains
 
   !=============================================================================
   !> @brief Initialises analytic orography type for DCMIP200 mountain in
-  !>        spherical coordinates using corresponding namelist parameters.
+  !>        (lon,lat) coordinates using corresponding namelist parameters.
   !=============================================================================
   subroutine set_orography_dcmip200_spherical()
 

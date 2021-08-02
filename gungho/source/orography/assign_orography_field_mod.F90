@@ -22,12 +22,11 @@ module assign_orography_field_mod
                                              orog_init_option_none
   use base_mesh_config_mod,           only : geometry, &
                                              geometry_spherical
-  use finite_element_config_mod,      only : coordinate_order,           &
-                                             spherical_coord_system,     &
-                                             spherical_coord_order,      &
-                                             spherical_coord_system_xyz, &
-                                             spherical_coord_system_abh, &
-                                             spherical_coord_system_llh
+  use finite_element_config_mod,      only : coord_system,            &
+                                             coord_order,             &
+                                             coord_system_xyz,        &
+                                             coord_system_alphabetaz, &
+                                             coord_system_lonlatz
   use mesh_collection_mod,            only : mesh_collection
   use coord_transform_mod,            only : xyz2llr, llr2xyz, alphabetar2llr
   use orography_helper_functions_mod, only : z2eta_linear, &
@@ -51,8 +50,8 @@ module assign_orography_field_mod
   public :: assign_orography_field
   ! These are made public only for unit-testing
   public :: analytic_orography_spherical_xyz
-  public :: analytic_orography_spherical_abh
-  public :: analytic_orography_spherical_llh
+  public :: analytic_orography_spherical_alphabetaz
+  public :: analytic_orography_spherical_lonlatz
   public :: analytic_orography_cartesian
   public :: ancil_orography_spherical_xyz
   public :: ancil_orography_spherical_sph
@@ -120,15 +119,12 @@ contains
   !> routines calculate analytic orography from horizontal coordinates or else
   !> use the surface_altitude field and then update the vertical coordinate.
   !>
-  !> @param[in,out] chi      Model coordinate array of size 3 (x,y,z) of fields
+  !> @param[in,out] chi      Model coordinate array of size 3 of fields
   !> @param[in]     panel_id Field giving the ID of mesh panels
   !> @param[in]     mesh_id  Id of mesh on which this field is attached
   !> @param[in]     surface_altitude Field containing the surface altitude
-  !> @param[in]     spherical_coords Logical labelling whether this is the
-  !>                                 spherical coordinate field
   !=============================================================================
-  subroutine assign_orography_field(chi, panel_id, mesh_id,           &
-                                    surface_altitude, spherical_coords)
+  subroutine assign_orography_field(chi, panel_id, mesh_id, surface_altitude)
 
     use field_mod,                      only : field_type, field_proxy_type
     use mesh_mod,                       only : mesh_type
@@ -148,7 +144,6 @@ contains
     ! we keep the surface_altitude as an optional argument since it is
     ! not needed for miniapps that only want analytic orography
     type( field_type ),  intent( in ), optional :: surface_altitude
-    logical(kind=l_def), intent( in ), optional :: spherical_coords
 
     ! Local variables
     type( field_proxy_type )     :: chi_proxy(3)
@@ -163,7 +158,6 @@ contains
     integer(kind=i_def), pointer :: map_chi(:,:) => null()
     integer(kind=i_def), pointer :: map_pid(:,:) => null()
     integer(kind=i_def), pointer :: map_sf(:,:) => null()
-    logical(kind=l_def)          :: spherical_coords_flag
 
     integer(kind=i_def) :: sf_mesh_id, surface_order
 
@@ -179,15 +173,11 @@ contains
 
     real(kind=r_def), allocatable :: basis_sf_on_chi(:,:,:)
 
-    if (coordinate_order == 0 .and. orog_init_option/=orog_init_option_none)then
+    if (coord_order == 0 .and. orog_init_option/=orog_init_option_none) then
       call log_event( "assign_orography_field: "// &
-         "Orography assignment is currently only available with coordinate_order > 0.", &
+         "Orography assignment is currently only available with coord_order > 0.", &
          LOG_LEVEL_ERROR )
     end if
-
-    ! Set spherical coordinates flag
-    spherical_coords_flag = .false.
-    if (present(spherical_coords)) spherical_coords_flag = spherical_coords
 
     ! Get mesh object
     mesh => mesh_collection%get_mesh(mesh_id)
@@ -217,16 +207,15 @@ contains
 
       ! Point to appropriate procedure to assign orography
       if ( geometry == geometry_spherical ) then
-        if ( (spherical_coord_system == spherical_coord_system_xyz) .or. &
-              ( .not. spherical_coords_flag ) ) then
+        if ( coord_system == coord_system_xyz ) then
           analytic_orography => analytic_orography_spherical_xyz
-        else if ( spherical_coord_system == spherical_coord_system_abh ) then
-          analytic_orography => analytic_orography_spherical_abh
-        else if ( spherical_coord_system == spherical_coord_system_llh ) then
-          analytic_orography => analytic_orography_spherical_llh
+        else if ( coord_system == coord_system_alphabetaz ) then
+          analytic_orography => analytic_orography_spherical_alphabetaz
+        else if ( coord_system == coord_system_lonlatz ) then
+          analytic_orography => analytic_orography_spherical_lonlatz
         else
-          call log_event("Error: this spherical coordinate system " // &
-                         "is not implemented with analytic orography", &
+          call log_event("Error: this coordinate system is not " // &
+                         "implemented with analytic orography", &
                          LOG_LEVEL_ERROR)
         end if
       else
@@ -273,15 +262,14 @@ contains
 
       ! Point to appropriate procedure to assign orography
       if ( geometry == geometry_spherical ) then
-        if ( (spherical_coord_system == spherical_coord_system_xyz) .or. &
-              ( .not. spherical_coords_flag ) ) then
+        if ( coord_system == coord_system_xyz ) then
           ancil_orography => ancil_orography_spherical_xyz
-        else if ( (spherical_coord_system == spherical_coord_system_abh) .or. &
-                  (spherical_coord_system == spherical_coord_system_llh) ) then
+        else if ( (coord_system == coord_system_alphabetaz) .or. &
+                  (coord_system == coord_system_lonlatz) ) then
           ancil_orography => ancil_orography_spherical_sph
         else
-          call log_event("Error: this spherical coordinate system " //  &
-                         "is not implemented with ancillary orography", &
+          call log_event("Error: this coordinate system is not " //  &
+                         "implemented with ancillary orography", &
                          LOG_LEVEL_ERROR)
         end if
       else
@@ -444,8 +432,8 @@ contains
   end subroutine analytic_orography_spherical_xyz
 
   !=============================================================================
-  !> @brief Updates (alpha, beta, h) vertical coordinates for a single column
-  !>        using selected analytic orography.
+  !> @brief Updates (alpha, beta, height) vertical coordinates for a single
+  !>        column using selected analytic orography.
   !>
   !> @details Calculates analytic orography from chi_1 and chi_2 horizontal
   !>          coordinates and then updates chi_3. This works directly on the
@@ -465,10 +453,19 @@ contains
   !> @param[in,out] chi_3          3rd coordinate field in Wchi
   !> @param[in]     panel_id       Field giving the ID for mesh panels
   !=============================================================================
-  subroutine analytic_orography_spherical_abh(nlayers, ndf_chi, undf_chi, map_chi, &
-                                              ndf_pid, undf_pid, map_pid,          &
-                                              domain_surface, domain_top,          &
-                                              chi_1, chi_2, chi_3, panel_id)
+  subroutine analytic_orography_spherical_alphabetaz(nlayers,        &
+                                                     ndf_chi,        &
+                                                     undf_chi,       &
+                                                     map_chi,        &
+                                                     ndf_pid,        &
+                                                     undf_pid,       &
+                                                     map_pid,        &
+                                                     domain_surface, &
+                                                     domain_top,     &
+                                                     chi_1,          &
+                                                     chi_2,          &
+                                                     chi_3,          &
+                                                     panel_id)
 
     implicit none
 
@@ -518,7 +515,7 @@ contains
       end do
     end do
 
-  end subroutine analytic_orography_spherical_abh
+  end subroutine analytic_orography_spherical_alphabetaz
 
   !=============================================================================
   !> @brief Updates (longitude, latitude, h) vertical coordinates for a single
@@ -542,10 +539,19 @@ contains
   !> @param[in,out] chi_3          3rd coordinate field in Wchi
   !> @param[in]     panel_id       Field giving the ID for mesh panels
   !=============================================================================
-  subroutine analytic_orography_spherical_llh(nlayers, ndf_chi, undf_chi, map_chi, &
-                                              ndf_pid, undf_pid, map_pid,          &
-                                              domain_surface, domain_top,          &
-                                              chi_1, chi_2, chi_3, panel_id)
+  subroutine analytic_orography_spherical_lonlatz(nlayers,        &
+                                                  ndf_chi,        &
+                                                  undf_chi,       &
+                                                  map_chi,        &
+                                                  ndf_pid,        &
+                                                  undf_pid,       &
+                                                  map_pid,        &
+                                                  domain_surface, &
+                                                  domain_top,     &
+                                                  chi_1,          &
+                                                  chi_2,          &
+                                                  chi_3,          &
+                                                  panel_id)
 
     implicit none
 
@@ -588,7 +594,7 @@ contains
       end do
     end do
 
-  end subroutine analytic_orography_spherical_llh
+  end subroutine analytic_orography_spherical_lonlatz
 
   !=============================================================================
   !> @brief Updates Cartesian vertical coordinate for a single column using

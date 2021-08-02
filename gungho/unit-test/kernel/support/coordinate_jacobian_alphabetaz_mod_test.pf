@@ -5,7 +5,7 @@
 !-----------------------------------------------------------------------------
 !
 !-------------------------------------------------------------------------------
-module coordinate_jacobian_abh_mod_test
+module coordinate_jacobian_alphabetaz_mod_test
 
   use pFUnit_Mod
   use yaxt,          only : xt_initialize, xt_finalize
@@ -14,16 +14,16 @@ module coordinate_jacobian_abh_mod_test
 
   implicit none
 
-  public :: jacobian_abh_test_type, test_all
+  public :: jacobian_alphabetaz_test_type, test_all
 
   @TestCase
-  type, extends(MPITestCase) :: jacobian_abh_test_type
+  type, extends(MPITestCase) :: jacobian_alphabetaz_test_type
     private
   contains
     procedure setUp
     procedure tearDown
     procedure test_all
-  end type jacobian_abh_test_type
+  end type jacobian_alphabetaz_test_type
 
   real(r_def), parameter :: gravity  = 10.0_r_def
   real(r_def), parameter :: radius   = 1000_r_def
@@ -40,35 +40,34 @@ contains
   subroutine setUp( this )
 
     use finite_element_config_mod, only : cellshape_quadrilateral, &
-                                          spherical_coord_system_abh
+                                          coord_system_alphabetaz
     use feign_config_mod,          only : feign_finite_element_config, &
                                           feign_planet_config
 
     implicit none
 
-    class(jacobian_abh_test_type), intent(inout) :: this
+    class(jacobian_alphabetaz_test_type), intent(inout) :: this
 
     ! Initialise YAXT
     call xt_initialize(this%getMpiCommunicator())
     ! Store the MPI communicator for later use
     call store_comm(this%getMpiCommunicator())
 
-    call feign_finite_element_config(           &
-             cellshape=cellshape_quadrilateral, &
-             coordinate_order=0_i_def,          &
-             element_order=0_i_def,             &
-             rehabilitate=.true.,               &
-             spherical_coord_order = 0,         &
-             spherical_coord_system=spherical_coord_system_abh, &
+    call feign_finite_element_config(              &
+             cellshape=cellshape_quadrilateral,    &
+             coord_order=0_i_def,                  &
+             coord_system=coord_system_alphabetaz, &
+             element_order=0_i_def,                &
+             rehabilitate=.true.,                  &
              vorticity_in_w1=.false. )
 
-    call feign_planet_config(                   &
-             gravity=gravity,                   &
-             radius=radius,                     &
-             omega=omega,                       &
-             rd=rd,                             &
-             cp=cp,                             &
-             p_zero=p_zero,                     &
+    call feign_planet_config(                      &
+             gravity=gravity,                      &
+             radius=radius,                        &
+             omega=omega,                          &
+             rd=rd,                                &
+             cp=cp,                                &
+             p_zero=p_zero,                        &
              scaling_factor=scaling )
 
 
@@ -81,7 +80,7 @@ contains
 
     implicit none
 
-    class(jacobian_abh_test_type), intent(inout) :: this
+    class(jacobian_alphabetaz_test_type), intent(inout) :: this
 
     call final_configuration()
 
@@ -104,7 +103,7 @@ contains
 
     implicit none
 
-    class(jacobian_abh_test_type), intent(inout) :: this
+    class(jacobian_alphabetaz_test_type), intent(inout) :: this
 
     real(kind=r_def), parameter :: tol = 1.0e-14_r_def  ! r_def 64bit
     real(kind=r_def)            :: use_tol, answer_dj
@@ -129,17 +128,17 @@ contains
     height(:) = (/ 0.0_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def, h, h, h, h /)
 
     ! We are only going to look at the quadrature point in the centre of the cell
-    ! At alpha = 0, beta = 0, height=h/2, jac_abh2XYZ will be given by:
+    ! At alpha = 0, beta = 0, height=h/2, jac_alphabetaz2XYZ will be given by:
     ! [   0,    0,   1 ]
     ! [ r+h/2,  0,   0 ]
     ! [   0,  r+h/2, 0 ]
 
-    ! Our cell is of dimensions (2a, 2b, h), so jac_ref2abh is:
+    ! Our cell is of dimensions (2a, 2b, h), so jac_ref2alphabetaz is:
     ! [ 2a,  0,  0 ]
     ! [ 0,  2b,  0 ]
     ! [ 0,   0,  h ]
 
-    ! Doing jac_abh2XYZ * jac_ref2abh gives
+    ! Doing jac_alphabetaz2XYZ * jac_ref2alphabetaz gives
     ! [     0           0       h ]
     ! [ 2a(r+h/2),      0       0 ]
     ! [     0,     2b(r+h/2),   0 ]
@@ -234,4 +233,4 @@ contains
 
   end subroutine test_all
 
-end module coordinate_jacobian_abh_mod_test
+end module coordinate_jacobian_alphabetaz_mod_test

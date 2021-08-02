@@ -37,11 +37,10 @@ start_dump_filename='',
 /
 &finite_element
 cellshape='quadrilateral',
-coordinate_order=0,
+coord_order=1,
+coord_system='xyz',
 element_order=0,
 rehabilitate=.true.,
-spherical_coord_order=1,
-spherical_coord_system='xyz',
 vorticity_in_w1=.true.,
 /
 &formulation

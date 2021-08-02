@@ -54,7 +54,7 @@ contains
                                           partitioner_cubedsphere,  &
                                           topology_fully_periodic
     use finite_element_config_mod, only : cellshape_quadrilateral,  &
-                                          spherical_coord_system_xyz
+                                          coord_system_xyz
     use formulation_config_mod,    only : eos_method_sampled
 
     implicit none
@@ -75,11 +75,10 @@ contains
                                  fplane=.false., f_lat_deg=f_lat )
 
     call feign_finite_element_config( cellshape=cellshape_quadrilateral, &
-                                      coordinate_order=0_i_def,          &
+                                      coord_order=0_i_def,               &
+                                      coord_system=coord_system_xyz,     &
                                       element_order=0_i_def,             &
                                       rehabilitate=.true.,               &
-                                      spherical_coord_order = 0,         &
-                                      spherical_coord_system=spherical_coord_system_xyz, &
                                       vorticity_in_w1=.false. )
 
     ! Formulation config is needed to ensure shallow atmosphere formulation is

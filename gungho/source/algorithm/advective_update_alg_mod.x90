@@ -30,8 +30,8 @@ module advective_update_alg_mod
   use field_mod,                          only: field_type
   use finite_element_config_mod,          only: element_order,          &
                                                 nqp_exact,              &
-                                                spherical_coord_system, &
-                                                spherical_coord_system_xyz
+                                                coord_system,           &
+                                                coord_system_xyz
   use fs_continuity_mod,                  only: W1, Wtheta
   use function_space_mod,                 only: function_space_type
   use quadrature_rule_gauss_lobatto_mod,  only: quadrature_rule_gauss_lobatto_type
@@ -156,7 +156,7 @@ contains
     integer(kind=i_def)             :: nfaces_re_h
     integer(kind=i_def)             :: nfaces_re_v
     integer(kind=i_def)             :: polynomial
-    type(field_type ),      pointer :: chi_sph(:) => null()
+    type(field_type ),      pointer :: chi(:) => null()
     type(field_type ),      pointer :: md_wt => null()
     type(field_type ),      pointer :: panel_id => null()
 
@@ -230,16 +230,16 @@ contains
         multidata_fs => function_space_collection%get_fs( mesh_id, element_order, Wtheta, ndata_h )
         call adv_coeffs_list(mesh_index)%initialise( vector_space = multidata_fs, ndata_first = .true. )
 
-        chi_sph => get_coordinates(mesh_id)
+        chi => get_coordinates(mesh_id)
         panel_id => get_panel_id(mesh_id)
 
-        if ( spherical_coord_system == spherical_coord_system_xyz ) then
+        if ( coord_system == coord_system_xyz ) then
           transform_radius = 0.0_r_def
         else
           ! Compute the smallest surface height of chi(3)
           ! (this is only needed for spherically-based coordinates
           ! Transform radius is minimum height + 1
-          call chi_sph(3)%field_minmax(transform_radius, chi3_max)
+          call chi(3)%field_minmax(transform_radius, chi3_max)
           transform_radius = 1.0_r_def + abs(transform_radius)
         end if
 
@@ -269,7 +269,7 @@ contains
                                                adv_coeffs_list(mesh_index),    &
                                                md_wt,                          &
                                                adv_stencil_extent,             &
-                                               chi_sph,                        &
+                                               chi,                            &
                                                adv_stencil_extent,             &
                                                panel_id,                       &
                                                adv_stencil_extent,             &
@@ -281,7 +281,7 @@ contains
                                                adv_coeffs_list(mesh_index),    &
                                                md_wt,                          &
                                                adv_stencil_extent,             &
-                                               chi_sph,                        &
+                                               chi,                            &
                                                adv_stencil_extent,             &
                                                panel_id,                       &
                                                adv_stencil_extent,             &
@@ -299,7 +299,7 @@ contains
 
         call invoke( poly1d_vert_adv_coeffs_kernel_type(                       &
                                             vert_adv_coeffs_list(mesh_index),  &
-                                            chi_sph, ndata_v,                  &
+                                            chi, ndata_v,                      &
                                             fv_advective_order) )
         if ( consistent_metric ) then
           call wt_metrics(mesh_index)%initialise(vector_space = wt_fs )
@@ -308,7 +308,7 @@ contains
                        setval_c(chi3_at_wt_list(mesh_index), 0.0_r_def),       &
                        multiplicity_kernel_type(wt_field),                     &
                        sample_field_kernel_type(chi3_at_wt_list(mesh_index),   &
-                                                wt_field, chi_sph(3)) )
+                                                wt_field, chi(3)) )
         end if
         !======================================================================!
       else
@@ -322,7 +322,7 @@ contains
     ndata_h_list(mesh_index) = ndata_h
     ndata_v_list(mesh_index) = ndata_v
 
-    nullify( chi_sph, panel_id, md_wt, wt_fs, w1_fs, reference_element, mesh )
+    nullify( chi, panel_id, md_wt, wt_fs, w1_fs, reference_element, mesh )
 
   end subroutine advective_update_alg_init
 
@@ -373,7 +373,7 @@ contains
     type(quadrature_xyoz_type)             :: qr
     type(quadrature_face_type)             :: qrf
     type(quadrature_rule_gaussian_type)    :: quadrature_rule
-    type(field_type), pointer              :: chi_sph(:) => null()
+    type(field_type), pointer              :: chi(:) => null()
     type(field_type), pointer              :: mt_lumped_inv => null()
     class(reference_element_type), pointer :: reference_element => null()
     type(mesh_type),               pointer :: mesh => null()
@@ -470,14 +470,14 @@ contains
                                               advective_av(mesh_index)) )
       call wind%copy_field(consistent_wind)
       if ( consistent_metric ) then
-        chi_sph => get_coordinates(mesh_id)
+        chi => get_coordinates(mesh_id)
         call invoke( poly_advective_kernel_type(                               &
                                               wt_metrics(mesh_index),          &
                                               wind,                            &
                                               advective_av_chi3(mesh_index) ), &
         ! Modify advecting wind
                      consistent_wind_kernel_type(consistent_wind, wind,        &
-                                                 wt_metrics(mesh_index), chi_sph) )
+                                                 wt_metrics(mesh_index), chi) )
       end if
       ! Compute vertical component of advective update
       call invoke( poly1d_vert_adv_kernel_type( u_grad_f(mesh_index),          &
@@ -518,7 +518,7 @@ contains
 
     call invoke( X_times_Y(rhs, u_grad_f(mesh_index), mt_lumped_inv) )
 
-    nullify( chi_sph, mt_lumped_inv, reference_element, mesh,    &
+    nullify( chi, mt_lumped_inv, reference_element, mesh,        &
              adv_coeffs, vert_adv_coeffs, chi3_at_wt,            &
              w1_multiplicity, ndata_h, ndata_v,                  &
              adv_stencil_extent, adv_2d_stencil_size )

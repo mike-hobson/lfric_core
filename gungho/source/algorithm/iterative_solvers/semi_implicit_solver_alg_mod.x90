@@ -376,7 +376,7 @@ contains
 
     type( field_type ),           pointer :: t_normalisation => null(), &
                                              u_normalisation => null()
-    type( field_type ),           pointer :: chi_sph(:) => null()
+    type( field_type ),           pointer :: chi(:) => null()
     type( field_type ),           pointer :: panel_id => null()
     type( operator_type ),        pointer :: m3_inv => null()
     type( quadrature_xyoz_type ), pointer :: qr => null()
@@ -445,12 +445,12 @@ contains
 
     if (exner_from_eos) then
       m3_inv  => get_inverse_w3_mass_matrix(mesh_id)
-      chi_sph => get_coordinates(mesh_id)
+      chi => get_coordinates(mesh_id)
       panel_id => get_panel_id(mesh_id)
       qr => get_qr()
       call invoke( project_pressure_kernel_type( state(igh_p), state(igh_d), &
                                                  state(igh_t),               &
-                                                 moist_dyn_gas_law, chi_sph, &
+                                                 moist_dyn_gas_law, chi,     &
                                                  panel_id, m3_inv, qr ) )
     end if
     if ( write_moisture_diag )  &
@@ -458,7 +458,7 @@ contains
 
     nullify( t_normalisation, &
              u_normalisation, &
-             m3_inv, chi_sph, &
+             m3_inv, chi,     &
              panel_id, qr )
 
     if ( subroutine_timers ) call timer('semi_implicit_solver_alg')

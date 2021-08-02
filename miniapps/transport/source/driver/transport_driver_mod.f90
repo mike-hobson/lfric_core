@@ -120,11 +120,9 @@ module transport_driver_mod
   type(field_type), pointer :: cell_orientation_shifted => null()
 
   ! Coordinate field
-  type(field_type), target, dimension(3) :: chi_xyz
-  type(field_type), target, dimension(3) :: chi_sph
+  type(field_type), target, dimension(3) :: chi
   type(field_type), target               :: panel_id
-  type(field_type), target, dimension(3) :: shifted_chi_xyz
-  type(field_type), target, dimension(3) :: shifted_chi_sph
+  type(field_type), target, dimension(3) :: shifted_chi
 
   class(io_context_type), allocatable :: io_context
 
@@ -220,27 +218,26 @@ contains
               source=mesh_collection_type() )
 
     ! Create the mesh
-    call init_mesh( local_rank, total_ranks, mesh_id,      &
-                    twod_mesh_id=twod_mesh_id,             &
-                    shifted_mesh_id=shifted_mesh_id,       &
-                    multigrid_mesh_ids=multigrid_mesh_ids, &
+    call init_mesh( local_rank, total_ranks, mesh_id,            &
+                    twod_mesh_id=twod_mesh_id,                   &
+                    shifted_mesh_id=shifted_mesh_id,             &
+                    multigrid_mesh_ids=multigrid_mesh_ids,       &
                     multigrid_2d_mesh_ids=multigrid_2d_mesh_ids, &
                     use_multigrid=l_multigrid )
 
     ! FEM initialisation
-    call init_fem( mesh_id, chi_xyz, chi_sph, panel_id,    &
-                   shifted_mesh_id=shifted_mesh_id,        &
-                   shifted_chi_xyz=shifted_chi_xyz,        &
-                   shifted_chi_sph=shifted_chi_sph,        &
-                   multigrid_mesh_ids=multigrid_mesh_ids,  &
+    call init_fem( mesh_id, chi, panel_id,                      &
+                   shifted_mesh_id=shifted_mesh_id,             &
+                   shifted_chi=shifted_chi,                     &
+                   multigrid_mesh_ids=multigrid_mesh_ids,       &
                    multigrid_2d_mesh_ids=multigrid_2d_mesh_ids, &
                    use_multigrid=l_multigrid )
 
     ! Transport initialisation
-    call init_transport( mesh_id, twod_mesh_id, chi_xyz, chi_sph, panel_id, &
-                         shifted_mesh_id, shifted_chi_xyz, shifted_chi_sph, &
-                         wind_n, density, theta, dep_pts_x, dep_pts_y,      &
-                         dep_pts_z, increment, wind_divergence,             &
+    call init_transport( mesh_id, twod_mesh_id, chi, panel_id,          &
+                         shifted_mesh_id, shifted_chi,                  &
+                         wind_n, density, theta, dep_pts_x, dep_pts_y,  &
+                         dep_pts_z, increment, wind_divergence,         &
                          wind_shifted, density_shifted )
 
     ! Initialise dependencies
@@ -277,7 +274,7 @@ contains
                             model_communicator, &
                             mesh_id,            &
                             twod_mesh_id,       &
-                            chi_sph,            &
+                            chi,                &
                             panel_id,           &
                             timestep_start,     &
                             timestep_end,       &

@@ -210,7 +210,7 @@ subroutine poly2d_advective_coeffs_code(nlayers,                    &
   integer(kind=i_def), dimension(0:nlayers) :: kx, vert_face, qv
   real(kind=r_def)                                       :: fn, poly, z0
   real(kind=r_def),              dimension(2)            :: xx
-  real(kind=r_def),              dimension(3)            :: x0, x1, xq, xn1, chi_sph, r0
+  real(kind=r_def),              dimension(3)            :: x0, x1, xq, xn1, chi, r0
   real(kind=r_def), allocatable, dimension(:,:)          :: int_monomial
   real(kind=r_def),              dimension(stencil_size) :: area
 
@@ -267,8 +267,8 @@ subroutine poly2d_advective_coeffs_code(nlayers,                    &
 
     ! Convert x0 to XYZ coordinate system
     ipanel = int(panel_id(smap_pid(1,1)), i_def)
-    chi_sph = x0 + r0
-    call chir2xyz(chi_sph(1), chi_sph(2), chi_sph(3), &
+    chi = x0 + r0
+    call chir2xyz(chi(1), chi(2), chi(3), &
                   ipanel, x0(1), x0(2), x0(3))
 
     ! Avoid issues when x0(3) == 0
@@ -285,8 +285,8 @@ subroutine poly2d_advective_coeffs_code(nlayers,                    &
 
     ! Convert x1 to XYZ coordinate system
     ipanel = int(panel_id(smap_pid(1,2)), i_def)
-    chi_sph = x1 + r0
-    call chir2xyz(chi_sph(1), chi_sph(2), chi_sph(3), &
+    chi = x1 + r0
+    call chir2xyz(chi(1), chi(2), chi(3), &
                   ipanel, x1(1), x1(2), x1(3))
 
     x1(3) = ispherical*x1(3) + (1_i_def - ispherical)*x0(3)
@@ -311,8 +311,8 @@ subroutine poly2d_advective_coeffs_code(nlayers,                    &
 
         ! Convert xq to XYZ coordinate system
         ipanel = int(panel_id(smap_pid(1, stencil)), i_def)
-        chi_sph = xq + r0
-        call chir2xyz(chi_sph(1), chi_sph(2), chi_sph(3), &
+        chi = xq + r0
+        call chir2xyz(chi(1), chi(2), chi(3), &
                       ipanel, xq(1), xq(2), xq(3))
 
         ! Avoid issues when x0(3) == 0
@@ -363,8 +363,8 @@ subroutine poly2d_advective_coeffs_code(nlayers,                    &
 
         ! Convert xq to XYZ coordinate system
         ipanel = int(panel_id(smap_pid(1, 1)), i_def)
-        chi_sph = xq + r0
-        call chir2xyz(chi_sph(1), chi_sph(2), chi_sph(3), &
+        chi = xq + r0
+        call chir2xyz(chi(1), chi(2), chi(3), &
                       ipanel, xq(1), xq(2), xq(3))
 
         ! Obtain local coordinates of gauss points on this edge

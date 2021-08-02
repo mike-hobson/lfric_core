@@ -31,7 +31,6 @@ l_multigrid=.false.
 
 &finite_element
 cellshape='quadrilateral',
-coordinate_order=2,
 element_order=0,
 rehabilitate=.true.,
 vorticity_in_w1=.false.,

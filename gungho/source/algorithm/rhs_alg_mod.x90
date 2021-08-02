@@ -12,8 +12,7 @@ module rhs_alg_mod
   use log_mod,                             only: log_event, &
                                                  LOG_LEVEL_ERROR
   use enforce_bc_kernel_mod,               only: enforce_bc_kernel_type
-  use geometric_constants_mod,             only: get_coordinates_xyz, &
-                                                 get_coordinates,     &
+  use geometric_constants_mod,             only: get_coordinates,     &
                                                  get_panel_id
   use fem_constants_mod,                   only: get_mass_matrix,  &
                                                  get_dl_mass_matrix, &
@@ -100,8 +99,7 @@ subroutine rhs_alg(rhs, alpha_dt, base_state, state, moist_dyn, compute_eos, &
                                     mm_wtheta => null(), &
                                     mm_w3_inv => null(), &
                                     coriolis  => null()
-    type(field_type), pointer :: chi_xyz(:)   => null(), &
-                                 chi_sph(:)   => null(), &
+    type(field_type), pointer :: chi(:)   => null(), &
                                  panel_id     => null(), &
                                  geopotential => null(), &
                                  u            => null(), &
@@ -129,8 +127,7 @@ subroutine rhs_alg(rhs, alpha_dt, base_state, state, moist_dyn, compute_eos, &
 
     geopotential => get_geopotential()
     mm_wtheta    => get_mass_matrix(Wtheta, mesh_id)
-    chi_xyz      => get_coordinates_xyz(mesh_id)
-    chi_sph      => get_coordinates(mesh_id)
+    chi          => get_coordinates(mesh_id)
     panel_id     => get_panel_id(mesh_id)
     mm_w3_inv    => get_inverse_w3_mass_matrix(mesh_id)
 
@@ -179,7 +176,7 @@ subroutine rhs_alg(rhs, alpha_dt, base_state, state, moist_dyn, compute_eos, &
       if ( vector_invariant ) then
         ! Compute grad(K) + curl(u) x u
         call invoke( kinetic_energy_gradient_kernel_type( rhs_tmp, u,             &
-                                                          chi_sph, panel_id, qr ) )
+                                                          chi, panel_id, qr ) )
         ! Compute the vorticity
         if ( vorticity_in_w1 ) then
           vorticity_fs = W1
@@ -192,10 +189,10 @@ subroutine rhs_alg(rhs, alpha_dt, base_state, state, moist_dyn, compute_eos, &
         call compute_vorticity_alg(vorticity, u, .false.)
         if ( vorticity_in_w1 ) then
           call invoke( vorticity_advection_kernel_type(rhs_tmp, u, vorticity,    &
-                                                       chi_sph, panel_id, qr_exact) )
+                                                       chi, panel_id, qr_exact) )
         else
           call invoke( w2_vorticity_advection_kernel_type(rhs_tmp, u, vorticity, &
-                                                          chi_sph, panel_id, qr_exact) )
+                                                          chi, panel_id, qr_exact) )
         end if
       else
         call rhs_adv%initialise( u%get_function_space() )
@@ -225,7 +222,7 @@ subroutine rhs_alg(rhs, alpha_dt, base_state, state, moist_dyn, compute_eos, &
       qr = quadrature_xyoz_type(1, gaussian_quadrature)
       call invoke( name = "Compute rhs_eos",                                  &
                    rhs_eos_kernel_type(rhs_eos, exner, rho, theta,            &
-                                       moist_dyn(gas_law), chi_sph, panel_id, &
+                                       moist_dyn(gas_law), chi, panel_id,     &
                                        kappa, rd, p_zero, qr),                &
                    dg_matrix_vector_kernel_type( rhs(igh_p), rhs_eos, mm_w3_inv ))
     else
@@ -233,7 +230,7 @@ subroutine rhs_alg(rhs, alpha_dt, base_state, state, moist_dyn, compute_eos, &
     end if
 
     nullify( mm_vel, mm_wtheta, mm_w3_inv,       &
-             chi_xyz, chi_sph, panel_id,         &
+             chi, panel_id,                      &
              geopotential, u, theta, rho, exner, &
              mesh, reference_element )
 

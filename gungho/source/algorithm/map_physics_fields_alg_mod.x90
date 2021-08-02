@@ -71,7 +71,7 @@ contains
     type( field_type ), pointer :: dA => null()
     type( field_type ), pointer :: height_w3 => null()
     type( field_type ), pointer :: height_wth => null()
-    type( field_type ), pointer :: chi_sph(:) => null()
+    type( field_type ), pointer :: chi(:) => null()
     type( field_type ), pointer :: panel_id => null()
     integer(kind=i_def) :: mesh_id
     if ( subroutine_timers ) call timer("map_physics_fields")
@@ -116,13 +116,13 @@ contains
       shear => derived_fields%get_field('shear')
       height_wth => get_height(Wtheta, mesh_id)
       height_w3 => get_height(W3, mesh_id)
-      chi_sph => get_coordinates(mesh_id)
+      chi => get_coordinates(mesh_id)
       panel_id => get_panel_id(mesh_id)
       call invoke(smagorinsky_shear_kernel_type( shear,         &
                                                  u_physics,  1, &
                                                  height_wth, 1, &
                                                  height_w3,  1, &
-                                                 chi_sph,       &
+                                                 chi,           &
                                                  panel_id     ) )
     end if
 

@@ -66,8 +66,7 @@ module gravity_wave_driver_mod
   character(*), public, parameter   :: xios_ctx = 'gravity_wave'
 
   ! Coordinate field
-  type(field_type), target, dimension(3) :: chi_xyz
-  type(field_type), target, dimension(3) :: chi_sph
+  type(field_type), target, dimension(3) :: chi
   type(field_type), target               :: panel_id
 
   ! The prognostic fields
@@ -129,14 +128,14 @@ contains
   multigrid_function_space_chain = function_space_chain_type()
 
   ! Initialise aspects of the grid
-  call initialise_grid(mesh_id, twod_mesh_id, chi_xyz, chi_sph, &
+  call initialise_grid(mesh_id, twod_mesh_id, chi, &
                        panel_id, multigrid_function_space_chain)
 
   ! Initialise aspects of output
   call initialise_io( model_communicator, &
                       mesh_id,            &
                       twod_mesh_id,       &
-                      chi_sph,            &
+                      chi,                &
                       panel_id,           &
                       xios_ctx,           &
                       io_context )
@@ -146,7 +145,7 @@ contains
   ! Create runtime_constants object. This in turn creates various things
   ! needed by the timestepping algorithms such as mass matrix operators, mass
   ! matrix diagonal fields and the geopotential field and limited area masks.
-  call create_runtime_constants(mesh_id, twod_mesh_id, chi_xyz, chi_sph, panel_id)
+  call create_runtime_constants(mesh_id, twod_mesh_id, chi, panel_id)
 
   ! Create the prognostic fields
   call create_gravity_wave_prognostics(mesh_id, wind, pressure, buoyancy)

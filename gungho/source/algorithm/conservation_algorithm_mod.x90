@@ -66,7 +66,7 @@ contains
     type( quadrature_xyoz_type ) :: qr
     type( quadrature_rule_gaussian_type ) :: quadrature_rule
     ! Coordinate fields
-    type( field_type ), pointer :: chi_sph(:) => null()
+    type( field_type ), pointer :: chi(:) => null()
     type( field_type ), pointer :: panel_id => null()
 
     type(function_space_type), pointer :: w3_fs => null()
@@ -84,7 +84,7 @@ contains
     w3_fs => function_space_collection%get_fs( mesh, element_order, W3)
 
     geopotential => get_geopotential()
-    chi_sph      => get_coordinates(mesh)
+    chi          => get_coordinates(mesh)
     panel_id     => get_panel_id(mesh)
 
     ! Initialise Mass, Energy and Axial Angular Momentum fields
@@ -95,17 +95,17 @@ contains
     ! Compute conserved quantities
     call invoke( name = "Compute conserved quantities",                   &
     ! Compute Total Mass
-                 compute_total_mass_kernel_type(mass, rho, chi_sph,       &
+                 compute_total_mass_kernel_type(mass, rho, chi,           &
                                                 panel_id, qr),            &
                  sum_X(total_mass, mass),                                 &
     ! Compute Total Energy
                  compute_total_energy_kernel_type(energy,                 &
                                                   u, rho, exner, theta,   &
-                                                  geopotential, chi_sph,  &
+                                                  geopotential, chi,      &
                                                   panel_id, cv, qr),      &
                  sum_X(total_energy, energy),                             &
     ! Compute Total Axial Angular Momentum
-                 compute_total_aam_kernel_type(aam, u, rho, chi_sph,      &
+                 compute_total_aam_kernel_type(aam, u, rho, chi,          &
                                                panel_id, scaled_omega,    &
                                                qr),                       &
                  sum_X(total_aam, aam) )
@@ -122,7 +122,7 @@ contains
 
 
     nullify( geopotential )
-    nullify( chi_sph, panel_id, w3_fs )
+    nullify( chi, panel_id, w3_fs )
 
     if ( subroutine_timers ) call timer('conservation_alg')
 

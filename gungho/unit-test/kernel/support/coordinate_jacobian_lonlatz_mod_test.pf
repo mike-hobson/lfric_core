@@ -5,7 +5,7 @@
 !-----------------------------------------------------------------------------
 !
 !-------------------------------------------------------------------------------
-module coordinate_jacobian_llh_mod_test
+module coordinate_jacobian_lonlatz_mod_test
 
   use pFUnit_Mod
   use yaxt,          only : xt_initialize, xt_finalize
@@ -14,16 +14,16 @@ module coordinate_jacobian_llh_mod_test
 
   implicit none
 
-  public :: jacobian_llh_test_type, test_all
+  public :: jacobian_lonlatz_test_type, test_all
 
   @TestCase
-  type, extends(MPITestCase) :: jacobian_llh_test_type
+  type, extends(MPITestCase) :: jacobian_lonlatz_test_type
     private
   contains
     procedure setUp
     procedure tearDown
     procedure test_all
-  end type jacobian_llh_test_type
+  end type jacobian_lonlatz_test_type
 
   real(r_def), parameter :: gravity  = 10.0_r_def
   real(r_def), parameter :: radius   = 270_r_def
@@ -40,13 +40,13 @@ contains
   subroutine setUp( this )
 
     use finite_element_config_mod, only : cellshape_quadrilateral, &
-                                          spherical_coord_system_llh
+                                          coord_system_lonlatz
     use feign_config_mod,          only : feign_finite_element_config, &
                                           feign_planet_config
 
     implicit none
 
-    class(jacobian_llh_test_type), intent(inout) :: this
+    class(jacobian_lonlatz_test_type), intent(inout) :: this
 
     ! Initialise YAXT
     call xt_initialize(this%getMpiCommunicator())
@@ -55,11 +55,10 @@ contains
 
     call feign_finite_element_config(           &
              cellshape=cellshape_quadrilateral, &
-             coordinate_order=0_i_def,          &
+             coord_order=0_i_def,               &
+             coord_system=coord_system_lonlatz, &
              element_order=0_i_def,             &
              rehabilitate=.true.,               &
-             spherical_coord_order = 0,         &
-             spherical_coord_system=spherical_coord_system_llh, &
              vorticity_in_w1=.false. )
 
     call feign_planet_config(                   &
@@ -81,7 +80,7 @@ contains
 
     implicit none
 
-    class(jacobian_llh_test_type), intent(inout) :: this
+    class(jacobian_lonlatz_test_type), intent(inout) :: this
 
     call final_configuration()
 
@@ -104,7 +103,7 @@ contains
 
     implicit none
 
-    class(jacobian_llh_test_type), intent(inout) :: this
+    class(jacobian_lonlatz_test_type), intent(inout) :: this
 
     real(kind=r_def), parameter :: tol = 1.0e-12_r_def  ! r_def 64bit
     real(kind=r_def)    :: use_tol, answer_dj
@@ -135,18 +134,18 @@ contains
     height(:) = (/ 0.0_r_def, 0.0_r_def, 0.0_r_def, 0.0_r_def, dh, dh, dh, dh /)
 
     ! We are only going to look at the quadrature point in the centre of the cell
-    ! At longitude = pi / 6, latitude = pi / 3, height=dh/2, jac_llh2XYZ will be
-    ! given by:
+    ! At longitude = pi / 6, latitude = pi / 3, height=dh/2, jac_lonlatz2XYZ will
+    ! be given by:
     ! [     -(r+dh/2)/4,        -(r+dh/2)*3/4,    sqrt(3)/4  ]
     ! [  (r+dh/2)*sqrt(3)/4, -(r+dh/2)*sqrt(3)/4,    1/4     ]
     ! [           0,             (r+dh/2)/2,      sqrt(3)/2  ]
 
-    ! Our cell is of dimensions (dlon, dlat, dh), so jac_ref2llh is:
+    ! Our cell is of dimensions (dlon, dlat, dh), so jac_ref2lonlatz is:
     ! [ dlon,  0,  0 ]
     ! [ 0,  dlat,  0 ]
     ! [ 0,   0,   dh ]
 
-    ! Doing jac_llh2XYZ * jac_ref2llh gives
+    ! Doing jac_lonlatz2XYZ * jac_ref2lonlatz gives
     ! [ -dlon*(r+dh/2)/4,            -dlat*(r+dh/2)*3/4,   dh*sqrt(3)/4 ]
     ! [ dlon*(r+dh/2)*sqrt(3)/4, -dlat*(r+dh/2)*sqrt(3)/4,     dh/4     ]
     ! [          0,                   dlat*(r+dh/2)/2,     dh*sqrt(3)/2 ]
@@ -246,4 +245,4 @@ contains
 
   end subroutine test_all
 
-end module coordinate_jacobian_llh_mod_test
+end module coordinate_jacobian_lonlatz_mod_test

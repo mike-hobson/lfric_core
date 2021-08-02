@@ -9,9 +9,9 @@
 !>
 !> @details This module contains type definition and routines to calculate
 !>          analytic orography profile of Witch-of-Agnesi mountain function from
-!>          spherical coordinates: longitude (lambda) and latitude (phi).
+!>          spherical polar coordinates: longitude (lambda) and latitude (phi).
 !>          Reference: Wedi and Smolarkiewicz (2009), Section 4.1.
-!>          Witch-of-Agnesi mountain parameters in spherical coordinates are:
+!>          Witch-of-Agnesi mountain parameters in (lon,lat) coordinates are:
 !>          mountain_height - Height of Witch-of-Agnesi mountain function (m),
 !>          half_width - Half-width of Witch-of-Agnesi mountain function (m),
 !>          lambda_centre - Longitudinal centre of Witch-of-Agnesi mountain
@@ -32,11 +32,11 @@ module agnesi_orography_spherical_mod
 
   private
   !> @brief Holds parameters and methods used to calculate Witch-of-Agnesi
-  !>        orography profile in spherical coordinates.
+  !>        orography profile in (lon,lat) coordinates.
   type, public, extends(analytic_orography_type) :: agnesi_spherical_type
 
     private
-    ! Witch-of-Agnesi mountain function parameters in spherical coordinates
+    ! Witch-of-Agnesi mountain function parameters in (lon,lat) coordinates
     real(kind=r_def) :: mountain_height
     real(kind=r_def) :: half_width
     real(kind=r_def) :: lambda_centre
@@ -110,7 +110,7 @@ contains
   end function agnesi_spherical_constructor
 
   !=============================================================================
-  !> @brief Calculates Witch-of-Agnesi mountain function in spherical coordinates.
+  !> @brief Calculates Witch-of-Agnesi mountain function in (lon,lat) coordinates.
   !>
   !> @param[in] self      An object of type agnesi_spherical_type
   !> @param[in] chi_1     Longitude (lambda) (radian)
@@ -194,7 +194,7 @@ contains
 
   !=============================================================================
   !> @brief Writes out parameters of Witch-of-Agnesi mountain function in
-  !>        spherical coordinates.
+  !>        (lon,lat) coordinates.
   !>
   !> @param[in] self An object of type agnesi_spherical_type
   !=============================================================================
@@ -215,7 +215,7 @@ contains
     ! Temporary write
     open(funit, file = trim(fname), status = 'replace')
     write(funit,'(A)') &
-          "Witch-of-Agnesi mountain parameters in spherical coordinates: "
+          "Witch-of-Agnesi mountain parameters in (lon,lat) coordinates: "
     write(funit, fmtreal) "mountain_height = ", self%mountain_height
     write(funit, fmtreal) "half_width      = ", self%half_width
     write(funit, fmtreal) "lambda_centre   = ", self%lambda_centre

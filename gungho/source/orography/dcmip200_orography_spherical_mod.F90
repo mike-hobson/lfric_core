@@ -5,13 +5,13 @@
 !-----------------------------------------------------------------------------
 
 !-----------------------------------------------------------------------
-!> @brief Calculates DCMIP200 mountain orography profile in spherical coordinates.
+!> @brief Calculates DCMIP200 mountain orography profile in (lon,lat) coordinates.
 !>
 !> @details This module contains type definition and routines to calculate
-!>          analytic orography profile of DCMIP200 case mountain function from spherical
-!>          coordinates: longitude (lambda) and latitude (phi).
+!>          analytic orography profile of DCMIP200 case mountain function from
+!>          spherical polar coordinates: longitude (lambda) and latitude (phi).
 !>          Reference: Ulrich et al. (2012), Section 2.0.
-!>          DCMIP200 mountain parameters in spherical coordinates are:
+!>          DCMIP200 mountain parameters in (lon,lat) coordinates are:
 !>          mountain_height - Height of DCMIP200 mountain function (m),
 !>          radius - Radius of DCMIP200 mountain function (radian),
 !>          osc_half_width - Oscillation half-width of DCMIP200 mountain (radian),
@@ -27,11 +27,11 @@ module dcmip200_orography_spherical_mod
 
   private
   !> @brief Holds parameters and methods used to calculate DCMIP200 orography
-  !>        profile in spherical coordinates.
+  !>        profile in (lon,lat) coordinates.
   type, public, extends(analytic_orography_type) :: dcmip200_spherical_type
 
     private
-    ! DCMIP200 mountain function parameters in spherical coordinates
+    ! DCMIP200 mountain function parameters in (lon,lat) coordinates
     real(kind=r_def) :: mountain_height
     real(kind=r_def) :: radius
     real(kind=r_def) :: osc_half_width
@@ -54,7 +54,7 @@ module dcmip200_orography_spherical_mod
 contains
 
   !=============================================================================
-  !> @brief Constructor for DCMIP200 mountain function in spherical coordinates.
+  !> @brief Constructor for DCMIP200 mountain function in (lon,lat) coordinates.
   !> @param[in] mountain_height Height of mountain function read from
   !>                            namelist (m)
   !> @param[in] radius          Half-width of DCMIP mountain function read from
@@ -97,7 +97,7 @@ contains
   end function dcmip200_spherical_constructor
 
   !=============================================================================
-  !> @brief Calculates DCMIP200 mountain function in spherical coordinates.
+  !> @brief Calculates DCMIP200 mountain function in (lon,lat) coordinates.
   !> @param[in] self      An object of type dcmip200_spherical_type
   !> @param[in] chi_1     Longitude (lambda) (radian)
   !> @param[in] chi_2     Latitude (phi) (radian)
@@ -189,7 +189,7 @@ contains
     ! Temporary write
     open(funit, file = trim(fname), status = 'replace')
     write(funit,'(A)') &
-          "DCMIP200 mountain parameters in spherical coordinates: "
+          "DCMIP200 mountain parameters in (lon,lat) coordinates: "
     write(funit, fmtreal) "mountain_height     = ", self%mountain_height
     write(funit, fmtreal) "radius              = ", self%radius
     write(funit, fmtreal) "osc_half_width      = ", self%osc_half_width

@@ -403,10 +403,10 @@ end function cartesian_distance
 
 
 !-------------------------------------------------------------------------------
-!> @brief Converts a vector in sperical coordinates to one in
+!> @brief Converts a vector in (lon,lat,r) coordinates to one in
 !> Cartesian coodinates
-!> @param[in] llr Location in spherical coodinates
-!> @param[in] dlambda Input vector in spherical coordinates
+!> @param[in] llr Location in (lon,lat,r) coodinates
+!> @param[in] dlambda Input vector in (lon,lat,r) coordinates
 !> @param[return] dx Output vector in Cartesian coordinates
 !-------------------------------------------------------------------------------
 function sphere2cart_vector( dlambda, llr ) result ( dx )
@@ -436,7 +436,7 @@ end function sphere2cart_vector
 
 !-------------------------------------------------------------------------------
 !> @brief Converts a flux vector in Cartesian coordinates (x,y,z)
-!> to one in spherical coodinates (lambda,phi,r)
+!> to one in spherical polar coordinates (lambda,phi,r)
 !>
 !> Converts 3d Cartesian velocity u = (u1,u2,u3) in Cartesian coordinates at
 !> (x,y,z) to spherical velocity v = (v1,v2,v3) (in m/s) in spherical
@@ -446,7 +446,7 @@ end function sphere2cart_vector
 !> @param[in] Cartesian_vec Components of a flux vector (u,v,w)
 !>                          in Cartesian coordinates
 !> @result    spherical_vec Components of a flux vector (u,v,w)
-!>                          on spherical coordinates
+!>                          in (lon,lat,r) coordinates
 !>
 !-------------------------------------------------------------------------------
 pure function cart2sphere_vector(x_vec, cartesian_vec) result ( spherical_vec )

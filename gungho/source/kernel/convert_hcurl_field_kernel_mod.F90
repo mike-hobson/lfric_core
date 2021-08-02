@@ -59,9 +59,9 @@ contains
 !> @param[in,out] physical_field2 Second component of the  output field in physical units
 !> @param[in,out] physical_field3 Third component of the  output field in physical units
 !> @param[in] computational_field Input field in computational units
-!> @param[in] chi_1 1st (spherical) coordinate field in Wchi
-!> @param[in] chi_2 2nd (spherical) coordinate field in Wchi
-!> @param[in] chi_3 3rd (spherical) coordinate field in Wchi
+!> @param[in] chi_1 1st coordinate field in Wchi
+!> @param[in] chi_2 2nd coordinate field in Wchi
+!> @param[in] chi_3 3rd coordinate field in Wchi
 !> @param[in] panel_id  Field giving the ID for mesh panels
 !> @param[in] ndf Number of degrees of freedom per cell for the output field
 !> @param[in] undf Number of unique degrees of freedom for the output field

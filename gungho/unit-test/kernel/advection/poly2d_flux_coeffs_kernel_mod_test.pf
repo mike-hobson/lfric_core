@@ -34,7 +34,7 @@ contains
     use base_mesh_config_mod,      only: geometry_planar,    &
                                          partitioner_planar, &
                                          topology_fully_periodic
-    use finite_element_config_mod, only: spherical_coord_system_xyz, &
+    use finite_element_config_mod, only: coord_system_xyz, &
                                          cellshape_quadrilateral
     use chi_transform_mod,         only: init_chi_transforms
 
@@ -58,12 +58,11 @@ contains
                                    planar_domain_min_y = -10.0_r_def, &
                                    planar_domain_max_y = 10.0_r_def )
     call  feign_finite_element_config( cellshape = cellshape_quadrilateral, &
+                                       coord_order = 1, &
+                                       coord_system = coord_system_xyz, &
                                        element_order = 0, &
-                                       coordinate_order = 1, &
                                        rehabilitate = .true., &
-                                       vorticity_in_w1 = .true., &
-                                       spherical_coord_order = 1, &
-                                       spherical_coord_system = spherical_coord_system_xyz)
+                                       vorticity_in_w1 = .true. )
     call init_chi_transforms()
 
   end subroutine setUp

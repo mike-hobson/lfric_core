@@ -65,9 +65,9 @@ contains
 !> @param[in,out] T_ip1 The below diagonal components of the transform matrix. Is a field in W3.
 !> @param[in,out] T_i The above diagonal components of the transform matrix. Is a field in W3.
 !> @param[in] dummy_w3_sh A dummy field in the shifted W3 space.
-!> @param[in] chi_dl_1 The 1st spherical coordinate field in Wchi for double level mesh.
-!> @param[in] chi_dl_2 The 2nd spherical coordinate field in Wchi for double level mesh.
-!> @param[in] chi_dl_3 The 3rd spherical coordinate field in Wchi for double level mesh.
+!> @param[in] chi_dl_1 The 1st coordinate field in Wchi for double level mesh.
+!> @param[in] chi_dl_2 The 2nd coordinate field in Wchi for double level mesh.
+!> @param[in] chi_dl_3 The 3rd coordinate field in Wchi for double level mesh.
 !> @param[in] panel_id A field giving the ID for the mesh panels.
 !> @param[in] ndf_w3 Number of degrees of freedom per cell for W3
 !> @param[in] undf_w3 Number of (local) unique degrees of freedom for W3

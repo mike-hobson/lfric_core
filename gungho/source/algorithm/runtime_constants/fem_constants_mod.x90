@@ -144,18 +144,18 @@ module fem_constants_mod
 contains
   !>@brief Subroutine to create the finite element constants
   !> @param[in] mesh_id_list         List of mesh_ids
-  !> @param[in] chi_sph_list         List of spherically-based chi fields
+  !> @param[in] chi_list             List of coordinate fields
   !> @param[in] panel_id_list        List of panel_id fields
   !> @param[in] label_list           List of labels for meshes
   subroutine create_fem_constants(mesh_id_list,  &
-                                  chi_sph_list,  &
+                                  chi_list,      &
                                   panel_id_list, &
                                   label_list     )
     implicit none
 
     ! Arguments
     integer(kind=i_def), intent(in) :: mesh_id_list(:)
-    type(field_type),    intent(in) :: chi_sph_list(:,:)
+    type(field_type),    intent(in) :: chi_list(:,:)
     type(field_type),    intent(in) :: panel_id_list(:)
     integer(kind=i_def), intent(in) :: label_list(:)
 
@@ -277,7 +277,7 @@ contains
                                                          mm_w3(i), mm_wtheta(i), &
                                                          grad(i), curl(i),       &
                                                          div(i), broken_div(i),  &
-                                                         chi_sph_list(:,i),      &
+                                                         chi_list(:,i),          &
                                                          panel_id_list(i),       &
                                                          qr) )
 
@@ -291,7 +291,7 @@ contains
         call invoke( name = "create_mg_de_rham_matrices",             &
                      mg_derham_mat_kernel_type( mm_w2(i), mm_w3(i),   &
                                                 mm_wtheta(i), div(i), &
-                                                chi_sph_list(:,i),    &
+                                                chi_list(:,i),        &
                                                 panel_id_list(i), qr) )
 
       end if
@@ -310,21 +310,21 @@ contains
         ! Construct vertical- and horizontal-only weak divergence operator
         div_v(i)  = operator_type( w3_fs, w2v_fs )
         div_h(i)  = operator_type( w3_fs, w2h_fs )
-        call invoke( name = "compute_vert_divergence_operator",                     &
-                     compute_div_operator_kernel_type( div_v(i), chi_sph_list(:,i), &
+        call invoke( name = "compute_vert_divergence_operator",                 &
+                     compute_div_operator_kernel_type( div_v(i), chi_list(:,i), &
                                                        panel_id_list(i), qr ) )
-        call invoke( name = "compute_hori_divergence_operator",                     &
-                     compute_div_operator_kernel_type( div_h(i), chi_sph_list(:,i), &
+        call invoke( name = "compute_hori_divergence_operator",                 &
+                     compute_div_operator_kernel_type( div_h(i), chi_list(:,i), &
                                                        panel_id_list(i), qr ) )
 
         ! Construct vertical- and horizontal-only velocity mass matrices
         mm_w2v(i) = operator_type( w2v_fs, w2v_fs )
         mm_w2h(i) = operator_type( w2h_fs, w2h_fs )
-        call invoke( name = "compute_W2_hori_mass_matrix",                             &
-                     compute_mass_matrix_kernel_w2_type( mm_w2v(i), chi_sph_list(:,i), &
+        call invoke( name = "compute_W2_hori_mass_matrix",                         &
+                     compute_mass_matrix_kernel_w2_type( mm_w2v(i), chi_list(:,i), &
                                                          panel_id_list(i), qr ) )
-        call invoke( name = "compute_W2_vert_mass_matrix",                             &
-                     compute_mass_matrix_kernel_w2_type( mm_w2h(i), chi_sph_list(:,i), &
+        call invoke( name = "compute_W2_vert_mass_matrix",                         &
+                     compute_mass_matrix_kernel_w2_type( mm_w2h(i), chi_list(:,i), &
                                                          panel_id_list(i), qr ) )
       end if
 
@@ -339,7 +339,7 @@ contains
         ! Eventually this may be absorbed into the de Rham complex computations
         ! but until the final form is settled upon it is left separate
         call invoke( name = "compute_damping_layer_mass_matrix",                &
-                     compute_dl_matrix_kernel_type( mm_dl(i),chi_sph_list(:,i), &
+                     compute_dl_matrix_kernel_type( mm_dl(i),chi_list(:,i),     &
                                                     panel_id_list(i), dl_base,  &
                                                     dl_str, domain_top, radius, &
                                                     element_order, dt, qr) )
@@ -354,7 +354,7 @@ contains
           const = tau_u * dt
           call invoke( name = "compute_coriolis_matrix",                       &
                        compute_coriolis_matrix_kernel_type(coriolis,           &
-                                                           chi_sph_list(:,i),  &
+                                                           chi_list(:,i),      &
                                                            panel_id_list(i),   &
                                                            scaled_omega,       &
                                                            f_lat, qr) )
@@ -507,7 +507,7 @@ contains
         call invoke( name = "calculate_w2_normalisation",              &
                      setval_c(w2_normalisation(i), 0.0_r_def),         &
                      w2_normalisation_kernel_type(w2_normalisation(i), &
-                                                  chi_sph_list(:,i),   &
+                                                  chi_list(:,i),       &
                                                   panel_id_list(i)),   &
                      inc_X_divideby_Y(w2_normalisation(i),             &
                                       nodal_multiplicity_w2(i)),       &
@@ -519,10 +519,10 @@ contains
       if ( label_list(i) == primary_mesh_label .or. &
            label_list(i) == shifted_mesh_label ) then
         call detj_at_w2(i)%initialise( vector_space = w2_fs )
-        call invoke( name = "calculate_detj_at_w2",                                &
-                     setval_c(detj_at_w2(i), 0.0_r_def),                           &
-                     calc_detj_at_w2_kernel_type(detj_at_w2(i), chi_sph_list(:,i), &
-                                                 panel_id_list(i)),                &
+        call invoke( name = "calculate_detj_at_w2",                            &
+                     setval_c(detj_at_w2(i), 0.0_r_def),                       &
+                     calc_detj_at_w2_kernel_type(detj_at_w2(i), chi_list(:,i), &
+                                                 panel_id_list(i)),            &
                      inc_X_divideby_Y(detj_at_w2(i), nodal_multiplicity_w2(i)) )
       end if
 

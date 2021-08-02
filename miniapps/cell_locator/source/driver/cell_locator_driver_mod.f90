@@ -51,8 +51,7 @@ module cell_locator_driver_mod
   public initialise, run, finalise
 
   ! Coordinate field
-  type(field_type), target, dimension(3) :: chi_xyz
-  type(field_type), target, dimension(3) :: chi_sph
+  type(field_type), target, dimension(3) :: chi
   type(field_type), target               :: panel_id
 
   integer(i_def) :: mesh_id
@@ -110,12 +109,12 @@ contains
                     twod_mesh_id=twod_mesh_id )
 
     ! Create FEM specifics (function spaces and chi field)
-    call init_fem( mesh_id, chi_xyz, chi_sph, panel_id )
+    call init_fem( mesh_id, chi, panel_id )
 
     ! Sets up chi. Create runtime_constants object. This creates various things
     ! needed by the timestepping algorithms such as mass matrix operators, mass
     ! matrix diagonal fields and the geopotential field.
-    call create_runtime_constants( mesh_id, twod_mesh_id, chi_xyz, chi_sph, panel_id )
+    call create_runtime_constants( mesh_id, twod_mesh_id, chi, panel_id )
 
     ! Construct cell locator
     call timer( 'constructor' )

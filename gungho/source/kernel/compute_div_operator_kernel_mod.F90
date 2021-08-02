@@ -56,9 +56,9 @@ contains
 !! @param[in] nlayers  Number of layers.
 !! @param[in] ncell_3d ncell*ndf
 !! @param[in,out] div  Local stencil of the div operator
-!! @param[in] chi_1    1st (spherical) coordinate field in Wchi
-!! @param[in] chi_2    2nd (spherical) coordinate field in Wchi
-!! @param[in] chi_3    3rd (spherical) coordinate field in Wchi
+!! @param[in] chi_1    1st coordinate field in Wchi
+!! @param[in] chi_2    2nd coordinate field in Wchi
+!! @param[in] chi_3    3rd coordinate field in Wchi
 !! @param[in] panel_id Field giving the ID for mesh panels.
 !! @param[in] ndf_w3   Number of degrees of freedom per cell.
 !! @param[in] basis_w3 Scalar basis functions

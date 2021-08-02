@@ -119,8 +119,8 @@ subroutine poly1d_vert_flux_coeffs_code(nlayers,                    &
   use matrix_invert_mod,          only: matrix_invert
   use base_mesh_config_mod,       only: geometry, &
                                         geometry_spherical
-  use finite_element_config_mod,  only: spherical_coord_system,     &
-                                        spherical_coord_system_xyz
+  use finite_element_config_mod,  only: coord_system,     &
+                                        coord_system_xyz
   implicit none
 
   ! Arguments
@@ -162,7 +162,7 @@ subroutine poly1d_vert_flux_coeffs_code(nlayers,                    &
   vertical_order = min(global_order, nlayers-1)
 
   if ( geometry == geometry_spherical .and. &
-       spherical_coord_system == spherical_coord_system_xyz ) then
+       coord_system == coord_system_xyz ) then
     spherical = 1.0_r_def
     planar    = 0.0_r_def
   else

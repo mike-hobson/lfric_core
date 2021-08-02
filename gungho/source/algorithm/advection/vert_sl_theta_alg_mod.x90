@@ -51,7 +51,7 @@ contains
     real(kind=r_def), intent(in)      :: dts
 
     type( field_type ) :: departure_wind
-    type( field_type ), pointer :: chi_sph(:) => null()
+    type( field_type ), pointer :: chi(:) => null()
     type( field_type ), pointer :: panel_id => null()
 
     integer(kind=i_def) :: mesh_id
@@ -72,7 +72,7 @@ contains
         call log_event( "vertical_sl_theta: Invalid vertical_sl_order", LOG_LEVEL_ERROR )
       end if
 
-      chi_sph  => get_coordinates(mesh_id)
+      chi  => get_coordinates(mesh_id)
       panel_id => get_panel_id(mesh_id)
       call departure_wind%initialise( vector_space = wind_adv%get_function_space())
 
@@ -81,9 +81,9 @@ contains
       call invoke( name = "calculate_dept_and_interpolate",                       &
                   setval_c( departure_wind, 0.0_r_def ),                          &
                   calc_computational_wind_kernel_type( departure_wind, wind_adv,  &
-                                                       chi_sph, panel_id),        &
+                                                       chi, panel_id),            &
                   vertical_sl_theta_kernel_type( departure_wind, theta, dts)      )
-      nullify( chi_sph, panel_id )
+      nullify( chi, panel_id )
     else
       call log_event( "vert_sl_theta: Invalid vertical scheme", LOG_LEVEL_ERROR )
     end if

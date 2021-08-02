@@ -62,9 +62,9 @@ contains
 !! @param[in] exner Exner pressure field
 !! @param[in] theta Potential temperature field
 !! @param[in] moist_dyn_gas Moist dynamics factor
-!! @param[in] chi1 1st (spherical) coordinate field in Wchi
-!! @param[in] chi2 2nd (spherical) coordinate field in Wchi
-!! @param[in] chi3 3rd (spherical) coordinate field in Wchi
+!! @param[in] chi1 1st coordinate field in Wchi
+!! @param[in] chi2 2nd coordinate field in Wchi
+!! @param[in] chi3 3rd coordinate field in Wchi
 !! @param[in] panel_id Field giving the ID for mesh panels.
 !! @param[in] kappa Ratio of rd and cp
 !! @param[in] rd Specific heat of dry air at constant density

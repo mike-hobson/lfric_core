@@ -77,9 +77,9 @@ contains
 !! the upper half of the original mesh. Is a W3 field.
 !! @param[in,out] I_upper_i_im1 The integral of the (i-1)-th Wtheta basis function on
 !! the upper half of the original mesh. Is a W3 field.
-!! @param[in] chi_dl_1 The 1st spherical coordinate field in Wchi for double level mesh.
-!! @param[in] chi_dl_2 The 2nd spherical coordinate field in Wchi for double level mesh.
-!! @param[in] chi_dl_3 The 3rd spherical coordinate field in Wchi for double level mesh.
+!! @param[in] chi_dl_1 The 1st coordinate field in Wchi for double level mesh.
+!! @param[in] chi_dl_2 The 2nd coordinate field in Wchi for double level mesh.
+!! @param[in] chi_dl_3 The 3rd coordinate field in Wchi for double level mesh.
 !! @param[in] panel_id A field giving the ID for the mesh panels.
 !! @param[in] dummy_theta An unused dummy variable in Wtheta.
 !! @param[in] ndf_w3 The number of degrees of freedom per cell for w3

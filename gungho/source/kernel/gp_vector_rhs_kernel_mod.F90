@@ -63,7 +63,7 @@ contains
 
 !> @brief Computes the right-hand-side of the Galerkin projection for a vector
 !> field into a scalar space by decomposing the vector into orthogonal
-!> components in cartesian or spherical polar coordinates.
+!> components in cartesian or (lon,lat,r) coordinates.
 !> @details Computes rhs_i = int (gamma * f_i dx) for a vector field f which  is
 !>          decomposed into orthogonal components and a separate right hand side
 !>          field is computed for each component, this allows a vector field to
@@ -74,9 +74,9 @@ contains
 !! @param[in,out] rhs2  Field to compute
 !! @param[in,out] rhs3  Field to compute
 !! @param[in] field     Field to be projected
-!! @param[in] chi_sph_1 1st coordinate in spherical Wchi
-!! @param[in] chi_sph_2 2nd coordinate in spherical Wchi
-!! @param[in] chi_sph_3 3rd coordinate in spherical Wchi
+!! @param[in] chi_1     1st coordinate field
+!! @param[in] chi_2     2nd coordinate field
+!! @param[in] chi_3     3rd coordinate field
 !! @param[in] panel_id  Field giving the ID for mesh panels.
 !! @param[in] w2_field  W2_field needed to get function space components
 !! @param[in] ndf       Number of degrees of freedom per cell
@@ -87,13 +87,13 @@ contains
 !! @param[in] undf_f    Number of degrees of freedom for the field to be projected
 !! @param[in] map_f     Dofmap for the cell at the base of the column
 !! @param[in] f_basis   Basis functions evaluated at gaussian quadrature points
-!! @param[in] ndf_chi_sph   Number of degrees of freedom per cell for spherical chi
-!! @param[in] undf_chi_sph  Number of unique degrees of freedom for spherical chi
-!! @param[in] map_chi_sph   Dofmap for the cell at the base of the column for spherical chi
-!! @param[in] chi_sph_basis Basis functions for spherical Wchi evaluated at
-!!                          gaussian quadrature points
-!! @param[in] chi_sph_diff_basis Differential of the spherical Wchi basis functions
-!!                               evaluated at gaussian quadrature points
+!! @param[in] ndf_chi   Number of degrees of freedom per cell for chi
+!! @param[in] undf_chi  Number of unique degrees of freedom for chi
+!! @param[in] map_chi   Dofmap for the cell at the base of the column for chi
+!! @param[in] chi_basis Basis functions for Wchi evaluated at
+!!                      gaussian quadrature points
+!! @param[in] chi_diff_basis Differential of the Wchi basis functions
+!!                           evaluated at gaussian quadrature points
 !! @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
 !! @param[in] undf_pid Number of unique degrees of freedom for panel_id
 !! @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
@@ -106,13 +106,13 @@ contains
 !! @param[in] wqp_v   Vertical quadrature weights
 subroutine gp_vector_rhs_code(nlayers,                           &
                               rhs1, rhs2, rhs3, field,           &
-                              chi_sph_1, chi_sph_2, chi_sph_3,   &
+                              chi_1, chi_2, chi_3,               &
                               panel_id, w2_field,                &
                               ndf, undf, map, basis,             &
                               ndf_f, undf_f, map_f, f_basis,     &
-                              ndf_chi_sph, undf_chi_sph,         &
-                              map_chi_sph,                       &
-                              chi_sph_basis, chi_sph_diff_basis, &
+                              ndf_chi, undf_chi,                 &
+                              map_chi,                           &
+                              chi_basis, chi_diff_basis,         &
                               ndf_pid, undf_pid, map_pid,        &
                               ndf_w2, undf_w2, map_w2,           &
                               nqp_h, nqp_v, wqp_h, wqp_v         &
@@ -123,23 +123,23 @@ subroutine gp_vector_rhs_code(nlayers,                           &
   ! Arguments
   integer(kind=i_def), intent(in) :: nlayers, ndf, ndf_f, ndf_w2, ndf_pid
   integer(kind=i_def), intent(in) :: undf, undf_f, undf_w2, undf_pid
-  integer(kind=i_def), intent(in) :: ndf_chi_sph, undf_chi_sph
+  integer(kind=i_def), intent(in) :: ndf_chi, undf_chi
   integer(kind=i_def), intent(in) :: nqp_h, nqp_v
 
   integer(kind=i_def), dimension(ndf),         intent(in) :: map
   integer(kind=i_def), dimension(ndf_f),       intent(in) :: map_f
-  integer(kind=i_def), dimension(ndf_chi_sph), intent(in) :: map_chi_sph
+  integer(kind=i_def), dimension(ndf_chi),     intent(in) :: map_chi
   integer(kind=i_def), dimension(ndf_w2),      intent(in) :: map_w2
   integer(kind=i_def), dimension(ndf_pid),     intent(in) :: map_pid
 
 
   real(kind=r_def), intent(in), dimension(1,ndf,    nqp_h,nqp_v) :: basis
   real(kind=r_def), intent(in), dimension(3,ndf_f,  nqp_h,nqp_v) :: f_basis
-  real(kind=r_def), intent(in), dimension(3,ndf_chi_sph,nqp_h,nqp_v) :: chi_sph_diff_basis
-  real(kind=r_def), intent(in), dimension(1,ndf_chi_sph,nqp_h,nqp_v) :: chi_sph_basis
+  real(kind=r_def), intent(in), dimension(3,ndf_chi,nqp_h,nqp_v) :: chi_diff_basis
+  real(kind=r_def), intent(in), dimension(1,ndf_chi,nqp_h,nqp_v) :: chi_basis
 
   real(kind=r_def), dimension(undf),      intent(inout) :: rhs1, rhs2, rhs3
-  real(kind=r_def), dimension(undf_chi_sph), intent(in) :: chi_sph_1, chi_sph_2, chi_sph_3
+  real(kind=r_def), dimension(undf_chi),     intent(in) :: chi_1, chi_2, chi_3
   real(kind=r_def), dimension(undf_f),       intent(in) :: field
   real(kind=r_def), dimension(undf_w2),      intent(in) :: w2_field
   real(kind=r_def), dimension(undf_pid),     intent(in) :: panel_id
@@ -150,7 +150,7 @@ subroutine gp_vector_rhs_code(nlayers,                           &
   integer(kind=i_def)                          :: df, df2, k, qp1, qp2
   real(kind=r_def), dimension(nqp_h,nqp_v)     :: dj
   real(kind=r_def), dimension(3,3,nqp_h,nqp_v) :: jacobian, jacobian_inv
-  real(kind=r_def), dimension(ndf_chi_sph)     :: chi_sph_1_cell, chi_sph_2_cell, chi_sph_3_cell
+  real(kind=r_def), dimension(ndf_chi)         :: chi_1_cell, chi_2_cell, chi_3_cell
   real(kind=r_def), dimension(3)               :: u_at_quad, x_at_quad, u_physical, coords
   real(kind=r_def)                             :: integrand
   logical                                      :: hdiv
@@ -166,22 +166,22 @@ subroutine gp_vector_rhs_code(nlayers,                           &
   end if
 
   do k = 0, nlayers-1
-    do df = 1, ndf_chi_sph
-      chi_sph_1_cell(df) = chi_sph_1( map_chi_sph(df) + k )
-      chi_sph_2_cell(df) = chi_sph_2( map_chi_sph(df) + k )
-      chi_sph_3_cell(df) = chi_sph_3( map_chi_sph(df) + k )
+    do df = 1, ndf_chi
+      chi_1_cell(df) = chi_1( map_chi(df) + k )
+      chi_2_cell(df) = chi_2( map_chi(df) + k )
+      chi_3_cell(df) = chi_3( map_chi(df) + k )
     end do
-    call coordinate_jacobian(ndf_chi_sph,        &
-                             nqp_h,              &
-                             nqp_v,              &
-                             chi_sph_1_cell,     &
-                             chi_sph_2_cell,     &
-                             chi_sph_3_cell,     &
-                             ipanel,             &
-                             chi_sph_basis,      &
-                             chi_sph_diff_basis, &
-                             jacobian,           &
-                             dj                  )
+    call coordinate_jacobian(ndf_chi,        &
+                             nqp_h,          &
+                             nqp_v,          &
+                             chi_1_cell,     &
+                             chi_2_cell,     &
+                             chi_3_cell,     &
+                             ipanel,         &
+                             chi_basis,      &
+                             chi_diff_basis, &
+                             jacobian,       &
+                             dj              )
 
     if ( .not. hdiv) call coordinate_jacobian_inverse(nqp_h, nqp_v, &
                                                       jacobian, dj, &
@@ -206,10 +206,10 @@ subroutine gp_vector_rhs_code(nlayers,                           &
           ! Compute physical coordinate of quadrature point
           if ( geometry == geometry_spherical ) then
             coords(:) = 0.0_r_def
-            do df2 = 1,ndf_chi_sph
-              coords(1) = coords(1) + chi_sph_1_cell(df2)*chi_sph_basis(1,df2,qp1,qp2)
-              coords(2) = coords(2) + chi_sph_2_cell(df2)*chi_sph_basis(1,df2,qp1,qp2)
-              coords(3) = coords(3) + chi_sph_3_cell(df2)*chi_sph_basis(1,df2,qp1,qp2)
+            do df2 = 1,ndf_chi
+              coords(1) = coords(1) + chi_1_cell(df2)*chi_basis(1,df2,qp1,qp2)
+              coords(2) = coords(2) + chi_2_cell(df2)*chi_basis(1,df2,qp1,qp2)
+              coords(3) = coords(3) + chi_3_cell(df2)*chi_basis(1,df2,qp1,qp2)
             end do
 
             ! Obtain (X,Y,Z) coordinates for converting components of u

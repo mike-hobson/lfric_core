@@ -20,10 +20,10 @@ module assign_coordinate_field_mod
   use mesh_collection_mod,  only : mesh_collection
   use coord_transform_mod,  only : xyz2llr, llr2xyz, identify_panel, &
                                    xyz2alphabetar, alphabetar2xyz
-  use finite_element_config_mod, only: spherical_coord_system, &
-                                       spherical_coord_system_xyz, &
-                                       spherical_coord_system_abh, &
-                                       spherical_coord_system_llh
+  use finite_element_config_mod, only: coord_system,            &
+                                       coord_system_xyz,        &
+                                       coord_system_alphabetaz, &
+                                       coord_system_lonlatz
   implicit none
 
   private
@@ -31,8 +31,8 @@ module assign_coordinate_field_mod
   public :: assign_coordinate_field
   ! Make this public only for unit-testing
   public :: assign_coordinate_xyz
-  public :: assign_coordinate_llh
-  public :: assign_coordinate_abh
+  public :: assign_coordinate_lonlatz
+  public :: assign_coordinate_alphabetaz
 
 contains
 
@@ -43,12 +43,10 @@ contains
 !! and the data attributes of the field so that its values can be assigned.
 !! calls two subroutines, get_cell_coords from the mesh generator and then
 !! assign_coordinate on a column by column basis
-!! @param[in,out] chi      Model coordinate array of size 3 (x,y,z) of fields
+!! @param[in,out] chi      Model coordinate array of size 3 of fields
 !! @param[in]     panel_id Field giving the ID of mesh panels
 !! @param[in]     mesh_id  Id of mesh on which this field is attached
-!! @param[in]     spherical_coords Logical labelling whether this is the
-!!                                 spherical coordinate field
-  subroutine assign_coordinate_field(chi, panel_id, mesh_id, spherical_coords)
+  subroutine assign_coordinate_field(chi, panel_id, mesh_id)
 
     use field_mod,             only: field_type, field_proxy_type
     use reference_element_mod, only: reference_element_type
@@ -60,7 +58,6 @@ contains
     type( field_type ),  intent( inout )        :: chi(3)
     type( field_type ),  intent( inout )        :: panel_id
     integer(kind=i_def), intent( in )           :: mesh_id
-    logical(kind=l_def), intent( in ), optional :: spherical_coords
 
     integer(kind=i_def),                pointer :: map(:,:)          => null()
     integer(kind=i_def),                pointer :: map_pid(:,:)      => null()
@@ -83,8 +80,6 @@ contains
 
     integer(kind=i_native) :: alloc_error
     integer(kind=i_def)    :: depth
-    logical(kind=l_def)    :: spherical_coords_flag
-
 
     ! Break encapsulation and get the proxy.
     chi_proxy(1) = chi(1)%get_proxy()
@@ -120,12 +115,8 @@ contains
 
     domain_size =  mesh%get_domain_size()
 
-    ! Set spherical coordinates flag
-    spherical_coords_flag = .false.
-    if (present(spherical_coords)) spherical_coords_flag = spherical_coords
 
-    if ( (.not. spherical_coords_flag) .or. &
-          ( spherical_coord_system == spherical_coord_system_xyz ) ) then
+    if ( coord_system == coord_system_xyz ) then
 
       do cell = 1,chi_proxy(1)%vspace%get_ncell()
 
@@ -157,7 +148,7 @@ contains
                                     map_pid(:,cell)          )
       end do
 
-    else if ( spherical_coord_system == spherical_coord_system_llh ) then
+    else if ( coord_system == coord_system_lonlatz ) then
 
       do cell = 1,chi_proxy(1)%vspace%get_ncell()
 
@@ -169,24 +160,24 @@ contains
                             column_coords(:,:,1),  &
                             panel_id_proxy%data    )
 
-        call assign_coordinate_llh( nlayers,                 &
-                                    ndf,                     &
-                                    nverts,                  &
-                                    undf,                    &
-                                    map(:,cell),             &
-                                    chi_proxy(1)%data,       &
-                                    chi_proxy(2)%data,       &
-                                    chi_proxy(3)%data,       &
-                                    column_coords,           &
-                                    dof_coords,              &
-                                    vertex_coords,           &
-                                    panel_id_proxy%data,     &
-                                    ndf_pid,                 &
-                                    undf_pid,                &
-                                    map_pid(:,cell)          )
+        call assign_coordinate_lonlatz( nlayers,                 &
+                                        ndf,                     &
+                                        nverts,                  &
+                                        undf,                    &
+                                        map(:,cell),             &
+                                        chi_proxy(1)%data,       &
+                                        chi_proxy(2)%data,       &
+                                        chi_proxy(3)%data,       &
+                                        column_coords,           &
+                                        dof_coords,              &
+                                        vertex_coords,           &
+                                        panel_id_proxy%data,     &
+                                        ndf_pid,                 &
+                                        undf_pid,                &
+                                        map_pid(:,cell)          )
       end do
 
-    else if ( spherical_coord_system == spherical_coord_system_abh ) then
+    else if ( coord_system == coord_system_alphabetaz ) then
 
       do cell = 1,chi_proxy(1)%vspace%get_ncell()
 
@@ -198,25 +189,25 @@ contains
                             column_coords(:,:,1),  &
                             panel_id_proxy%data    )
 
-        call assign_coordinate_abh( nlayers,                 &
-                                    ndf,                     &
-                                    nverts,                  &
-                                    undf,                    &
-                                    map(:,cell),             &
-                                    chi_proxy(1)%data,       &
-                                    chi_proxy(2)%data,       &
-                                    chi_proxy(3)%data,       &
-                                    column_coords,           &
-                                    dof_coords,              &
-                                    vertex_coords,           &
-                                    panel_id_proxy%data,     &
-                                    ndf_pid,                 &
-                                    undf_pid,                &
-                                    map_pid(:,cell)          )
+        call assign_coordinate_alphabetaz( nlayers,                 &
+                                           ndf,                     &
+                                           nverts,                  &
+                                           undf,                    &
+                                           map(:,cell),             &
+                                           chi_proxy(1)%data,       &
+                                           chi_proxy(2)%data,       &
+                                           chi_proxy(3)%data,       &
+                                           column_coords,           &
+                                           dof_coords,              &
+                                           vertex_coords,           &
+                                           panel_id_proxy%data,     &
+                                           ndf_pid,                 &
+                                           undf_pid,                &
+                                           map_pid(:,cell)          )
       end do
 
     else
-      call log_event('This spherical coordinate system has not been implemented yet', LOG_LEVEL_ERROR)
+      call log_event('This coordinate system has not been implemented yet', LOG_LEVEL_ERROR)
     end if
 
     ! As we have correctly set the chi fields into their full halos,
@@ -344,15 +335,12 @@ contains
     real(kind=r_def),    intent(in)  :: panel_id(undf_pid)
 
     ! Internal variables
-    integer(kind=i_def) :: k, df, dfk, vert, panel
+    integer(kind=i_def) :: k, df, dfk, vert
 
     real(kind=r_def)    :: interp_weight, x, y, z, radius_correction
-    real(kind=r_def)    :: alpha, beta, radius, longitude, latitude
-    real(kind=r_def)    :: v_x, v_y, v_z, v_a, v_b, v_r, v_lon, v_lat
     real(kind=r_def)    :: vertex_local_coords(3,nverts)
 
     radius_correction = 1.0_r_def
-    panel = int(panel_id(map_pid(1)))
 
     ! Compute the representation of the coordinate field
     do k = 0, nlayers-1
@@ -379,105 +367,39 @@ contains
         end if
       end if
 
-      if ( spherical_coord_system == spherical_coord_system_abh ) then
-        ! Our spherical coordinates are (alpha, beta, h)
-        ! To make sure our (X,Y,Z) coordinates are consistent with these,
-        ! we first calculate the (alpha,beta,r) coordinates at each DoF and then
-        ! convert to (X,Y,Z) coordinates
-        do df = 1, ndf
-          dfk = map(df)+k
-          ! Compute interpolation weights
-          alpha = 0.0_r_def
-          beta = 0.0_r_def
-          radius = 0.0_r_def
-          do vert = 1,nverts
-            interp_weight = &
-                   (1.0_r_def - abs(chi_hat_vert(vert,1) - chi_hat_node(1,df))) &
-                  *(1.0_r_def - abs(chi_hat_vert(vert,2) - chi_hat_node(2,df))) &
-                  *(1.0_r_def - abs(chi_hat_vert(vert,3) - chi_hat_node(3,df)))
-            v_x = vertex_local_coords(1,vert)
-            v_y = vertex_local_coords(2,vert)
-            v_z = vertex_local_coords(3,vert)
+      do df = 1, ndf
+        ! Compute interpolation weights
+        x = 0.0_r_def
+        y = 0.0_r_def
+        z = 0.0_r_def
+        do vert = 1,nverts
+          interp_weight = &
+                 (1.0_r_def - abs(chi_hat_vert(vert,1) - chi_hat_node(1,df))) &
+                *(1.0_r_def - abs(chi_hat_vert(vert,2) - chi_hat_node(2,df))) &
+                *(1.0_r_def - abs(chi_hat_vert(vert,3) - chi_hat_node(3,df)))
 
-            call xyz2alphabetar(v_x,v_y,v_z,panel,v_a,v_b,v_r)
-            alpha = alpha + interp_weight*v_a
-            beta = beta + interp_weight*v_b
-            radius = radius + interp_weight*v_r
-          end do
-
-          call alphabetar2xyz(alpha, beta, radius, panel, &
-                              chi_1(dfk), chi_2(dfk), chi_3(dfk))
-
+          x = x + interp_weight*vertex_local_coords(1,vert)
+          y = y + interp_weight*vertex_local_coords(2,vert)
+          z = z + interp_weight*vertex_local_coords(3,vert)
         end do
+        ! For spherical domains we need to project x,y,z back onto
+        ! spherical shells
+        if ( geometry == geometry_spherical ) then
+          radius_correction = scaled_radius + &
+                              sum(dz(1:k)) + chi_hat_node(3,df)*dz(k+1)
+          radius_correction = radius_correction/sqrt(x*x + y*y + z*z)
+        end if
+        dfk = map(df)+k
+        chi_1(dfk) = x*radius_correction
+        chi_2(dfk) = y*radius_correction
+        chi_3(dfk) = z*radius_correction
 
-      else if ( spherical_coord_system == spherical_coord_system_llh ) then
-          ! Our spherical coordinates are (lon, lat, h)
-          ! To make sure our (X,Y,Z) coordinates are consistent with these,
-          ! we first calculate the (lon,lat,r) coordinates at each DoF and then
-          ! convert to (X,Y,Z) coordinates
-          do df = 1, ndf
-            dfk = map(df)+k
-            ! Compute interpolation weights
-            longitude = 0.0_r_def
-            latitude = 0.0_r_def
-            radius = 0.0_r_def
-            do vert = 1,nverts
-              interp_weight = &
-                     (1.0_r_def - abs(chi_hat_vert(vert,1) - chi_hat_node(1,df))) &
-                    *(1.0_r_def - abs(chi_hat_vert(vert,2) - chi_hat_node(2,df))) &
-                    *(1.0_r_def - abs(chi_hat_vert(vert,3) - chi_hat_node(3,df)))
-              v_x = vertex_local_coords(1,vert)
-              v_y = vertex_local_coords(2,vert)
-              v_z = vertex_local_coords(3,vert)
-
-              call xyz2llr(v_x,v_y,v_z,v_lon,v_lat,v_r)
-              longitude = longitude + interp_weight*v_lon
-              latitude = latitude + interp_weight*v_lat
-              radius = radius + interp_weight*v_r
-            end do
-
-            call llr2xyz(longitude, latitude, radius, &
-                         chi_1(dfk), chi_2(dfk), chi_3(dfk))
-
-          end do
-
-      else
-
-        do df = 1, ndf
-          ! Compute interpolation weights
-          x = 0.0_r_def
-          y = 0.0_r_def
-          z = 0.0_r_def
-          do vert = 1,nverts
-            interp_weight = &
-                   (1.0_r_def - abs(chi_hat_vert(vert,1) - chi_hat_node(1,df))) &
-                  *(1.0_r_def - abs(chi_hat_vert(vert,2) - chi_hat_node(2,df))) &
-                  *(1.0_r_def - abs(chi_hat_vert(vert,3) - chi_hat_node(3,df)))
-
-            x = x + interp_weight*vertex_local_coords(1,vert)
-            y = y + interp_weight*vertex_local_coords(2,vert)
-            z = z + interp_weight*vertex_local_coords(3,vert)
-          end do
-          ! For spherical domains we need to project x,y,z back onto
-          ! spherical shells
-          if ( geometry == geometry_spherical ) then
-            radius_correction = scaled_radius + &
-                                sum(dz(1:k)) + chi_hat_node(3,df)*dz(k+1)
-            radius_correction = radius_correction/sqrt(x*x + y*y + z*z)
-          end if
-          dfk = map(df)+k
-          chi_1(dfk) = x*radius_correction
-          chi_2(dfk) = y*radius_correction
-          chi_3(dfk) = z*radius_correction
-
-        end do
-      end if ! Spherical coord system
-
+      end do
     end do
 
   end subroutine assign_coordinate_xyz
 
-!> @brief Determines and assigns the (alpha,beta,h) coordinates for a single column
+!> @brief Determines and assigns the (alpha,beta,height) coordinates for a single column
 !! @param[in]  nlayers       integer: loop bound
 !! @param[in]  ndf           integer: array size and loop bound
 !! @param[in]  nverts        integer: array size and loop bound
@@ -493,21 +415,21 @@ contains
 !! @param[in]  ndf_pid       integer: number of DoFs per cell for panel_id space
 !! @param[in]  undf_pid      integer: number of universal DoFs for panel_id space
 !! @param[in]  map_pid       integer: DoF map for panel_id space
-  subroutine assign_coordinate_abh( nlayers,       &
-                                    ndf,           &
-                                    nverts,        &
-                                    undf,          &
-                                    map,           &
-                                    chi_1,         &
-                                    chi_2,         &
-                                    chi_3,         &
-                                    column_coords, &
-                                    chi_hat_node,  &
-                                    chi_hat_vert,  &
-                                    panel_id,      &
-                                    ndf_pid,       &
-                                    undf_pid,      &
-                                    map_pid        )
+  subroutine assign_coordinate_alphabetaz( nlayers,       &
+                                           ndf,           &
+                                           nverts,        &
+                                           undf,          &
+                                           map,           &
+                                           chi_1,         &
+                                           chi_2,         &
+                                           chi_3,         &
+                                           column_coords, &
+                                           chi_hat_node,  &
+                                           chi_hat_vert,  &
+                                           panel_id,      &
+                                           ndf_pid,       &
+                                           undf_pid,      &
+                                           map_pid        )
 
     implicit none
 
@@ -565,7 +487,7 @@ contains
 
     end do
 
-  end subroutine assign_coordinate_abh
+  end subroutine assign_coordinate_alphabetaz
 
   !> @brief Determines and assigns the (lon,lat,h) coordinates for a single column.
   !! @param[in]  nlayers       The number of layers in the mesh
@@ -583,21 +505,21 @@ contains
   !! @param[in]  ndf_pid       Number of DoFs per cell for panel_id space
   !! @param[in]  undf_pid      Number of universal DoFs for panel_id space
   !! @param[in]  map_pid       DoF map for panel_id space
-  subroutine assign_coordinate_llh( nlayers,       &
-                                    ndf,           &
-                                    nverts,        &
-                                    undf,          &
-                                    map,           &
-                                    chi_1,         &
-                                    chi_2,         &
-                                    chi_3,         &
-                                    column_coords, &
-                                    chi_hat_node,  &
-                                    chi_hat_vert,  &
-                                    panel_id,      &
-                                    ndf_pid,       &
-                                    undf_pid,      &
-                                    map_pid        )
+  subroutine assign_coordinate_lonlatz( nlayers,       &
+                                        ndf,           &
+                                        nverts,        &
+                                        undf,          &
+                                        map,           &
+                                        chi_1,         &
+                                        chi_2,         &
+                                        chi_3,         &
+                                        column_coords, &
+                                        chi_hat_node,  &
+                                        chi_hat_vert,  &
+                                        panel_id,      &
+                                        ndf_pid,       &
+                                        undf_pid,      &
+                                        map_pid        )
 
     implicit none
 
@@ -651,6 +573,6 @@ contains
       end do
     end do
 
-  end subroutine assign_coordinate_llh
+  end subroutine assign_coordinate_lonlatz
 
 end module assign_coordinate_field_mod

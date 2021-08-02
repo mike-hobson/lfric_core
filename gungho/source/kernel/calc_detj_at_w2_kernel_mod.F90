@@ -53,9 +53,9 @@ contains
 
 !> @param[in]  nlayers        Integer the number of layers
 !> @param[in,out] detj_w2     The output field containing the detj values at W2 locations
-!> @param[in]  chi1           1st (spherical) coordinate field in Wchi
-!> @param[in]  chi2           2nd (spherical) coordinate field in Wchi
-!> @param[in]  chi3           3rd (spherical) coordinate field in Wchi
+!> @param[in]  chi1           1st coordinate field in Wchi
+!> @param[in]  chi2           2nd coordinate field in Wchi
+!> @param[in]  chi3           3rd coordinate field in Wchi
 !> @param[in]  panel_id       Field giving the ID for mesh panels.
 !> @param[in]  ndf_w2         The number of degrees of freedom per cell for the output field
 !> @param[in]  undf_w2        The number of unique degrees of freedom for the output field

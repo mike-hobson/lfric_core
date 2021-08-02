@@ -57,8 +57,7 @@ INTEGER(KIND=i_def), PUBLIC :: local_rank
 INTEGER(KIND=i_def), PUBLIC :: comm = -999
 
 ! Coordinate field
-TYPE(field_type), TARGET :: chi_xyz(3)
-TYPE(field_type), TARGET :: chi_sph(3)
+TYPE(field_type), TARGET :: chi(3)
 TYPE(field_type), TARGET :: panel_id
 
 INTEGER(KIND=i_def), PUBLIC :: mesh_id      = imdi
@@ -146,7 +145,7 @@ CALL init_mesh(local_rank, total_ranks, mesh_id, twod_mesh_id)
 
 ! Create FEM specifics (function spaces and chi field)
 CALL log_event('Creating function spaces and chi', LOG_LEVEL_INFO)
-CALL init_fem(mesh_id, chi_xyz, chi_sph, panel_id)
+CALL init_fem(mesh_id, chi, panel_id)
 
 ! XIOS domain initialisation
 populate_pointer => populate_file_list
@@ -155,7 +154,7 @@ call initialise_xios( io_context,       &
                       comm,             &
                       mesh_id,          &
                       twod_mesh_id,     &
-                      chi_sph,          &
+                      chi,              &
                       panel_id,         &
                       first_step,       &
                       last_step,        &

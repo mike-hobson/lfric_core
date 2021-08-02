@@ -76,7 +76,7 @@ subroutine smagorinsky_alg(mr, theta, u, visc_m,                   &
     type( field_type ), pointer :: shear => null()
     type( field_type ), pointer :: height_w3 => null()
     type( field_type ), pointer :: height_wth => null()
-    type( field_type ), pointer :: chi_sph(:) => null()
+    type( field_type ), pointer :: chi(:) => null()
     type( field_type ), pointer :: panel_id => null()
     type( field_type ), pointer :: delta => null()
     type( field_type ) :: dmr_v, dmr_cl
@@ -97,7 +97,7 @@ subroutine smagorinsky_alg(mr, theta, u, visc_m,                   &
 
     height_wth => get_height(Wtheta, mesh_id)
     height_w3 => get_height(W3, mesh_id)
-    chi_sph => get_coordinates(mesh_id)
+    chi => get_coordinates(mesh_id)
     panel_id => get_panel_id(mesh_id)
 
     if ( boundary_layer == boundary_layer_um ) then
@@ -112,7 +112,7 @@ subroutine smagorinsky_alg(mr, theta, u, visc_m,                   &
                                                         theta,                &
                                                         smag_stencil_depth,   &
                                                         visc_h,               &
-                                                        chi_sph,              &
+                                                        chi,                  &
                                                         panel_id ) )
       if ( use_moisture ) then
         ! Water vapour and cloud liquid:
@@ -122,13 +122,13 @@ subroutine smagorinsky_alg(mr, theta, u, visc_m,                   &
                                                           mr(imr_v),          &
                                                           smag_stencil_depth, &
                                                           visc_h,             &
-                                                          chi_sph,            &
-                                                          panel_id ),          &
+                                                          chi,                &
+                                                          panel_id ),         &
                      tracer_smagorinsky_diff_kernel_type( dmr_cl,             &
                                                           mr(imr_cl),         &
                                                           smag_stencil_depth, &
                                                           visc_h,             &
-                                                          chi_sph,            &
+                                                          chi,                &
                                                           panel_id ) )
       end if
 
@@ -141,7 +141,7 @@ subroutine smagorinsky_alg(mr, theta, u, visc_m,                   &
                                                      height_wth,           &
                                                      smag_stencil_depth,   &
                                                      visc_m,               &
-                                                     chi_sph,              &
+                                                     chi,                  &
                                                      panel_id ) )
 
     else ! Without UM BL scheme
@@ -159,7 +159,7 @@ subroutine smagorinsky_alg(mr, theta, u, visc_m,                   &
                                                         theta,                &
                                                         smag_stencil_depth,   &
                                                         visc_h,               &
-                                                        chi_sph,              &
+                                                        chi,                  &
                                                         panel_id ) )
       if (use_moisture) then
         ! Water vapour and cloud liquid:
@@ -169,13 +169,13 @@ subroutine smagorinsky_alg(mr, theta, u, visc_m,                   &
                                                           mr(imr_v),          &
                                                           smag_stencil_depth, &
                                                           visc_h,             &
-                                                          chi_sph,            &
+                                                          chi,                &
                                                           panel_id ),         &
                      tracer_smagorinsky_diff_kernel_type( dmr_cl,             &
                                                           mr(imr_cl),         &
                                                           smag_stencil_depth, &
                                                           visc_h,             &
-                                                          chi_sph,            &
+                                                          chi,                &
                                                           panel_id ) )
       end if
 
@@ -191,7 +191,7 @@ subroutine smagorinsky_alg(mr, theta, u, visc_m,                   &
                                                      height_wth,              &
                                                      smag_stencil_depth,      &
                                                      visc_m,                  &
-                                                     chi_sph,                 &
+                                                     chi,                     &
                                                      panel_id ) )
 
     end if ! With or without BL scheme
@@ -208,7 +208,7 @@ subroutine smagorinsky_alg(mr, theta, u, visc_m,                   &
     if (write_conservation_diag .and. use_moisture) &
       call moisture_conservation_alg( step, rho, mr, 'After mixing' )
 
-    nullify( chi_sph, height_w3, height_wth, panel_id )
+    nullify( chi, height_w3, height_wth, panel_id )
 
     if ( subroutine_timers ) call timer("smagorinsky_alg")
 

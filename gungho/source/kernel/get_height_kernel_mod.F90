@@ -19,8 +19,8 @@ module get_height_kernel_mod
   use base_mesh_config_mod,      only: geometry, &
                                        geometry_spherical
   use constants_mod,             only: r_def, i_def
-  use finite_element_config_mod, only: spherical_coord_system, &
-                                       spherical_coord_system_xyz
+  use finite_element_config_mod, only: coord_system, &
+                                       coord_system_xyz
   use kernel_mod,                only: kernel_type
 
   implicit none
@@ -98,7 +98,7 @@ subroutine get_height_code(nlayers,                         &
   real(kind=r_def)    :: coord(3), coord_radius, height_at_dof
 
   if ( (geometry == geometry_spherical) .and. &
-       (spherical_coord_system == spherical_coord_system_xyz) ) then
+       (coord_system == coord_system_xyz) ) then
     ! NB This will result in the height above
     ! the spherical representation of the planet
     ! but not necessarily the height above the bottom

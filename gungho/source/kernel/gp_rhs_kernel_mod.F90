@@ -59,9 +59,9 @@ contains
 !! @param[in] nlayers Number of layers
 !! @param[in,out] rhs Field containing the intergral of test_function * field
 !! @param[in] field Field to be projected
-!! @param[in] chi_1 1st (spherical) coordinate field in Wchi
-!! @param[in] chi_2 2nd (spherical) coordinate field in Wchi
-!! @param[in] chi_3 3rd (spherical) coordinate field in Wchi
+!! @param[in] chi_1 1st coordinate field in Wchi
+!! @param[in] chi_2 2nd coordinate field in Wchi
+!! @param[in] chi_3 3rd coordinate field in Wchi
 !! @param[in] panel_id Field giving the ID for mesh panels
 !! @param[in] ndf Number of degrees of freedom per cell
 !! @param[in] undf Number of (local) unique degrees of freedom of the field rhs

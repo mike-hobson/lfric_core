@@ -68,9 +68,9 @@ contains
 !! @param[in,out] aam Cell integrated axial angular momentum
 !! @param[in] u Velocity array
 !! @param[in] rho density
-!! @param[in] chi_sph_1 1st coordinate in spherical Wchi
-!! @param[in] chi_sph_2 2nd coordinate in spherical Wchi
-!! @param[in] chi_sph_3 3rd coordinate in spherical Wchi
+!! @param[in] chi_1 1st coordinate field
+!! @param[in] chi_2 2nd coordinate field
+!! @param[in] chi_3 3rd coordinate field
 !! @param[in] panel_id Field giving the ID for mesh panels
 !! @param[in] omega Planet angular velocity
 !! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
@@ -81,13 +81,13 @@ contains
 !! @param[in] undf_w3 Number of unique degrees of freedom  for w3
 !! @param[in] map_w3 Dofmap for the cell at the base of the column for w3
 !! @param[in] w3_basis Basis functions evaluated at gaussian quadrature points
-!! @param[in] ndf_chi_sph Number of degrees of freedom per cell for spherical chi
-!! @param[in] undf_chi_sph Number of unique degrees of freedom for spherical chi
-!! @param[in] map_chi_sph Dofmap for the cell at the base of the column for spherical chi
-!! @param[in] chi_sph_basis Basis functions for spherical Wchi evaluated at
-!!                          gaussian quadrature points
-!! @param[in] chi_sph_diff_basis Differential of the spherical Wchi basis functions
-!!                               evaluated at gaussian quadrature points
+!! @param[in] ndf_chi Number of degrees of freedom per cell for chi
+!! @param[in] undf_chi Number of unique degrees of freedom for chi
+!! @param[in] map_chi Dofmap for the cell at the base of the column for chi
+!! @param[in] chi_basis Basis functions for Wchi evaluated at
+!!                      gaussian quadrature points
+!! @param[in] chi_diff_basis Differential of the Wchi basis functions
+!!                           evaluated at gaussian quadrature points
 !! @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
 !! @param[in] undf_pid Number of unique degrees of freedom for panel_id
 !! @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
@@ -95,17 +95,17 @@ contains
 !! @param[in] nqp_v Number of quadrature points in the vertical
 !! @param[in] wqp_h Horizontal quadrature weights
 !! @param[in] wqp_v Vertical quadrature weights
-subroutine compute_total_aam_code(                                                       &
-                                  nlayers,                                               &
-                                  aam, u, rho,                                           &
-                                  chi_sph_1, chi_sph_2, chi_sph_3, panel_id,             &
-                                  omega,                                                 &
-                                  ndf_w3, undf_w3, map_w3, w3_basis,                     &
-                                  ndf_w2, undf_w2, map_w2, w2_basis,                     &
-                                  ndf_chi_sph, undf_chi_sph, map_chi_sph,                &
-                                  chi_sph_basis, chi_sph_diff_basis,                     &
-                                  ndf_pid, undf_pid, map_pid,                            &
-                                  nqp_h, nqp_v, wqp_h, wqp_v                             &
+subroutine compute_total_aam_code(                                           &
+                                  nlayers,                                   &
+                                  aam, u, rho,                               &
+                                  chi_1, chi_2, chi_3, panel_id,             &
+                                  omega,                                     &
+                                  ndf_w3, undf_w3, map_w3, w3_basis,         &
+                                  ndf_w2, undf_w2, map_w2, w2_basis,         &
+                                  ndf_chi, undf_chi, map_chi,                &
+                                  chi_basis, chi_diff_basis,                 &
+                                  ndf_pid, undf_pid, map_pid,                &
+                                  nqp_h, nqp_v, wqp_h, wqp_v                 &
                                  )
 
   use coordinate_jacobian_mod,   only: coordinate_jacobian
@@ -118,35 +118,35 @@ subroutine compute_total_aam_code(                                              
   ! Arguments
   integer(kind=i_def),             intent(in) :: nlayers, nqp_h, nqp_v
   integer(kind=i_def),             intent(in) :: ndf_w2, ndf_w3, ndf_pid
-  integer(kind=i_def),             intent(in) :: ndf_chi_sph
-  integer(kind=i_def),             intent(in) :: undf_chi_sph
+  integer(kind=i_def),             intent(in) :: ndf_chi
+  integer(kind=i_def),             intent(in) :: undf_chi
   integer(kind=i_def),             intent(in) :: undf_w2, undf_w3, undf_pid
-  integer(kind=i_def), dimension(ndf_chi_sph), intent(in) :: map_chi_sph
-  integer(kind=i_def), dimension(ndf_w2),      intent(in) :: map_w2
-  integer(kind=i_def), dimension(ndf_w3),      intent(in) :: map_w3
-  integer(kind=i_def), dimension(ndf_pid),     intent(in) :: map_pid
+  integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
+  integer(kind=i_def), dimension(ndf_w2),  intent(in) :: map_w2
+  integer(kind=i_def), dimension(ndf_w3),  intent(in) :: map_w3
+  integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
 
-  real(kind=r_def), dimension(1,ndf_w3,nqp_h,nqp_v),      intent(in) :: w3_basis
-  real(kind=r_def), dimension(3,ndf_w2,nqp_h,nqp_v),      intent(in) :: w2_basis
-  real(kind=r_def), dimension(1,ndf_chi_sph,nqp_h,nqp_v), intent(in) :: chi_sph_basis
-  real(kind=r_def), dimension(3,ndf_chi_sph,nqp_h,nqp_v), intent(in) :: chi_sph_diff_basis
+  real(kind=r_def), dimension(1,ndf_w3,nqp_h,nqp_v),  intent(in) :: w3_basis
+  real(kind=r_def), dimension(3,ndf_w2,nqp_h,nqp_v),  intent(in) :: w2_basis
+  real(kind=r_def), dimension(1,ndf_chi,nqp_h,nqp_v), intent(in) :: chi_basis
+  real(kind=r_def), dimension(3,ndf_chi,nqp_h,nqp_v), intent(in) :: chi_diff_basis
 
   real(kind=r_def), dimension(undf_w3),      intent(inout) :: aam
   real(kind=r_def), dimension(undf_w2),      intent(in)    :: u
   real(kind=r_def), dimension(undf_w3),      intent(in)    :: rho
-  real(kind=r_def), dimension(undf_chi_sph), intent(in)    :: chi_sph_1, chi_sph_2, chi_sph_3
+  real(kind=r_def), dimension(undf_chi),     intent(in)    :: chi_1, chi_2, chi_3
   real(kind=r_def), dimension(undf_pid),     intent(in)    :: panel_id
   real(kind=r_def),                          intent(in)    :: omega
 
-  real(kind=r_def), dimension(nqp_h), intent(in)      ::  wqp_h
-  real(kind=r_def), dimension(nqp_v), intent(in)      ::  wqp_v
+  real(kind=r_def), dimension(nqp_h), intent(in) ::  wqp_h
+  real(kind=r_def), dimension(nqp_v), intent(in) ::  wqp_v
 
   ! Internal variables
   integer(kind=i_def) :: df, k, loc
   integer(kind=i_def) :: qp1, qp2
   integer(kind=i_def) :: ipanel
 
-  real(kind=r_def), dimension(ndf_chi_sph)     :: chi_1_sph_e, chi_2_sph_e, chi_3_sph_e
+  real(kind=r_def), dimension(ndf_chi)         :: chi_1_e, chi_2_e, chi_3_e
   real(kind=r_def), dimension(nqp_h,nqp_v)     :: dj
   real(kind=r_def), dimension(3,3,nqp_h,nqp_v) :: jac
   real(kind=r_def), dimension(ndf_w3)          :: rho_e, aam_e
@@ -161,16 +161,16 @@ subroutine compute_total_aam_code(                                              
 
   do k = 0, nlayers-1
   ! Extract element arrays of chi
-    do df = 1, ndf_chi_sph
-      loc = map_chi_sph(df) + k
-      chi_1_sph_e(df) = chi_sph_1( loc )
-      chi_2_sph_e(df) = chi_sph_2( loc )
-      chi_3_sph_e(df) = chi_sph_3( loc )
+    do df = 1, ndf_chi
+      loc = map_chi(df) + k
+      chi_1_e(df) = chi_1( loc )
+      chi_2_e(df) = chi_2( loc )
+      chi_3_e(df) = chi_3( loc )
     end do
 
-    call coordinate_jacobian(ndf_chi_sph, nqp_h, nqp_v,                     &
-                             chi_1_sph_e, chi_2_sph_e, chi_3_sph_e, ipanel, &
-                             chi_sph_basis, chi_sph_diff_basis, jac, dj)
+    call coordinate_jacobian(ndf_chi, nqp_h, nqp_v,             &
+                             chi_1_e, chi_2_e, chi_3_e, ipanel, &
+                             chi_basis, chi_diff_basis, jac, dj)
     do df = 1, ndf_w3
       rho_e(df) = rho( map_w3(df) + k )
       aam_e(df) = 0.0_r_def
@@ -182,10 +182,10 @@ subroutine compute_total_aam_code(                                              
     do qp2 = 1, nqp_v
       do qp1 = 1, nqp_h
         coords(:) = 0.0_r_def
-        do df = 1, ndf_chi_sph
-          coords(1) = coords(1) + chi_1_sph_e(df)*chi_sph_basis(1,df,qp1,qp2)
-          coords(2) = coords(2) + chi_2_sph_e(df)*chi_sph_basis(1,df,qp1,qp2)
-          coords(3) = coords(3) + chi_3_sph_e(df)*chi_sph_basis(1,df,qp1,qp2)
+        do df = 1, ndf_chi
+          coords(1) = coords(1) + chi_1_e(df)*chi_basis(1,df,qp1,qp2)
+          coords(2) = coords(2) + chi_2_e(df)*chi_basis(1,df,qp1,qp2)
+          coords(3) = coords(3) + chi_3_e(df)*chi_basis(1,df,qp1,qp2)
         end do
 
         ! Obtain (X,Y,Z) and (lon,lat,r) coords

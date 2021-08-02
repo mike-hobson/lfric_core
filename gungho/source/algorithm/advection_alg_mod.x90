@@ -620,8 +620,8 @@ end subroutine advection_alg
     type(field_type),          pointer :: dA_w2 => null()
     type(field_type),          pointer :: dA_w2_shifted => null()
     type(field_type),          pointer :: dA_w2_double_level => null()
-    type(field_type),          pointer :: chi_sph(:) => null()
-    type(field_type),          pointer :: chi_sph_shifted(:) => null()
+    type(field_type),          pointer :: chi(:) => null()
+    type(field_type),          pointer :: chi_shifted(:) => null()
     type(field_type),          pointer :: height_wt
     type(field_type),          pointer :: height_wt_shifted
     type(field_type)                   :: matrix_mr_to_sh_mass_n(3)
@@ -645,8 +645,8 @@ end subroutine advection_alg
     dA_w2 => get_dA_at_w2(primary_mesh_id)
     dA_w2_shifted => get_dA_at_w2(shifted_mesh_id)
     dA_w2_double_level => get_dA_at_w2(double_level_mesh_id)
-    chi_sph => get_coordinates(primary_mesh_id)
-    chi_sph_shifted => get_coordinates(shifted_mesh_id)
+    chi => get_coordinates(primary_mesh_id)
+    chi_shifted => get_coordinates(shifted_mesh_id)
     div => get_div(primary_mesh_id)
     div_shifted => get_div(shifted_mesh_id)
     height_wt => get_height(WTHETA, primary_mesh_id)
@@ -899,7 +899,7 @@ end subroutine advection_alg
     logical(l_def),   intent(in)        :: from_si
 
     type(field_type), dimension(3)      :: u_scalar, adv_wind_update
-    type( field_type ),        pointer  :: chi_sph(:) => null()
+    type( field_type ),        pointer  :: chi(:) => null()
     type( field_type ),        pointer  :: panel_id => null()
     type(function_space_type), pointer  :: ws_fs => null()
     type(quadrature_xyoz_type)          :: qr
@@ -925,7 +925,7 @@ end subroutine advection_alg
     ! Compute u in physical space and advect components in geocentric
     ! Cartesian coordinates and then map back to computational form
     qr = quadrature_xyoz_type(nqp_exact, quadrature_rule)
-    chi_sph => get_coordinates(mesh_id)
+    chi => get_coordinates(mesh_id)
     panel_id => get_panel_id(mesh_id)
     ! Compute updates on W3 points
     do dir = 1,3
@@ -937,7 +937,7 @@ end subroutine advection_alg
                  setval_c(u_scalar(2), 0.0_r_def), &
                  setval_c(u_scalar(3), 0.0_r_def), &
                  convert_hdiv_field_kernel_type(u_scalar, advected_wind, &
-                                                chi_sph, panel_id) )
+                                                chi, panel_id) )
     call u_scalar(1)%log_minmax(LOG_LEVEL_INFO, 'xdot')
     call u_scalar(2)%log_minmax(LOG_LEVEL_INFO, 'ydot')
     call u_scalar(3)%log_minmax(LOG_LEVEL_INFO, 'zdot')
@@ -963,10 +963,10 @@ end subroutine advection_alg
     ! update
     call invoke( setval_c(rhs, 0.0_r_def),                                    &
                  project_advective_update_kernel_type(rhs, adv_wind_update,   &
-                                                      chi_sph, panel_id, qr), &
+                                                      chi, panel_id, qr),     &
                  enforce_bc_kernel_type(rhs) )
 
-    nullify( ws_fs, chi_sph, panel_id )
+    nullify( ws_fs, chi, panel_id )
     if ( subroutine_timers ) call timer('momentum advection')
 
   end subroutine advect_momentum_alg

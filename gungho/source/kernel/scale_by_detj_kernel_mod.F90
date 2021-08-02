@@ -57,9 +57,9 @@ contains
 !> @brief Scales a field by 1/det J
 !! @param[in] nlayers Number of layers
 !! @param[in,out] field Horizontally discontinuous field to scale
-!! @param[in] chi1 1st (spherical) coordinate field in Wchi
-!! @param[in] chi2 2nd (spherical) coordinate field in Wchi
-!! @param[in] chi3 3rd (spherical) coordinate field in Wchi
+!! @param[in] chi1 1st coordinate field in Wchi
+!! @param[in] chi2 2nd coordinate field in Wchi
+!! @param[in] chi3 3rd coordinate field in Wchi
 !! @param[in] panel_id Field giving the ID for mesh panels
 !! @param[in] ndf_ws Number of degrees of freedom per cell for field
 !! @param[in] undf_ws Number of unique degrees of freedom for field

@@ -30,11 +30,10 @@ number_of_layers=3,
 
 &finite_element
 cellshape='quadrilateral',
-coordinate_order=2,
 element_order=0,
 rehabilitate=.true.,
-spherical_coord_order=2
-spherical_coord_system='xyz'
+coord_order=2
+coord_system='xyz'
 vorticity_in_w1=.false.,
 /
 &partitioning

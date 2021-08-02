@@ -23,8 +23,8 @@ module compute_dl_matrix_kernel_mod
   use base_mesh_config_mod,      only: geometry, geometry_spherical
   use constants_mod,             only: i_def, r_def, PI
   use coord_transform_mod,       only: xyz2llr
-  use finite_element_config_mod, only: spherical_coord_system,    &
-                                       spherical_coord_system_xyz
+  use finite_element_config_mod, only: coord_system,    &
+                                       coord_system_xyz
   use fs_continuity_mod,         only: W2
   use kernel_mod,                only: kernel_type
   use coordinate_jacobian_mod,   only: coordinate_jacobian
@@ -74,9 +74,9 @@ contains
   !! @param[in] nlayers  Number of layers
   !! @param[in] ncell_3d ncell*ndf
   !! @param[in,out] mm   Local stencil or mass matrix
-  !! @param[in] chi1     1st (spherical) coordinate field in Wchi
-  !! @param[in] chi2     2nd (spherical) coordinate field in Wchi
-  !! @param[in] chi3     3rd (spherical) coordinate field in Wchi
+  !! @param[in] chi1     1st coordinate field in Wchi
+  !! @param[in] chi2     2nd coordinate field in Wchi
+  !! @param[in] chi3     3rd coordinate field in Wchi
   !! @param[in] panel_id Field giving the ID for mesh panels
   !! @param[in] dl_base_height
   !!                     Base height of damping layer
@@ -194,7 +194,7 @@ contains
 
               if (geometry == geometry_spherical) then
 
-                if (spherical_coord_system == spherical_coord_system_xyz) then
+                if (coord_system == coord_system_xyz) then
                   call xyz2llr(chi1_at_quad,chi2_at_quad,chi3_at_quad, &
                                long_at_quad,lat_at_quad,r_at_quad)
                   z=r_at_quad - radius

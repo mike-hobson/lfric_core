@@ -43,7 +43,7 @@ contains
 
     type( field_type )             :: dtheta
     type( field_type ),    pointer :: panel_id => null()
-    type( field_type ),    pointer :: chi_sph(:) => null()
+    type( field_type ),    pointer :: chi(:) => null()
     type( operator_type ), pointer :: m3_inv => null()
     type( quadrature_xyoz_type ), pointer :: qr => null()
 
@@ -54,7 +54,7 @@ contains
     call dtheta%initialise( state(igh_t)%get_function_space() )
 
     m3_inv  => get_inverse_w3_mass_matrix(mesh_id)
-    chi_sph => get_coordinates(mesh_id)
+    chi => get_coordinates(mesh_id)
     panel_id => get_panel_id(mesh_id)
     qr => get_qr()
 
@@ -67,9 +67,9 @@ contains
 
     call invoke( project_pressure_kernel_type(state(igh_p), state(igh_d),      &
                                               state(igh_t), moist_dyn_gas_law, &
-                                              chi_sph, panel_id, m3_inv, qr ) )
+                                              chi, panel_id, m3_inv, qr ) )
 
-    nullify( chi_sph, m3_inv, panel_id, qr )
+    nullify( chi, m3_inv, panel_id, qr )
   end subroutine update_prognostic_scalars_alg
 
 end module update_prognostic_scalars_alg_mod

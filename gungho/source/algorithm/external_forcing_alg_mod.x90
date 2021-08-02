@@ -72,7 +72,7 @@ contains
     type( field_type ), pointer :: u_physics => null()
     type( field_type ), pointer :: w2_rmultiplicity => null()
     type( field_type ), pointer :: dA => null()
-    type( field_type ), pointer :: chi_sph(:) => null()
+    type( field_type ), pointer :: chi(:) => null()
     type( field_type ), pointer :: panel_id => null()
     integer( kind=i_def )       :: mesh_id
 
@@ -85,7 +85,7 @@ contains
       call dtheta_forcing%initialise( vector_space = theta%get_function_space() )
       call invoke( setval_c(dtheta_forcing, 0.0_r_def) )
 
-      chi_sph => get_coordinates(mesh_id)
+      chi => get_coordinates(mesh_id)
       panel_id => get_panel_id(mesh_id)
 
       select case(theta_forcing)
@@ -96,7 +96,7 @@ contains
                           LOG_LEVEL_INFO )
 
           call invoke(held_suarez_fv_kernel_type(dtheta_forcing, theta, &
-                                                 exner_in_wth, chi_sph, &
+                                                 exner_in_wth, chi,     &
                                                  panel_id, kappa, dt) )
 
         case default
@@ -108,7 +108,7 @@ contains
 
       theta_forcing_done = .true. ! Collect this increment later on
 
-      nullify( chi_sph, panel_id )
+      nullify( chi, panel_id )
 
     end if
 

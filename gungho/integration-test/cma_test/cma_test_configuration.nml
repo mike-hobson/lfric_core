@@ -21,10 +21,9 @@
 &finite_element
   cellshape        = 'quadrilateral'
   element_order    = 0
-  coordinate_order = 2
   rehabilitate     = .true.
-  spherical_coord_order = 1
-  spherical_coord_system = 'abh'
+  coord_order      = 1
+  coord_system     = 'alphabetaz'
   vorticity_in_w1  = .false.
 /
 

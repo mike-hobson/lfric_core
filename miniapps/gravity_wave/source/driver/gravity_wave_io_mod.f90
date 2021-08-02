@@ -32,7 +32,7 @@ contains
   !> @param [in]  comm         The MPI communicator for use within the model.
   !> @param [in]  mesh_id      The identifier of the primary mesh.
   !> @param [in]  twod_mesh_id The identifier of the primary 2d mesh.
-  !> @param [in]  chi_sph      A size 3 array of fields holding the
+  !> @param [in]  chi          A size 3 array of fields holding the
   !>                           coordinates of the mesh.
   !> @param [in]  panel_id     Field containing the IDs of mesh panels.
   !> @param [in]  context_name I/O context identifier.
@@ -41,7 +41,7 @@ contains
   subroutine initialise_io( comm,         &
                             mesh_id,      &
                             twod_mesh_id, &
-                            chi_sph,      &
+                            chi,          &
                             panel_id,     &
                             context_name, &
                             io_context )
@@ -51,7 +51,7 @@ contains
     integer(i_native),      intent(in)  :: comm
     integer(i_def),         intent(in)  :: mesh_id
     integer(i_def),         intent(in)  :: twod_mesh_id
-    type(field_type),       intent(in)  :: chi_sph(3)
+    type(field_type),       intent(in)  :: chi(3)
     type(field_type),       intent(in)  :: panel_id
     character(len=*),       intent(in)  :: context_name
     class(io_context_type), intent(out), &
@@ -67,7 +67,7 @@ contains
                             comm,              &
                             mesh_id,           &
                             twod_mesh_id,      &
-                            chi_sph,           &
+                            chi,               &
                             panel_id,          &
                             timestep_start,    &
                             timestep_end,      &

@@ -68,9 +68,9 @@ contains
 !! @param[in] u_lon Longitudinal component of wind in W3
 !! @param[in] u_lat Latitudinal component of wind in W3
 !! @param[in] u_up Vertical component of wind in Wtheta
-!! @param[in] chi_sph_1 1st coordinate in spherical Wchi
-!! @param[in] chi_sph_2 2nd coordinate in spherical Wchi
-!! @param[in] chi_sph_3 3rd coordinate in spherical Wchi
+!! @param[in] chi_1 1st coordinate field
+!! @param[in] chi_2 2nd coordinate field
+!! @param[in] chi_3 3rd coordinate field
 !! @param[in] panel_id Field giving the ID for mesh panels
 !! @param[in] ndf_w2 Number of degrees of freedom per cell for w2
 !! @param[in] undf_w2 Number of unique degrees of freedom  for w2
@@ -84,13 +84,13 @@ contains
 !! @param[in] undf_wth Number of unique degrees of freedom  for Wtheta
 !! @param[in] map_wth Dofmap for the cell at the base of the column for Wtheta
 !! @param[in] basis_wt Wtheta basis functions evaluated at gaussian quadrature points
-!! @param[in] ndf_chi_sph Number of degrees of freedom per cell for spherical chi
-!! @param[in] undf_chi_sph Number of unique degrees of freedom for spherical chi
-!! @param[in] map_chi_sph Dofmap for the cell at the base of the column for spherical chi
-!! @param[in] chi_sph_basis Basis functions for spherical Wchi evaluated at
-!!                          gaussian quadrature points
-!! @param[in] chi_sph_diff_basis Differential of the spherical Wchi basis functions
-!!                               evaluated at gaussian quadrature points
+!! @param[in] ndf_chi Number of degrees of freedom per cell for chi
+!! @param[in] undf_chi Number of unique degrees of freedom for chi
+!! @param[in] map_chi Dofmap for the cell at the base of the column for chi
+!! @param[in] chi_basis Basis functions for Wchi evaluated at
+!!                      gaussian quadrature points
+!! @param[in] chi_diff_basis Differential of the Wchi basis functions
+!!                           evaluated at gaussian quadrature points
 !! @param[in] ndf_pid  Number of degrees of freedom per cell for panel_id
 !! @param[in] undf_pid Number of unique degrees of freedom for panel_id
 !! @param[in] map_pid  Dofmap for the cell at the base of the column for panel_id
@@ -101,12 +101,12 @@ contains
 subroutine map_u_code(nlayers,                                   &
                       rhs,                                       &
                       u_lon, u_lat, u_up,                        &
-                      chi_sph_1, chi_sph_2, chi_sph_3, panel_id, &
+                      chi_1, chi_2, chi_3, panel_id,             &
                       ndf_w2, undf_w2, map_w2, basis_w2,         &
                       ndf_w3, undf_w3, map_w3, basis_w3,         &
                       ndf_wth, undf_wth, map_wth, basis_wt,      &
-                      ndf_chi_sph, undf_chi_sph, map_chi_sph,    &
-                      chi_sph_basis, chi_sph_diff_basis,         &
+                      ndf_chi, undf_chi, map_chi,                &
+                      chi_basis, chi_diff_basis,                 &
                       ndf_pid, undf_pid, map_pid,                &
                       nqp_h, nqp_v, wqp_h, wqp_v                 &
                       )
@@ -123,29 +123,29 @@ subroutine map_u_code(nlayers,                                   &
   implicit none
 
   ! Arguments
-  integer(kind=i_def), intent(in) :: nlayers, ndf_chi_sph
+  integer(kind=i_def), intent(in) :: nlayers, ndf_chi
   integer(kind=i_def), intent(in) :: ndf_w2, ndf_wth, ndf_w3, ndf_pid
   integer(kind=i_def), intent(in) :: undf_w2, undf_wth, undf_w3, undf_pid
-  integer(kind=i_def), intent(in) :: undf_chi_sph
+  integer(kind=i_def), intent(in) :: undf_chi
   integer(kind=i_def), intent(in) :: nqp_h, nqp_v
 
-  integer(kind=i_def), dimension(ndf_w2),      intent(in) :: map_w2
-  integer(kind=i_def), dimension(ndf_chi_sph), intent(in) :: map_chi_sph
-  integer(kind=i_def), dimension(ndf_w3),      intent(in) :: map_w3
-  integer(kind=i_def), dimension(ndf_wth),     intent(in) :: map_wth
-  integer(kind=i_def), dimension(ndf_pid),     intent(in) :: map_pid
+  integer(kind=i_def), dimension(ndf_w2),  intent(in) :: map_w2
+  integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
+  integer(kind=i_def), dimension(ndf_w3),  intent(in) :: map_w3
+  integer(kind=i_def), dimension(ndf_wth), intent(in) :: map_wth
+  integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
 
-  real(kind=r_def), intent(in), dimension(3,ndf_w2, nqp_h,nqp_v)     :: basis_w2
-  real(kind=r_def), intent(in), dimension(1,ndf_w3, nqp_h,nqp_v)     :: basis_w3
-  real(kind=r_def), intent(in), dimension(1,ndf_wth, nqp_h,nqp_v)    :: basis_wt
-  real(kind=r_def), intent(in), dimension(1,ndf_chi_sph,nqp_h,nqp_v) :: chi_sph_basis
-  real(kind=r_def), intent(in), dimension(3,ndf_chi_sph,nqp_h,nqp_v) :: chi_sph_diff_basis
+  real(kind=r_def), intent(in), dimension(3,ndf_w2, nqp_h,nqp_v)  :: basis_w2
+  real(kind=r_def), intent(in), dimension(1,ndf_w3, nqp_h,nqp_v)  :: basis_w3
+  real(kind=r_def), intent(in), dimension(1,ndf_wth, nqp_h,nqp_v) :: basis_wt
+  real(kind=r_def), intent(in), dimension(1,ndf_chi,nqp_h,nqp_v)  :: chi_basis
+  real(kind=r_def), intent(in), dimension(3,ndf_chi,nqp_h,nqp_v)  :: chi_diff_basis
 
   real(kind=r_def), dimension(undf_w2),   intent(inout) :: rhs
   real(kind=r_def), dimension(undf_w3),   intent(in)    :: u_lat, u_lon
   real(kind=r_def), dimension(undf_wth),  intent(in)    :: u_up
-  real(kind=r_def), dimension(undf_pid),     intent(in) :: panel_id
-  real(kind=r_def), dimension(undf_chi_sph), intent(in) :: chi_sph_1, chi_sph_2, chi_sph_3
+  real(kind=r_def), dimension(undf_pid),  intent(in)    :: panel_id
+  real(kind=r_def), dimension(undf_chi),  intent(in)    :: chi_1, chi_2, chi_3
 
   real(kind=r_def), dimension(nqp_h), intent(in) ::  wqp_h
   real(kind=r_def), dimension(nqp_v), intent(in) ::  wqp_v
@@ -154,7 +154,7 @@ subroutine map_u_code(nlayers,                                   &
   integer(kind=i_def)                          :: df, k, qp1, qp2, ipanel
   real(kind=r_def), dimension(nqp_h,nqp_v)     :: dj
   real(kind=r_def), dimension(3,3,nqp_h,nqp_v) :: jacobian
-  real(kind=r_def), dimension(ndf_chi_sph)     :: chi_sph_1_cell, chi_sph_2_cell, chi_sph_3_cell
+  real(kind=r_def), dimension(ndf_chi)         :: chi_1_cell, chi_2_cell, chi_3_cell
   real(kind=r_def), dimension(3)               :: u_physical, u_spherical, coords, llr
   real(kind=r_def)                             :: integrand
 
@@ -162,22 +162,22 @@ subroutine map_u_code(nlayers,                                   &
 
   do k = 0, nlayers-1
 
-    do df = 1, ndf_chi_sph
-      chi_sph_1_cell(df) = chi_sph_1( map_chi_sph(df) + k )
-      chi_sph_2_cell(df) = chi_sph_2( map_chi_sph(df) + k )
-      chi_sph_3_cell(df) = chi_sph_3( map_chi_sph(df) + k )
+    do df = 1, ndf_chi
+      chi_1_cell(df) = chi_1( map_chi(df) + k )
+      chi_2_cell(df) = chi_2( map_chi(df) + k )
+      chi_3_cell(df) = chi_3( map_chi(df) + k )
     end do
 
-    call coordinate_jacobian(ndf_chi_sph,        &
-                             nqp_h,              &
-                             nqp_v,              &
-                             chi_sph_1_cell,     &
-                             chi_sph_2_cell,     &
-                             chi_sph_3_cell,     &
-                             ipanel,             &
-                             chi_sph_basis,      &
-                             chi_sph_diff_basis, &
-                             jacobian,           &
+    call coordinate_jacobian(ndf_chi,        &
+                             nqp_h,          &
+                             nqp_v,          &
+                             chi_1_cell,     &
+                             chi_2_cell,     &
+                             chi_3_cell,     &
+                             ipanel,         &
+                             chi_basis,      &
+                             chi_diff_basis, &
+                             jacobian,       &
                              dj)
     do qp2 = 1, nqp_v
       do qp1 = 1, nqp_h
@@ -187,10 +187,10 @@ subroutine map_u_code(nlayers,                                   &
              .and. topology == topology_fully_periodic ) then
           ! Need position vector for obtaining (X,Y,Z) components of u_physical
           coords(:) = 0.0_r_def
-          do df = 1, ndf_chi_sph
-            coords(1) = coords(1) + chi_sph_1_cell(df)*chi_sph_basis(1,df,qp1,qp2)
-            coords(2) = coords(2) + chi_sph_2_cell(df)*chi_sph_basis(1,df,qp1,qp2)
-            coords(3) = coords(3) + chi_sph_3_cell(df)*chi_sph_basis(1,df,qp1,qp2)
+          do df = 1, ndf_chi
+            coords(1) = coords(1) + chi_1_cell(df)*chi_basis(1,df,qp1,qp2)
+            coords(2) = coords(2) + chi_2_cell(df)*chi_basis(1,df,qp1,qp2)
+            coords(3) = coords(3) + chi_3_cell(df)*chi_basis(1,df,qp1,qp2)
           end do
 
           call chi2llr(coords(1), coords(2), coords(3), &

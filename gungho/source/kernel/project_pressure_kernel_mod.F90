@@ -65,9 +65,9 @@ contains
 !! @param[in] rho Density
 !! @param[in] theta Potential temperature
 !! @param[in] moist_dyn_gas Moist dynamics factor in gas law (1+mv/epsilon)
-!! @param[in] chi_1 1st (spherical) coordinate field in Wchi
-!! @param[in] chi_2 2nd (spherical) coordinate field in Wchi
-!! @param[in] chi_3 3rd (spherical) coordinate field in Wchi
+!! @param[in] chi_1 1st coordinate field in Wchi
+!! @param[in] chi_2 2nd coordinate field in Wchi
+!! @param[in] chi_3 3rd coordinate field in Wchi
 !! @param[in] panel_id Field giving the ID for mesh panels
 !! @param[in] ncell_3d Number of cells
 !! @param[in] m3_inv Inverse of W3 mass matrix

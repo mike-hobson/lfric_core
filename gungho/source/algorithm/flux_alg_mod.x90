@@ -30,8 +30,8 @@ module flux_alg_mod
   use field_mod,                      only: field_type
   use finite_element_config_mod,      only: element_order,          &
                                             nqp_exact,              &
-                                            spherical_coord_system, &
-                                            spherical_coord_system_xyz
+                                            coord_system,           &
+                                            coord_system_xyz
   use fs_continuity_mod,              only: W2, W3
   use function_space_mod,             only: function_space_type
   use operator_mod,                   only: operator_type
@@ -140,7 +140,7 @@ contains
     integer(kind=i_def)         :: flux_stencil_extent
     integer(kind=i_def)         :: ndata_h
     integer(kind=i_def)         :: ndata_v
-    type(field_type),   pointer :: chi_sph(:) => null()
+    type(field_type),   pointer :: chi(:) => null()
     type(field_type),   pointer :: panel_id => null()
     type(field_type),   pointer :: md_w3 => null()
 
@@ -204,16 +204,16 @@ contains
           flux_stencil_size = flux_2d_stencil_size
         end if
 
-        chi_sph => get_coordinates(mesh_id)
+        chi => get_coordinates(mesh_id)
         panel_id => get_panel_id(mesh_id)
 
-        if ( spherical_coord_system == spherical_coord_system_xyz ) then
+        if ( coord_system == coord_system_xyz ) then
           transform_radius = 0.0_r_def
         else
           ! Compute the smallest surface height of chi(3)
           ! (this is only needed for spherically-based coordinates
           ! Transform radius is minimum height + 1
-          call chi_sph(3)%field_minmax(transform_radius, chi3_max)
+          call chi(3)%field_minmax(transform_radius, chi3_max)
           transform_radius = 1.0_r_def + abs(transform_radius)
         end if
 
@@ -243,7 +243,7 @@ contains
                                                 flux_coeffs_list(mesh_index),  &
                                                 md_w3,                         &
                                                 flux_stencil_extent,           &
-                                                chi_sph,                       &
+                                                chi,                           &
                                                 flux_stencil_extent,           &
                                                 panel_id,                      &
                                                 flux_stencil_extent,           &
@@ -256,7 +256,7 @@ contains
                                                 flux_coeffs_list(mesh_index),  &
                                                 md_w3,                         &
                                                 flux_stencil_extent,           &
-                                                chi_sph,                       &
+                                                chi,                           &
                                                 flux_stencil_extent,           &
                                                 panel_id,                      &
                                                 flux_stencil_extent,           &
@@ -284,7 +284,7 @@ contains
         call invoke(poly1d_vert_flux_coeffs_kernel_type(                       &
                                           vert_flux_coeffs_list(mesh_index),   &
                                           md_w3,                               &
-                                          chi_sph,                             &
+                                          chi,                             &
                                           ndata_v,                             &
                                           fv_flux_order,                       &
                                           qr, qrf ) )
@@ -301,7 +301,7 @@ contains
     ndata_h_list(mesh_index) = ndata_h
     ndata_v_list(mesh_index) = ndata_v
 
-    nullify( chi_sph, panel_id, md_w3, w3_fs, reference_element, mesh )
+    nullify( chi, panel_id, md_w3, w3_fs, reference_element, mesh )
 
   end subroutine flux_alg_init
 
@@ -336,7 +336,7 @@ contains
   type(field_type), intent(inout)           :: mass_flux
   logical(kind=l_def), optional, intent(in) :: logspace
 
-  type(field_type),    pointer :: chi_sph(:) => null()
+  type(field_type),    pointer :: chi(:) => null()
   type(field_type),    pointer :: panel_id => null()
   type(operator_type), pointer :: mm_w2 => null()
   type(field_type),    pointer :: mmd_w2 => null()
@@ -414,18 +414,18 @@ contains
 
       mm_w2   => get_mass_matrix(W2, mesh_id)
       mmd_w2  => get_mass_matrix_diagonal(W2, mesh_id)
-      chi_sph => get_coordinates(mesh_id)
+      chi => get_coordinates(mesh_id)
       panel_id => get_panel_id(mesh_id)
       u_fs    => wind%get_function_space()
       call rhs_f%initialise( vector_space = u_fs )
       call invoke( name = "Transport operators fem",                    &
                    setval_c(rhs_f, 0.0_r_def),                          &
                    flux_rhs_kernel_type(rhs_f, wind, density,           &
-                                        chi_sph, panel_id, qr),         &
+                                        chi, panel_id, qr),             &
                    enforce_bc_kernel_type(rhs_f),                       &
                    setval_c(mass_flux, 0.0_r_def) )
       call mass_matrix_solver_alg( mass_flux, rhs_f)
-      nullify( mm_w2, chi_sph, panel_id, mmd_w2, u_fs )
+      nullify( mm_w2, chi, panel_id, mmd_w2, u_fs )
   end select
   end subroutine flux_alg
 

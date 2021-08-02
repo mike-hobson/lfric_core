@@ -113,7 +113,7 @@ contains
     type(field_type), allocatable                :: state(:), rhs_adv(:)
     type(field_type), allocatable                :: mr_inc(:), mr_out(:)
     type(field_type)                             :: r_psi, psi, r_u
-    type(field_type), pointer                    :: chi_sph(:) => null()
+    type(field_type), pointer                    :: chi(:) => null()
     type(field_type), pointer                    :: panel_id => null()
     type(quadrature_xyoz_type), pointer          :: qr => null()
     real(kind=r_def)                             :: time
@@ -156,7 +156,7 @@ contains
     call r_u%initialise( vector_space = wind%get_function_space() )
 
     qr => get_qr()
-    chi_sph => get_coordinates(mesh_id)
+    chi => get_coordinates(mesh_id)
     panel_id => get_panel_id(mesh_id)
 
     ! If the wind is time-varying, update it here
@@ -166,7 +166,7 @@ contains
       call invoke( name="set_streamfunction",                       &
                    setval_c(psi, 0.0_r_def),                        &
                    setval_c(r_psi, 0.0_r_def),                      &
-                   initial_streamfunc_kernel_type(r_psi, chi_sph, panel_id, &
+                   initial_streamfunc_kernel_type(r_psi, chi, panel_id,     &
                                                   time, sbr_angle_lat,      &
                                                   sbr_angle_lon, u0, v0, qr ) )
       call mass_matrix_solver_alg(psi, r_psi, bc_flag=.false.)
@@ -177,7 +177,7 @@ contains
         call invoke( name="set_wind_by_sampling",                   &
                      setval_c( wind, 0.0_r_def ),                   &
                      setval_c( r_u, 0.0_r_def ),                    &
-                     initial_u_kernel_type( r_u, chi_sph, panel_id, &
+                     initial_u_kernel_type( r_u, chi, panel_id,     &
                                             time, qr ),             &
                      enforce_bc_kernel_type( r_u ) )
         call mass_matrix_solver_alg(wind, r_u)
@@ -208,7 +208,7 @@ contains
     deallocate( state, rhs_adv )
     if (allocated(mr_inc)) deallocate(mr_inc)
     if (allocated(mr_out)) deallocate(mr_out)
-    nullify( panel_id, chi_sph, qr )
+    nullify( panel_id, chi, qr )
 
     if ( subroutine_timers ) call timer('rk_transport_alg')
 

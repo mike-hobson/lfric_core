@@ -8,7 +8,7 @@
 !!
 !!  @details Contains routines for conversion of chi coordinate fields. These
 !!           are accessed through the chi2ABC interface functions, so that
-!!           which spherical_coord_system chi is in, it will convert the
+!!           which coord_system chi is in, it will convert the
 !!           coordinates to the ABC system
 !------------------------------------------------------------------------------
 module chi_transform_mod
@@ -175,29 +175,29 @@ contains
 !------------------------------------------------------------------------------
 subroutine init_chi_transforms()
 
-  use finite_element_config_mod, only : spherical_coord_system,        &
-                                        spherical_coord_system_xyz,    &
-                                        spherical_coord_system_abh,    &
-                                        spherical_coord_system_llh
+  use finite_element_config_mod, only : coord_system,            &
+                                        coord_system_xyz,        &
+                                        coord_system_alphabetaz, &
+                                        coord_system_lonlatz
   use log_mod,                   only : log_event, LOG_LEVEL_ERROR
 
   implicit none
 
   ! Set procedure pointers based on the chosen coordinate system
-  select case ( spherical_coord_system )
-  case ( spherical_coord_system_xyz )
+  select case ( coord_system )
+  case ( coord_system_xyz )
     chi2xyz  => chi2chi
     chi2llr  => xyz2llr_panel
     chi2abr  => xyz2alphabetar
     chir2xyz => chi2chi
-  case ( spherical_coord_system_llh )
-    chi2xyz  => llh2xyz_panel
+  case ( coord_system_lonlatz )
+    chi2xyz  => lonlatz2xyz_panel
     chi2llr  => chih2chir
-    chi2abr  => llh2abr
+    chi2abr  => lonlatz2abr
     chir2xyz => llr2xyz_panel
-  case ( spherical_coord_system_abh )
-    chi2xyz  => abh2xyz
-    chi2llr  => abh2llr
+  case ( coord_system_alphabetaz )
+    chi2xyz  => alphabetaz2xyz
+    chi2llr  => alphabetaz2llr
     chi2abr  => chih2chir
     chir2xyz => alphabetar2xyz
   case default
@@ -316,7 +316,7 @@ end subroutine xyz2llr_panel
 !! @param[out]  y          The second coordinate field out (global Cartesian Y)
 !! @param[out]  z          The third coordinate field out (global Cartesian Z)
 !-----------------------------------------------------------------------------
-subroutine llh2xyz_panel(longitude, latitude, height, panel_id, x, y, z)
+subroutine lonlatz2xyz_panel(longitude, latitude, height, panel_id, x, y, z)
 
   implicit none
 
@@ -326,7 +326,7 @@ subroutine llh2xyz_panel(longitude, latitude, height, panel_id, x, y, z)
 
   call llr2xyz(longitude, latitude, height+scaled_radius, x, y, z)
 
-end subroutine llh2xyz_panel
+end subroutine lonlatz2xyz_panel
 
 !-----------------------------------------------------------------------------
 !> @brief Transforms from (longitude, latitude, radius) coordinates to
@@ -365,7 +365,7 @@ end subroutine llr2xyz_panel
 !! @param[out]  beta       The second coordinate field out (beta)
 !! @param[out]  radius     The third coordinate field out (radius)
 !-----------------------------------------------------------------------------
-subroutine llh2abr(longitude, latitude, height, panel_id, alpha, beta, radius)
+subroutine lonlatz2abr(longitude, latitude, height, panel_id, alpha, beta, radius)
 
   implicit none
 
@@ -383,7 +383,7 @@ subroutine llh2abr(longitude, latitude, height, panel_id, alpha, beta, radius)
   ! Avoid loss of accuracy of going via XYZ by storing radius at the end
   radius = height + scaled_radius
 
-end subroutine llh2abr
+end subroutine lonlatz2abr
 
 !-----------------------------------------------------------------------------
 !> @brief Transforms from equiangular cubed sphere coordinates
@@ -397,7 +397,7 @@ end subroutine llh2abr
 !! @param[out]  y          The second coordinate field out (global Cartesian Y)
 !! @param[out]  z          The third coordinate field out (global Cartesian Z)
 !-----------------------------------------------------------------------------
-subroutine abh2xyz(alpha, beta, height, panel_id, x, y, z)
+subroutine alphabetaz2xyz(alpha, beta, height, panel_id, x, y, z)
 
   implicit none
 
@@ -407,7 +407,7 @@ subroutine abh2xyz(alpha, beta, height, panel_id, x, y, z)
 
   call alphabetar2xyz(alpha, beta, height+scaled_radius, panel_id, x, y, z)
 
-end subroutine abh2xyz
+end subroutine alphabetaz2xyz
 
 !-----------------------------------------------------------------------------
 !> @brief Transforms from equiangular cubed sphere coordinates
@@ -421,7 +421,7 @@ end subroutine abh2xyz
 !! @param[out]  latitude   The second coordinate field out (latitude)
 !! @param[out]  radius     The third coordinate field out (radius)
 !-----------------------------------------------------------------------------
-subroutine abh2llr(alpha, beta, height, panel_id, longitude, latitude, radius)
+subroutine alphabetaz2llr(alpha, beta, height, panel_id, longitude, latitude, radius)
 
   implicit none
 
@@ -432,7 +432,7 @@ subroutine abh2llr(alpha, beta, height, panel_id, longitude, latitude, radius)
   radius = height + scaled_radius
   call alphabetar2llr(alpha, beta, radius, panel_id, longitude, latitude)
 
-end subroutine abh2llr
+end subroutine alphabetaz2llr
 
 end module chi_transform_mod
 

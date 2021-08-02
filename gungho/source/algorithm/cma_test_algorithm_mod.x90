@@ -52,8 +52,8 @@ module cma_test_algorithm_mod
                                              columnwise_operator_type
   use fs_continuity_mod,              only : W0,W1,W2,W2V,W2H,W3,Wchi
   use assign_coordinate_field_mod,    only : assign_coordinate_field
-  use finite_element_config_mod,      only : element_order, coordinate_order, &
-                                             spherical_coord_order
+  use finite_element_config_mod,      only : element_order, &
+                                             coord_order
   ! Kernels for field assignment and manipulation
   use enforce_bc_kernel_mod,          only : enforce_bc_kernel_type
   use assign_field_random_kernel_mod, only : assign_field_random_kernel_type
@@ -87,8 +87,7 @@ module cma_test_algorithm_mod
   ! Index of coordinate function space
   integer(kind=i_def) :: chi_space
   ! Coordinate fields
-  type(field_type) :: chi_xyz(3)
-  type(field_type) :: chi_sph(3)
+  type(field_type) :: chi(3)
   type(field_type) :: panel_id
   ! Quadrature rule
   type( quadrature_xyoz_type ) :: qr
@@ -173,7 +172,7 @@ contains
     mesh_id = mesh_id_in
 
     ! Set up coordinate field
-    if ( coordinate_order == 0 ) then
+    if ( coord_order == 0 ) then
        chi_space = W0
        call log_event( "cma test: Computing W0 coordinate fields", &
                        LOG_LEVEL_INFO )
@@ -186,28 +185,20 @@ contains
     allocate( function_space_collection, &
               source = function_space_collection_type() )
 
-    fs_coord => function_space_collection%get_fs(mesh_id,          &
-                                                 coordinate_order, &
+    fs_coord => function_space_collection%get_fs(mesh_id,     &
+                                                 coord_order, &
                                                  chi_space)
-
-    do i = 1,3
-       call chi_xyz(i)%initialise(vector_space = fs_coord )
-    end do
 
     fs_pressure => function_space_collection%get_fs(mesh_id, 1, W3)
     call panel_id%initialise(vector_space = fs_pressure )
 
-    call assign_coordinate_field(chi_xyz, panel_id, &
-                                 mesh_id, spherical_coords=.false.)
-
-    fs_coord => function_space_collection%get_fs(mesh_id, spherical_coord_order, Wchi)
+    fs_coord => function_space_collection%get_fs(mesh_id, coord_order, Wchi)
 
     do i = 1,3
-      call chi_sph(i)%initialise(vector_space = fs_coord )
+      call chi(i)%initialise(vector_space = fs_coord )
     end do
 
-    call assign_coordinate_field(chi_sph, panel_id, &
-                                 mesh_id, spherical_coords=.true.)
+    call assign_coordinate_field(chi, panel_id, mesh_id)
 
     ! Construct quadrature rule
     qr = quadrature_xyoz_type(3, quadrature_rule)
@@ -243,13 +234,13 @@ contains
     call mm_vel_v_diag%initialise( fs_vel_v )
     call mm_vel_h_diag%initialise( fs_vel_h )
 
-    call invoke( compute_mass_matrix_kernel_w2_type( mm_vel_v, chi_sph, panel_id, qr ), &
-                 compute_mass_matrix_kernel_w3_type( mm_pressure, chi_sph, panel_id, qr ),      &
-                 compute_div_operator_kernel_type( div_v, chi_sph, panel_id, qr ),              &
+    call invoke( compute_mass_matrix_kernel_w2_type( mm_vel_v, chi, panel_id, qr ),    &
+                 compute_mass_matrix_kernel_w3_type( mm_pressure, chi, panel_id, qr ), &
+                 compute_div_operator_kernel_type( div_v, chi, panel_id, qr ),         &
                  transpose_matrix_kernel_type( div_v, grad_v ) )
 
-    call invoke( compute_mass_matrix_kernel_w2_type( mm_vel_h, chi_sph, panel_id, qr ), &
-                 compute_div_operator_kernel_type( div_h, chi_sph, panel_id, qr ) )
+    call invoke( compute_mass_matrix_kernel_w2_type( mm_vel_h, chi, panel_id, qr ), &
+                 compute_div_operator_kernel_type( div_h, chi, panel_id, qr ) )
 
     ! Extract diagonal of vertical and horizontal velocity mass matrices
     ! Note that this has to be done BEFORE applying the boundary

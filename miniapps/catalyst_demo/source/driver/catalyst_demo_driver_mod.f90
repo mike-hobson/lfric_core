@@ -92,8 +92,7 @@ module catalyst_demo_driver_mod
   type( field_type ) :: pressure
 
   ! Coordinate field
-  type(field_type), target, dimension(3) :: chi_xyz
-  type(field_type), target, dimension(3) :: chi_sph
+  type(field_type), target, dimension(3) :: chi
   type(field_type), target,              :: panel_id
 
   integer(i_def) :: mesh_id
@@ -174,7 +173,7 @@ contains
   ! FEM init
   !----------------------------------------------------------------------------
   ! Create FEM specifics (function spaces and chi field)
-  call init_fem( mash_id, chi_xyz, chi_sph, panel_id )
+  call init_fem( mash_id, chi, panel_id )
 
 
   !----------------------------------------------------------------------------
@@ -189,7 +188,7 @@ contains
                           clock,              &
                           mesh_id,            &
                           twod_mesh_id,       &
-                          chi_sph,            &
+                          chi,                &
                           panel_id )
 
     ! Make sure XIOS calendar is set to timestep 1 as it starts there
@@ -217,7 +216,7 @@ contains
 
   ! Create function space collection and initialise prognostic fields
   call init_catalyst_demo( mesh_id, twod_mesh_id, multigrid_mesh_ids, &
-                           chi_xyz, chi_sph, panel_id,                &
+                           chi, panel_id,                             &
                            multigrid_function_space_chain,            &
                            wind, pressure, buoyancy )
 

@@ -103,20 +103,20 @@ contains
 
   !> @brief Initialises the working data set dependent of namelist configuration
   !> @param[in,out] model_data The working data set for a model run
-  !> @param[in]     chi_sph    A size 3 array of fields holding the mesh coordinates
+  !> @param[in]     chi        A size 3 array of fields holding the mesh coordinates
   !> @param[in]     panel_id   A field with the IDs of mesh panels
   !> @param[in]     clock      The model clock object
-  subroutine initialise_model_data( model_data, chi_sph, panel_id, clock )
+  subroutine initialise_model_data( model_data, chi, panel_id, clock )
 
     implicit none
 
     type( io_dev_data_type ), intent(inout) :: model_data
-    type( field_type ),       intent(in)    :: chi_sph(3)
+    type( field_type ),       intent(in)    :: chi(3)
     type( field_type ),       intent(in)    :: panel_id
     class( clock_type ),      intent(in)    :: clock
 
     ! Initialise all the model fields here analytically
-    call io_dev_init_fields_alg( model_data%core_fields, chi_sph, panel_id )
+    call io_dev_init_fields_alg( model_data%core_fields, chi, panel_id )
 
 
     !---------------------------------------------------------------

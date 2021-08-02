@@ -56,7 +56,7 @@ contains
                                          runge_kutta_method_ssp3
     use extrusion_config_mod,      only: method_uniform, stretching_method_linear
     use finite_element_config_mod, only: cellshape_quadrilateral, &
-                                         spherical_coord_system_xyz
+                                         coord_system_xyz
 
     implicit none
 
@@ -78,12 +78,10 @@ contains
 
     call feign_finite_element_config(           &
              cellshape=cellshape_quadrilateral, &
-             coordinate_order=0_i_def,          &
+             coord_order=0_i_def,               &
+             coord_system=coord_system_xyz,     &
              element_order=0_i_def,             &
              rehabilitate=.true.,               &
-             spherical_coord_order = 0,         &
-             spherical_coord_system=spherical_coord_system_xyz, &
-
              vorticity_in_w1=.false. )
 
   end subroutine setUp

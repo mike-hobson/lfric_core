@@ -609,7 +609,7 @@ contains
     integer(i_um), parameter :: nscmdpkgs=15
     logical,       parameter :: l_scmdiags(nscmdpkgs)=.false.
 
-    real(r_um), dimension(row_length,rows,nlayers) :: cca0
+    real(r_um), dimension(row_length,rows,nlayers) :: cca0, ccw0
 
     real(r_um), dimension(row_length,rows,0:nlayers) ::                      &
          aerosol, dust_div1, dust_div2, dust_div3, dust_div4, dust_div5,     &
@@ -635,7 +635,8 @@ contains
     real(r_um), dimension(row_length,rows,3) :: t_frac, t_frac_dsc, we_lim,  &
          we_lim_dsc, zrzi, zrzi_dsc
 
-    integer(i_um), dimension(row_length,rows) :: ccb0, cct0, kent, kent_dsc
+    integer(i_um), dimension(row_length,rows) :: lcbase0, ccb0, cct0,        &
+         kent, kent_dsc
 
     real(r_um), dimension(row_length,rows,nice_use) :: radnet_sice
 
@@ -1113,7 +1114,7 @@ contains
     ! IN ancillary fields and fields needed to be kept from tstep to tstep
           , sil_orog_land_gb, ho2r2_orog_gb                             &
           , ice_fract, di_sice_ncat, ice_fract_ncat, k_sice_ncat        &
-          , u_0, v_0, land_index, cca_3d, lcbase, ccb0, cct0            &
+          , u_0, v_0, land_index, cca_3d, lcbase, lcbase0, ccb0, cct0   &
           , ls_rain, ls_snow, conv_rain, conv_snow                      &
     ! IN variables required from BDY_LAYR
           , alpha1_sea, alpha1_sice, ashtf_prime_sea, ashtf_prime, bq_gb, bt_gb&
@@ -1150,7 +1151,7 @@ contains
           , nSCMDpkgs, L_SCMDiags, bl_diag, sf_diag                     &
     ! INOUT (Note ti_sice_ncat and ti_sice are IN if l_sice_multilayers=T)
           , TScrnDcl_SSI, TScrnDcl_surft, tStbTrans                     &
-          , cca0, fqw, ftl, taux, tauy, rhokh                           &
+          , cca0, ccw0, fqw, ftl, taux, tauy, rhokh                     &
           , dtstar_surft,dtstar_sea,dtstar_sice,ti_sice_ncat &
           , area_cloud_fraction, bulk_cloud_fraction                    &
           , t_latest, q_latest, qcl_latest, qcf_latest, qcf2_latest     &

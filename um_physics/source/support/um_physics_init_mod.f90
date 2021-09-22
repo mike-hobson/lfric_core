@@ -197,7 +197,8 @@ contains
          ent_dp_power, ent_fac_md, ent_opt_dp, ent_opt_md, fac_qsat,       &
          ent_fac_md, iconv_deep, iconv_mid, iconv_shallow,l_3d_cca,        &
          l_anvil, l_cmt_heating, l_cv_conserve_check, l_safe_conv,         &
-         mdet_opt_dp, mid_cnv_pmin, mparwtr, qlmin, n_conv_calls,          &
+         mdet_opt_dp, mdet_opt_md, mid_cnv_pmin, mparwtr, qlmin,           &
+         n_conv_calls,                                                     &
          qstice, r_det, sh_pert_opt,t_melt_snow, termconv, tice,           &
          tower_factor,ud_factor, fdet_opt, anv_opt, cape_timescale,        &
          cca2d_dp_opt,cca2d_md_opt,cca2d_sh_opt,                           &
@@ -572,6 +573,7 @@ contains
         l_safe_conv         = .true.
         md_pert_opt         = md_pert_orig
         mdet_opt_dp         = 1
+        mdet_opt_md         = 0
         mid_cmt_opt         = 0
         mid_cnv_pmin        = 10000.00_r_um
         midtrig_opt         = mtrig_ntmlplus2

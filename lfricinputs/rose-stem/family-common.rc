@@ -45,7 +45,7 @@
         inherit = PLATFORM_X86
         pre-script = """
                      module use /data/users/lfric/modules/modulefiles.rhel7
-                     module load environment/lfric/intel/17.0.1/1
+                     module load environment/lfric/intel/17.0.1/2
                      module load um_tools
                      module list 2>&1
                      unset F_UFMTENDIAN
@@ -57,7 +57,7 @@
         pre-script = """
                      module use /project/ukmo/rhel7/fortran/opt/gfortran/modulefiles
                      module use /data/users/lfric/modules/modulefiles.rhel7
-                     module load environment/lfric/gnu/6.1.0/1
+                     module load environment/lfric/gnu/6.1.0/2
                      module load um_tools
                      module list 2>&1
                      """
@@ -125,8 +125,8 @@
     [[meto-xc40-ifort-icc]]
         inherit = PLATFORM_XC40
         pre-script = """
-                     source /home/d03/lfric/Data/modules/setup
-                     module load meto-environment/lfric/intel/17.0.0.098/1
+                     source /data/d03/lfric/modules/setup
+                     module load meto-environment/lfric/intel/17.0.0.098/2
                      module load cray-snplauncher/$CRAY_MPICH2_VER nctools/1.5.0
                      module swap craype-haswell craype-ivybridge
                      module load um_tools
@@ -139,8 +139,8 @@
     [[meto-xc40-crayftn-craycc]]
         inherit = PLATFORM_XC40
         pre-script = """
-                     source /home/d03/lfric/Data/modules/setup
-                     module load meto-environment/lfric/cce/8.4.3/1
+                     source /data/d03/lfric/modules/setup
+                     module load meto-environment/lfric/cce/8.4.3/2
                      module load cray-snplauncher/$CRAY_MPICH2_VER nctools/1.5.0
                      module swap craype-haswell craype-ivybridge
                      module load um_tools

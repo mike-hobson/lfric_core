@@ -15,7 +15,7 @@ from psyclone.transformations import Dynamo0p3ColourTrans, \
                                      OMPParallelTrans, \
                                      Dynamo0p3RedundantComputationTrans
 
-from psyclone.domain.lfric.function_space import FunctionSpace
+from psyclone.domain.lfric import LFRicConstants
 
 
 def trans(psy):
@@ -27,6 +27,7 @@ def trans(psy):
     otrans = Dynamo0p3OMPLoopTrans()
     oregtrans = OMPParallelTrans()
     rtrans = Dynamo0p3RedundantComputationTrans()
+    const = LFRicConstants()
 
     setval_count = 0
     # Loop over all of the Invokes in the PSy object
@@ -45,21 +46,21 @@ def trans(psy):
                         format(len(loop.kernels())))
                 if loop.kernels()[0].name in ["setval_c", "setval_x"]:
                     setval_count += 1
-                    schedule, _ = rtrans.apply(loop, options={"depth": 1})
+                    rtrans.apply(loop, options={"depth": 1})
 
         # Colour loops over cells unless they are on discontinuous
         # spaces or over dofs
         for loop in schedule.loops():
             if loop.iteration_space == "cell_column" \
                 and loop.field_space.orig_name \
-                    not in FunctionSpace.VALID_DISCONTINUOUS_NAMES:
-                schedule, _ = ctrans.apply(loop)
+                    not in const.VALID_DISCONTINUOUS_NAMES:
+                ctrans.apply(loop)
 
-        # Add OpenMP to loops unless they are over colours
+        # Add OpenMP to loops unless they are over colours or are null
         for loop in schedule.loops():
-            if loop.loop_type != "colours":
-                schedule, _ = oregtrans.apply(loop)
-                schedule, _ = otrans.apply(loop, options={"reprod": True})
+            if loop.loop_type not in ["colours", "null"]:
+                oregtrans.apply(loop)
+                otrans.apply(loop, options={"reprod": True})
 
         # Take a look at what we've done
         print("Found {0} setval calls".format(setval_count))

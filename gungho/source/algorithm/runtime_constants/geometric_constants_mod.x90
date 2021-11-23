@@ -230,7 +230,7 @@ contains
                                                    panel_id_in(i) )  )
         else
           call invoke( setval_c(lat_w3_list(i), f_lat),  &
-                       setval_c(long_w3_list(i), 0_r_def) )
+                       setval_c(long_w3_list(i), 0.0_r_def) )
         end if
       end if
 

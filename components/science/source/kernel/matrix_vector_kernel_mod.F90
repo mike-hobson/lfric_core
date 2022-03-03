@@ -3,7 +3,8 @@
 ! For further details please refer to the file LICENCE.original which you
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
-!> @brief This version is for use on continous spaces and will force
+
+!> @brief This version is for use on continuous spaces and will force
 !>        halo exchanges on the input fields
 module matrix_vector_kernel_mod
   use argument_mod,            only : arg_type,                 &

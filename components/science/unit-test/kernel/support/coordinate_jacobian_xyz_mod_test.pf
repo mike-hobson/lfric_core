@@ -48,8 +48,7 @@ contains
              coord_order=0_i_def,               &
              coord_system=coord_system_xyz,     &
              element_order=0_i_def,             &
-             rehabilitate=.true.,               &
-             vorticity_in_w1=.false. )
+             rehabilitate=.true. )
 
   end subroutine setUp
 

@@ -237,9 +237,19 @@ launch-test-suite:
 	          --opt-conf-key=$$target --no-gcontrol \
 	          $(CLEAN_OPT) $(QUIET_ARG) \
 	          --define-suite=RDEF_PRECISION=$(RDEF_PRECISION) \
-                  $(VERBOSE_ARG) \
+	          $(VERBOSE_ARG) \
 	          --group=$(SUITE_GROUP); \
 	done
+
+
+##############################################################################
+# Generate configuration source.
+#
+.PHONY: configuration
+configuration: FIX_ENUMS_OPT:=$(FIX_ENUMS_OPT)
+configuration:
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk
+
 
 ##############################################################################
 # Extract parts of other projects.
@@ -264,124 +274,98 @@ launch-test-suite:
 
 
 ##############################################################################
-# Invoke Configurator to generate namelist handling code.
-#
-# Configurator is called on the original source but that source may use other
-# modules so extraction must be complete first.
-#
-.PHONY: %/configure
-%/configure: PROJECT ?= $(lastword $(filter-out source, $(subst /, ,$*)))
-%/configure: $$(addsuffix /extract, $$*)
-	$(Q)$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk \
-	            PROJECT=$(PROJECT) \
-	            SOURCE_DIR=$* \
-	            WORKING_DIR=$(WORKING_DIR)
-
-
-##############################################################################
 # Run unit tests.
 #
 .PHONY: do-unit-tests
-do-unit-tests: export ANY_TESTS := $(strip $(shell find $(SOURCE_DIR) -name *test.pf))
 do-unit-tests:
-	$(Q)$(MAKE) $(QUIET_ARG) do-unit-test/detect \
-	            ADDITIONAL_EXTRACTION=$(ADDITIONAL_EXTRACTION) \
-	            ANY_TESTS=$(ANY_TESTS) \
-	            BIN_DIR=$(BIN_DIR) \
-	            EXTERNAL_STATIC_LIBRARIES="$(EXTERNAL_STATIC_LIBRARIES)" \
-	            PROGRAMS=$(PROGRAMS) \
-	            PROJECT=$(PROJECT) \
-	            SOURCE_DIR=$(SOURCE_DIR) \
-	            TEST_DIR=$(TEST_DIR) \
-	            WORKING_DIR=$(WORKING_DIR)
+	# We recurse into the make file here in order to reify all the target
+	# specific variables. They only appear in recipes and we need them to
+	# make decissions. This does mean we reload the makefile in order to
+	# log a message in the case where there is nothing to test.
+	#
+	$Q$(MAKE) -f $(LFRIC_BUILD)/lfric.mk                              \
+	          $(if $(strip $(shell find $(TEST_DIR) -name *test.pf)), \
+	               do-unit-test/found, do-unit-test/none)
 
 .PHONY: do-unit-test/%
-do-unit-test/detect: $(if $(ANY_TESTS), do-unit-test/found, \
-                                        do-unit-test/none)
-	$(Q)echo >/dev/null
-
 do-unit-test/none:
-	$(Q)$(call MESSAGE,Unit tests,'None to run')
+	$Q$(call MESSAGE,Unit tests,'None to run')
 
+do-unit-test/found: export EXTERNAL_STATIC_LIBRARIES += pfunit
 do-unit-test/found: do-unit-test/build
 	$(call MESSAGE,Running,$(PROGRAMS))
-	$(Q)cd $(WORKING_DIR); \
+	$Qcd $(WORKING_DIR); \
             mpiexec -n 4 $(BIN_DIR)/$(PROGRAMS) $(DOUBLE_VERBOSE_ARG)
 
-# Note: The initial explicit extract step was added as some algorithms
-#       were using kernels outside their own project area. It is a
-#       workaround until a more permanent solution is found.
 do-unit-test/build: WITHOUT_PROGRAMS = 1
-do-unit-test/build: PROCESS_TARGETS = $(SOURCE_DIR) $(ADDITIONAL_EXTRACTION)
-do-unit-test/build: $$(addsuffix /extract, $$(PROCESS_TARGETS)) \
-                    $$(addsuffix /configure, $$(PROCESS_TARGETS)) \
-                    $$(addsuffix /psyclone, $$(PROCESS_TARGETS)) \
-                    $$(addsuffix /extract, $$(TEST_DIR))
-	$(Q)mkdir -p $(WORKING_DIR)
-	$(Q)if [ -d $(TEST_DIR)/data ] ; then \
+do-unit-test/build: do-unit-test/generate \
+                    $(addsuffix /extract, $(TEST_DIR))
+	$Qmkdir -p $(WORKING_DIR)
+	$Qif [ -d $(TEST_DIR)/data ] ; then \
 	        cp -r $(TEST_DIR)/data $(WORKING_DIR); fi
-	$(Q)$(MAKE) $(QUIET_ARG) pfunit \
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/pfunit.mk \
 	            SOURCE_DIR=$(TEST_DIR) WORKING_DIR=$(WORKING_DIR)
-	$(Q)$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/analyse.mk
-	$(Q)$(MAKE) $(QUIET_ARG) \
+	$Q$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/analyse.mk
+	$Q$(MAKE) $(QUIET_ARG) \
                     -C $(WORKING_DIR) -f $(LFRIC_BUILD)/compile.mk \
                     PRE_PROCESS_MACROS=$(PRE_PROCESS_MACROS)
+
+# Ensure all extraction is performed before PSyclone otherwise kernel files may
+# not have arrived when they are needed.
+#
+do-unit-test/generate: do-unit-test/extract configuration
+	$Q$(MAKE) -f $(LFRIC_BUILD)/lfric.mk           \
+	          $(addsuffix /psyclone, $(SOURCE_DIR) \
+	                                 $(ADDITIONAL_EXTRACTION))
+
+do-unit-test/extract: $(addsuffix /extract, $(SOURCE_DIR) \
+                                            $(ADDITIONAL_EXTRACTION))
 
 
 ##############################################################################
 # Run integration tests.
 #
 .PHONY: do-integration-tests
-do-integration-tests: export ANY_TESTS = $(patsubst $(TEST_DIR)/%,%,$(basename $(shell find $(TEST_DIR) -name '*.[Ff]90' -exec egrep -l "^\s*program" {} \; 2>/dev/null)))
+do-integration-tests: ANY_TESTS = $(patsubst $(TEST_DIR)/%,%,$(basename $(shell find $(TEST_DIR) -name '*.[Ff]90' -exec egrep -l "^\s*program" {} \; 2>/dev/null)))
+do-integration-tests: export PROGRAMS = $(ANY_TESTS)
+do-integration-tests: export TEST_RUN_DIR = $(BIN_DIR)/test_files
 do-integration-tests:
-	$(Q)$(MAKE) $(QUIET_ARG) do-integration-test/detect \
-	            ADDITIONAL_EXTRACTION=$(ADDITIONAL_EXTRACTION) \
-	            ANY_TESTS="$(ANY_TESTS)" \
-	            BIN_DIR=$(BIN_DIR) \
-	            META_FILE_DIR=$(META_FILE_DIR) \
-	            PRE_PROCESS_MACROS=$(PRE_PROCESS_MACROS) \
-	            PROGRAMS="$(ANY_TESTS)" \
-	            PROJECT_NAME=$(PROJECT_NAME) \
-	            SOURCE_DIR=$(SOURCE_DIR) \
-	            TEST_DIR=$(TEST_DIR) \
-	            WORKING_DIR=$(WORKING_DIR) \
-	            TEST_RUN_DIR=$(BIN_DIR)/test_files
+	# We recurse into the make file here in order to reify all the target
+	# specific variables. They only appear in recipes and we need them to
+	# make decissions. This does mean we reload the makefile in order to
+	# log a message in the case where there is nothing to test.
+	#
+	$Q$(MAKE) -f $(LFRIC_BUILD)/lfric.mk                                   \
+	          $(if $(ANY_TESTS), $(ANY_TESTS:%=do-integration-test/run/%), \
+	                             do-integration-test/none)
 
 .PHONY: do-integration-test/%
-do-integration-test/detect: $(if $(ANY_TESTS), \
-                                 $(ANY_TESTS:%=do-integration-test/run/%), \
-                                 do-integration-test/none)
-	$(Q)echo >/dev/null
-
 do-integration-test/none:
-	$(Q)$(call MESSAGE,Integration tests,'None to run')
+	$Q$(call MESSAGE,Integration tests,'None to run')
 
 do-integration-test/run/%: export PYTHONPATH := $(PYTHONPATH):$(LFRIC_BUILD)
 do-integration-test/run/%: do-integration-test/build
 	$(call MESSAGE,Running,$*)
-	$(Q)rsync -a $(TEST_DIR)/ $(TEST_RUN_DIR)
-	$(Q)cd $(TEST_RUN_DIR)/$(dir $*); \
+	$Qrsync -a $(TEST_DIR)/ $(TEST_RUN_DIR)
+	$Qcd $(TEST_RUN_DIR)/$(dir $*); \
 	    ./$(notdir $(addsuffix .py,$*)) $(addprefix $(BIN_DIR)/,$(notdir $*))
 
-do-integration-test/build: PROCESS_TARGETS = $(SOURCE_DIR) $(TEST_DIR) $(ADDITIONAL_EXTRACTION)
-do-integration-test/build: $$(addsuffix /configure, $$(PROCESS_TARGETS)) \
-                           $$(addsuffix /psyclone, $$(PROCESS_TARGETS))
-	$(Q)$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/analyse.mk
-	$(Q)$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/compile.mk
+do-integration-test/build: do-integration-test/generate \
+                           $(addsuffix /extract, $(TEST_DIR))
+	$Q$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/analyse.mk
+	$Q$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/compile.mk
 
-
-##############################################################################
-# Generate configuration source.
+# Ensure all extraction is performed before PSyclone otherwise kernel files may
+# not have arrived when they are needed.
 #
-.PHONY: configuration
-configuration: FIX_ENUMS_OPT=$(FIX_ENUMS_OPT)
-configuration:
-	$(call MESSAGE,lfric.mk $(FIX_ENUMS_OPT))
-	$(Q)$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk
+do-integration-test/generate: do-integration-test/extract configuration
+	$Q$(MAKE) -f $(LFRIC_BUILD)/lfric.mk           \
+	          $(addsuffix /psyclone, $(SOURCE_DIR) \
+	                                 $(TEST_DIR)   \
+	                                 $(ADDITIONAL_EXTRACTION))
 
-##############################################################################
-# Generate pFUnit unit tests.
-#
-.PHONY: pfunit
-pfunit:
-	$(Q)$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/pfunit.mk
+do-integration-test/extract: $(addsuffix /extract, $(SOURCE_DIR) \
+                                                   $(ADDITIONAL_EXTRACTION))
+
+###############################################################################
+# End

@@ -127,16 +127,15 @@ build: ALWAYS
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
 	          SOURCE_DIR=$(ROOT_DIR)/components/driver/source
 	$(call MESSAGE,========================================)
+	$(call MESSAGE,Extracting LFRic science model component)
+	$(call MESSAGE,========================================)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+	          SOURCE_DIR=$(ROOT_DIR)/components/science/source
+	$(call MESSAGE,========================================)
 	$(call MESSAGE,Extracting LFRic-XIOS model component)
 	$(call MESSAGE,========================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
 	          SOURCE_DIR=$(ROOT_DIR)/components/lfric-xios/source
-	$(call MESSAGE,========================================)
-	$(call MESSAGE,Extracting Gungho dynamical core)
-	$(call MESSAGE,========================================)
-	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
-	         SOURCE_DIR=$(ROOT_DIR)/gungho/source \
-	         WITHOUT_PROGRAMS=1
 	$(call MESSAGE,========================================)
 	$(call MESSAGE,Extracting $(PROJECT_NAME))
 	$(call MESSAGE,========================================)
@@ -149,16 +148,16 @@ build: ALWAYS
 	          SOURCE_DIR=$(LFRIC_INFRASTRUCTURE)/source \
 	          OPTIMISATION_PATH=$(OPTIMISATION_PATH)
 	$(call MESSAGE,========================================)
+	$(call MESSAGE,PSycloning LFRic science model component)
+	$(call MESSAGE,========================================)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
+	          SOURCE_DIR=$(ROOT_DIR)/components/science/source \
+	          OPTIMISATION_PATH=$(OPTIMISATION_PATH)
+	$(call MESSAGE,========================================)
 	$(call MESSAGE,PSycloning LFRic-XIOS model component)
 	$(call MESSAGE,========================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
 	          SOURCE_DIR=$(ROOT_DIR)/components/lfric-xios/source \
-	          OPTIMISATION_PATH=$(OPTIMISATION_PATH)
-	$(call MESSAGE,========================================)
-	$(call MESSAGE,PSycloning Gungho dynamical core)
-	$(call MESSAGE,========================================)
-	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
-	          SOURCE_DIR=$(ROOT_DIR)/gungho/source \
 	          OPTIMISATION_PATH=$(OPTIMISATION_PATH)
 	$(call MESSAGE,========================================)
 	$(call MESSAGE,PSycloning $(PROJECT_NAME))
@@ -170,7 +169,7 @@ build: ALWAYS
 	$(call MESSAGE,Generating $(PROJECT) namelist loaders)
 	$(call MESSAGE,=========================================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk \
-	          SOURCE_DIR=$(ROOT_DIR)/gungho/source \
+	          SOURCE_DIR=source \
 	          META_FILE_DIR=$(META_FILE_DIR) \
 	          FIX_ENUMS_OPT=$(FIX_ENUMS_OPT)
 	$(call MESSAGE,=========================================================)
@@ -186,25 +185,19 @@ build: ALWAYS
 
 ##############################################################################
 # Unit tests
-# 
+#
 .PHONY: unit-tests
-unit-tests: export ADDITIONAL_EXTRACTION = "$(ROOT_DIR)/infrastructure/source \
-                                            $(ROOT_DIR)/components/driver/source \
-                                            $(ROOT_DIR)/gungho/source \
-                                            $(ROOT_DIR)/gungho/unit-test/support \
-                                            $(ROOT_DIR)/components/lfric-xios/source"
+unit-tests: export ADDITIONAL_EXTRACTION = $(ROOT_DIR)/infrastructure/source \
+                                           $(ROOT_DIR)/components/science/source/kernel
 unit-tests: export BIN_DIR ?= $(PROJECT_DIR)/test
-unit-tests: export EXTERNAL_STATIC_LIBRARIES += pfunit
 unit-tests: export FFLAG_GROUPS = DEBUG NO_OPTIMISATION INIT UNIT_WARNINGS
-unit-tests: export IGNORE_DEPENDENCIES += pfunit_mod
 unit-tests: export META_FILE_DIR = rose-meta/lfric-skeleton/HEAD
 unit-tests: export PROGRAMS = $(PROJECT_NAME)_unit_tests
 unit-tests: export PROJECT = $(PROJECT_NAME)
-unit-tests: export SOURCE_DIR = source
+unit-tests: export SOURCE_DIR = source/kernel
 unit-tests: export TEST_DIR = unit-test
 unit-tests: export WORKING_DIR := $(WORKING_DIR)/unit-test
 unit-tests: do-unit-tests
-	$(Q)echo > /dev/null
 
 
 ##############################################################################
@@ -218,7 +211,6 @@ integration-tests: export SOURCE_DIR = source
 integration-tests: export TEST_DIR = integration-test
 integration-tests: export WORKING_DIR := $(WORKING_DIR)/integration-test
 integration-tests: do-integration-tests
-	$(Q)echo > /dev/null
 
 
 ##############################################################################

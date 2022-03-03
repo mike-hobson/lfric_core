@@ -58,14 +58,8 @@ module chi_transform_mod_test
   integer(i_native), parameter :: XYZ     = 3
   integer(i_native), parameter :: R2XYZ   = 4
 
-  real(r_def), parameter :: gravity       = 10.0_r_def
   real(r_def), parameter :: planet_radius = 14_r_def
-  real(r_def), parameter :: omega         = 8.0E-5_r_def
-  real(r_def), parameter :: p_zero        = 100000.0_r_def
-  real(r_def), parameter :: rd            = 300.0_r_def
-  real(r_def), parameter :: cp            = 1000.0_r_def
   real(r_def), parameter :: scaling       = 1.0_r_def
-  real(r_def), parameter :: lat_c         = 0.0_r_def
 
 contains
 
@@ -237,17 +231,9 @@ contains
              element_order=0_i_def,             &
              rehabilitate=.true.,               &
              coord_order=0_i_def,               &
-             coord_system=coord_system,         &
-             vorticity_in_w1=.false. )
+             coord_system=coord_system )
 
-    call feign_planet_config(                   &
-             gravity=gravity,                   &
-             radius=planet_radius,              &
-             omega=omega,                       &
-             rd=rd,                             &
-             cp=cp,                             &
-             p_zero=p_zero,                     &
-             scaling_factor=scaling )
+    call feign_planet_config( radius=planet_radius, scaling_factor=scaling )
 
     call init_chi_transforms()
 

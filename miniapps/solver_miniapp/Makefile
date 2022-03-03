@@ -136,6 +136,17 @@ build: ALWAYS
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
 	          SOURCE_DIR=$(ROOT_DIR)/components/driver/source
 	$(call MESSAGE,========================================)
+	$(call MESSAGE,Extracting LFRic science model component)
+	$(call MESSAGE,========================================)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+	          SOURCE_DIR=$(ROOT_DIR)/components/science/source
+	$(call MESSAGE,========================================)
+	$(call MESSAGE,PSycloning LFRic science model component)
+	$(call MESSAGE,========================================)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
+	          SOURCE_DIR=$(ROOT_DIR)/components/science/source \
+	          OPTIMISATION_PATH=$(OPTIMISATION_PATH)
+	$(call MESSAGE,========================================)
 	$(call MESSAGE,Extracting Gungho dynamical core)
 	$(call MESSAGE,========================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
@@ -182,9 +193,7 @@ build: ALWAYS
 #
 .PHONY: unit-tests
 unit-tests: export BIN_DIR ?= $(PROJECT_DIR)/test
-unit-tests: export EXTERNAL_STATIC_LIBRARIES += pfunit
-unit-tests: export FFLAGS += $(FFLAGS_DEBUG) $(FFLAGS_NO_OPTIMISATION) $(FFLAGS_INIT) $(FFLAGS_UNIT_WARNINGS)
-unit-tests: export IGNORE_DEPENDENCIES += pfunit_mod
+unit-tests: export FFLAG_GROUPS = DEBUG NO_OPTIMISATION INIT UNIT_WARNINGS
 unit-tests: export PROGRAMS = $(PROJECT_NAME)_unit_tests
 unit-tests: export PROJECT = $(PROJECT_NAME)
 unit-tests: export SOURCE_DIR = $(PROJECT_DIR)/source

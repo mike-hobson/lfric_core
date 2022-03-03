@@ -51,7 +51,7 @@ module io_dev_model_mod
   ! IO_Dev driver modules
   use io_dev_mod,                 only : load_configuration
   use io_dev_init_files_mod,      only : init_io_dev_files
-  ! GungHo driver modules
+  ! Driver modules
   use driver_fem_mod,             only : init_fem, final_fem
   use driver_mesh_mod,            only : init_mesh, final_mesh
   ! External libraries

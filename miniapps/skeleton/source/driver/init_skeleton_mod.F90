@@ -21,21 +21,20 @@ module init_skeleton_mod
                                              LOG_LEVEL_INFO, &
                                              LOG_LEVEL_ERROR
   use mesh_mod,                       only : mesh_type
-  use runtime_constants_mod,          only : create_runtime_constants
   use io_config_mod,                  only : write_diag, &
                                              use_xios_io
   use lfric_xios_write_mod,           only : write_field_face
-  implicit none
+  use skeleton_constants_mod,         only : create_skeleton_constants
 
+  implicit none
 
   contains
 
-  subroutine init_skeleton( mesh, twod_mesh, chi, panel_id, dt, field_1)
+  subroutine init_skeleton( mesh, chi, panel_id, dt, field_1)
 
     implicit none
 
     type(mesh_type), intent(in), pointer     :: mesh
-    type(mesh_type), intent(in), pointer     :: twod_mesh
     real(r_def),    intent(in)               :: dt
     ! Prognostic fields
     type( field_type ), intent(inout)        :: field_1
@@ -47,26 +46,22 @@ module init_skeleton_mod
 
     call log_event( 'skeleton: Initialising miniapp ...', LOG_LEVEL_INFO )
 
-
     ! Create prognostic fields
     ! Creates a field in the W3 function space (fully discontinuous field)
     call field_1%initialise( vector_space = &
                       function_space_collection%get_fs(mesh, element_order, W3) )
 
     ! Set up field with an IO behaviour (XIOS only at present)
-
     if (write_diag .and. use_xios_io) then
-
        tmp_ptr => write_field_face
-
        call field_1%set_write_behaviour(tmp_ptr)
 
     end if
 
-    ! Create runtime_constants object. This in turn creates various things
+    ! Create skeleton runtime constants. This creates various things
     ! needed by the fem algorithms such as mass matrix operators, mass
     ! matrix diagonal fields and the geopotential field
-    call create_runtime_constants(mesh, twod_mesh, chi, panel_id, dt)
+    call create_skeleton_constants(mesh, chi, panel_id)
 
     call log_event( 'skeleton: Miniapp initialised', LOG_LEVEL_INFO )
 

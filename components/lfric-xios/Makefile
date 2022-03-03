@@ -69,14 +69,14 @@ document-api: WORKING_DIR  := $(WORKING_DIR)/api
 document-api: api-documentation
 	$(Q)echo > /dev/null
 
+
 ##############################################################################
 # Unit tests
 #
 .PHONY: unit-tests
-unit-tests: export ADDITIONAL_EXTRACTION = "$(ROOT_DIR)/infrastructure/source"
+unit-tests: export ADDITIONAL_EXTRACTION = $(ROOT_DIR)/infrastructure/source \
+                                           $(ROOT_DIR)/components/science/source
 unit-tests: export BIN_DIR ?= $(PROJECT_DIR)/test
-unit-tests: export CXX_LINK = TRUE
-unit-tests: export EXTERNAL_STATIC_LIBRARIES += pfunit
 unit-tests: export FFLAG_GROUPS = DEBUG NO_OPTIMISATION INIT UNIT_WARNINGS
 unit-tests: export FFLAGS += -D UNIT_TEST
 unit-tests: export META_FILE_DIR = rose-meta/lfric-xios/HEAD
@@ -86,20 +86,7 @@ unit-tests: export SOURCE_DIR = source
 unit-tests: export TEST_DIR = unit-test
 unit-tests: export WORKING_DIR := $(WORKING_DIR)/unit-tests
 unit-tests: do-unit-tests
-	$(Q)echo > /dev/null
 
-##############################################################################
-# Integration tests
-#
-#.PHONY: integration-tests
-#integration-tests: export BIN_DIR ?= $(PROJECT_DIR)/test
-#integration-tests: export META_FILE_DIR = integration-test/configuration_test
-#integration-tests: export PROJECT = lfric-xios
-#integration-tests: export SOURCE_DIR = source
-#integration-tests: export TEST_DIR = integration-test
-#integration-tests: export WORKING_DIR := $(WORKING_DIR)/integration-tests
-#integration-tests: do-integration-tests
-#	$(Q)echo > /dev/null
 
 ##############################################################################
 # Test suite rules

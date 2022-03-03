@@ -93,6 +93,11 @@ build: ALWAYS
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
 	          SOURCE_DIR=$(ROOT_DIR)/components/driver/source
 	$(call MESSAGE,========================================)
+	$(call MESSAGE,Extracting LFRic science model component)
+	$(call MESSAGE,========================================)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+	          SOURCE_DIR=$(ROOT_DIR)/components/science/source
+	$(call MESSAGE,========================================)
 	$(call MESSAGE,Extracting LFRic xios component)
 	$(call MESSAGE,========================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
@@ -128,6 +133,12 @@ build: ALWAYS
 	$(call MESSAGE,========================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
 	          SOURCE_DIR=$(LFRIC_INFRASTRUCTURE)/source
+	$(call MESSAGE,========================================)
+	$(call MESSAGE,PSycloning LFRic science component)
+	$(call MESSAGE,========================================)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
+	          SOURCE_DIR=$(ROOT_DIR)/components/science/source \
+	          OPTIMISATION_PATH=$(OPTIMISATION_PATH)
 	$(call MESSAGE,========================================)
 	$(call MESSAGE,PSycloning LFRic xios component)
 	$(call MESSAGE,========================================)
@@ -178,12 +189,12 @@ build: ALWAYS
 # Unit tests
 #
 .PHONY: unit-tests
-unit-tests: export ADDITIONAL_EXTRACTION = "$(ROOT_DIR)/infrastructure/source \
-                                            $(ROOT_DIR)/components/driver/source \
-                                            $(ROOT_DIR)/coupler-oasis/source \
-                                            $(ROOT_DIR)/components/lfric-xios/source"
+unit-tests: export ADDITIONAL_EXTRACTION = $(ROOT_DIR)/infrastructure/source \
+                                           $(ROOT_DIR)/components/driver/source \
+                                           $(ROOT_DIR)/components/science/source \
+                                           $(ROOT_DIR)/coupler-oasis/source \
+                                           $(ROOT_DIR)/components/lfric-xios/source
 unit-tests: export BIN_DIR ?= $(PROJECT_DIR)/test
-unit-tests: export EXTERNAL_STATIC_LIBRARIES += pfunit
 unit-tests: export FFLAG_GROUPS += DEBUG NO_OPTIMISATION INIT UNIT_WARNINGS
 unit-tests: export PROGRAMS = lfric_atm_unit_tests
 unit-tests: export PROJECT = lfric_atm 
@@ -191,7 +202,6 @@ unit-tests: export SOURCE_DIR = source
 unit-tests: export TEST_DIR = unit-test
 unit-tests: export WORKING_DIR := $(WORKING_DIR)/unit-tests
 unit-tests: do-unit-tests
-	$(Q)echo > /dev/null
 
 
 ##############################################################################
@@ -205,7 +215,6 @@ integration-tests: export SOURCE_DIR = source
 integration-tests: export TEST_DIR = unit-test
 integration-tests: export WORKING_DIR := $(WORKING_DIR)/integration-tests
 integration-tests: do-integration-tests
-	$(Q)echo > /dev/null
 
 
 ##############################################################################

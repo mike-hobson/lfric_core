@@ -129,6 +129,17 @@ build: ALWAYS
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
 	          SOURCE_DIR=$(ROOT_DIR)/components/driver/source
 	$(call MESSAGE,========================================)
+	$(call MESSAGE,Extracting LFRic science model component)
+	$(call MESSAGE,========================================)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+	          SOURCE_DIR=$(ROOT_DIR)/components/science/source
+	$(call MESSAGE,========================================)
+	$(call MESSAGE,PSycloning LFRic science model component)
+	$(call MESSAGE,========================================)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
+	          SOURCE_DIR=$(ROOT_DIR)/components/science/source \
+	          OPTIMISATION_PATH=$(OPTIMISATION_PATH)
+	$(call MESSAGE,========================================)
 	$(call MESSAGE,Extracting LFRic-XIOS model component)
 	$(call MESSAGE,========================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
@@ -184,15 +195,14 @@ build: ALWAYS
 # Unit tests
 #
 .PHONY: unit-tests
-unit-tests: export ADDITIONAL_EXTRACTION = "$(ROOT_DIR)/infrastructure/source \
-                                            $(ROOT_DIR)/components/driver/source \
-                                            $(ROOT_DIR)/gungho/source \
-                                            $(ROOT_DIR)/gungho/unit-test/support \
-                                            $(ROOT_DIR)/components/lfric-xios/source"
+unit-tests: export ADDITIONAL_EXTRACTION = $(ROOT_DIR)/infrastructure/source     \
+                                           $(ROOT_DIR)/components/driver/source  \
+                                           $(ROOT_DIR)/components/science/source \
+                                           $(ROOT_DIR)/gungho/source             \
+                                           $(ROOT_DIR)/gungho/unit-test/support  \
+                                           $(ROOT_DIR)/components/lfric-xios/source
 unit-tests: export BIN_DIR ?= $(PROJECT_DIR)/test
-unit-tests: export EXTERNAL_STATIC_LIBRARIES += pfunit
 unit-tests: export FFLAG_GROUPS = DEBUG NO_OPTIMISATION INIT UNIT_WARNINGS
-unit-tests: export IGNORE_DEPENDENCIES += pfunit_mod
 unit-tests: export META_FILE_DIR = rose-meta/lfric-io_dev/HEAD
 unit-tests: export PROGRAMS = $(PROJECT_NAME)_unit_tests
 unit-tests: export PROJECT = $(PROJECT_NAME)

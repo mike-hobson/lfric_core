@@ -13,14 +13,11 @@ module skeleton_driver_mod
   use checksum_alg_mod,           only : checksum_alg
   use clock_mod,                  only : clock_type
   use configuration_mod,          only : final_configuration
-  use check_configuration_mod,    only : get_required_stencil_depth
   use constants_mod,              only : i_def, i_native, &
                                          PRECISION_REAL, r_def
   use convert_to_upper_mod,       only : convert_to_upper
   use driver_mesh_mod,            only : init_mesh
   use driver_fem_mod,             only : init_fem
-  use derived_config_mod,         only : set_derived_config
-  use diagnostics_io_mod,         only : write_scalar_diagnostic
   use field_mod,                  only : field_type
   use init_skeleton_mod,          only : init_skeleton
   use lfric_xios_io_mod,          only : initialise_xios
@@ -142,8 +139,6 @@ contains
         '-bit real numbers'
     call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
 
-    call set_derived_config( .true. )
-
     !-------------------------------------------------------------------------
     ! Model init
     !-------------------------------------------------------------------------
@@ -155,7 +150,8 @@ contains
     allocate( mesh_collection, &
               source = mesh_collection_type() )
 
-    stencil_depth = get_required_stencil_depth()
+    ! Hard-code stencil depth to 1 for skeleton
+    stencil_depth = 1
 
     ! Create the mesh
     call init_mesh( local_rank, total_ranks, stencil_depth, &
@@ -195,7 +191,7 @@ contains
     dt_model = real(clock%get_seconds_per_step(), r_def)
 
     ! Create and initialise prognostic fields
-    call init_skeleton(mesh, twod_mesh, chi, panel_id, dt_model, field_1)
+    call init_skeleton(mesh, chi, panel_id, dt_model, field_1)
 
   end subroutine initialise
 
@@ -220,8 +216,7 @@ contains
 
     if (write_diag ) then
       ! Calculation and output of diagnostics
-      call write_scalar_diagnostic( 'skeleton_field', field_1, &
-                                    clock, mesh, .false. )
+      call field_1%write_field('skeleton_field')
     end if
 
   end subroutine run

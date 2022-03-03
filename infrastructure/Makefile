@@ -115,7 +115,6 @@ document-api: api-documentation
 #
 .PHONY: unit-tests
 unit-tests: export BIN_DIR ?= $(PROJECT_DIR)/test
-unit-tests: export EXTERNAL_STATIC_LIBRARIES += pfunit
 unit-tests: export FFLAG_GROUPS = DEBUG NO_OPTIMISATION INIT UNIT_WARNINGS
 unit-tests: export META_FILE_DIR = rose-meta/lfric-infrastructure/HEAD
 unit-tests: export PROGRAMS = infrastructure_unit_tests
@@ -124,7 +123,6 @@ unit-tests: export SOURCE_DIR = source
 unit-tests: export TEST_DIR = unit-test
 unit-tests: export WORKING_DIR := $(WORKING_DIR)/unit-tests
 unit-tests: do-unit-tests
-	$(Q)echo > /dev/null
 
 
 ##############################################################################
@@ -138,7 +136,6 @@ integration-tests: export SOURCE_DIR = source
 integration-tests: export TEST_DIR = integration-test
 integration-tests: export WORKING_DIR := $(WORKING_DIR)/integration-tests
 integration-tests: do-integration-tests
-	$(Q)echo > /dev/null
 
 
 ##############################################################################

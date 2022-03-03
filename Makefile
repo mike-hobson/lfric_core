@@ -18,6 +18,7 @@
 OPERATE_ON ?= lfric_atm                                  \
               gungho                                     \
               infrastructure                             \
+              components/science                         \
               components/lfric-xios                      \
               components/coupler-oasis                   \
               mesh_tools                                 \

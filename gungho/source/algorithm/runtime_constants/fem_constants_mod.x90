@@ -848,7 +848,7 @@ contains
 
   !> @brief Returns a pointer to the div operator
   !> @param[in] mesh_id The ID of the mesh to get the object for
-  !> @return The grad operator
+  !> @return The div operator
   function get_div(mesh_id) result(div_op)
     implicit none
     integer(kind=i_def),   intent(in) :: mesh_id

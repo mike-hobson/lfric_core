@@ -25,14 +25,8 @@ module coordinate_jacobian_alphabetaz_mod_test
     procedure test_all
   end type jacobian_alphabetaz_test_type
 
-  real(r_def), parameter :: gravity  = 10.0_r_def
   real(r_def), parameter :: radius   = 1000_r_def
-  real(r_def), parameter :: omega    = 8.0E-5_r_def
-  real(r_def), parameter :: p_zero   = 100000.0_r_def
-  real(r_def), parameter :: rd       = 300.0_r_def
-  real(r_def), parameter :: cp       = 1000.0_r_def
   real(r_def), parameter :: scaling  = 1.0_r_def
-  real(r_def), parameter :: lat_c    = 0.0_r_def
 
 contains
 
@@ -58,18 +52,9 @@ contains
              coord_order=0_i_def,                  &
              coord_system=coord_system_alphabetaz, &
              element_order=0_i_def,                &
-             rehabilitate=.true.,                  &
-             vorticity_in_w1=.false. )
+             rehabilitate=.true. )
 
-    call feign_planet_config(                      &
-             gravity=gravity,                      &
-             radius=radius,                        &
-             omega=omega,                          &
-             rd=rd,                                &
-             cp=cp,                                &
-             p_zero=p_zero,                        &
-             scaling_factor=scaling )
-
+    call feign_planet_config( radius=radius, scaling_factor=scaling )
 
   end subroutine setUp
 

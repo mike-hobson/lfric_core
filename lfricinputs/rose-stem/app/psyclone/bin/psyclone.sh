@@ -27,13 +27,13 @@ project_src_dir[0]="${BASE_SRC_DIR}lfric"
 project_src_dir[1]="${BASE_SRC_DIR}lfric/lfricinputs/source/scintelapi/generators"
 
 # Declare project kernel directories
-declare -a kernel_src_dir
-kernel_src_dir[0]="${BASE_SRC_DIR}lfric/gungho/source/kernel"
-kernel_src_dir[1]=
+declare -a kernel_src_flag
+kernel_src_flag[0]="-d ${BASE_SRC_DIR}lfric/gungho/source/kernel -d ${BASE_SRC_DIR}lfric/components/science/source/kernel"
+kernel_src_flag[1]=
 
 # Declare project algorithm directories
 declare -a alg_src_dir
-alg_src_dir[0]="${BASE_SRC_DIR}lfric/gungho/source/algorithm ${BASE_SRC_DIR}lfric/infrastructure/source/field ${BASE_SRC_DIR}lfric/components/lfric-xios/source"
+alg_src_dir[0]="${BASE_SRC_DIR}lfric/gungho/source/algorithm ${BASE_SRC_DIR}lfric/infrastructure/source/field ${BASE_SRC_DIR}lfric/components/science/source/algorithm ${BASE_SRC_DIR}lfric/components/lfric-xios/source"
 alg_src_dir[1]="${BASE_SRC_DIR}lfric/lfricinputs/source/scintelapi/generators/toolset ${BASE_SRC_DIR}lfric/lfricinputs/source/scintelapi/generators/analytic"
 
 # Psyclone input files are labelled ".x90"; for each algorithm file we find
@@ -53,11 +53,11 @@ for i in "${!project[@]}"; do
     algname=`echo $basename | sed -e 's/.x90/_alg.f90/g'`
     psyname=`echo $basename | sed -e 's/.x90/_psy.f90/g'`
 
-    if [ -z "${kernel_src_dir[$i]}" ]
+    if [ -z "${kernel_src_flag[$i]}" ]
     then
       FLAG_KERNEL_DIR=
     else
-      FLAG_KERNEL_DIR="-d ${kernel_src_dir[$i]}"
+      FLAG_KERNEL_DIR="${kernel_src_flag[$i]}"
     fi
     PROJ_DIR="${project_src_dir[$i]}"
 

@@ -42,8 +42,6 @@ module geometric_constants_mod
   use base_mesh_config_mod,               only: f_lat, geometry, &
                                                 geometry_spherical
   use finite_element_config_mod,          only: element_order
-  use transport_config_mod,               only: profile_size, scheme
-  use transport_enumerated_types_mod,     only: scheme_mol_3d
   use planet_config_mod,                  only: scaled_radius
 
   ! Kernels

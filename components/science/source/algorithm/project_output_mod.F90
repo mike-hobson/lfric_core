@@ -59,7 +59,7 @@ contains
 
     qr = quadrature_xyoz_type(element_order+3, quadrature_rule)
 
-    ! determine the input function space
+    ! Determine the input function space
     fs_handle = field%which_function_space()
 
     ! Create the output field

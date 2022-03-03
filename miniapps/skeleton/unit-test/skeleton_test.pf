@@ -7,7 +7,8 @@
 !> An example of an LFRic unit test.
 !> LFRic unit tests use pfUnit, a Fortran unit test framework written by NASA.
 !> This particular example tests the result of a matrix vector calculation
-!> using the code from the gungho matrix_vector_kernel_mod.
+!> using the code from the matrix_vector_kernel_mod in the LFRic science
+!> component.
 !>
 !-------------------------------------------------------------------------------
 module skeleton_test

@@ -39,8 +39,9 @@ module lfric_xios_io_mod
   use mpi_mod,                       only: get_comm_size, &
                                            get_comm_rank, &
                                            all_gather
-  use psykal_lite_mod,               only: invoke_nodal_xyz_coordinates_kernel, &
-                                           invoke_nodal_coordinates_kernel
+  use nodal_xyz_coordinates_kernel_mod, &
+                                     only: nodal_xyz_coordinates_kernel_type
+  use nodal_coordinates_kernel_mod,  only: nodal_coordinates_kernel_type
   use psykal_builtin_light_mod,      only: invoke_pointwise_convert_xyz2llr
   use xios,                          only: xios_duration,      &
                                            xios_fieldgroup,    &
@@ -59,10 +60,10 @@ module lfric_xios_io_mod
   !>
   type, extends(io_context_initialiser_type) :: setup_xios_type
     private
-    type(mesh_type),   pointer :: mesh      => null()
+    type(mesh_type),   pointer :: mesh => null()
     type(mesh_type),   pointer :: twod_mesh => null()
-    class(field_type), pointer :: chi(:)    => null()
-    class(field_type), pointer :: panel_id  => null()
+    class(field_type), pointer :: chi(:)   => null()
+    class(field_type), pointer :: panel_id => null()
     !
     ! An unused allocatable integer that prevents an intenal compiler error
     ! with the GNU Fortran compiler. Adding an allocatable forces the compiler
@@ -84,7 +85,7 @@ contains
   !> Initialises a setup_xios object.
   !>
   !> @param[in] mesh               Primary mesh.
-  !> @param[in] twod_mesh          Primary 2D mesh.
+  !> @param[in] twod_mesh          Primary 2D mesh
   !> @param[in] chi                Co-ordinate fields.
   !> @param[in] panel_id           Field with IDs of mesh panels.
   !> @param[in] populate_filelist  Model procedure to fill file list.
@@ -103,10 +104,10 @@ contains
     class(field_type),      intent(in), target  :: chi(:)
     class(field_type),      intent(in), target  :: panel_id
 
-    this%mesh      => mesh
-    this%twod_mesh => twod_mesh
-    this%chi       => chi
-    this%panel_id  => panel_id
+    this%mesh              => mesh
+    this%twod_mesh         => twod_mesh
+    this%chi               => chi
+    this%panel_id          => panel_id
 
   end subroutine initialise_setup_xios
 
@@ -188,7 +189,7 @@ contains
 
     type(setup_xios_type) :: callback
 
-    integer :: rc
+    integer(kind=i_def) :: rc
 
     call callback%initialise( mesh, twod_mesh, chi, panel_id )
 
@@ -218,21 +219,20 @@ contains
   !!           of XIOS dimensionality (domains, axes, etc) and initialised the
   !!           corresponding XIOS objects.
   !>
-  !> @param[in]  mesh       Mesh
-  !> @param[in]  twod_mesh  2D Mesh
-  !> @param[in]  chi        Coordinate field
-  !> @param[in]  panel_id   Field with IDs of mesh panels
+  !> @param[in]  mesh          Mesh
+  !> @param[in]  twod_mesh     2D Mesh
+  !> @param[in]  chi           Coordinate field
+  !> @param[in]  panel_id      Field with IDs of mesh panels
   !>
   subroutine init_xios_dimensions(mesh, twod_mesh, chi, panel_id)
 
     implicit none
 
     ! Arguments
-    type(mesh_type), intent(in), pointer :: mesh
-    type(mesh_type), intent(in), pointer :: twod_mesh
-
-    type(field_type),    intent(in) :: chi(:)
-    type(field_type),    intent(in) :: panel_id
+    type(mesh_type),     intent(in), pointer :: mesh
+    type(mesh_type),     intent(in), pointer :: twod_mesh
+    type(field_type),    intent(in)          :: chi(:)
+    type(field_type),    intent(in)          :: panel_id
 
     ! Local variables
     integer(kind=i_def) :: i
@@ -332,7 +332,7 @@ contains
         call sample_chi(i)%initialise( vector_space = output_field_fs )
       end do
       ! Convert to (X,Y,Z) coordinates
-      call invoke_nodal_xyz_coordinates_kernel(sample_chi, chi, panel_id)
+      call invoke(nodal_xyz_coordinates_kernel_type(sample_chi, chi, panel_id))
     else
       ! For planar geometries just re-use existing chi which are already (X,Y,Z)
       do i = 1,3
@@ -471,7 +471,7 @@ contains
   !> @details Samples the chi field at nodal points, calculates cartesian coordinates.
   !>          For spherical geometry, converts to lat-lon in degrees for specified layer
   !>
-  !> @param[in]     mesh                  The partitioned mesh
+  !> @param[in]     mesh            The id of the partitioned mesh
   !> @param[in]     nodal_coords          Input field
   !> @param[in]     chi                   Input coordinate field
   !> @param[in]     nlayers               The number of layers data is output on
@@ -666,9 +666,9 @@ contains
     implicit none
 
     ! Arguments
-    integer(kind=i_def),           intent(in) :: fs_id
+    integer(kind=i_native),        intent(in) :: fs_id
     character(len=*),              intent(in) :: domain_name
-    type(mesh_type),               intent(in), pointer :: mesh
+    type(mesh_type), pointer,      intent(in) :: mesh
     type(field_type),              intent(in) :: chi(3)
     logical(kind=l_def),           intent(in) :: use_index
     integer(kind=i_def), optional, intent(in) :: k_order
@@ -683,7 +683,7 @@ contains
     real(dp_xios), allocatable              :: checkpoint_lat(:)
     real(dp_xios), allocatable              :: bnd_checkpoint_lon(:,:)
     real(dp_xios), allocatable              :: bnd_checkpoint_lat(:,:)
-    integer(kind=i_halo_index), allocatable :: domain_index(:)
+    integer(kind=i_halo_index), allocatable :: cp_domain_index(:)
 
 
     ! Variables needed to compute output domain coordinates in lat-long
@@ -722,7 +722,7 @@ contains
 
     ! Create appropriate function space in order to be able to get the
     ! physical coordinates
-    output_field_fs => function_space_collection%get_fs( mesh,  &
+    output_field_fs => function_space_collection%get_fs( mesh, &
                                                          k_ord, &
                                                          fs_id)
 
@@ -734,7 +734,7 @@ contains
     end do
 
     ! Convert field to physical nodal output & sample chi on nodal points
-    call invoke_nodal_coordinates_kernel(coord_output, chi)
+    call invoke(nodal_coordinates_kernel_type(coord_output, chi))
 
     ! If spherical geometry convert the coordinate field to (longitude, latitude, radius)
     if ( geometry == geometry_spherical ) then
@@ -794,24 +794,24 @@ contains
     if (use_index) then
 
       ! Allocate domain_index - it is of size ndof_glob
-      allocate(domain_index(output_field_fs%get_ndof_glob()))
+      allocate(cp_domain_index(output_field_fs%get_ndof_glob()))
 
       ! Populate domain_index for this rank
-      call output_field_fs%get_global_dof_id(domain_index)
+      call output_field_fs%get_global_dof_id(cp_domain_index)
 
       ! temporary fix for higher-order domain decomposition
       if (k_ord > 0) then
-        domain_index = domain_index/2
+        cp_domain_index = cp_domain_index/2
       end if
 
       ! Pass local portion of domain_index (up to undf)
-      call xios_set_domain_attr(domain_name, i_index=int(domain_index(1:local_undf(1))))
+      call xios_set_domain_attr(domain_name, i_index=int(cp_domain_index(1:local_undf(1))))
 
     end if
 
     if ( allocated(checkpoint_lon) )     deallocate(checkpoint_lon)
     if ( allocated(checkpoint_lat) )     deallocate(checkpoint_lat)
-    if ( allocated(domain_index) )    deallocate(domain_index)
+    if ( allocated(cp_domain_index) )    deallocate(cp_domain_index)
     if ( allocated(bnd_checkpoint_lon) ) deallocate(bnd_checkpoint_lon)
     if ( allocated(bnd_checkpoint_lat) ) deallocate(bnd_checkpoint_lat)
     if ( allocated(local_undf) )      deallocate(local_undf)
@@ -827,7 +827,7 @@ contains
   !>          domain object
   !>
   !> @param[in]  domain_id   The name of the XIOS domain
-  !> @param[in]  mesh        Partitioned mesh
+  !> @param[in]  mesh        The partitioned mesh
   !> @param[in]  fs_id       The id of the function space corresponding to the domain
   !> @param[in]  chi         Input coordinate field
   !> @param[in]  lon_bounds  Array of longitude coords making up the domain bounds
@@ -837,10 +837,10 @@ contains
 
     implicit none
 
-    character(len=*),       intent(in)          :: domain_id
-    type(mesh_type),        intent(in), pointer :: mesh
-    integer(kind=i_native), intent(in)          :: fs_id
-    type(field_type),       intent(in)          :: chi(:)
+    character(len=*),         intent(in) :: domain_id
+    type(mesh_type), pointer, intent(in) :: mesh
+    integer(kind=i_native),   intent(in) :: fs_id
+    type(field_type),         intent(in) :: chi(:)
 
     type(function_space_type), pointer :: domain_fs   => null()
 
@@ -890,7 +890,7 @@ contains
     !=========================================================================
     ! These calls need to be replaced with a working infrastructure alternative:
     ! Convert field to physical nodal output & sample chi on nodal points
-    call invoke_nodal_coordinates_kernel(coord_output, chi)
+    call invoke(nodal_coordinates_kernel_type(coord_output, chi))
 
     ! If spherical geometry convert the coordinate field to (longitude, latitude, radius)
     if ( geometry == geometry_spherical ) then
@@ -971,7 +971,7 @@ contains
   !>          and local mesh and passes information to XIOS axis object
   !>
   !> @param[in]  axis_id  The name of the XIOS axis
-  !> @param[in]  mesh     Partitioned mesh
+  !> @param[in]  mesh     The partitioned mesh
   !> @param[in]  fs_id    The id of the function space corresponding to the
   !>                      domain
   !>
@@ -979,9 +979,9 @@ contains
 
     implicit none
 
-    character(len=*),       intent(in)          :: axis_id
-    type(mesh_type),        intent(in), pointer :: mesh
-    integer(kind=i_native), intent(in)          :: fs_id
+    character(len=*),         intent(in) :: axis_id
+    type(mesh_type), pointer, intent(in) :: mesh
+    integer(kind=i_native),   intent(in) :: fs_id
 
     type(function_space_type), pointer :: domain_fs => null()
     real(dp_xios), allocatable         :: dp_levels(:)

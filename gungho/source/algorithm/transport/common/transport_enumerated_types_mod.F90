@@ -36,6 +36,7 @@ module transport_enumerated_types_mod
 
   integer(kind=i_def), parameter :: monotone_none     = 1_i_def
   integer(kind=i_def), parameter :: monotone_clipping = 2_i_def
+  integer(kind=i_def), parameter :: monotone_koren    = 3_i_def
 
 contains
 

@@ -78,6 +78,8 @@ contains
 !> @param[in]     logspace       If true (=1), then perform interpolation in log space;
 !!                               this should be a logical but this is not currently supported in
 !!                               PSyclone, see Issue #1248
+!!                               TODO #3010: the use of logical types is now supported
+!!                               so this ticket should remove these integers
 !> @param[in]     ndf_w2         Number of degrees of freedom per cell
 !> @param[in]     undf_w2        Number of unique degrees of freedom for the reconstruction &
 !!                               wind fields

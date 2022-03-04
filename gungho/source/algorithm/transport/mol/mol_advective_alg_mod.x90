@@ -100,10 +100,10 @@ contains
       do stage = 1, nstage
         ! Build rhs depending upon type of field being advected
         ! Compute: - u.grad(f)
-        call advective_increment_alg(rk_rhs(stage), field_np1,         &
-                                     advecting_wind, dt_substep,       &
-                                     direction, logspace=logspace,     &
-                                     monotonicity=monotonicity)
+        call advective_increment_alg(rk_rhs(stage), field_np1,       &
+                                     advecting_wind, dt_substep,     &
+                                     direction, monotonicity,        &
+                                     logspace=logspace               )
 
         call invoke( setval_c(rhs, 0.0_r_def) )
         do s = 1, stage

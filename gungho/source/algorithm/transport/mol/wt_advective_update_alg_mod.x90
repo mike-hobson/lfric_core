@@ -64,6 +64,9 @@ module wt_advective_update_alg_mod
   use transport_enumerated_types_mod,     only: direction_v,    &
                                                 direction_h,    &
                                                 direction_3d
+  use polyh_wtheta_koren_kernel_mod,      only: polyh_wtheta_koren_kernel_type
+  use polyv_wtheta_koren_kernel_mod,      only: polyv_wtheta_koren_kernel_type
+
   implicit none
 
   private
@@ -81,6 +84,7 @@ module wt_advective_update_alg_mod
   public  :: wt_advective_update_alg_init
   public  :: wt_advective_update_alg_final
   public  :: wt_advective_update_alg
+  public  :: wt_advective_update_koren_alg
   public  :: get_adv_stencil_extent
   public  :: get_adv_2d_stencil_size
   public  :: get_adv_ndata_h
@@ -88,6 +92,7 @@ module wt_advective_update_alg_mod
   public  :: get_adv_coeffs
   public  :: get_vert_adv_coeffs
   public  :: horizontal_wt_reconstruct_alg
+  public  :: horizontal_wt_reconstruct_koren_alg
 
 contains
 
@@ -382,7 +387,6 @@ contains
                                               adv_coeffs,         &
                                               ndata_h,            &
                                               adv_2d_stencil_size ) )
-
       end if
 
     case default
@@ -398,6 +402,49 @@ contains
   end subroutine horizontal_wt_reconstruct_alg
 
   !=============================================================================
+  !> @brief Reconstruction of a Wtheta field with the Koren scheme.
+  !> @param[in,out] h_reconstruction  Horiz. reconstruction in W1 of a Wtheta field
+  !> @param[in]     wind              Advecting wind field
+  !> @param[in]     field             Wtheta field to advect
+  subroutine horizontal_wt_reconstruct_koren_alg(h_reconstruction, wind, field)
+
+    implicit none
+
+    type(field_type),  intent(in)    :: field, wind
+    type(field_type),  intent(inout) :: h_reconstruction
+
+    type(field_type), pointer    :: w1_rmultiplicity => null()
+    type(mesh_type), pointer     :: mesh => null()
+    integer(kind=i_def)          :: mesh_index
+    integer(kind=i_def), pointer :: adv_stencil_extent => null()
+    integer(kind=i_def), pointer :: ndata_h => null()
+
+    mesh => wind%get_mesh()
+    mesh_index = find_mesh_index(mesh%get_id())
+    adv_stencil_extent => adv_stencil_extent_list(mesh_index)
+    ndata_h => ndata_h_list(mesh_index)
+    w1_rmultiplicity => get_rmultiplicity(W1, mesh%get_id())
+
+    ! Set default value (for h_reconstruction)
+    ! to be average of the field at W1 points and then update where the wind
+    ! is non-zero using an upwind reconstruction
+    call invoke( setval_c(h_reconstruction, 0.0_r_def),     &
+                 sample_field_kernel_type(h_reconstruction, &
+                                          w1_rmultiplicity, &
+                                          field) )
+
+    call invoke( polyh_wtheta_koren_kernel_type(                    &
+                                                h_reconstruction,   &
+                                                wind,               &
+                                                field,              &
+                                                adv_stencil_extent, &
+                                                ndata_h           ) )
+
+    nullify( w1_rmultiplicity, mesh, ndata_h, adv_stencil_extent )
+
+  end subroutine horizontal_wt_reconstruct_koren_alg
+
+  !=============================================================================
   !> @brief Compute advective update of a Wtheta field.
   !> @details Compute advective update wind.grad(adv_field) using desired spatial
   !!          reconstruction. Options for this are either FE or FV reconstructions.
@@ -406,9 +453,9 @@ contains
   !> @param[in]     adv_field    Field to advect
   !> @param[in]     wind         Advecting wind field
   !> @param[in]     dt           Timestep
-  !> @param[in]     logspace     Carry out interpolation in log space
   !> @param[in]     monotonicity Choice of monontonic limiter
-  subroutine wt_advective_update_alg(rhs, adv_field, wind, dt, direction, logspace, monotonicity)
+  !> @param[in]     logspace     Carry out interpolation in log space
+  subroutine wt_advective_update_alg(rhs, adv_field, wind, dt, direction, monotonicity, logspace)
 
     use consistent_wind_kernel_mod,     only: consistent_wind_kernel_type
     use poly1d_vert_adv_kernel_mod,     only: poly1d_vert_adv_kernel_type
@@ -417,8 +464,7 @@ contains
     use monotonic_update_kernel_mod,    only: monotonic_update_kernel_type
     use reference_element_mod,          only: reference_element_type
     use mesh_mod,                       only: mesh_type
-    use transport_enumerated_types_mod, only: monotone_none, &
-                                              monotone_clipping
+    use transport_enumerated_types_mod, only: monotone_clipping
 
     implicit none
 
@@ -426,8 +472,9 @@ contains
     type(field_type),              intent(inout) :: rhs
     real(kind=r_def),              intent(in)    :: dt
     integer(kind=i_def),           intent(in)    :: direction
+    integer(kind=i_def),           intent(in)    :: monotonicity
     logical(kind=l_def), optional, intent(in)    :: logspace
-    integer(kind=i_def), optional, intent(in)    :: monotonicity
+
 
     type(field_type)                       :: u_grad_f
     type(field_type)                       :: h_reconstruction
@@ -446,7 +493,6 @@ contains
     integer(kind=i_def)                    :: mono_stencil, mesh_index
     integer(kind=i_def)                    :: logspace_loc
     integer(kind=i_def), pointer           :: ndata_v => null()
-    integer(kind=i_def)                    :: monotonicity_option
     logical(kind=l_def)                    :: horizontal_faces
     logical(kind=l_def)                    :: vertical_faces
     integer(kind=i_def)                    :: wt_stencil_size
@@ -455,10 +501,6 @@ contains
     logspace_loc = 0_i_def
     if ( present(logspace) ) then
       if ( logspace ) logspace_loc = 1_i_def
-    end if
-    monotonicity_option = monotone_none
-    if ( present(monotonicity) ) then
-      monotonicity_option = monotonicity
     end if
 
     mesh => wind%get_mesh()
@@ -540,7 +582,7 @@ contains
 
     mt_lumped_inv => get_inverse_lumped_mass_matrix(Wtheta, mesh%get_id())
     ! Apply monotonicity (as if this is a full timestep)
-    if ( monotonicity_option == monotone_clipping ) then
+    if ( monotonicity == monotone_clipping ) then
       if ( operators == operators_fem ) then
         mono_stencil = 1_i_def
       else
@@ -559,6 +601,141 @@ contains
              reference_element, mesh, ndata_v )
 
   end subroutine wt_advective_update_alg
+   !=============================================================================
+  !> @brief Compute advective update of a Wtheta field using the Koren scheme.
+  !> @details Compute advective update wind.grad(adv_field) using desired spatial
+  !!          reconstruction. Options for this are either FE or FV reconstructions.
+  !!          A monotonicity filter is also optionally applied
+  !> @param[in,out] rhs          Advective increment
+  !> @param[in]     adv_field    Field to advect
+  !> @param[in]     wind         Advecting wind field
+  !> @param[in]     logspace     Carry out interpolation in log space
+  subroutine wt_advective_update_koren_alg(rhs, adv_field, wind, direction, logspace)
+
+    use consistent_wind_kernel_mod,     only: consistent_wind_kernel_type
+    use poly1d_vert_adv_kernel_mod,     only: poly1d_vert_adv_kernel_type
+    use rtheta_kernel_mod,              only: rtheta_kernel_type
+    use rtheta_bd_kernel_mod,           only: rtheta_bd_kernel_type
+    use monotonic_update_kernel_mod,    only: monotonic_update_kernel_type
+    use reference_element_mod,          only: reference_element_type
+    use mesh_mod,                       only: mesh_type
+
+    implicit none
+
+    type(field_type),              intent(in)    :: adv_field, wind
+    type(field_type),              intent(inout) :: rhs
+    integer(kind=i_def),           intent(in)    :: direction
+    logical(kind=l_def), optional, intent(in)    :: logspace
+
+    type(field_type)                       :: u_grad_f
+    type(field_type)                       :: h_reconstruction
+    type(field_type), pointer              :: chi(:) => null()
+    type(field_type), pointer              :: mt_lumped_inv => null()
+    type(field_type)                       :: consistent_wind
+    type(field_type)                       :: u_grad_z
+    type(field_type), pointer              :: height => null()
+    type(function_space_type), pointer     :: w1_fs => null()
+    class(reference_element_type), pointer :: reference_element => null()
+    type(mesh_type), pointer               :: mesh => null()
+    type(quadrature_xyoz_type)             :: qr
+    type(quadrature_face_type)             :: qrf
+    type(quadrature_rule_gaussian_type)    :: quadrature_rule
+    integer(kind=i_def)                    :: mesh_index
+    integer(kind=i_def)                    :: logspace_loc
+    integer(kind=i_def), pointer           :: ndata_v => null()
+    logical(kind=l_def)                    :: horizontal_faces
+    logical(kind=l_def)                    :: vertical_faces
+    integer(kind=i_def)                    :: wt_stencil_size
+    integer(kind=i_def)                    :: w2_stencil_size
+
+    logspace_loc = 0_i_def
+    if ( present(logspace) ) then
+      if ( logspace ) logspace_loc = 1_i_def
+    end if
+
+    mesh => wind%get_mesh()
+    reference_element => mesh%get_reference_element()
+    mesh_index = find_mesh_index(mesh%get_id())
+
+    call u_grad_f%initialise( adv_field%get_function_space() )
+
+    select case(operators)
+
+    case default
+      call log_event( "Gungho: Unrecognised option for wtheta reconstruction.", LOG_LEVEL_ERROR )
+
+    case(operators_fv)
+      ! Consistent winds will be used for vertical transport
+      ! For now set these to be the normal winds and adjust later if needed
+      call consistent_wind%initialise ( wind%get_function_space() )
+      call invoke( setval_X(consistent_wind, wind) )
+
+      if ( direction == direction_3d .or. direction == direction_h ) then
+        ! Horizontal update with the Koren scheme
+        w1_fs => function_space_collection%get_fs( mesh, element_order, W1 )
+        call h_reconstruction%initialise( w1_fs )
+        call horizontal_wt_reconstruct_koren_alg(h_reconstruction, wind, adv_field)
+        ! Compute horizontal advective update
+        call invoke( poly_advective_kernel_type(u_grad_f, wind, h_reconstruction) )
+
+        ! Adjust consistent wind field
+        if ( consistent_metric ) then
+          height => get_height(Wtheta, mesh%get_id())
+          chi => get_coordinates(mesh%get_id())
+          call u_grad_z%initialise( u_grad_f%get_function_space() )
+          call horizontal_wt_reconstruct_koren_alg(h_reconstruction, wind, height)
+          call invoke( poly_advective_kernel_type(u_grad_z, wind,         &
+                                                  h_reconstruction),      &
+                       consistent_wind_kernel_type(consistent_wind, wind, &
+                                                   u_grad_z, chi(3)) )
+        end if
+      else
+        call invoke( setval_c( u_grad_f, 0.0_r_def ) )
+      end if
+
+      if ( direction == direction_3d .or. direction == direction_v ) then
+        ! vertical update with Koren scheme
+        ndata_v => ndata_v_list(mesh_index)
+        call invoke( polyv_wtheta_koren_kernel_type( u_grad_f,           &
+                                                     consistent_wind,    &
+                                                     adv_field,          &
+                                                     ndata_v,            &
+                                                     logspace_loc ) )
+      end if
+
+
+    case(operators_fem)
+      ! Perform 3D update using FEM operators
+      if ( direction /= direction_3d ) &
+        call log_event( "Gungho: FEM Wt advection requires unsplit method", LOG_LEVEL_ERROR )
+
+      ! Use project u.grad(adv_field) into the adv_field function space
+      qr = quadrature_xyoz_type(nqp_exact, quadrature_rule)
+
+      ! Quadrature rule on lateral faces only
+      horizontal_faces = .true.
+      vertical_faces = .false.
+      qrf = quadrature_face_type(nqp_exact, horizontal_faces, vertical_faces, &
+                                 reference_element, quadrature_rule)
+      wt_stencil_size = 1_i_def
+      w2_stencil_size = 1_i_def
+      call invoke( setval_c(u_grad_f, 0.0_r_def),                     &
+                   rtheta_kernel_type(u_grad_f, adv_field, wind, qr), &
+                   rtheta_bd_kernel_type(u_grad_f, adv_field,         &
+                                         wt_stencil_size, wind,       &
+                                         w2_stencil_size, qrf) )
+
+    end select
+
+    ! rhs = u_grad_f * mt_lumped_inv
+    mt_lumped_inv => get_inverse_lumped_mass_matrix(Wtheta, mesh%get_id())
+    ! Scale by lumped inverse mass matrix
+     call invoke( X_times_Y(rhs, u_grad_f, mt_lumped_inv) )
+
+    nullify( height, chi, mt_lumped_inv,      &
+             reference_element, mesh, ndata_v )
+
+  end subroutine wt_advective_update_koren_alg
 
   !> @brief Returns a pointer to the advective stencil extent
   !> @param[in] mesh_id the ID of the mesh to get the object for

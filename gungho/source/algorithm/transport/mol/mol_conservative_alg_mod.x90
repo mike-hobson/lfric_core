@@ -74,6 +74,7 @@ module mol_conservative_alg_mod
     real(r_def)                   :: min_value
     type(mesh_type),      pointer :: mesh => null()
     type(transport_runtime_type), pointer :: transport_runtime => null()
+    integer(i_def)                :: monotonicity
 
     if ( subroutine_timers ) call timer('mol_conservative_alg')
 
@@ -86,6 +87,7 @@ module mol_conservative_alg_mod
     number_substeps = transport_runtime%get_number_substeps(mesh_id,direction,transport_metadata%get_splitting())
     dt_substep = transport_runtime%get_dt_substep(mesh_id,direction,transport_metadata%get_splitting())
     logspace = transport_metadata%get_log_space()
+    monotonicity = transport_metadata%get_monotone()
     enforce_min_value = transport_metadata%get_enforce_min_value()
     include_div_term_with_density = transport_metadata%get_divergence_factor()
     advecting_wind => transport_runtime%get_advecting_wind(mesh_id)
@@ -132,8 +134,8 @@ module mol_conservative_alg_mod
 
         ! Compute the flux using desired spatial reconstruction
         call invoke( setval_c( flux_temp, 0.0_r_def ) )
-        call flux_alg(flux_temp,field_np1, advecting_wind, &
-                      direction, logspace=logspace)
+        call flux_alg( flux_temp,field_np1, advecting_wind,       &
+                       direction, monotonicity, logspace=logspace )
         ! Compute: div(F)
         call invoke( dg_matrix_vector_kernel_type(rk_rhs(stage), flux_temp, div), &
                      inc_X_plus_bY(flux_step, ak_adv(nstage, stage), flux_temp) )

@@ -20,25 +20,28 @@ contains
   !!          compute the advective increment, u.grad(f), of field f
   !!          and wind u.
   !> @param[in,out] advective_increment Increment wind.grad(field)
-  !> @param[in]     field               Field to compute the increment from
+  !> @param[in]     field               Field to compute the adevctive increment
   !> @param[in]     wind                Advecting wind
   !> @param[in]     dt                  Advection time step
   !> @param[in]     direction           Direction to perform the advective update
-  !> @param[in]     logspace            Flag to use logspace for
+  !> @param[in]     logspace            Flag to use logspace for edge reconstruction
   !> @param[in]     monotonicity        Flag to apply monotonicity
-  subroutine advective_increment_alg(advective_increment, field, wind, &
-                                     dt, direction, logspace, monotonicity)
+  subroutine advective_increment_alg(advective_increment, field, wind,    &
+                                     dt, direction, monotonicity, logspace)
 
     use constants_mod,                  only: r_def, i_def, l_def
     use field_mod,                      only: field_type
     use log_mod,                        only: log_event, &
                                               LOG_LEVEL_ERROR
-    use reconstruct_w3_field_alg_mod,   only: reconstruct_w3_field_alg
+    use reconstruct_w3_field_alg_mod,   only: reconstruct_w3_field_alg, &
+                                              reconstruct_koren_w3_field_alg
     use w3_advective_update_kernel_mod, only: w3_advective_update_kernel_type
-    use wt_advective_update_alg_mod,    only: wt_advective_update_alg
+    use wt_advective_update_alg_mod,    only: wt_advective_update_alg, &
+                                              wt_advective_update_koren_alg
     use fs_continuity_mod,              only: W3, Wtheta
     use operator_mod,                   only: operator_type
     use fem_constants_mod,              only: get_inverse_w3_mass_matrix
+    use transport_enumerated_types_mod, only: monotone_koren
 
     implicit none
 
@@ -56,11 +59,19 @@ contains
 
       case ( W3 )
         call field_new%initialise( wind%get_function_space() )
-        call reconstruct_w3_field_alg(field_new, field, wind, direction, logspace)
+        if ( monotonicity == monotone_koren ) then
+          call reconstruct_koren_w3_field_alg(field_new, field, wind, direction, logspace)
+        else
+          call reconstruct_w3_field_alg(field_new, field, wind, direction, logspace)
+        end if
         m3_inv => get_inverse_w3_mass_matrix( field%get_mesh_id() )
         call invoke( w3_advective_update_kernel_type( advective_increment, field_new, wind, m3_inv ) )
       case ( Wtheta )
-        call wt_advective_update_alg(advective_increment, field, wind, dt, direction, logspace, monotonicity)
+        if ( monotonicity == monotone_koren ) then
+          call wt_advective_update_koren_alg(advective_increment, field, wind, direction, logspace)
+        else
+          call wt_advective_update_alg(advective_increment, field, wind, dt, direction, monotonicity, logspace)
+        end if
       case default
         call log_event( "Advective increment only valid for W3 & Wtheta spaces", LOG_LEVEL_ERROR )
 

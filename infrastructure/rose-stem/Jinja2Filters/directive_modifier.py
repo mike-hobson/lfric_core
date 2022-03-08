@@ -17,11 +17,11 @@ import math
 import re
 
 
-def directive_modifier(directive, cores, walltime, xios_nodes=0):
+def directive_modifier(directive, cores, walltime, xios_nodes=0, memory='30GB'):
     '''
     Substitutes values into batch manager directives.
     '''
-    def choose_replacement(name, arguments, xios_nodes):
+    def choose_replacement(name, arguments, xios_nodes, memory):
         '''
         Converts a substitution name into a value.
         '''
@@ -33,6 +33,8 @@ def directive_modifier(directive, cores, walltime, xios_nodes=0):
             middlebit = str(cores)
         elif name == 'time_hhmmss':
             middlebit = str(walltime)
+        elif name == 'memory':
+            middlebit = str(memory)
         else:
             raise Exception('Unrecognised function name "{}"'.format(name))
         return middlebit
@@ -52,7 +54,7 @@ def directive_modifier(directive, cores, walltime, xios_nodes=0):
             processed = processed.replace(match_string,
                                           choose_replacement(name,
                                                              arguments,
-                                                             xios_nodes))
+                                                             xios_nodes, memory))
         plist.append(processed)
 
     return plist

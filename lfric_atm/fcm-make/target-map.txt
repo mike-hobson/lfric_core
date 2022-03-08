@@ -8,3 +8,4 @@ meto-xcs:     ifort:    meto-xc40-intel
 meto-xcs:     crayftn:  meto-xc40-cce
 monsoon-xc40: ifort:    meto-xc40-intel
 monsoon-xc40: crayftn:  meto-xc40-cce
+nci-gadi:     ifort:    nci-x86-ifort

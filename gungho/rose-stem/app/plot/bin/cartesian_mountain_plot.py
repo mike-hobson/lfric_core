@@ -39,10 +39,13 @@ import sys
 from read_data import read_nodal_data
 
 # Use viridis colormap
-from python_maps import viridis_data
-from matplotlib.colors import ListedColormap
-viridis = ListedColormap(viridis_data, name='viridis')
-plt.register_cmap(name='viridis', cmap=viridis)
+try:
+    viridis = plt.get_cmap("viridis")
+except ValueError:
+    from matplotlib.colors import ListedColormap
+    from python_maps import viridis_data
+    viridis = ListedColormap(viridis_data, name='viridis')
+    plt.register_cmap(name='viridis', cmap=viridis)
 
 levels = None
 levels0 = None

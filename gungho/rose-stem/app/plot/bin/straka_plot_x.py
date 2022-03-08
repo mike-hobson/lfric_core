@@ -44,7 +44,7 @@ except ValueError:
     from matplotlib.colors import ListedColormap
     from python_maps import viridis_data
     viridis = ListedColormap(viridis_data, name='viridis')
-    plt.register_cmap(name='magma', cmap=magma)
+    plt.register_cmap(name='viridis', cmap=viridis)
 
 levels = None
 data = None

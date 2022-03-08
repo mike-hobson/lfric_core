@@ -116,10 +116,16 @@
 [runtime]
     [[root]]
         env-script = "eval $(rose task-env)"
+{%- if TARGET_INIT_SCRIPT is defined %}
+         init-script = """
+                      {{TARGET_INIT_SCRIPT}}
+                      """
+{%- else %}
         init-script = """
                       export CYLC_VERSION={{CYLC_VERSION}}
                       export ROSE_VERSION={{ROSE_VERSION}}
                       """
+{%- endif %}
         script = "rose task-run"
 {%- if TARGET_REQUIRES_POLLING is defined %}
         [[[job]]]
@@ -164,13 +170,6 @@
         inherit = METO-XC
 
     [[NCI-GADI]]
-        init-script = """
-                      module use /g/data/hr22/modulefiles
-                      module load rose
-                      export http_proxy=http://130.56.246.247:80
-                      export CYLC_VERSION={{CYLC_VERSION}}
-                      export ROSE_VERSION={{ROSE_VERSION}}
-                      """
         [[[environment]]]
             HYPERTHREADS    = 1
             CORES_PER_NODE  = 48

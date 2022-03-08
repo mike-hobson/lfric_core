@@ -99,10 +99,16 @@
 [runtime]
     [[root]]
         env-script = "eval $(rose task-env)"
+{%- if TARGET_INIT_SCRIPT is defined %}
+         init-script = """
+                      {{TARGET_INIT_SCRIPT}}
+                      """
+{%- else %}
         init-script = """
                       export CYLC_VERSION={{CYLC_VERSION}}
                       export ROSE_VERSION={{ROSE_VERSION}}
                       """
+{%- endif %}
         script = "rose task-run"
 {%- if TARGET_REQUIRES_POLLING is defined %}
         [[[job]]]
@@ -151,6 +157,15 @@
             HYPERTHREADS    = 1
             CORES_PER_NODE  = 36
             NUMA_REGIONS_PER_NODE = 2
+
+    [[NCI-GADI]]
+        [[[environment]]]
+            HYPERTHREADS    = 1
+            CORES_PER_NODE  = 48
+            NUMA_REGIONS_PER_NODE = 2
+
+    [[NCI-OOD]]
+        inherit = NCI-GADI
 
     [[ LOCAL ]]
         [[[remote]]]
@@ -682,6 +697,8 @@
 {%-                   set xios_server_opt = '' %}
 {%-                   set mpi_parts_xios  = default_mpi_parts_xios %}
 
+{%-                   set memory = "30GB" %}
+
 {%-                   set run_batcher = TARGET_RUN_BATCHER_DIRECTIVES %}
 
 {%-                   if configuration_label in scheduledTasksDict.keys() %}
@@ -702,10 +719,16 @@
 {%-                       set threads        = directiveDict['threads']        if 'threads'        in directiveDict.keys() else threads        %}
 {%-                       set use_xios       = directiveDict['use_xios']       if 'use_xios'       in directiveDict.keys() else use_xios       %}
 {%-                       set xios_nodes     = directiveDict['xios_nodes']     if 'xios_nodes'     in directiveDict.keys() else xios_nodes     %}
+{%-                       set memory         = directiveDict['memory']         if 'memory'         in directiveDict.keys() else memory         %}
 
-{%-                       if use_xios == "True" and xios_nodes > 0 and mpi_parts_xios > 0 %}
-{%-                         set run_batcher = TARGET_PARAM_RUN_BATCHER_DIRECTIVES| directive_modifier(mpi_parts*threads, wallclock, xios_nodes) %}
+{%-                       if use_xios == "True" and xios_nodes > 0 and mpi_parts_xios > 0 and 'memory' in directiveDict.keys() %}
+{%-                         set run_batcher = TARGET_PARAM_RUN_BATCHER_DIRECTIVES| directive_modifier(mpi_parts*threads, wallclock, xios_nodes=xios_nodes, memory=memory) %}
 {%-                         set xios_server_opt = '--opt-conf-key=xios_server' %}
+{%-                       elif use_xios == "True" and xios_nodes > 0 and mpi_parts_xios > 0 %}
+{%-                         set run_batcher = TARGET_PARAM_RUN_BATCHER_DIRECTIVES| directive_modifier(mpi_parts*threads, wallclock, xios_nodes=xios_nodes) %}
+{%-                         set xios_server_opt = '--opt-conf-key=xios_server' %}
+{%-                       elif 'memory' in directiveDict.keys() %}
+{%-                         set run_batcher = TARGET_PARAM_RUN_BATCHER_DIRECTIVES| directive_modifier(mpi_parts*threads, wallclock, memory=memory) %}
 {%                        else %}
 {%-                         set run_batcher = TARGET_PARAM_RUN_BATCHER_DIRECTIVES| directive_modifier(mpi_parts*threads, wallclock) %}
 {%-                       endif %}

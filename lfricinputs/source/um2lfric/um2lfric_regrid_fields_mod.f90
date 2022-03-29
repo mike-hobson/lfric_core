@@ -57,6 +57,7 @@ USE lfricinp_check_shumlib_status_mod, ONLY: shumlib
 USE lfricinp_regrid_weights_type_mod, ONLY: lfricinp_regrid_weights_type
 USE lfricinp_stash_to_lfric_map_mod, ONLY: get_field_name
 USE lfricinp_lfric_driver_mod, ONLY: lfric_fields
+USE lfricinp_regrid_options_mod, ONLY: regrid_type
 
 ! um2lfric modules
 USE um2lfric_namelist_mod,       ONLY: um2lfric_config                           
@@ -197,12 +198,15 @@ DO i_field = 1, um2lfric_config%num_fields
       CALL weights % regrid_src_2d_dst_1d (src=um_input_fields(level)%rdata,   &
                                            dst=regridded_field(:, level))
       !-------------------------------------------------------------------------
-      ! Perform post regridding masked field adjustments
+      ! Perform post regridding masked field adjustments, if regridding was not
+      ! a simple copy of data (as is case for LAMs)
       !-------------------------------------------------------------------------
-      CALL um2lfric_apply_masked_field_adjustments(                            &
+      IF (TRIM(regrid_type) /= 'lam_to_lam') THEN
+        CALL um2lfric_apply_masked_field_adjustments(                          &
                                             stashcode,                         &
                                             src=um_input_fields(level)%rdata,  &
                                             dst=regridded_field(:, level))
+      END IF
   
     END DO ! loop over levels
 

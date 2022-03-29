@@ -14,7 +14,7 @@ USE lfricinp_um_parameters_mod,     ONLY: fnamelen, um_imdi
 IMPLICIT NONE
 PRIVATE
 PUBLIC :: lfricinp_init_regrid_options, interp_method, winds_on_w3, &
-     specify_nearest_neighbour, nn_fields
+          regrid_type, specify_nearest_neighbour, nn_fields
 
 CHARACTER(LEN=fnamelen) :: interp_method = 'bilinear'
 CHARACTER(LEN=fnamelen) :: regrid_type = 'global_to_global'

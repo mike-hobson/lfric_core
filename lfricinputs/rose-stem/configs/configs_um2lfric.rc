@@ -63,4 +63,19 @@
                                "lfric_mesh"         : {"file":"$BIG_DATA_DIR/meshes/HEAD/aquaplanet_lam.nc", "name":"dynamics"},
                              },
 
+
+"falklands_lam"            : {
+                               "app"                : "um2lfric",
+                               "opt_config"         : "falklands_lam",
+                               "source_grid_res"    : "",
+                               "source_grid_levs"   : "70",
+                               "source_grid_type"   : "regional",
+                               "target_grid_res"    : "",
+                               "target_grid_levs"   : "70",
+                               "target_grid_type"   : "regional",
+                               "source_dump"        : "$UMDIR/standard_jobs/lfricinputs/inputs/flk_T+000_new",
+                               "lfric_mesh"         : {"file":"$BIG_DATA_DIR/meshes/HEAD/falklands.nc", "name":"gungho"},
+                             },
+
+
 }) %}

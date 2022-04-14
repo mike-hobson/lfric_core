@@ -615,7 +615,6 @@ contains
 
       ! Get unique edge dofs for this cell
       map_edge => w2h_fs%get_cell_dofmap( cell )
-      print*, map_edge
 
       ! Loop over edges on cell
       do df_edge = 1,4

@@ -36,11 +36,11 @@
             ],
             'compiler' : {
                 'intel' : [
-                    'module load environment/lfric/ifort/17.0_64/3'
+                    'module load environment/lfric/ifort/17.0_64/4'
                 ],
                 'gnu' : [
                     'module use /project/ukmo/rhel7/fortran/opt/gfortran/modulefiles',
-                    'module load environment/lfric/gcc/6.1.0/3'
+                    'module load environment/lfric/gcc/6.1.0/4'
                 ]
             },
             'plot' : ['module load scitools/production-os43-2'],
@@ -92,7 +92,7 @@
             ],
             'compiler' : {
                 'intel' : [
-                    'module load meto-environment/lfric/intel/17.0.0.098/2'
+                    'module load meto-environment/lfric/intel/17.0.0.098/3'
                 ],
                 'cray' : [
                     'module load meto-environment/lfric/cce/8.7.0/2'

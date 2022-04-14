@@ -9,18 +9,6 @@
             <axis id="fixed_vert_axis_2" n_glo="3" name="fixed_axis"
                   positive="up" unit="m" value="(0, 2) [10.5 11.5 12.5]"/>
         </axis_definition>
-        <domain_definition>
-            <domain id="node" name="Mesh2d_node" nvertex="1"/>
-            <domain id="face" name="Mesh2d_face" nvertex="4"/>
-            <domain id="edge" name="Mesh2d_edge" nvertex="2"/>
-            <domain id="checkpoint_W0" name="checkpoint_W0" nvertex="1"/>
-            <domain id="checkpoint_W1" name="checkpoint_W1" nvertex="1"/>
-            <domain id="checkpoint_W2" name="checkpoint_W2" nvertex="1"/>
-            <domain id="checkpoint_W3" name="checkpoint_W3" nvertex="1"/>
-            <domain id="checkpoint_Wtheta" name="checkpoint_Wtheta" nvertex="1"/>
-            <domain id="fd_checkpoint_W3" name="fd_checkpoint_W3" nvertex="1"/>
-            <domain id="fd_checkpoint_Wtheta" name="fd_checkpoint_Wtheta" nvertex="1"/>
-        </domain_definition>
         <grid_definition>
             <grid id="node_grid">
                 <domain domain_ref="node"/>

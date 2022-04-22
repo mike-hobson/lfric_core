@@ -164,6 +164,12 @@
     [[NCI-OOD]]
         inherit = NCI-GADI
 
+    [[NIWA-XC50]]
+        [[[environment]]]
+            HYPERTHREADS    = 1
+            CORES_PER_NODE  = 40
+            NUMA_REGIONS_PER_NODE = 2
+
     [[ LOCAL ]]
         [[[remote]]]
             host = {{ ROSE_ORIG_HOST }}
@@ -354,7 +360,7 @@ echo $RELATIVE_LOG_ROOT > $DESTINATION_DIRECTORY/compile.log.path
           )}}
 
         [[[environment]]]
-            WORKING_DIR           = {{get_target_property(PRIMARY_TARGET, 'build_root')}}/{{label}}
+            WORKING_DIR           = {{get_target_property(PRIMARY_TARGET, 'build_root')}}/{{label}}/{{projectName}}
             TARGET                = build
             PROFILE               = {{build}}
             LFRIC_TARGET_PLATFORM = {{TARGET_OPT}}
@@ -366,6 +372,8 @@ echo $RELATIVE_LOG_ROOT > $DESTINATION_DIRECTORY/compile.log.path
 
             {{directives(PRIMARY_TARGET, 'build')}}
 {%-       endif %}
+
+        {{TARGET_BATCHER_OVERRIDE | default()}}
 
 {%-       if 'publish_' + label + '_compile' in scheduledTasks %}
 {%-         if 'compilation_info' not in rose_suite_gui_headers %}
@@ -430,7 +438,7 @@ echo $RELATIVE_LOG_ROOT > $DESTINATION_DIRECTORY/compile.log.path
             DESTINATION_DIRECTORY = $OUTPUT_ROOT/{{mesh_label}}
             MESH_DIR              = $OUTPUT_ROOT/{{mesh_label}}/meshes
             BIN_DIR               = $OUTPUT_ROOT/{{mesh_label}}/bin
-            WORKING_DIR           = {{get_target_property(PRIMARY_TARGET, 'build_root')}}/{{mesh_label}}
+            WORKING_DIR           = {{get_target_property(PRIMARY_TARGET, 'build_root')}}/{{mesh_label}}/mesh_tools
             TARGET                = build
             PROFILE               = {{mesh_build}}
             LFRIC_TARGET_PLATFORM = {{TARGET_OPT}}
@@ -439,6 +447,8 @@ echo $RELATIVE_LOG_ROOT > $DESTINATION_DIRECTORY/compile.log.path
 {%-   if fix_enums %}
             FIX_ENUMS             = 1
 {%-   endif %}
+
+        {{TARGET_BATCHER_OVERRIDE | default()}}
 
         {{directives(PRIMARY_TARGET, 'build')}}
 {%- endif %}   {# Compile mesh tools #}
@@ -891,6 +901,8 @@ fi""",
             RES        = {{res_value}}{{dt_labels[i]}}
             RES_LABEL  = {{res_label}}{{dt_labels[i]}}
 
+        {{TARGET_BATCHER_OVERRIDE | default()}}
+
                       {{directives(PRIMARY_TARGET, 'tech')}}
 {%-                 endif %}
 
@@ -916,6 +928,8 @@ fi""",
             PLOT_CONFIG = {{plot_config[plot_label]}}
         [[[job]]]
             execution retry delays = 2*PT5S, 5*PT10S, 3*PT1M
+
+        {{TARGET_BATCHER_OVERRIDE | default()}}
 
                       {{directives(PRIMARY_TARGET, 'tech')}}
 {%-                 endif %}
@@ -983,6 +997,12 @@ fi""",
         {{directives(PRIMARY_TARGET, 'tech')}}
 {%- endif %}
 
+{%- if get_target_property(PRIMARY_TARGET, 'queue.run.launcher') == 'srun' %}
+{%    set mesh_app_cmd_key = ' --command-key=srun' %}
+{%- else %}
+{%    set mesh_app_cmd_key = '' %}
+{%- endif %}
+
 {%- for mesh_name in mesh_names|sort %}
 {%-   if 'generate_mesh_' + mesh_name + '_' + mesh_label in scheduledTasks %}
 
@@ -994,7 +1014,8 @@ fi""",
               ['base', 'compiler.'+TARGET_MESH_COMPILER, 'tech'],
               ['base'],
               prescript='mkdir -p $MESH_DIR',
-              script="rose task-run --app-key=mesh --opt-conf-key="+mesh_name
+              script="rose task-run --app-key=mesh --opt-conf-key="+mesh_name+
+                     mesh_app_cmd_key
           )}}
 
         [[[environment]]]

@@ -19,7 +19,7 @@ module diagnostics_driver_mod
   use field_parent_mod,              only : field_parent_type
   use field_collection_mod,          only : field_collection_type
   use fieldspec_collection_mod,      only : fieldspec_collection
-  use diagnostics_model_data_mod,    only : model_data_type
+  use driver_model_data_mod,         only : model_data_type
   use halo_comms_mod,                only : initialise_halo_comms, &
                                             finalise_halo_comms
   use io_config_mod,                 only : write_diag, &

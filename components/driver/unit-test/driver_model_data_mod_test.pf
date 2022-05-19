@@ -6,7 +6,7 @@
 
 !> Test the model data object
 !>
-module gungho_model_data_mod_test
+module driver_model_data_mod_test
 
   use constants_mod,                 only : i_def, r_def
   use function_space_mod,            only : function_space_type
@@ -25,7 +25,7 @@ module gungho_model_data_mod_test
   use local_mesh_mod,                only : local_mesh_type
   use pure_abstract_field_mod,       only : pure_abstract_field_type
   use mpi_mod,                       only : store_comm, clear_comm
-  use gungho_model_data_mod,         only : model_data_type
+  use driver_model_data_mod,         only : model_data_type
   use pFUnit_Mod
 
   implicit none
@@ -35,7 +35,7 @@ module gungho_model_data_mod_test
   public :: test_assignment
 
   @TestCase
-  type, extends(MPITestCase), public :: gungho_model_data_test_type
+  type, extends(MPITestCase), public :: driver_model_data_test_type
     private
     type(local_mesh_type)              :: unit_test_local_mesh
     type(function_space_type), pointer :: w3_fs => null()
@@ -44,7 +44,7 @@ module gungho_model_data_mod_test
     procedure tearDown
     procedure get_local_mesh_ptr
     procedure test_assignment
-  end type gungho_model_data_test_type
+  end type driver_model_data_test_type
 
   integer(i_def), parameter    :: element_order = 0
 
@@ -58,7 +58,7 @@ contains
 
     implicit none
 
-    class(gungho_model_data_test_type), intent(inout) :: this
+    class(driver_model_data_test_type), intent(inout) :: this
     type(local_mesh_type), pointer :: unit_test_local_mesh_ptr
     type(mesh_type) :: unit_test_mesh
     integer(i_def)  :: mesh_id
@@ -97,7 +97,7 @@ contains
 
     implicit none
 
-    class(gungho_model_data_test_type), intent(inout) :: this
+    class(driver_model_data_test_type), intent(inout) :: this
 
     call function_space_collection%clear()
     call mesh_collection%clear()
@@ -115,7 +115,7 @@ contains
 
     implicit none
 
-    class(gungho_model_data_test_type), intent(inout), target :: this
+    class(driver_model_data_test_type), intent(inout), target :: this
     type(local_mesh_type), pointer :: unit_test_local_mesh_ptr
 
     unit_test_local_mesh_ptr => this%unit_test_local_mesh
@@ -132,7 +132,7 @@ contains
 
     implicit none
 
-    class(gungho_model_data_test_type), intent(inout) :: this
+    class(driver_model_data_test_type), intent(inout) :: this
     type(model_data_type)                             :: model_data
 
     type(field_type), target                 :: test_field
@@ -187,4 +187,4 @@ contains
 
   end subroutine test_assignment
 
-end module gungho_model_data_mod_test
+end module driver_model_data_mod_test

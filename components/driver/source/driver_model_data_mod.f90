@@ -10,7 +10,7 @@
 !!          methods to initialise (create and read), copy and finalise (write
 !!          and destroy) the data contained within the type.
 !!
-module diagnostics_model_data_mod
+module driver_model_data_mod
 
   use field_mod,            only : field_type
   use field_collection_mod, only : field_collection_type
@@ -207,4 +207,4 @@ contains
 
   end function get_field_collection
 
-end module diagnostics_model_data_mod
+end module driver_model_data_mod

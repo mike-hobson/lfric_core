@@ -47,10 +47,10 @@ contains
     integer(i_def), parameter                      :: ndf_w1 = 8
     integer(i_def), parameter                      :: ndf_w2 = 4
     integer(i_def), parameter                      :: ndf_wt = 2
-    integer(i_def), parameter                      :: ndf_c  = 2
+    integer(i_def), parameter                      :: ndf_c  = 1
     integer(i_def), parameter                      :: undf_w1 = nfaces_h*(nlayers+1)
     integer(i_def), parameter                      :: undf_w2 = ndf_w2*nlayers
-    integer(i_def), parameter                      :: undf_c  = ndata*(nlayers+1)
+    integer(i_def), parameter                      :: undf_c  = ndata
     integer(i_def), dimension(ndf_w1)              :: map_w1
     integer(i_def), dimension(ndf_w2)              :: map_w2
     integer(i_def), dimension(ndf_c)               :: map_c
@@ -77,7 +77,7 @@ contains
       stencil_map(1,i) = 1 + (i-1)*(nlayers+1)
       stencil_map(2,i) = 2 + (i-1)*(nlayers+1)
     end do
-    map_c(:) = (/ 1, 2 /)
+    map_c(:) = (/ 1 /)
 
     ! Get canned information for the reference cube
     call get_outward_normals_to_horizontal_faces(outward_normals_to_horizontal_faces)
@@ -116,11 +116,9 @@ contains
 
     ! Set up coeff field for quadratic fit in x direction
     coeff(:) = 0.0_r_def
-    do i = 0,nlayers
-      coeff((0 + 2*stencil_size)*(nlayers+1) + i + map_c(1)) =  5.0_r_def/6.0_r_def
-      coeff((1 + 2*stencil_size)*(nlayers+1) + i + map_c(1)) = -1.0_r_def/6.0_r_def
-      coeff((2 + 2*stencil_size)*(nlayers+1) + i + map_c(1)) =  2.0_r_def/6.0_r_def
-    end do
+    coeff((0 + 2*stencil_size) + map_c(1)) =  5.0_r_def/6.0_r_def
+    coeff((1 + 2*stencil_size) + map_c(1)) = -1.0_r_def/6.0_r_def
+    coeff((2 + 2*stencil_size) + map_c(1)) =  2.0_r_def/6.0_r_def
 
     ! Set up tracer field so that d(tracer)/dx = 10
     tracer(:) = 300.0_r_def

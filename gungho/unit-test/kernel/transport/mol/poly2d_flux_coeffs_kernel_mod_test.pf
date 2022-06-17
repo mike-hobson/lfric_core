@@ -218,6 +218,7 @@ contains
                                  order,                     &
                                  stencil_size,              &
                                  h0,                        &
+                                 nlayers,                   &
                                  ndf_c,                     &
                                  undf_c,                    &
                                  map_c,                     &

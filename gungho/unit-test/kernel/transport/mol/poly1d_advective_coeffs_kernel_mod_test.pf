@@ -95,8 +95,8 @@ contains
     integer(i_def), parameter :: undf_wx = ndf_wx*nlayers*stencil_size
     integer(i_def), parameter :: undf_pid = stencil_size
     integer(i_def), parameter :: ndata = (mol_order+1)*nfaces
-    integer(i_def), parameter :: ndf_c = 2
-    integer(i_def), parameter :: undf_c = (nlayers+1)*ndata
+    integer(i_def), parameter :: ndf_c = 1
+    integer(i_def), parameter :: undf_c = ndata
 
     integer(i_def), dimension(ndf_c)                :: map_c
     integer(i_def), dimension(ndf_wt,stencil_size)  :: smap_wt
@@ -147,7 +147,7 @@ contains
       end do
     end do
 
-    map_c(:) = (/ 1, 1+ndata /)
+    map_c(:) = (/ 1 /)
 
     stencil_dx = (/ 0.0_r_def, -dx, 0.0_r_def, dx, 0.0_r_def /)
     stencil_dy = (/ 0.0_r_def, 0.0_r_def, -dy, 0.0_r_def, dy /)
@@ -230,6 +230,7 @@ contains
                                       mol_order,                 &
                                       nfaces,                    &
                                       h0,                        &
+                                      nlayers,                   &
                                       ndf_c,                     &
                                       undf_c,                    &
                                       map_c,                     &
@@ -254,7 +255,7 @@ contains
       use_tol = 10.0_r_def*spacing( maxval( answer ) )
     end if
     do df = 1,3
-      @assertEqual(answer(df), coeff(1 + (df-1)*(nlayers+1)), use_tol)
+      @assertEqual(answer(df), coeff(1 + (df-1)), use_tol)
     end do
   end subroutine test_all
 

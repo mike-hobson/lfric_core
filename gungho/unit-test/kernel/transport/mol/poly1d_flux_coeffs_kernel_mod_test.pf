@@ -217,6 +217,7 @@ contains
                                  ndata,                     &
                                  mol_order,                 &
                                  h0,                        &
+                                 nlayers,                   &
                                  ndf_c,                     &
                                  undf_c,                    &
                                  map_c,                     &

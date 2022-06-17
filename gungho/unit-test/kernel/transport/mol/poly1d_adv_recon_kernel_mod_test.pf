@@ -44,7 +44,7 @@ contains
     integer(i_def), parameter                      :: ndf_w1 = 8
     integer(i_def), parameter                      :: ndf_w2 = 4
     integer(i_def), parameter                      :: ndf_wt = 2
-    integer(i_def), parameter                      :: ndf_c  = 2
+    integer(i_def), parameter                      :: ndf_c  = 1
     integer(i_def), parameter                      :: nfaces_h = 4
     integer(i_def), parameter                      :: undf_w1 = nfaces_h*(nlayers+1)
     integer(i_def), parameter                      :: undf_w2 = ndf_w2*nlayers
@@ -57,7 +57,7 @@ contains
     real(r_def), dimension(3,ndf_w2,ndf_w1)        :: basis_w2
     integer(i_def), parameter                      :: order = 2
     integer(i_def), parameter                      :: ndata = (order+1)*nfaces_h
-    integer(i_def), parameter                      :: undf_c = ndata*(nlayers+1)
+    integer(i_def), parameter                      :: undf_c = ndata
     real(r_def), allocatable, dimension(:,:)       :: outward_normals_to_horizontal_faces
 
     real(r_def), dimension(undf_w1) :: reconstruction
@@ -96,12 +96,11 @@ contains
 
     ! Set up coeff field for quadratic fit in x direction
     map_c(1) = 1
-    map_c(2) = 2
     coeff(:) = 0.0_r_def
     do i = 0,nlayers
-      coeff((0 + 2*(order+1))*(nlayers+1) + i + map_c(1)) =  5.0_r_def/6.0_r_def
-      coeff((1 + 2*(order+1))*(nlayers+1) + i + map_c(1)) = -1.0_r_def/6.0_r_def
-      coeff((2 + 2*(order+1))*(nlayers+1) + i + map_c(1)) =  2.0_r_def/6.0_r_def
+      coeff((0 + 2*(order+1)) + map_c(1)) =  5.0_r_def/6.0_r_def
+      coeff((1 + 2*(order+1)) + map_c(1)) = -1.0_r_def/6.0_r_def
+      coeff((2 + 2*(order+1)) + map_c(1)) =  2.0_r_def/6.0_r_def
     end do
 
     ! Set up tracer field so that d(tracer)/dx = 10

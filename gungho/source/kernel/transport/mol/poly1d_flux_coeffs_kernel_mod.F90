@@ -43,14 +43,15 @@ private
 !> The type declaration for the kernel. Contains the metadata needed by the PSy layer
 type, public, extends(kernel_type) :: poly1d_flux_coeffs_kernel_type
   private
-  type(arg_type) :: meta_args(7) = (/                                                         &
+  type(arg_type) :: meta_args(8) = (/                                                         &
        arg_type(GH_FIELD,   GH_REAL,    GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),                 &
        arg_type(GH_FIELD,   GH_REAL,    GH_READ,  W3,                        STENCIL(CROSS)), &
        arg_type(GH_FIELD*3, GH_REAL,    GH_READ,  ANY_SPACE_1,               STENCIL(CROSS)), &
        arg_type(GH_FIELD,   GH_REAL,    GH_READ,  ANY_DISCONTINUOUS_SPACE_3, STENCIL(CROSS)), &
        arg_type(GH_SCALAR,  GH_INTEGER, GH_READ),                                             &
        arg_type(GH_SCALAR,  GH_INTEGER, GH_READ),                                             &
-       arg_type(GH_SCALAR,  GH_REAL,    GH_READ)                                              &
+       arg_type(GH_SCALAR,  GH_REAL,    GH_READ),                                             &
+       arg_type(GH_SCALAR,  GH_INTEGER, GH_READ)                                              &
        /)
   type(func_type) :: meta_funcs(1) = (/                                          &
        func_type(ANY_SPACE_1, GH_BASIS)                                          &
@@ -69,7 +70,7 @@ contains
 
 !> @brief Compute the coefficients needed for a 1D horizontal reconstruction
 !!        of a tracer field on horizontal faces.
-!> @param[in] nlayers Number of vertical layers
+!> @param[in] one_layer Number of layers in 2D field
 !> @param[in,out] coeff Array of fields to store the coefficients for the polynomial
 !!                      reconstruction
 !> @param[in] mdw3 Mass matrix diagonal for the W3 space, this is used to give
@@ -90,6 +91,7 @@ contains
 !!                             coordinates. For Cartesian coordinates this is zero, but
 !!                             for spherical coordinates it is the global minimum
 !!                             of the height field plus 1.
+!> @param[in] nlayers Number of vertical layers
 !> @param[in] ndf_c Number of degrees of freedom per cell for the coeff space
 !> @param[in] undf_c Total number of degrees of freedom for the coeff space
 !> @param[in] map_c Dofmap for the coeff space
@@ -113,7 +115,7 @@ contains
 !> @param[in] nfaces_qr Number of faces in the quadrature rule
 !> @param[in] nqp_f Number of face quadrature points
 !> @param[in] wqp_f Weights of face quadrature points
-subroutine poly1d_flux_coeffs_code(nlayers,                    &
+subroutine poly1d_flux_coeffs_code(one_layer,                  &
                                    coeff,                      &
                                    mdw3,                       &
                                    stencil_size_w3,            &
@@ -127,6 +129,7 @@ subroutine poly1d_flux_coeffs_code(nlayers,                    &
                                    ndata,                      &
                                    order,                      &
                                    transform_radius,           &
+                                   nlayers,                    &
                                    ndf_c,                      &
                                    undf_c,                     &
                                    map_c,                      &
@@ -155,7 +158,7 @@ subroutine poly1d_flux_coeffs_code(nlayers,                    &
 
   ! Arguments
   integer(kind=i_def), intent(in) :: order
-  integer(kind=i_def), intent(in) :: nlayers
+  integer(kind=i_def), intent(in) :: one_layer, nlayers
   integer(kind=i_def), intent(in) :: ndata
   integer(kind=i_def), intent(in) :: ndf_w3, undf_w3, &
                                      ndf_wx, undf_wx, &
@@ -190,7 +193,7 @@ subroutine poly1d_flux_coeffs_code(nlayers,                    &
   logical(kind=l_def) :: spherical
   integer(kind=i_def) :: ispherical, ipanel
   integer(kind=i_def) :: k, ijk, df, qv0, qh0, stencil, nmonomial, qp, &
-                         m, face, stencil_depth, depth, face_mod, ijkp
+                         m, face, stencil_depth, depth, face_mod, ijp
   integer(kind=i_def),           dimension(order+1,nfaces_qr) :: map1d
   real(kind=r_def)                                           :: xx, fn
   real(kind=r_def),              dimension(3)                :: x0, x1, xq, xn1, chi, r0
@@ -259,121 +262,120 @@ subroutine poly1d_flux_coeffs_code(nlayers,                    &
   allocate( int_monomial(nmonomial, nmonomial),  &
             inv_int_monomial(nmonomial, nmonomial) )
 
-  ! Loop over all layers
-  layer_loop: do k = 0, nlayers-1
+  ! Just compute in top layer
+  k = nlayers-1
 
-    ! Position vector of centre of this cell
-    x0 = 0.0_r_def
+  ! Position vector of centre of this cell
+  x0 = 0.0_r_def
+  do df = 1, ndf_wx
+    ijk = smap_wx( df, 1) + k
+    x0(:) = x0(:) + (/ chi1(ijk), chi2(ijk), chi3(ijk) /)*basis_wx(1,df,qh0,qv0)
+  end do
+
+
+  ! Convert x0 to XYZ coordinate system
+  ipanel = int(panel_id(smap_pid(1,1)), i_def)
+  chi = x0 + r0
+  call chir2xyz(chi(1), chi(2), chi(3), &
+                ipanel, x0(1), x0(2), x0(3))
+
+  ! Initialise polynomial coefficients to zero
+  do df = 0, ndata-1
+    coeff(map_c(1) + df) = 0.0_r_def
+  end do
+
+  ! Compute the coefficients of each cell in the stencil for
+  ! each edge when this is the upwind cell
+  face_loop: do face = 1,nfaces_qr
+    int_monomial = 0.0_r_def
+
+    ! Find direction of first neighbour to establish axes of
+    ! Local coordinate system
+    ! Position vector of neighbour cell centre
+    x1 = 0.0_r_def
     do df = 1, ndf_wx
-      ijk = smap_wx( df, 1) + k
-      x0(:) = x0(:) + (/ chi1(ijk), chi2(ijk), chi3(ijk) /)*basis_wx(1,df,qh0,qv0)
+      ijk = smap_wx( df, face+1) + k
+      x1(:) = x1(:) + (/ chi1(ijk), chi2(ijk), chi3(ijk) /)*basis_wx(1,df,qh0,qv0)
     end do
 
-
-    ! Convert x0 to XYZ coordinate system
-    ipanel = int(panel_id(smap_pid(1,1)), i_def)
-    chi = x0 + r0
+    ! Convert x1 to XYZ coordinate system
+    ipanel = int(panel_id(smap_pid(1,face+1)), i_def)
+    chi = x1 + r0
     call chir2xyz(chi(1), chi(2), chi(3), &
-                  ipanel, x0(1), x0(2), x0(3))
+                  ipanel, x1(1), x1(2), x1(3))
 
-    ! Initialise polynomial coefficients to zero
-    do df = 0, ndata-1
-      coeff(map_c(1) + df*nlayers + k) = 0.0_r_def
-    end do
+    x1(3) = ispherical*x1(3) + (1_i_def-ispherical)*x0(3)
+    ! Unit normal to plane containing points 0 and 1
+    xn1 = cross_product(x0,x1)
+    xn1 = xn1/sqrt(xn1(1)**2 + xn1(2)**2 + xn1(3)**2)
 
-    ! Compute the coefficients of each cell in the stencil for
-    ! each edge when this is the upwind cell
-    face_loop: do face = 1,nfaces_qr
-      int_monomial = 0.0_r_def
-
-      ! Find direction of first neighbour to establish axes of
-      ! Local coordinate system
-      ! Position vector of neighbour cell centre
-      x1 = 0.0_r_def
-      do df = 1, ndf_wx
-        ijk = smap_wx( df, face+1) + k
-        x1(:) = x1(:) + (/ chi1(ijk), chi2(ijk), chi3(ijk) /)*basis_wx(1,df,qh0,qv0)
-      end do
-
-      ! Convert x1 to XYZ coordinate system
-      ipanel = int(panel_id(smap_pid(1,face+1)), i_def)
-      chi = x1 + r0
-      call chir2xyz(chi(1), chi(2), chi(3), &
-                    ipanel, x1(1), x1(2), x1(3))
-
-      x1(3) = ispherical*x1(3) + (1_i_def-ispherical)*x0(3)
-      ! Unit normal to plane containing points 0 and 1
-      xn1 = cross_product(x0,x1)
-      xn1 = xn1/sqrt(xn1(1)**2 + xn1(2)**2 + xn1(3)**2)
-
-      ! Loop over all cells in the stencil
-      stencil_loop: do stencil = 1, order+1
-        area(stencil) = mdw3(smap_w3( 1, map1d(stencil,face)) + k)
-        ! Integrate monomials over this cell
-        quadrature_loop: do qp = 1, nqp_h
-          ! First: Compute physical coordinate of each quadrature point
-          xq = 0.0_r_def
-          do df = 1, ndf_wx
-            ijk = smap_wx( df, map1d(stencil,face)) + k
-            xq(:) = xq(:) + (/ chi1(ijk), chi2(ijk), chi3(ijk) /)*basis_wx(1,df,qp,qv0)
-          end do
-
-          ! Convert xq to XYZ coordinate system
-          ipanel = int(panel_id(smap_pid(1, map1d(stencil,face))), i_def)
-          chi = xq + r0
-          call chir2xyz(chi(1), chi(2), chi(3), &
-                        ipanel, xq(1), xq(2), xq(3))
-
-          ! Second: Compute the local coordinate of each quadrature point from the
-          !         physical coordinate
-          xx = local_distance_1d(x0, xq, xn1, spherical)
-          ! Third: Compute each needed monomial in terms of the local coordinate
-          !        on each quadrature point
-          ! Loop over monomials
-          do m = 1, nmonomial
-            fn = xx**(m-1)
-            int_monomial(stencil,m) = int_monomial(stencil,m) &
-                                    + wqp_h(qp)*fn*area(stencil)
-          end do
-        end do quadrature_loop
-      end do stencil_loop
-      ! Manipulate the integrals of monomials
-      call matrix_invert(int_monomial, inv_int_monomial, nmonomial)
-
-      ! Loop over quadrature points on this face
-      face_quadrature_loop: do qp = 1,nqp_f
-
-        ! Obtain physical coordinates of gauss points on this face
+    ! Loop over all cells in the stencil
+    stencil_loop: do stencil = 1, order+1
+      area(stencil) = mdw3(smap_w3( 1, map1d(stencil,face)) + k)
+      ! Integrate monomials over this cell
+      quadrature_loop: do qp = 1, nqp_h
+        ! First: Compute physical coordinate of each quadrature point
         xq = 0.0_r_def
         do df = 1, ndf_wx
-          ijk = smap_wx( df, 1) + k
-          xq(:) = xq(:) + (/ chi1(ijk), chi2(ijk), chi3(ijk) /)*face_basis_wx(1,df,qp,face)
+          ijk = smap_wx( df, map1d(stencil,face)) + k
+          xq(:) = xq(:) + (/ chi1(ijk), chi2(ijk), chi3(ijk) /)*basis_wx(1,df,qp,qv0)
         end do
 
         ! Convert xq to XYZ coordinate system
-        ipanel = int(panel_id(smap_pid(1,1)), i_def)
+        ipanel = int(panel_id(smap_pid(1, map1d(stencil,face))), i_def)
         chi = xq + r0
         call chir2xyz(chi(1), chi(2), chi(3), &
                       ipanel, xq(1), xq(2), xq(3))
 
-        ! Obtain local coordinates of gauss points on this face
+        ! Second: Compute the local coordinate of each quadrature point from the
+        !         physical coordinate
         xx = local_distance_1d(x0, xq, xn1, spherical)
-
-        ! Evaluate polynomial fit
+        ! Third: Compute each needed monomial in terms of the local coordinate
+        !        on each quadrature point
         ! Loop over monomials
-        do stencil = 1, order+1
-          monomial(stencil) = xx**(stencil-1)
+        do m = 1, nmonomial
+          fn = xx**(m-1)
+          int_monomial(stencil,m) = int_monomial(stencil,m) &
+                                  + wqp_h(qp)*fn*area(stencil)
         end do
-        do stencil = 1, order+1
-          delta(:) = 0.0_r_def
-          delta(stencil) = 1.0_r_def
-          beta = matmul(inv_int_monomial,delta)
-          ijkp = (stencil - 1 + (face-1)*(order+1))*nlayers + k + map_c(1)
-          coeff(ijkp) = dot_product(monomial,beta)*area(stencil)
-        end do
-      end do face_quadrature_loop
-    end do face_loop
-  end do layer_loop
+      end do quadrature_loop
+    end do stencil_loop
+    ! Manipulate the integrals of monomials
+    call matrix_invert(int_monomial, inv_int_monomial, nmonomial)
+
+    ! Loop over quadrature points on this face
+    face_quadrature_loop: do qp = 1,nqp_f
+
+      ! Obtain physical coordinates of gauss points on this face
+      xq = 0.0_r_def
+      do df = 1, ndf_wx
+        ijk = smap_wx( df, 1) + k
+        xq(:) = xq(:) + (/ chi1(ijk), chi2(ijk), chi3(ijk) /)*face_basis_wx(1,df,qp,face)
+      end do
+
+      ! Convert xq to XYZ coordinate system
+      ipanel = int(panel_id(smap_pid(1,1)), i_def)
+      chi = xq + r0
+      call chir2xyz(chi(1), chi(2), chi(3), &
+                    ipanel, xq(1), xq(2), xq(3))
+
+      ! Obtain local coordinates of gauss points on this face
+      xx = local_distance_1d(x0, xq, xn1, spherical)
+
+      ! Evaluate polynomial fit
+      ! Loop over monomials
+      do stencil = 1, order+1
+        monomial(stencil) = xx**(stencil-1)
+      end do
+      do stencil = 1, order+1
+        delta(:) = 0.0_r_def
+        delta(stencil) = 1.0_r_def
+        beta = matmul(inv_int_monomial,delta)
+        ijp = (stencil - 1 + (face-1)*(order+1)) + map_c(1)
+        coeff(ijp) = dot_product(monomial,beta)*area(stencil)
+      end do
+    end do face_quadrature_loop
+  end do face_loop
   deallocate( int_monomial, inv_int_monomial )
 
 end subroutine poly1d_flux_coeffs_code

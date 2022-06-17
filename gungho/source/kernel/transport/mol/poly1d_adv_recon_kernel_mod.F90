@@ -186,11 +186,11 @@ subroutine poly1d_adv_recon_code( nlayers,              &
   do df = 1,nfaces_re_h
     polynomial_tracer(:) = 0.0_r_def
     do p = 1, order+1
-      ijp = (p - 1 + (df-1)*(order+1))*(nlayers+1) + map_c(1)
+      ijp = (p - 1 + (df-1)*(order+1)) + map_c(1)
       stencil = map1d(p,df)
       do k = 0, nlayers
         polynomial_tracer(k) = polynomial_tracer(k) &
-                             + tracer( stencil_map(1,stencil) + k )*coeff( ijp + nlayers )
+                             + tracer( stencil_map(1,stencil) + k )*coeff( ijp )
       end do
     end do
     v_dot_n = dot_product(basis_w2(:,df,df),outward_normals_to_horizontal_faces(:,df))

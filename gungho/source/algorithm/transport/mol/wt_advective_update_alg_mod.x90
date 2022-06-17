@@ -19,6 +19,7 @@
 module wt_advective_update_alg_mod
 
   use constants_mod,                      only: r_def, i_def, l_def, str_def
+  use extrusion_mod,                      only: TWOD
   use geometric_constants_mod,            only: get_coordinates,                &
                                                 get_panel_id,                   &
                                                 get_height
@@ -48,6 +49,7 @@ module wt_advective_update_alg_mod
   use log_mod,                            only: log_event,         &
                                                 LOG_LEVEL_ERROR,   &
                                                 LOG_LEVEL_INFO
+  use mesh_collection_mod,                only: mesh_collection
   use mesh_mod,                           only: mesh_type
   use poly1d_adv_recon_kernel_mod,        only: poly1d_adv_recon_kernel_type
   use poly1d_vert_adv_coeffs_kernel_mod,  only: poly1d_vert_adv_coeffs_kernel_type
@@ -157,6 +159,7 @@ contains
     type(field_type),       pointer :: chi(:) => null()
     type(field_type),       pointer :: md_wt => null()
     type(field_type),       pointer :: panel_id => null()
+    type(mesh_type),        pointer :: twod_mesh => null()
 
     type(quadrature_rule_gaussian_type)      :: gaussian_quadrature
     type(quadrature_rule_gauss_lobatto_type) :: gauss_lobatto_quadrature
@@ -173,7 +176,7 @@ contains
     real(kind=r_def)                       :: transform_radius, chi3_max
     type(function_space_type),     pointer :: multidata_fs => null()
     type(field_type),              pointer :: height => null()
-    integer(kind=i_def)                    :: vertical_order
+    integer(kind=i_def)                    :: vertical_order, nlayers
 
     reference_element => mesh%get_reference_element()
     mesh_index = find_mesh_index(mesh%get_id())
@@ -184,6 +187,8 @@ contains
     adv_2d_stencil_size = 0_i_def
     ndata_h = 0_i_def
     ndata_v = 0_i_def
+    twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
+    nlayers = mesh%get_nlayers()
 
     w1_fs => function_space_collection%get_fs( mesh, element_order, W1 )
     wt_fs => function_space_collection%get_fs( mesh, element_order, Wtheta )
@@ -224,7 +229,7 @@ contains
         ! Create multi-data space and field for the horizontal advective coefficients
         ndata_h = nfaces_re_h*adv_stencil_size
         ndata_h_list(mesh_index) = ndata_h
-        multidata_fs => function_space_collection%get_fs( mesh, element_order, Wtheta, ndata_h )
+        multidata_fs => function_space_collection%get_fs( twod_mesh, element_order, W3, ndata_h )
         call adv_coeffs_list(mesh_index)%initialise( vector_space = multidata_fs, ndata_first = .false. )
 
         chi => get_coordinates(mesh%get_id())
@@ -274,7 +279,7 @@ contains
                                                adv_stencil_extent,             &
                                                ndata_h, fv_horizontal_order,   &
                                                nfaces_re_h, transform_radius,  &
-                                               qr, qre ) )
+                                               nlayers, qr, qre ) )
         else
           call invoke( poly2d_advective_coeffs_kernel_type(                    &
                                                adv_coeffs_list(mesh_index),    &
@@ -287,7 +292,8 @@ contains
                                                ndata_h, fv_horizontal_order,   &
                                                nfaces_re_h,                    &
                                                adv_2d_stencil_size,            &
-                                               transform_radius, qr, qre ) )
+                                               transform_radius, nlayers,      &
+                                               qr, qre ) )
         end if
         ! Vertical advective coeffs
         call log_event( "Gungho: computing vertical advective coeffs", LOG_LEVEL_INFO )
@@ -327,7 +333,7 @@ contains
     adv_stencil_extent_list(mesh_index) = adv_stencil_extent
     adv_2d_stencil_size_list(mesh_index) = adv_2d_stencil_size
 
-    nullify( chi, panel_id, md_wt, wt_fs, w1_fs, reference_element, height )
+    nullify( chi, panel_id, md_wt, wt_fs, w1_fs, reference_element, height, twod_mesh )
 
   end subroutine wt_advective_update_alg_init
 

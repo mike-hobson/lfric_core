@@ -152,8 +152,9 @@ contains
 
       ! First calculate the integrated gamma function
       gamtot = 0.0_r_um
-      call calc_fsat(.true., soil_pts, soil_index, soil_pts, ti_mean, &
-                     ti_sig, dummy, dummy, gamtot, dummy, dummy)
+      call calc_fsat(soil_pts, soil_pts, .true., soil_index,            &
+                     ti_mean, ti_sig, dummy, dummy,                     &
+                     gamtot, dummy, dummy)
 
       ! Then calculate the fitting parameters (a_fsat, a_fwet, c_fsat, c_fwet)
       fexp = decrease_sath_cond

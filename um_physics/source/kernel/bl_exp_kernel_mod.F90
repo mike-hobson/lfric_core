@@ -948,9 +948,6 @@ contains
     ! integer fields on number of tile types
     integer, dimension(ntype) :: surft_pts
 
-    ! fields on land points and carbon pools
-    real(r_um), dimension(land_field,dim_cs1) :: resp_s_gb_um
-
     ! fields on land points and tiles
     real(r_um), dimension(land_field,ntiles) :: canopy_surft, catch_surft,   &
          catch_snow_surft, snow_surft, z0_surft, z0h_bare_surft,             &
@@ -1008,7 +1005,7 @@ contains
 
     real(r_um), dimension(dim_cs2) :: resp_s_tot_soilt
 
-    real(r_um), dimension(land_field,dim_cs2) :: resp_s_acc_gb_um
+    real(r_um), dimension(land_field,dim_cslayer,dim_cs2) :: resp_s_acc_gb_um
 
     real(r_um), dimension(land_field,ntiles) :: tsurf_elev_surft, epot_surft,&
          aresist_surft, dust_emiss_frac, flake, gc_surft, resft,             &
@@ -1672,7 +1669,7 @@ contains
          epot_surft,                                                           &
          fraca,resfs,resft,rhokh_surft,rhokh_sice,rhokh_sea,                   &
          z0hssi,z0mssi,chr1p5m,chr1p5m_sice,smc_soilt,                         &
-         npp_gb, resp_s_gb_um, resp_s_tot_soilt,                               &
+         npp_gb, resp_s_tot_soilt,                                             &
          resp_w_pft, gc_surft, canhc_surft, wt_ext_surft, flake,               &
          surft_index, surft_pts,                                               &
          tile_frac, tstar_land, tstar_ssi, dtstar_surft,                       &
@@ -1815,7 +1812,7 @@ contains
         epot_surft,                                                     &
         fraca,resfs,resft,rhokh_surft,rhokh_sice,rhokh_sea,             &
         z0hssi,z0mssi,chr1p5m,chr1p5m_sice,smc_soilt,                   &
-        npp_gb, resp_s_gb_um, resp_s_tot_soilt,                         &
+        npp_gb, resp_s_tot_soilt,                                       &
         resp_w_pft, gc_surft, canhc_surft, wt_ext_surft, flake,         &
         surft_index, surft_pts,                                         &
         tile_frac, tstar_land, tstar_ssi, dtstar_surft,                 &
@@ -2068,10 +2065,10 @@ contains
       net_prim_prod(map_2d(1)) = real(npp_gb(1), r_def)
       surface_conductance(map_2d(1)) = real(gs_gb(1), r_def)
       thermal_cond_wet_soil(map_2d(1)) = hcons_soilt(1)
-      if (dim_cs1 == 4) then
+      if (dim_cs1 == 4) then     ! l_triffid=TRUE (4 pool model)
         soil_respiration(map_2d(1)) = resp_s_tot_soilt(1)
-      else
-        soil_respiration(map_2d(1)) = resp_s_gb_um(1,1)
+      else      ! l_triffid=FALSE (1 pool model, no soil layers: dim_cslayer=1)
+        soil_respiration(map_2d(1)) = trifctltype%resp_s_soilt(1,1,1,1)
       endif
     else
       gross_prim_prod(map_2d(1)) = 0.0_r_def

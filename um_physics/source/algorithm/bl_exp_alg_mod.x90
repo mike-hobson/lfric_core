@@ -218,7 +218,6 @@ contains
     type( field_type ), pointer :: unfrozen_soil_moisture => null()
     type( field_type ), pointer :: frozen_soil_moisture   => null()
     type( field_type ), pointer :: soil_moist_avail       => null()
-    type( field_type ), pointer :: soil_respiration       => null()
     type( field_type ), pointer :: thermal_cond_wet_soil  => null()
 
     type( field_type ), pointer :: tile_snow_mass       => null()
@@ -248,7 +247,7 @@ contains
     type(function_space_type), pointer :: vector_space => null()
     type( field_type ) :: gross_prim_prod, dtl_mphys, dmt_mphys, ngstress_w2,  &
          fd_tau_w2, rhokm_bl, ngstress_bl, fd_taux, fd_tauy, fd_tauz,          &
-         surf_interp, zht, z0h_eff, oblen
+         surf_interp, zht, z0h_eff, oblen, soil_respiration
 
     integer(i_def) :: stencil_depth
 
@@ -386,7 +385,6 @@ contains
     unfrozen_soil_moisture => soil_fields%get_field('unfrozen_soil_moisture')
     frozen_soil_moisture   => soil_fields%get_field('frozen_soil_moisture')
     soil_moist_avail       => soil_fields%get_field('soil_moist_avail')
-    soil_respiration       => soil_fields%get_field('soil_respiration')
     thermal_cond_wet_soil  => soil_fields%get_field('thermal_cond_wet_soil')
 
     ! Snow fields
@@ -416,7 +414,8 @@ contains
     w2_rmultiplicity => get_rmultiplicity( W2, mesh%get_id() )
 
     ! Initialise diagnostics
-    call initialise_diags_for_bl_exp(zh, zht, z0h_eff, gross_prim_prod, oblen)
+    call initialise_diags_for_bl_exp(zh, zht, z0h_eff, gross_prim_prod, oblen, &
+                                     soil_respiration)
 
     ! Fields from microphysics
     call dtheta_mphys%copy_field_properties(dtl_mphys)

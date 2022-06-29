@@ -498,6 +498,7 @@ contains
     use fluxes_mod,               only: fluxes_type, fluxes_data_type,         &
                                         fluxes_alloc, fluxes_assoc,            &
                                         fluxes_nullify, fluxes_dealloc
+    use trifctl,                  only: trifctl_type
 
     implicit none
 
@@ -765,8 +766,6 @@ contains
 
     real(r_um), dimension(dim_cs2) :: resp_s_tot_soilt
 
-    real(r_um), dimension(land_field,dim_cs1) :: resp_s_gb_um
-
     real(r_um), dimension(land_field) :: npp_gb
 
     real(r_um), dimension(land_field,ntiles) :: catch_surft,                 &
@@ -800,6 +799,7 @@ contains
     type(forcing_data_type) :: forcing_data
     type(fluxes_type) :: fluxes
     type(fluxes_data_type) :: fluxes_data
+    type(trifctl_type) :: trifctltype
 
     !-----------------------------------------------------------------------
     ! Initialisation of JULES data and pointer types
@@ -1375,7 +1375,7 @@ contains
           , fland, flandg, flandg_u,flandg_v                            &
           , t_soil_soilt, snow_surft, sstfrz                            &
     ! IN JULES variables for STASH
-          , gs_gb, npp_gb, resp_s_gb_um                                 &
+          , gs_gb, npp_gb                                               &
           , resp_s_tot_soilt                                            &
           , catch_surft                                                 &
           , co2_emits, co2flux                                          &
@@ -1411,6 +1411,7 @@ contains
           , fluxes &
           , lake_vars &
           , forcing &
+          , trifctltype                                                  &
           !rivers, &
           !veg3_parm, &
           !veg3_field, &

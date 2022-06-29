@@ -99,7 +99,6 @@ contains
     type( field_type ), pointer :: c_sat_frac             => null()
     type( field_type ), pointer :: a_wet_frac             => null()
     type( field_type ), pointer :: c_wet_frac             => null()
-    type( field_type ), pointer :: soil_respiration       => null()
     type( field_type ), pointer :: thermal_cond_wet_soil  => null()
     type( field_type ), pointer :: soil_temperature       => null()
     type( field_type ), pointer :: soil_moisture          => null()
@@ -174,7 +173,6 @@ contains
     c_sat_frac             => soil_fields%get_field('c_sat_frac')
     a_wet_frac             => soil_fields%get_field('a_wet_frac')
     c_wet_frac             => soil_fields%get_field('c_wet_frac')
-    soil_respiration       => soil_fields%get_field('soil_respiration')
     thermal_cond_wet_soil  => soil_fields%get_field('thermal_cond_wet_soil')
     soil_temperature       => soil_fields%get_field('soil_temperature')
     soil_moisture          => soil_fields%get_field('soil_moisture')
@@ -224,7 +222,7 @@ contains
                            a_wet_frac, c_wet_frac, tile_temperature,           &
                            net_prim_prod, snowice_sublimation, surf_heat_flux, &
                            canopy_evap, water_extraction,                      &
-                           thermal_cond_wet_soil, soil_respiration,            &
+                           thermal_cond_wet_soil,                              &
                            soil_temperature, soil_moisture,                    &
                            unfrozen_soil_moisture, frozen_soil_moisture,       &
                            canopy_water, tile_snow_mass, tile_snow_rgrain,     &

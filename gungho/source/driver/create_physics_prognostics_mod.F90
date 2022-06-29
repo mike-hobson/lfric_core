@@ -1143,9 +1143,6 @@ contains
       'soil_moist_avail', twod_space, twod=.true. )
     call add_physics_field(soil_fields, depository, prognostic_fields,        &
       adv_fields_last_outer, &
-      'soil_respiration', twod_space, twod=.true.)
-    call add_physics_field(soil_fields, depository, prognostic_fields,        &
-      adv_fields_last_outer, &
       'thermal_cond_wet_soil', twod_space, twod=.true.)
 
     !========================================================================

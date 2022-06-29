@@ -32,7 +32,7 @@ module jules_extra_kernel_mod
   !>
   type, public, extends(kernel_type) :: jules_extra_kernel_type
     private
-    type(arg_type) :: meta_args(57) = (/                                       &
+    type(arg_type) :: meta_args(56) = (/                                       &
          arg_type(GH_FIELD, GH_REAL, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! ls_rain
          arg_type(GH_FIELD, GH_REAL, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! conv_rain
          arg_type(GH_FIELD, GH_REAL, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! ls_snow
@@ -64,7 +64,6 @@ module jules_extra_kernel_mod
          arg_type(GH_FIELD, GH_REAL, GH_READ,      ANY_DISCONTINUOUS_SPACE_2), & ! canopy_evap
          arg_type(GH_FIELD, GH_REAL, GH_READ,      ANY_DISCONTINUOUS_SPACE_4), & ! water_extraction
          arg_type(GH_FIELD, GH_REAL, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! thermal_cond_wet_soil
-         arg_type(GH_FIELD, GH_REAL, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! soil_respiration
          arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_4), & ! soil_temperature
          arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_4), & ! soil_moisture
          arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_4), & ! unfrozen_soil_moisture
@@ -138,7 +137,6 @@ contains
   !> @param[in]     canopy_evap            Canopy evaporation from land tiles (kg m-2 s-1)
   !> @param[in]     water_extraction       Extraction of water from each soil layer (kg m-2 s-1)
   !> @param[in]     thermal_cond_wet_soil  Thermal conductivity of soil (W m-1 K-1)
-  !> @param[in]     soil_respiration       Soil respiration (kg m-2 s-1)
   !> @param[in,out] soil_temperature       Soil temperature (K)
   !> @param[in,out] soil_moisture          Soil moisture content (kg m-2)
   !> @param[in,out] unfrozen_soil_moisture Unfrozen soil moisture proportion
@@ -212,7 +210,6 @@ contains
                canopy_evap,                &
                water_extraction,           &
                thermal_cond_wet_soil,      &
-               soil_respiration,           &
                soil_temperature,           &
                soil_moisture,              &
                unfrozen_soil_moisture,     &
@@ -403,7 +400,6 @@ contains
     real(kind=r_def), intent(in)    :: c_wet_frac(undf_2d)
     real(kind=r_def), intent(in)    :: net_prim_prod(undf_2d)
     real(kind=r_def), intent(in)    :: thermal_cond_wet_soil(undf_2d)
-    real(kind=r_def), intent(in)    :: soil_respiration(undf_2d)
 
     real(kind=r_def), intent(inout) :: canopy_water(undf_tile)
     real(kind=r_def), intent(inout) :: tile_snow_mass(undf_tile)
@@ -494,15 +490,13 @@ contains
 
     real(r_um), dimension(river_row_length, river_rows) :: twatstor
 
-    real(r_um), dimension(land_pts, dim_cs1) :: resp_s_acc_gb_um
+    real(r_um), dimension(land_pts, dim_cslayer, dim_cs1) :: resp_s_acc_gb_um
 
     real(r_um), dimension(land_pts) :: dhf_surf_minus_soil,                   &
          ls_rainfrac_gb, tot_surf_runoff, tot_sub_runoff, inlandout_atm_gb
 
     real(r_um), dimension(land_pts, nsoilt) :: hcons_soilt, fsat_soilt,       &
          fwetl_soilt, zw_soilt, sthzw_soilt
-
-    real(r_um), dimension(land_pts, nsoilt, 1, dim_cs1) :: resp_s_soilt
 
     !-----------------------------------------------------------------------
     ! JULES Types
@@ -822,9 +816,6 @@ contains
     ! Soil wetness below soil column
     sthzw_soilt = real(wetness_under_soil(map_2d(1)), r_um)
 
-    ! Soil respiration (resp_s_soilt [=resp_s_soilt in bl_kernel])
-    resp_s_soilt = real(soil_respiration(map_2d(1)), r_um)
-
   !----------------------------------------------------------------------------
   ! Call to surf_couple_extra using JULESvn5.4 standalone variable names
 
@@ -853,7 +844,7 @@ contains
     yua, yva, g_p_field, g_r_field, nproc, global_row_length, global_rows,    &
     global_river_row_length, global_river_rows, flandg, trivdir, trivseq,     &
     r_area, slope, flowobs1, r_inext, r_jnext, r_land, frac_agr_gb,           &
-    soil_clay_ij, resp_s_soilt, npp_gb,  u_s_std_surft,                       &
+    soil_clay_ij, npp_gb,  u_s_std_surft,                                     &
 
     !IN OUT
     a_steps_since_riv,                                                        &

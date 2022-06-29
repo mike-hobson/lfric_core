@@ -18,7 +18,8 @@ module bl_exp_diags_mod
   private
 
   ! Logical indicating whether diagnostics are requested
-  logical( l_def ) :: gross_prim_prod_flag, zht_flag, z0h_eff_flag, oblen_flag
+  logical( l_def ) :: gross_prim_prod_flag, zht_flag, z0h_eff_flag, oblen_flag,  &
+                      soil_respiration_flag
 
   public :: initialise_diags_for_bl_exp
   public :: output_diags_for_bl_exp
@@ -31,8 +32,9 @@ contains
   !> @param[inout] z0h_eff            Gridbox mean effective roughness length for scalars
   !> @param[inout] gross_prim_prod    Gross Primary Productivity
   !> @param[inout] oblen              Obukhov length
+  !> @param[inout] soil_respiration   Soil heterotrophic respiration
   subroutine initialise_diags_for_bl_exp(zh, zht, z0h_eff, gross_prim_prod, &
-                                         oblen)
+                                         oblen, soil_respiration)
 
     implicit none
 
@@ -41,6 +43,7 @@ contains
     type( field_type ), intent(inout) :: z0h_eff
     type( field_type ), intent(inout) :: gross_prim_prod
     type( field_type ), intent(inout) :: oblen
+    type( field_type ), intent(inout) :: soil_respiration
 
     if ( subroutine_timers ) call timer("bl_exp_diags")
 
@@ -52,6 +55,8 @@ contains
     call zh%copy_field_properties(gross_prim_prod)
     oblen_flag = .true.
     call zh%copy_field_properties(oblen)
+    soil_respiration_flag = .true.
+    call zh%copy_field_properties(soil_respiration)
 
     if ( subroutine_timers ) call timer("bl_exp_diags")
 
@@ -149,7 +154,6 @@ contains
     call z0m_eff%write_field('surface__z0m_eff')
     call net_prim_prod%write_field('surface__net_prim_prod')
     call gc_tile%write_field('surface__gc_tile') 
-    call soil_respiration%write_field('surface__soil_respiration')
     call ustar%write_field('surface__ustar')
     ! Prognostic fields from aerosol collection
     call dust_flux%write_field('aerosol__dust_flux') 
@@ -162,6 +166,8 @@ contains
          call z0h_eff%write_field('surface__z0h_eff')
     if (gross_prim_prod_flag) &
          call gross_prim_prod%write_field('surface__gross_prim_prod')
+    if (soil_respiration_flag) &
+         call soil_respiration%write_field('surface__soil_respiration')
 
     if ( subroutine_timers ) call timer("bl_exp_diags")
 

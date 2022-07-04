@@ -33,6 +33,7 @@ module lfric_xios_context_mod
                                    xios_get_handle,               &
                                    xios_set_current_context,      &
                                    xios_context_finalize
+  use mod_wait,             only : init_wait
 
   implicit none
 
@@ -158,6 +159,10 @@ contains
     integer(i_native) :: i
 
     call xios_context_finalize()
+
+    ! We have closed the context on our end, but we need to make sure that XIOS
+    ! has closed the files for all servers before we process them.
+    call init_wait()
 
     do i = 1, size(this%filelist)
       call this%filelist(i)%file_close()

@@ -107,11 +107,12 @@ function analytic_temperature(chi, choice) result(temperature)
   end if
 
   temperature = 0.0_r_def
-  call reference_profile(pressure, density, temperature, chi, choice)
 
   select case( choice )
 
   case ( test_gravity_wave )
+    ! Set default value
+    call reference_profile(pressure, density, temperature, chi, choice)
     if ( geometry == geometry_spherical ) then
       temperature = temperature &
                   +  generate_global_gw_pert(long,lat,radius-scaled_radius)
@@ -121,6 +122,8 @@ function analytic_temperature(chi, choice) result(temperature)
     end if
 
   case ( test_cold_bubble_x )
+    ! Set default value
+    call reference_profile(pressure, density, temperature, chi, choice)
     l = sqrt( ((chi(1)-XC)/XR)**2 + ((chi(3)-ZC_cold)/ZR)**2 )
     if ( l <= 1.0_r_def ) then
       dt =  15.0_r_def/2.0_r_def*(cos(PI*l)+1.0_r_def)
@@ -128,6 +131,8 @@ function analytic_temperature(chi, choice) result(temperature)
     end if
 
   case ( test_cold_bubble_y )
+    ! Set default value
+    call reference_profile(pressure, density, temperature, chi, choice)
     l = sqrt( ((chi(2)-XC)/XR)**2 + ((chi(3)-ZC_cold)/ZR)**2 )
     if ( l <= 1.0_r_def ) then
       dt =  15.0_r_def/2.0_r_def*(cos(PI*l)+1.0_r_def)
@@ -135,6 +140,8 @@ function analytic_temperature(chi, choice) result(temperature)
     end if
 
   case( test_warm_bubble )
+    ! Set default value
+    call reference_profile(pressure, density, temperature, chi, choice)
     l = sqrt( ((chi(1)-XC))**2 + ((chi(3)-ZC_hot))**2 )
     if ( l <= 50.0_r_def ) then
       dt = 0.5_r_def
@@ -164,6 +171,8 @@ function analytic_temperature(chi, choice) result(temperature)
 
   !> Test from Kelly & Giraldo
   case( test_warm_bubble_3d )
+    ! Set default value
+    call reference_profile(pressure, density, temperature, chi, choice)
     l = sqrt( (chi(1)-XC)**2 + (chi(2)-YC)**2 + (chi(3)-ZC_3d)**2 )
 
     if ( abs(l) <= 250.0_r_def ) then
@@ -350,6 +359,10 @@ function analytic_temperature(chi, choice) result(temperature)
     else
       temperature = tracer_background
     end if
+
+  case default
+    ! Set default value
+    call reference_profile(pressure, density, temperature, chi, choice)
 
   end select
 

@@ -8,7 +8,7 @@
 {# SETUP SOME JINJA2 VARIABLES #}
 {%- set build_profiles = ['fast-debug', 'full-debug', 'production'] -%}
 {%- set rose_suite_gui_headers = [] -%}
-{%- set rdef_build_precisions = []  -%}
+{%- set rdef_build_precisions = ['64']  -%}
 
 
 {%- if RUN_NAMES is defined %}

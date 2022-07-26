@@ -72,10 +72,10 @@
             ],
             'compiler' : {
                 'intel' : [
-                    'module load environment/lfric/ifort/17.0_64/5'
+                    'module unload ifort/17.0_64',
+                    'module load environment/lfric/ifort/19.0_64/1'
                 ],
                 'gnu' : [
-                    'module use /project/ukmo/rhel7/fortran/opt/gfortran/modulefiles',
                     'module load environment/lfric/gcc/6.1.0/5'
                 ]
             },

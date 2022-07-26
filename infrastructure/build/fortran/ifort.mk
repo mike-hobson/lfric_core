@@ -23,7 +23,6 @@ F_MOD_DESTINATION_ARG = -module$(SPACE)
 OPENMP_ARG            = -qopenmp
 FORTRAN_RUNTIME       = 
 
-FFLAGS_COMPILER           =
 FFLAGS_NO_OPTIMISATION    = -O0
 FFLAGS_SAFE_OPTIMISATION  = -O2 -fp-model strict
 FFLAGS_RISKY_OPTIMISATION = -O3 -xhost
@@ -31,7 +30,16 @@ FFLAGS_DEBUG              = -g -traceback
 FFLAGS_WARNINGS           = -warn all -warn errors
 FFLAGS_UNIT_WARNINGS      = -warn all
 FFLAGS_INIT               = -ftrapuv
+
+ifeq ($(shell test $(IFORT_VERSION) -ge 0190000 -a $(IFORT_VERSION) -lt 0190100; echo $$?), 0)
+# It looks like there's a bad interaction between array shape checking and
+# the "matmul" intrinsic in at least some iterations of v19.
+#
+FFLAGS_RUNTIME            = -check all,noshape -fpe0
+else
 FFLAGS_RUNTIME            = -check all -fpe0
+endif
+
 # Option for checking code meets Fortran standard - currently 2008
 FFLAGS_FORTRAN_STANDARD   = -stand f08
 

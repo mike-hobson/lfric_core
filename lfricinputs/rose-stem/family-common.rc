@@ -163,6 +163,8 @@
     [[x86_weights]]
         inherit = WEIGHTS, LINUX
         pre-script = """
+                     module load ifort
+                     module use /project/ukmo/rhel7/fortran/opt/gfortran/modulefiles
                      module load libraries/gcc/6.4.0
                      module load gcc/6.4.0
                      module load mpi/mpich/3.2.1/gnu/6.4.0

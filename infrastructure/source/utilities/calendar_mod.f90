@@ -16,19 +16,23 @@ module calendar_mod
   !> Parent of all calendar implementations.
   !>
   type, public, abstract :: calendar_type
+    private
   contains
-    procedure(format_duration_if), deferred :: format_duration
-    procedure(format_instance_if), deferred :: format_instance
-    procedure(parse_duration_if), deferred :: parse_duration
-    procedure(parse_instance_if), deferred :: parse_instance
+    private
+    procedure(format_duration_if), public, deferred :: format_duration
+    procedure(format_instance_if), public, deferred :: format_instance
+    procedure(parse_duration_if),  public, deferred :: parse_duration
+    procedure(parse_instance_if),  public, deferred :: parse_instance
   end type calendar_type
 
-  interface
+  abstract interface
     !> Produces a human readable string from a calendar specific duration.
     !>
     !> @param[in] duration Period of time in calendar terms.
     !>
-    module function format_duration_if( this, duration ) result(string)
+    function format_duration_if( this, duration ) result(string)
+      import calendar_type, i_timestep
+      implicit none
       class(calendar_type), intent(in) :: this
       integer(i_timestep),  intent(in) :: duration
       character(:), allocatable :: string
@@ -38,7 +42,9 @@ module calendar_mod
     !>
     !> @param[in] instance Instant in time in calendar terms.
     !>
-    module function format_instance_if( this, instance ) result(string)
+    function format_instance_if( this, instance ) result(string)
+      import calendar_type, i_timestep
+      implicit none
       class(calendar_type), intent(in) :: this
       integer(i_timestep),  intent(in) :: instance
       character(:), allocatable :: string
@@ -48,7 +54,9 @@ module calendar_mod
     !>
     !> @param[in] string Human readable string in calendar form.
     !>
-    module function parse_duration_if( this, string ) result(duration)
+    function parse_duration_if( this, string ) result(duration)
+      import calendar_type, i_timestep
+      implicit none
       class(calendar_type), intent(in) :: this
       character(*),         intent(in) :: string
       integer(i_timestep) :: duration
@@ -58,11 +66,14 @@ module calendar_mod
     !>
     !> @param[in] string Human readable string in calendar form.
     !>
-    module function parse_instance_if( this, string ) result(instance)
+    function parse_instance_if( this, string ) result(instance)
+      import calendar_type, i_timestep
+      implicit none
       class(calendar_type), intent(in) :: this
       character(*),         intent(in) :: string
       integer(i_timestep) :: instance
     end function parse_instance_if
+
   end interface
 
 end module calendar_mod

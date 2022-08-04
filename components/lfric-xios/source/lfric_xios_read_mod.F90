@@ -22,7 +22,7 @@ module lfric_xios_read_mod
   use field_collection_mod,     only: field_collection_type
   use field_parent_mod,         only: field_parent_type, &
                                       field_parent_proxy_type
-  use fs_continuity_mod,        only: W3, WTheta, W2H
+  use fs_continuity_mod,        only: W3, WTheta, W2H, W2
   use integer_field_mod,        only: integer_field_type, &
                                       integer_field_proxy_type
   use io_mod,                   only: ts_fname
@@ -75,6 +75,7 @@ subroutine checkpoint_read_xios(xios_field_name, file_name, field_proxy)
   class(field_parent_proxy_type), intent(inout) :: field_proxy
 
   integer(i_def) :: undf
+  integer(i_def) :: fs_id
 
   ! We only read in up to undf for the partition
   undf = field_proxy%vspace%get_last_dof_owned()
@@ -82,10 +83,16 @@ subroutine checkpoint_read_xios(xios_field_name, file_name, field_proxy)
   select type(field_proxy)
 
     type is (field_r64_proxy_type)
-    call xios_recv_field("restart_"//trim(xios_field_name), field_proxy%data(1:undf))
+      call xios_recv_field("restart_"//trim(xios_field_name), field_proxy%data(1:undf))
+      call field_proxy%set_dirty()
+      ! Ensure annexed dofs for continuous fields are initialised
+      fs_id = field_proxy%vspace%which()
+      if (fs_id == W2) then
+        call field_proxy%halo_exchange(depth=1)
+      end if
 
     class default
-    call log_event( "Invalid type for input field proxy", LOG_LEVEL_ERROR )
+      call log_event( "Invalid type for input field proxy", LOG_LEVEL_ERROR )
 
   end select
 
@@ -130,6 +137,8 @@ subroutine read_field_node(xios_field_name, field_proxy)
   call xios_recv_field(xios_field_name, recv_field)
 
   ! Reshape the data to what we require for the LFRic field
+  ! Note the conversion from dp_xios to real32, real64 or i_def
+  ! Note the halo swap to ensure annexed dofs are suitably initialised
   select type(field_proxy)
 
     type is (field_r32_proxy_type)
@@ -137,12 +146,16 @@ subroutine read_field_node(xios_field_name, field_proxy)
       field_proxy%data( i+1 : undf : axis_size )  = &
                   real(recv_field( i*(domain_size)+1 : (i+1)*domain_size ), real32)
     end do
+    call field_proxy%set_dirty()
+    call field_proxy%halo_exchange(depth=1)
 
     type is (field_r64_proxy_type)
     do i = 0, axis_size-1
       field_proxy%data( i+1 : undf : axis_size )  = &
                   real(recv_field( i*(domain_size)+1 : (i+1)*domain_size ), real64)
     end do
+    call field_proxy%set_dirty()
+    call field_proxy%halo_exchange(depth=1)
 
 
     type is (integer_field_proxy_type)
@@ -150,6 +163,8 @@ subroutine read_field_node(xios_field_name, field_proxy)
       field_proxy%data( i+1 : undf : axis_size )  = &
                   int(recv_field( i*(domain_size)+1 : (i+1)*domain_size ), i_def)
     end do
+    call field_proxy%set_dirty()
+    call field_proxy%halo_exchange(depth=1)
 
     class default
       call log_event( "Invalid type for input field proxy", LOG_LEVEL_ERROR )
@@ -200,6 +215,7 @@ subroutine read_field_edge(xios_field_name, field_proxy)
 
   ! Reshape the data to what we require for the LFRic field
   ! Note the conversion from dp_xios to real32, real64 or i_def
+  ! Note the halo swap to ensure annexed dofs are suitably initialised
   select type(field_proxy)
 
     type is (field_r32_proxy_type)
@@ -207,18 +223,24 @@ subroutine read_field_edge(xios_field_name, field_proxy)
       field_proxy%data( i+1 : undf : axis_size )  = &
                   real(recv_field( i*(domain_size)+1 : (i+1)*domain_size ), real32)
     end do
+    call field_proxy%set_dirty()
+    call field_proxy%halo_exchange(depth=1)
 
     type is (field_r64_proxy_type)
     do i = 0, axis_size-1
       field_proxy%data( i+1 : undf : axis_size )  = &
                   real(recv_field( i*(domain_size)+1 : (i+1)*domain_size ), real64)
     end do
+    call field_proxy%set_dirty()
+    call field_proxy%halo_exchange(depth=1)
 
     type is (integer_field_proxy_type)
     do i = 0, axis_size-1
       field_proxy%data( i+1 : undf : axis_size )  = &
                   int( recv_field( i*(domain_size)+1 : (i+1)*domain_size ), i_def)
     end do
+    call field_proxy%set_dirty()
+    call field_proxy%halo_exchange(depth=1)
 
     class default
       call log_event( "Invalid type for input field proxy", LOG_LEVEL_ERROR )
@@ -286,18 +308,21 @@ subroutine read_field_face(xios_field_name, field_proxy)
       field_proxy%data(i+1:undf:axis_size) = &
              real(recv_field(i*(domain_size)+1:(i*(domain_size)) + domain_size), real32)
     end do
+    call field_proxy%set_dirty()
 
     type is (field_r64_proxy_type)
     do i = 0, axis_size-1
       field_proxy%data(i+1:undf:axis_size) = &
              real(recv_field(i*(domain_size)+1:(i*(domain_size)) + domain_size), real64)
     end do
+    call field_proxy%set_dirty()
 
     type is (integer_field_proxy_type)
     do i = 0, axis_size-1
       field_proxy%data(i+1:undf:axis_size) = &
              int( recv_field(i*(domain_size)+1:(i*(domain_size)) + domain_size), i_def)
     end do
+    call field_proxy%set_dirty()
 
     class default
       call log_event( "Invalid type for input field proxy", LOG_LEVEL_ERROR )
@@ -367,18 +392,21 @@ subroutine read_field_single_face(xios_field_name, field_proxy)
       field_proxy%data(i+1:(ndata*domain_size)+i:ndata) = &
               real(recv_field(i*(domain_size)+1:(i*(domain_size)) + domain_size), real32)
     end do
+    call field_proxy%set_dirty()
 
     type is (field_r64_proxy_type)
     do i = 0, ndata-1
       field_proxy%data(i+1:(ndata*domain_size)+i:ndata) = &
               real(recv_field(i*(domain_size)+1:(i*(domain_size)) + domain_size), real64)
     end do
+    call field_proxy%set_dirty()
 
     type is (integer_field_proxy_type)
     do i = 0, ndata-1
       field_proxy%data(i+1:(ndata*domain_size)+i:ndata) = &
               int( recv_field(i*(domain_size)+1:(i*(domain_size)) + domain_size), i_def)
     end do
+    call field_proxy%set_dirty()
 
     class default
       call log_event( "Invalid type for input field proxy", LOG_LEVEL_ERROR )
@@ -516,10 +544,10 @@ subroutine read_field_time_var(xios_field_name, field_proxy, time_indices, time_
 
   ! Pass reshaped data array to field object via proxy
   field_proxy%data( 1 : undf ) = field_data( 1 : undf )
-
-  ! Set halos dirty here as for parallel read we only read in data for owned
-  ! dofs and the halos will not be set
   call field_proxy%set_dirty()
+
+  ! Halo exchange necessary to ensure annexed dofs contain safe initial data
+  call field_proxy%halo_exchange(depth=1)
 
   deallocate( recv_field )
   deallocate( ndata_slice )

@@ -13,7 +13,7 @@ module transport_runtime_alg_mod
   use check_configuration_mod,        only: check_any_scheme_mol,   &
                                             check_any_scheme_ffsl,  &
                                             check_any_scheme_split, &
-                                            check_horz_dep_pts, &
+                                            check_horz_dep_pts,     &
                                             check_vert_dep_pts
   use constants_mod,                  only: r_def, i_def, l_def,  &
                                             str_def, tiny_eps, imdi
@@ -68,6 +68,7 @@ module transport_runtime_alg_mod
     type(field_type),    allocatable, dimension(:,:) :: vert_dry_flux
     real(kind=r_def),    allocatable, dimension(:)   :: horizontal_cfl_max
     real(kind=r_def),    allocatable, dimension(:)   :: vertical_cfl_max
+    real(kind=r_def),    allocatable, dimension(:)   :: total_cfl_max
     real(kind=r_def)                                 :: dt_model
 
     contains
@@ -134,10 +135,11 @@ contains
                                              select_detj_at_w2
     use split_w2_field_kernel_mod,     only: split_w2_field_kernel_type
     use timestepping_config_mod,       only: beta
-    use transport_config_mod,          only: max_vert_cfl_calc, &
+    use transport_config_mod,          only: max_vert_cfl_calc,           &
                                              max_vert_cfl_calc_dep_point, &
                                              max_vert_cfl_calc_uniform
     use map_w2_to_sh_w2_alg_mod,       only: sample_w2_to_sh_w2_alg
+    use calc_max_cfl_kernel_mod,       only: calc_max_cfl_kernel_type
     use dg_matrix_vector_kernel_mod,   only: dg_matrix_vector_kernel_type
     use fem_constants_mod,             only: get_div, &
                                              get_inverse_W3_mass_matrix
@@ -153,16 +155,19 @@ contains
 
     type(transport_runtime_type)   :: self
     type(field_type)               :: cfl, vertical_cfl, horizontal_cfl, cfl_dep
+    type(field_type)               :: sum_cfl, sum_horizontal_cfl, hori_cfl_dep
     integer(kind=i_def)            :: mesh_idx, i, fs_idx, num_compute_meshes
     type(mesh_type),       pointer :: mesh => null()
     type(local_mesh_type), pointer :: local_mesh => null()
-    type(field_type),      pointer :: wind_n           => null()
-    type(field_type),      pointer :: wind_np1         => null()
+    type(field_type),      pointer :: wind_n   => null()
+    type(field_type),      pointer :: wind_np1 => null()
     type(field_type),      target  :: shifted_wind_n
     type(field_type),      target  :: shifted_wind_np1
     type(field_type)               :: rhs
     real(kind=r_def)               :: minus_beta_dt
     real(kind=r_def)               :: cfl_min, cfl_max
+    real(kind=r_def)               :: h_cfl_min, h_cfl_max
+    real(kind=r_def)               :: v_cfl_min, v_cfl_max
     logical(kind=l_def)            :: any_scheme_mol, any_scheme_split
     logical(kind=l_def)            :: any_scheme_ffsl
     logical(kind=l_def)            :: any_horz_dep_pts, any_vert_dep_pts
@@ -221,6 +226,7 @@ contains
               self%div_factor(self%n_meshes),                &
               self%horizontal_cfl_max(self%n_meshes),        &
               self%vertical_cfl_max(self%n_meshes),          &
+              self%total_cfl_max(self%n_meshes),             &
               self%field_n(self%n_meshes) )
 
     ! Get mesh ID and element order
@@ -336,36 +342,63 @@ contains
       call cfl%initialise( wind_n%get_function_space() )
       call horizontal_cfl%initialise( self%horizontal_advecting_wind(mesh_idx)%get_function_space() )
       call vertical_cfl%initialise( self%vertical_advecting_wind(mesh_idx)%get_function_space() )
+      call sum_horizontal_cfl%initialise( vector_space = &
+                function_space_collection%get_fs(tmp_mesh, element_order, W3) )
+      call sum_cfl%initialise( vector_space = &
+                function_space_collection%get_fs(tmp_mesh, element_order, W3) )
 
-      call invoke( setval_X(cfl, self%advecting_wind(mesh_idx)),                 &
-                   inc_X_divideby_Y( cfl, self%detj_at_w2_transport(mesh_idx) ), &
-                   inc_a_times_X( dt, cfl ),                                     &
-                   setval_c(horizontal_cfl, 0.0_r_def),                          &
-                   setval_c(vertical_cfl, 0.0_r_def),                            &
-                   split_w2_field_kernel_type(horizontal_cfl,                    &
-                                              vertical_cfl,                      &
+      call invoke( setval_X(cfl, self%advecting_wind(mesh_idx)),               &
+                   inc_X_divideby_Y(cfl, self%detj_at_w2_transport(mesh_idx)), &
+                   inc_a_times_X(dt, cfl),                                     &
+                   setval_c(horizontal_cfl, 0.0_r_def),                        &
+                   setval_c(vertical_cfl, 0.0_r_def),                          &
+                   setval_c(sum_horizontal_cfl, 0.0_r_def),                    &
+                   setval_c(sum_cfl, 0.0_r_def),                               &
+                   split_w2_field_kernel_type(horizontal_cfl,                  &
+                                              vertical_cfl,                    &
                                               cfl) )
-      call horizontal_cfl%field_minmax(cfl_min, cfl_max)
-      self%horizontal_cfl_max(mesh_idx) = max(abs(cfl_max), abs(cfl_min))
 
       select case(max_vert_cfl_calc)
       ! Calculate the maximum vertical cfl for substepping
       case(max_vert_cfl_calc_uniform)
-        call vertical_cfl%field_minmax(cfl_min, cfl_max)
+        call vertical_cfl%field_minmax(v_cfl_min, v_cfl_max)
       case(max_vert_cfl_calc_dep_point)
-        call cfl_dep%field_minmax(cfl_min, cfl_max)
+        call hori_cfl_dep%initialise( self%horizontal_advecting_wind(mesh_idx)%get_function_space() )
+        call invoke( split_w2_field_kernel_type(hori_cfl_dep, &
+                                                vertical_cfl, &
+                                                cfl_dep) )
+        call cfl_dep%field_minmax(v_cfl_min, v_cfl_max)
       case default
         write(log_scratch_space, '(A)') &
           'transport_runtime: maximum vertical CFL method not defined '
         call log_event(log_scratch_space, LOG_LEVEL_ERROR)
       end select
-      self%vertical_cfl_max(mesh_idx) = max(abs(cfl_max), abs(cfl_min))
+
+      ! Get the total CFL at each cell - this only works for element_order = 0
+      if (element_order == 0_i_def) then
+        call invoke( calc_max_cfl_kernel_type(sum_cfl, sum_horizontal_cfl, &
+                                              horizontal_cfl, vertical_cfl) )
+        call sum_horizontal_cfl%field_minmax(h_cfl_min, h_cfl_max)
+        call sum_cfl%field_minmax(cfl_min, cfl_max)
+        self%horizontal_cfl_max(mesh_idx) = max(abs(h_cfl_max), abs(h_cfl_min))
+        self%vertical_cfl_max(mesh_idx) = max(abs(v_cfl_max), abs(v_cfl_min))
+        self%total_cfl_max(mesh_idx) = max(abs(cfl_max), abs(cfl_min))
+      else
+        call horizontal_cfl%field_minmax(h_cfl_min, h_cfl_max)
+        self%horizontal_cfl_max(mesh_idx) = max(abs(h_cfl_max), abs(h_cfl_min))
+        self%vertical_cfl_max(mesh_idx) = max(abs(v_cfl_max), abs(v_cfl_min))
+        self%total_cfl_max(mesh_idx) = max( self%horizontal_cfl_max(mesh_idx), &
+                                            self%vertical_cfl_max(mesh_idx) )
+      end if
 
       write( log_scratch_space, '(A, E16.8)') &
           'Transport: maximum horizontal CFL ', self%horizontal_cfl_max(mesh_idx)
       call log_event( log_scratch_space, LOG_LEVEL_INFO )
       write( log_scratch_space, '(A, E16.8)') &
           'Transport: maximum vertical CFL ', self%vertical_cfl_max(mesh_idx)
+      call log_event( log_scratch_space, LOG_LEVEL_INFO )
+      write( log_scratch_space, '(A, E16.8)') &
+          'Transport: maximum total CFL ', self%total_cfl_max(mesh_idx)
       call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
       !========================================================================!
@@ -451,6 +484,7 @@ contains
     if ( allocated( self%vert_dry_flux ) )             deallocate( self%vert_dry_flux )
     if ( allocated( self%horizontal_cfl_max ) )        deallocate( self%horizontal_cfl_max )
     if ( allocated( self%vertical_cfl_max ) )          deallocate( self%vertical_cfl_max )
+    if ( allocated( self%total_cfl_max ) )             deallocate( self%total_cfl_max )
 
   end subroutine destroy_transport_runtime
 
@@ -489,6 +523,7 @@ contains
     if (.not. allocated( dest%vert_dry_flux ) )             allocate( dest%vert_dry_flux(dest%n_meshes, dest%num_dry_steps) )
     if (.not. allocated( dest%horizontal_cfl_max ) )        allocate( dest%horizontal_cfl_max(dest%n_meshes) )
     if (.not. allocated( dest%vertical_cfl_max ) )          allocate( dest%vertical_cfl_max(dest%n_meshes) )
+    if (.not. allocated( dest%total_cfl_max ) )             allocate( dest%total_cfl_max(dest%n_meshes) )
 
     do mesh_idx = 1, source%n_meshes
       call source%advecting_wind(mesh_idx)%copy_field(dest%advecting_wind(mesh_idx))
@@ -512,7 +547,8 @@ contains
 
     dest%mesh_ids(:) = source%mesh_ids(:)
     dest%horizontal_cfl_max(:) = source%horizontal_cfl_max(:)
-    dest%vertical_cfl_max(:) = source%vertical_cfl_max(:)
+    dest%vertical_cfl_max(:)   = source%vertical_cfl_max(:)
+    dest%total_cfl_max(:)      = source%total_cfl_max(:)
     dest%dt_model = source%dt_model
 
   end subroutine transport_runtime_assign
@@ -846,8 +882,7 @@ contains
         end if
 
       case (direction_3d)
-        number_substeps = int( max( self%horizontal_cfl_max(idx), &
-                                    self%vertical_cfl_max(idx) )  &
+        number_substeps = int( self%total_cfl_max(idx)            &
                               /(cfl_mol_3d_stab+tiny_eps),i_def)  &
                          + 1_i_def
       case default

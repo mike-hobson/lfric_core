@@ -7,11 +7,24 @@
 ##############################################################################
 UNIT_TEST_EXE = $(BIN_DIR)/$(firstword $(PROGRAMS))
 
+ifdef MPI_TESTS
+  UNIT_TEST_PRE_PROCESS_MACROS = USE_MPI=YES
+  LAUNCHER = mpiexec -n 4
+else
+  UNIT_TEST_PRE_PROCESS_MACROS = NO_MPI=no_mpi
+  # It seems that the Cray 'ftn' wrapper always builds for MPI...
+  #
+  ifdef CRAY_ENVIRONMENT
+    LAUNCHER = mpiexec -n 1
+  endif
+endif
+
+
 .PHONY: do-unit-test/%
 do-unit-test/run: $(UNIT_TEST_EXE)
 	$(call MESSAGE,Running,$(PROGRAMS))
 	$Qcd $(TEST_DIR); \
-	    mpiexec -n 6 $(UNIT_TEST_EXE) $(DOUBLE_VERBOSE_ARG)
+	    $(LAUNCHER) $(UNIT_TEST_EXE) $(DOUBLE_VERBOSE_ARG)
 
 # The addition of this target is a bit messy but it allows us to guarantee that
 # no build will happen when running from a test suite.
@@ -19,7 +32,7 @@ do-unit-test/run: $(UNIT_TEST_EXE)
 do-unit-test/rerun:
 	$(call MESSAGE,Running,$(PROGRAMS))
 	$Qcd $(TEST_DIR); \
-	    mpiexec -n 6 $(UNIT_TEST_EXE) $(DOUBLE_VERBOSE_ARG)
+	    $(LAUNCHER) $(UNIT_TEST_EXE) $(DOUBLE_VERBOSE_ARG)
 
 
 do-unit-test/build: $(UNIT_TEST_EXE)

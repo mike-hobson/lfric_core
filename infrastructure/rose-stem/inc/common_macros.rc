@@ -61,7 +61,7 @@ err-script = """
           target,
           ['base', 'compiler.'+compiler, 'build'],
           ['base'],
-          script='make -C $SOURCE_DIRECTORY -j 6 unit-tests/build'
+          script='make -C $SOURCE_DIRECTORY -j 6 unit-tests/build ' + verboseMake()
       )}}
 
     [[[environment]]]
@@ -79,7 +79,7 @@ err-script = """
           target,
           ['base', 'compiler.'+compiler, 'tech'],
           ['base'],
-          script='make -C $SOURCE_DIRECTORY -j 6 unit-tests/rerun'
+          script='make -C $SOURCE_DIRECTORY -j 6 unit-tests/rerun ' + verboseMake()
       )}}
 
     [[[environment]]]

@@ -83,7 +83,6 @@ unit-tests/%: export PROJECT = lfric_da
 unit-tests/%: export SOURCE_DIR = source
 unit-tests/%: export TEST_DIR = unit-test
 unit-tests/%: export WORKING_DIR := $(WORKING_DIR)/unit-tests
-unit-tests/%: export UNIT_TEST_PRE_PROCESS_MACROS = "NO_MPI=no_mpi"
 unit-tests: unit-tests/run
 
 

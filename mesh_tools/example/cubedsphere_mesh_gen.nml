@@ -1,15 +1,15 @@
 !--------------------------------------------------------------------
-! Example namelists for mesh generation
+! Example namelist for Cubed-Sphere mesh generation
 !--------------------------------------------------------------------
 ! These example namelists will result in the mesh generators
 ! producing an output file (<mesh_filename>) which will
 ! contain <n_meshes> mesh topologies which are identified by
-! the by <mesh_names>.
+! the <mesh_names>.
 !
 ! Additional intergrid mappings may be produced and included
 ! in the output file. Each map is specified by an item in the
 ! <mesh_maps> list. Maps are specified by a string of the two
-! mesh names spearated by a ":". Each item will cause a
+! mesh names separated by a ":". Each item will cause a
 ! map to be added to the maps source mesh, i.e.
 !
 ! 'dynamics:physics' will result in a map added to the
@@ -18,27 +18,28 @@
 !  *  "physics"  mesh (source) object mapping to "dynamics" (target)
 !
 ! Notes: 
-!  *  Only the first "n_meshes" listed in mesh_names will be
+!  *  Only the first "n_meshes" listed in <mesh_names> will be
 !     output in the mesh file.
 !  *  All spherical co-ordinates are given the order
-!     [longitude, latitude] in the units, degrees_east, degrees_north
-!     respectively
+!     [longitude, latitude] in the units, degrees_east, degrees_north,
+!     respectively.
 !===================================================================
 &mesh
-  mesh_filename  = 'mesh_C32.nc'
+  mesh_filename  = 'cubedsphere_mesh.nc'
   geometry       = 'spherical'
   topology       = 'periodic'
-  n_meshes       = 1
-  mesh_names     = 'unit_test'
+  n_meshes       = 2
+  mesh_names     = 'mesh_A','mesh_B'
+  mesh_maps      = 'mesh_A:mesh_B'
   partition_mesh = .false.
   coord_sys      = 'll'
-  rotate_mesh    = .false.
+  rotate_mesh    = .true.
 /
 
 !==================================================================
-! Cubedsphere Meshes: Only used by the Cubedsphere mesh generator
+! Cubed-sphere Meshes: Only used by the cubed-sphere mesh generator
 !==================================================================
-! Each cubesphere mesh is specified by the corresponding number of
+! Each cubed-sphere mesh is specified by the corresponding number of
 ! cells on a panel edge. These are listed in the variable <edge_cells>
 ! and correspond to the order of names given by <mesh_names>.
 !
@@ -47,7 +48,22 @@
 ! intergrid mesh maps) is advised to be left as 0 for general use.
 
 &cubedsphere_mesh
-  edge_cells     = 32
+  edge_cells     = 16, 8
   smooth_passes  = 0
   stretch_factor = 1.0
+/
+
+&partitions
+  panel_decomposition = 'auto'
+  panel_xproc         = 1
+  panel_yproc         = 1
+  max_stencil_depth   = 1
+  n_partitions        = 6
+  partition_range     = 0, 5
+/
+
+&rotation
+  rotation_target    = "null_island"
+  target_null_island = 0.0, 45.0
+  target_north_pole  = 0.0, 45.0
 /

@@ -30,7 +30,7 @@
   topology       = 'periodic'
   n_meshes       = 1
   mesh_names     = 'dynamics'
-  n_partitions   = 0
+  partition_mesh = .false.
   coord_sys      = 'xyz'
   rotate_mesh    = .false.
 /

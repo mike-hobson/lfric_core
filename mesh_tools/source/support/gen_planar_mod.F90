@@ -2126,8 +2126,8 @@ subroutine set_partition_parameters( xproc, yproc, &
                            partitioner_planar
 
   ! Configuration modules
-  use mesh_config_mod,       only: n_partitions
-  use partitions_config_mod, only: panel_xproc, panel_yproc,   &
+  use partitions_config_mod, only: n_partitions,               &
+                                   panel_xproc, panel_yproc,   &
                                    panel_decomposition,        &
                                    PANEL_DECOMPOSITION_AUTO,   &
                                    PANEL_DECOMPOSITION_ROW,    &

@@ -31,7 +31,7 @@
   n_meshes       = 4
   mesh_names     = 'C16','C8','C4','C2'
   mesh_maps      = 'C16:C8','C8:C4','C4:C2'
-  n_partitions   = 0
+  partition_mesh = .false.
   coord_sys      = 'll'
   rotate_mesh    = .false.
 /

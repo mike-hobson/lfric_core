@@ -30,7 +30,7 @@
   topology       = 'channel'
   n_meshes       = 1
   mesh_names     = 'unit_test'
-  n_partitions   = 0
+  partition_mesh = .false.
   coord_sys      = 'xyz'
   rotate_mesh    = .false.
 /

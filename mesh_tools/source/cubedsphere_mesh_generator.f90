@@ -50,7 +50,7 @@ program cubedsphere_mesh_generator
                                          stretch_factor
   use mesh_config_mod,             only: mesh_filename, rotate_mesh, &
                                          n_meshes, mesh_names,       &
-                                         mesh_maps, n_partitions,    &
+                                         mesh_maps, partition_mesh,  &
                                          coord_sys, coord_sys_ll,    &
                                          coord_sys_xyz,              &
                                          key_from_coord_sys,         &
@@ -63,6 +63,7 @@ program cubedsphere_mesh_generator
                                          geometry_spherical,         &
                                          key_from_geometry
   use partitions_config_mod,       only: max_stencil_depth, &
+                                         n_partitions,      &
                                          partition_range
   use rotation_config_mod,         only: target_north_pole,           &
                                          target_null_island,          &
@@ -114,6 +115,8 @@ program cubedsphere_mesh_generator
   type(partition_type)                :: partition
   type(local_mesh_type)               :: local_mesh
 
+  integer(i_def) :: start_partition, end_partition
+
   ! Temporary variables
   character(str_def), allocatable :: requested_mesh_maps(:)
   character(str_def) :: first_mesh
@@ -124,8 +127,8 @@ program cubedsphere_mesh_generator
   character(str_def) :: check_mesh(2)
   integer(i_def)     :: first_mesh_edge_cells
   integer(i_def)     :: second_mesh_edge_cells
-  real(kind=r_def)   :: set_north_pole(2)
-  real(kind=r_def)   :: set_null_island(2)
+  real(r_def)        :: set_north_pole(2)
+  real(r_def)        :: set_null_island(2)
 
   character(str_def) :: lon_str
   character(str_def) :: lat_str
@@ -136,7 +139,6 @@ program cubedsphere_mesh_generator
 
   character(str_max_filename) :: output_basename
   character(str_def) :: name, source_name
-  integer(i_def)     :: start_partition, end_partition
 
   !===================================================================
   ! 1.0 Set the logging level for the run, should really be able
@@ -183,20 +185,20 @@ program cubedsphere_mesh_generator
   case (geometry_spherical)
 
   case (geometry_planar)
-    write(log_scratch_space,'(A)') &
+    write( log_scratch_space,'(A)' ) &
         'Invalid domain geometry, Cubed-sphere geometry is spherical '
-    call log_event(log_scratch_space, log_level)
+    call log_event( log_scratch_space, log_level )
 
   case (emdi)
-    write(log_scratch_space,'(A)') &
+    write( log_scratch_space,'(A)' ) &
         'Enumeration key for geometry has not been set.'
-    call log_event(log_scratch_space, log_level)
+    call log_event( log_scratch_space, log_level )
 
   case default
-    write(log_scratch_space,'(A)')                      &
+    write( log_scratch_space,'(A)' )                    &
         'Unrecognised enumeration key for geometry:' // &
         trim(key_from_geometry(geometry))
-    call log_event(log_scratch_space, log_level)
+    call log_event( log_scratch_space, log_level )
 
   end select
 
@@ -209,20 +211,20 @@ program cubedsphere_mesh_generator
   case (topology_periodic)
 
   case (topology_channel, topology_non_periodic)
-    write(log_scratch_space,'(A)') &
+    write( log_scratch_space,'(A)' ) &
         'Cubed-sphere topology should be periodic.'
-    call log_event(log_scratch_space, log_level)
+    call log_event( log_scratch_space, log_level )
 
   case (emdi)
-    write(log_scratch_space,'(A)') &
+    write( log_scratch_space,'(A)' ) &
         'Enumeration key for topology has not been set.'
-    call log_event(log_scratch_space, log_level)
+    call log_event( log_scratch_space, log_level )
 
   case default
-    write(log_scratch_space,'(A)')                      &
+    write( log_scratch_space,'(A)' )                    &
         'Unrecognised enumeration key for topology:' // &
         trim(key_from_topology(topology))
-    call log_event(log_scratch_space, log_level)
+    call log_event( log_scratch_space, log_level )
 
   end select
 
@@ -234,64 +236,62 @@ program cubedsphere_mesh_generator
   case (coord_sys_ll)
 
   case (coord_sys_xyz)
-    write(log_scratch_space,'(A)') 'Cartesian co-ordinate space ' //   &
-                                   'currently unsupported for cubed-sphere'
-    call log_event(log_scratch_space, log_level)
+    write( log_scratch_space,'(A)' ) &
+        'Cartesian co-ordinate space currently unsupported for cubed-sphere.'
+    call log_event( log_scratch_space, log_level )
 
   case (emdi)
-    write(log_scratch_space,'(A)') 'Enumeration key for coord_sys ' // &
-                                   'has not been set.'
+    write( log_scratch_space,'(A)' ) &
+        'Enumeration key for coord_sys has not been set.'
 
   case default
-    write(log_scratch_space,'(A)') 'Unrecognised enumeration key ' //  &
-                                   'for coord_sys:' //                 &
-                                   trim(key_from_coord_sys(coord_sys))
-
-    call log_event(log_scratch_space, log_level)
+    write( log_scratch_space,'(A)' )                     &
+        'Unrecognised enumeration key for coord_sys:' // &
+        trim(key_from_coord_sys(coord_sys))
+    call log_event( log_scratch_space, log_level )
 
   end select
 
 
-
   ! 4.2 Check the number of meshes requested.
   if (n_meshes < 1) then
-    write(log_scratch_space,'(A,I0,A)')                    &
+    write( log_scratch_space,'(A,I0,A)' )                  &
        'Invalid number of meshes requested, (n_meshes = ', &
        n_meshes,')'
-    call log_event(log_scratch_space,LOG_LEVEL_ERROR)
+    call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end if
 
   if ( any(mesh_names == cmdi) .or. &
        any(edge_cells == imdi) ) then
-    write(log_scratch_space,'(A,I0,A)') &
-       'Invalid number of meshes/edge_cells requested, '//&
+    write( log_scratch_space,'(A,I0,A)' )                   &
+       'Invalid number of meshes/edge_cells requested, ' // &
        '(n_meshes = ',n_meshes,')'
-    call log_event(log_scratch_space,LOG_LEVEL_ERROR)
+    call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end if
 
   ! 4.3 Check for missing data.
   if (ANY(edge_cells == imdi)) then
-    write(log_scratch_space,'(A)') &
+    write( log_scratch_space,'(A)' ) &
        'Missing data in namelist variable, edge_cells'
-    call log_event(log_scratch_space,LOG_LEVEL_ERROR)
+    call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end if
 
   ! 4.4 Check that all meshes requested have unique names.
   any_duplicate_names = any_duplicates(mesh_names)
   if (any_duplicate_names)  then
-    write(log_scratch_space,'(A)')          &
-       'Duplicate mesh names found, '// &
+    write( log_scratch_space,'(A)' )     &
+       'Duplicate mesh names found, ' // &
        'all requested meshes must have unique names.'
-    call log_event(log_scratch_space, LOG_LEVEL_ERROR)
+    call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end if
 
   ! 4.5 Check that all mesh map requests are unique.
   any_duplicate_names = any_duplicates(mesh_maps)
   if (any_duplicate_names)  then
-    write(log_scratch_space,'(A)')          &
-       'Duplicate mesh requests found, '//  &
+    write( log_scratch_space,'(A)' )        &
+       'Duplicate mesh requests found, ' // &
        'please remove duplicate requests.'
-    call log_event(log_scratch_space, LOG_LEVEL_ERROR)
+    call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end if
 
   ! Perform a number of checks related to mesh map
@@ -323,11 +323,11 @@ program cubedsphere_mesh_generator
 
       ! 4.6 Check that there is a ':' in the map specification.
       if (count(':' == map_spec ) /= 1) then
-        write(log_scratch_space,'(A)')                               &
-           '['//trim(adjustl(map_entry))//'] '//                     &
-           'Incorrectly specified map entry must contain one ":" '// &
+        write( log_scratch_space,'(A)' )                              &
+           '['//trim(adjustl(map_entry))//'] ' //                     &
+           'Incorrectly specified map entry must contain one ":" ' // &
            'separating the mesh identifiers'
-        call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR )
+        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
       deallocate(map_spec)
 
@@ -342,45 +342,45 @@ program cubedsphere_mesh_generator
         end do
 
         if ( .not. l_found ) then
-          write(log_scratch_space,'(A)')         &
+          write( log_scratch_space,'(A)' )       &
            '['//trim(adjustl(map_entry))//'] '// &
              'Mesh "'//trim(check_mesh(j))//     &
              '" not configured for this file.'
-          call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR )
+          call log_event( log_scratch_space, LOG_LEVEL_ERROR )
         end if
       end do
 
       ! 4.8 Check the map request is not mapping at mesh
       !     to itself.
       if (trim(first_mesh) == trim(second_mesh)) then
-        write(log_scratch_space,'(A)')               &
+        write( log_scratch_space,'(A)' )             &
            '['//trim(adjustl(map_entry))//'] '//     &
            'Found identical adjacent mesh names "'// &
            trim(mesh_maps(i))//'", requested for mapping.'
-        call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR )
+        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
 
       ! 4.9 Check that the number of edge cells of the meshes
       !     are not the same.
       if (first_mesh_edge_cells == second_mesh_edge_cells) then
-        write(log_scratch_space,'(A,I0,A)')                    &
+        write( log_scratch_space,'(A,I0,A)' )                  &
            '['//trim(adjustl(map_entry))//'] '//               &
            'Found identical adjacent mesh edge cells,',        &
            first_mesh_edge_cells,', requested for mapping "'// &
            trim(first_mesh)//'"-"'//trim(second_mesh)//'".'
-        call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR )
+        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
 
       ! 4.10 Check that the number of edge cells for one mesh is a
       !      factor of the number of edges cells on the other mesh.
       if ( mod(first_mesh_edge_cells, second_mesh_edge_cells) /= 0 .and. &
            mod(second_mesh_edge_cells, first_mesh_edge_cells) /= 0 ) then
-        write(log_scratch_space, '(2(A,I0))')                            &
+        write( log_scratch_space,'(2(A,I0))' )                           &
           '['//trim(adjustl(map_entry))//'] '//                          &
           'Edges cells of one mesh must be a factor of the other. '//    &
           trim(first_mesh)//' edge cells=',first_mesh_edge_cells,', '//  &
           trim(second_mesh)//' edge cells=',second_mesh_edge_cells
-        call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR )
+        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
 
     end do  ! n_mesh_maps
@@ -398,9 +398,9 @@ program cubedsphere_mesh_generator
       tmp_str = mesh_maps(i)
       first_mesh  = tmp_str(:index(tmp_str,':')-1)
       second_mesh = tmp_str(index(tmp_str,':')+1:)
-      write(requested_mesh_maps(j),   '(A)') &
+      write( requested_mesh_maps(j),  '(A)' ) &
           trim(first_mesh)//':'//trim(second_mesh)
-      write(requested_mesh_maps(j+1), '(A)') &
+      write( requested_mesh_maps(j+1),'(A)' ) &
           trim(second_mesh)//':'//trim(first_mesh)
       j=j+2
     end do
@@ -412,40 +412,40 @@ program cubedsphere_mesh_generator
   !     where the mesh is that source.
   !===================================================================
   log_level=LOG_LEVEL_INFO
-  write(log_scratch_space, '(A)')    &
+  write( log_scratch_space,'(A)' ) &
       '===================================================================='
   call log_event( log_scratch_space, log_level )
 
-  write(log_scratch_space, '(A)')    &
+  write( log_scratch_space,'(A)' ) &
       'Mesh geometry: ' // trim(key_from_geometry(geometry))
   call log_event( log_scratch_space, log_level )
 
-  write(log_scratch_space,'(A)')     &
+  write( log_scratch_space,'(A)' ) &
       'Mesh topology: ' // trim(key_from_topology(topology))
   call log_event( log_scratch_space, log_level )
 
-  write(log_scratch_space, '(A)')    &
+  write( log_scratch_space,'(A)' ) &
       'Co-ordinate system: '// trim(key_from_coord_sys(coord_sys))
   call log_event( log_scratch_space, log_level )
 
-  write(log_scratch_space, '(A)')    &
+  write( log_scratch_space,'(A)' ) &
       '===================================================================='
   call log_event( log_scratch_space, log_level )
   call log_event( 'Additional transformations', log_level )
 
-  write(log_scratch_space, '(A,I0)') &
+  write( log_scratch_space,'(A,I0)' ) &
       '  Smoothing passes: ', smooth_passes
   call log_event( log_scratch_space, log_level )
 
   if (smooth_passes > 0) then
-    write(log_scratch_space, '(A,I0)')                &
+    write( log_scratch_space,'(A,I0)' )               &
         '  Smoothing on meshes for intergrid maps '// &
         'may result in non-colocated nodes.'
     call log_event( log_scratch_space, LOG_LEVEL_WARNING )
   end if
 
   if (stretch_factor >= 0.0_r_def) then
-    write(log_scratch_space, '(A,F4.2)') &
+    write( log_scratch_space,'(A,F4.2)' ) &
       '  Stretch factor:   ', stretch_factor
     call log_event( log_scratch_space, log_level )
   end if
@@ -468,26 +468,26 @@ program cubedsphere_mesh_generator
 
   if (rotate_mesh) then
 
-    write(log_scratch_space, '(A)') &
+    write(log_scratch_space,'(A)') &
         '  Rotation of mesh requested with: '
-    call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
     select case( rotation_target )
     case ( ROTATION_TARGET_NULL_ISLAND )
       ! Use the domain_centre (Null Island) rather than pole as input
       set_north_pole(:)  = get_target_north_pole(target_null_island)
       set_null_island(:) = target_null_island(:)
-      write(log_scratch_space,'(A)')       &
+      write( log_scratch_space,'(A)' ) &
          '    Target pole will be derived from Null Island.'
-      call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
+      call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
-      write(lon_str,'(F10.2)') set_null_island(1)
-      write(lat_str,'(F10.2)') set_null_island(2)
-      write(log_scratch_space,'(A)')         &
-         '    Null Island [lon,lat]: ['  //  &
-         trim(adjustl(lon_str)) // ',' //    &
+      write( lon_str,'(F10.2)' ) set_null_island(1)
+      write( lat_str,'(F10.2)' ) set_null_island(2)
+      write( log_scratch_space,'(A)' )     &
+         '    Null Island [lon,lat]: [' // &
+         trim(adjustl(lon_str)) // ',' //  &
          trim(adjustl(lat_str)) // ']'
-      call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
+      call log_event( log_scratch_space, LOG_LEVEL_INFO )
     case ( ROTATION_TARGET_NORTH_POLE )
       set_north_pole(:)  = target_north_pole(:)
       set_null_island(:) = get_target_null_island(target_north_pole)
@@ -497,36 +497,36 @@ program cubedsphere_mesh_generator
     set_null_island(1) = rebase_longitude_range( set_null_island(1), -180.0_r_def)
     set_north_pole(1)  = rebase_longitude_range( set_north_pole(1), -180.0_r_def)
 
-    write(lon_str,'(F10.2)') set_north_pole(1)
-    write(lat_str,'(F10.2)') set_north_pole(2)
-    write(log_scratch_space,'(A)')      &
+    write( lon_str,'(F10.2)' ) set_north_pole(1)
+    write( lat_str,'(F10.2)' ) set_north_pole(2)
+    write( log_scratch_space,'(A)' )    &
        '    North pole [lon,lat]: [' // &
        trim(adjustl(lon_str)) // ',' // &
        trim(adjustl(lat_str)) // ']'
-    call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
-    write(lon_str,'(F10.2)') set_null_island(1)
-    write(lat_str,'(F10.2)') set_null_island(2)
-    write(log_scratch_space,'(A)')       &
+    write( lon_str,'(F10.2)' ) set_null_island(1)
+    write( lat_str,'(F10.2)' ) set_null_island(2)
+    write( log_scratch_space,'(A)' )     &
        '    Null island [lon,lat]: [' // &
        trim(adjustl(lon_str)) // ','  // &
        trim(adjustl(lat_str)) // ']'
-    call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
   end if
 
-  write(log_scratch_space, '(A)') &
+  write( log_scratch_space,'(A)' ) &
       '===================================================================='
-  call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
+  call log_event( log_scratch_space, LOG_LEVEL_INFO )
   call log_event( "Generating mesh(es):", log_level )
   do i=1, n_meshes
     cpp(i)    = edge_cells(i)*edge_cells(i)
     ncells(i) = cpp(i)*mesh_gen(i)%get_number_of_panels()
 
-    write(log_scratch_space,'(2(A,I0),A)')           &
+    write( log_scratch_space,'(2(A,I0),A)' )         &
         '  Creating Mesh: '// trim(mesh_names(i)) // &
         '(',edge_cells(i),',',edge_cells(i),')'
-    call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
 
     ! 6.3 Get any target mappings requested for this mesh
@@ -575,13 +575,15 @@ program cubedsphere_mesh_generator
       target_mesh_names(:) = target_mesh_names_tmp(:n_targets)
       target_edge_cells(:) = target_edge_cells_tmp(:n_targets)
 
-      write(log_scratch_space,'(A,I0)') '    Maps to: '
+      write( log_scratch_space,'(A,I0)' ) '    Maps to: '
       do j=1, n_targets
-        write(log_scratch_space,'(2(A,I0),A)') trim(log_scratch_space)//' '//&
-              trim(target_mesh_names(j))//&
-              '(',target_edge_cells(j),',',target_edge_cells(j),')'
+        write( log_scratch_space,'(2(A,I0),A)' ) &
+            trim(log_scratch_space)//' '//       &
+            trim(target_mesh_names(j))//         &
+            '(',target_edge_cells(j), ',',       &
+            target_edge_cells(j),')'
       end do
-      call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
+      call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
       mesh_gen(i) = gencube_ps_type(                         &
                         mesh_name=mesh_names(i),             &
@@ -596,12 +598,12 @@ program cubedsphere_mesh_generator
                         stretch_factor=stretch_factor )
 
     else
-      write(log_scratch_space, "(A,I0,A)") &
+      write( log_scratch_space,'(A,I0,A)' ) &
           '  Number of unique meshes is negative [', n_meshes,']'
-      call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR)
+      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
     end if
 
-    ! Pass the cubesphere generation object to the ugrid file writer
+    ! Pass the cubesphere generation object to the UGRID file writer
     call ugrid_2d(i)%set_by_generator(mesh_gen(i))
 
     if (allocated(target_mesh_names)) deallocate(target_mesh_names)
@@ -612,17 +614,16 @@ program cubedsphere_mesh_generator
   if ( allocated(ncells)            ) deallocate(ncells)
 
   call log_event( "...generation complete.", LOG_LEVEL_INFO )
-  write(log_scratch_space, '(A)') &
+  write( log_scratch_space,'(A)' ) &
       '===================================================================='
-  call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
-
+  call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
   output_basename = mesh_filename( 1:index(mesh_filename, '.nc',back=.true. )-1)
 
   !=================================================================
   ! 7.0 Offline Partitioning (OP)
   !=================================================================
-  if (n_partitions > 0) then
+  if (partition_mesh) then
     !----------------------------------------------------------------------
     ! 7.1 Create OP global meshes
     !----------------------------------------------------------------------
@@ -634,11 +635,27 @@ program cubedsphere_mesh_generator
     !----------------------------------------------------------------------
     start_partition = partition_range(1)
     end_partition   = partition_range(2)
-    if (end_partition > n_partitions-1) then
-      write(log_scratch_space,'(A,I0)')                   &
-          'Requested partition range does not exist, ' // &
-          'max. partition is ', n_partitions-1
-      call log_event( log_scratch_space, log_level_error )
+    do i=1, 2
+      if ( partition_range(i) <  0 .or. &
+           partition_range(i) >= n_partitions ) then
+        write( log_scratch_space,'(A,I0)' )         &
+            'Invalid partition ID range bound, ' // &
+            'valid IDs are 0:', n_partitions-1
+        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+      end if
+    end do
+
+    if ( partition_range(1) > partition_range(2) ) then
+      write( log_scratch_space,'(A,I0)' )                     &
+          'Invalid start/end partitions, start partition ' // &
+          'ID should be less than end partition ID.'
+      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+    end if
+
+    if ( n_partitions <  1 ) then
+      write( log_scratch_space,'(A,I0)' ) &
+          'At least 1 partition must be requested.'
+      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
     end if
 
     !----------------------------------------------------------------------
@@ -662,7 +679,7 @@ program cubedsphere_mesh_generator
                                     max_stencil_depth, &
                                     j, n_partitions )
 
-        write(name,'(A,I0)') trim(source_name)//'_', j
+        write( name,'(A,I0)' ) trim(source_name)//'_', j
 
         call local_mesh%initialise( global_mesh_ptr, partition, mesh_name=name )
 
@@ -671,39 +688,40 @@ program cubedsphere_mesh_generator
 
     global_mesh_ptr => null()
 
-  end if ! n_partitions > 0
+    ! ========================================================
+    ! End of developmental Offline Partioning code
+    ! ========================================================
 
-  ! ========================================================
-  ! End of developmental Offline Partioning code
-  ! ========================================================
+  else ! Write out mesh without partitioning
 
-  !===================================================================
-  ! 8.0 Write out to ugrid file
-  !===================================================================
-  do i=1, n_meshes
+    !===================================================================
+    ! 8.0 Write out to UGRID file
+    !===================================================================
+    do i=1, n_meshes
 
-    if (.not. allocated(ugrid_file)) allocate(ncdf_quad_type::ugrid_file)
+      if (.not. allocated(ugrid_file)) allocate(ncdf_quad_type::ugrid_file)
 
-    call ugrid_2d(i)%set_file_handler(ugrid_file)
+      call ugrid_2d(i)%set_file_handler(ugrid_file)
 
-    if ( i==1 ) then
-      call ugrid_2d(i)%write_to_file( trim(mesh_filename) )
-    else
-      call ugrid_2d(i)%append_to_file( trim(mesh_filename) )
-    end if
+      if ( i==1 ) then
+        call ugrid_2d(i)%write_to_file( trim(mesh_filename) )
+      else
+        call ugrid_2d(i)%append_to_file( trim(mesh_filename) )
+      end if
 
-    inquire(file=trim(mesh_filename), size=fsize)
-    write( log_scratch_space, '(A,I0,A)')                 &
-        'Adding mesh (' // trim(mesh_names(i)) //         &
-        ') to ' // trim(adjustl(mesh_filename)) // ' - ', &
-        fsize, ' bytes written.'
+      inquire(file=trim(mesh_filename), size=fsize)
+      write( log_scratch_space, '(A,I0,A)' )                &
+          'Adding mesh (' // trim(mesh_names(i)) //         &
+          ') to ' // trim(adjustl(mesh_filename)) // ' - ', &
+          fsize, ' bytes written.'
 
-    call log_event( log_scratch_space, LOG_LEVEL_INFO )
+      call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
-    if (allocated(ugrid_file)) deallocate(ugrid_file)
+      if (allocated(ugrid_file)) deallocate(ugrid_file)
 
-  end do  ! n_meshes
+    end do  ! n_meshes
 
+  end if ! partition_mesh
 
   !===================================================================
   ! 9.0 Clean up and Finalise

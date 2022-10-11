@@ -220,7 +220,7 @@ stretching_method='linear',
 /
 
 &transport
-  advective_then_flux = .false.
+  advective_then_flux = .true.
   moisture_eqn='advective'
   profile_size = 3
   field_names = 'density', 'potential_temperature', 'wind'
@@ -235,9 +235,9 @@ stretching_method='linear',
   enforce_min_value=.false.,.false.,.false.
   max_vert_cfl_calc='dep_point'
   min_value=0.0,0.0,-99999999.0,0.0
-  cfl_mol_1d_stab = 2.0
-  cfl_mol_2d_stab = 2.0
-  cfl_mol_3d_stab = 2.0
+  cfl_mol_1d_stab = 1.0
+  cfl_mol_2d_stab = 1.0
+  cfl_mol_3d_stab = 1.0
   dry_field_name = 'density'
   consistent_metric  = .false.
   fv_horizontal_order = 2

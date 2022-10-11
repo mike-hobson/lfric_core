@@ -372,20 +372,20 @@
                           "directives":{
                                         "C48_MG":{"mpi_parts":216,
                                                "threads":1,
-                                               "wallclock":"0:40:00"},
+                                               "wallclock":"0:30:00"},
 					       },
                          },
                      plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"
                      )',
     'run_application("lfric_atm", "nwp_gal9_hres", checkkgo=False,
                      resolutions=[("C192_MG", 720.0)],
-                     env={"crun":10, "nrun":60,
+                     env={"crun":2, "nrun":300,
                           "directives":{
                                         "C192_MG":{"mpi_parts":864,
                                                "threads":1,
                                                "xios_nodes":2,
                                                "mpi_parts_xios":72,
-                                               "wallclock":"0:20:00"},
+                                               "wallclock":"0:40:00"},
 					       },
                          },
                      plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"

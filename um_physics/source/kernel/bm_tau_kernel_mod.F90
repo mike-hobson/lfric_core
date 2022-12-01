@@ -10,7 +10,7 @@ module bm_tau_kernel_mod
   use argument_mod,       only : arg_type,          &
                                  GH_FIELD, GH_REAL, &
                                  GH_READ, GH_WRITE, &
-                                 CELL_COLUMN
+                                 DOMAIN
   use constants_mod,      only : r_def, i_def, i_um, r_um
   use fs_continuity_mod,  only : Wtheta
   use kernel_mod,         only : kernel_type
@@ -37,7 +37,7 @@ module bm_tau_kernel_mod
          arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA), & ! tau_hom_bm
          arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA)  & ! tau_mph_bm
          /)
-    integer :: operates_on = CELL_COLUMN
+    integer :: operates_on = DOMAIN
   contains
     procedure, nopass :: bm_tau_code
   end type
@@ -69,6 +69,7 @@ contains
   !> @param[in]     map_wth       Dofmap for the cell at the base of the column for potential temperature space
 
   subroutine bm_tau_code(nlayers,       &
+                         seg_len,       &
                          m_v,           &
                          theta_in_wth,  &
                          exner_in_wth,  &
@@ -91,18 +92,18 @@ contains
     ! Structures holding diagnostic arrays - not used
 
     ! Other modules containing stuff passed to CLD
-    use nlsizes_namelist_mod, only: row_length, rows, bl_levels
+    use nlsizes_namelist_mod, only: bl_levels
     use planet_constants_mod, only: p_zero, kappa
     use bm_calc_tau_mod,      only: bm_calc_tau
 
     implicit none
 
     ! Arguments
-    integer(kind=i_def), intent(in)     :: nlayers
+    integer(kind=i_def), intent(in)     :: nlayers, seg_len
     integer(kind=i_def), intent(in)     :: ndf_wth
     integer(kind=i_def), intent(in)     :: undf_wth
 
-    integer(kind=i_def), intent(in),    dimension(ndf_wth)  :: map_wth
+    integer(kind=i_def), intent(in),    dimension(ndf_wth,seg_len)  :: map_wth
 
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: wvar
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: lmix_bl
@@ -120,51 +121,46 @@ contains
 
 
     ! Local variables for the kernel
-    integer(i_um) :: k
+    integer(i_um) :: k, i
 
     ! profile fields from level 1 upwards
-    real(r_um), dimension(row_length,rows,nlayers) ::   &
-         cff, q, theta, qcf, qcf2, rho_dry_theta,       &
-         rho_wet_tq, exner_theta_levels
+    real(r_um), dimension(seg_len,1,nlayers) :: cff, q, theta, qcf, qcf2,      &
+         rho_dry_theta, rho_wet_tq, exner_theta_levels, wvar_in, tau_dec_out,  &
+         tau_hom_out, tau_mph_out
 
-    real(r_um), dimension(row_length,rows,1:bl_levels) :: elm_in
-    real(r_um), dimension(row_length,rows,nlayers) :: wvar_in
-
-    ! profile fields from level 1 upwards
-    real(r_um), dimension(row_length,rows,nlayers) ::   &
-         tau_dec_out, tau_hom_out, tau_mph_out
+    real(r_um), dimension(seg_len,1,bl_levels) :: elm_in
 
     ! profile fields from level 0 upwards
-    real(r_um), dimension(row_length,rows,0:nlayers) :: &
-         p_theta_levels
+    real(r_um), dimension(seg_len,1,0:nlayers) :: p_theta_levels
 
-    do k = 1, nlayers
-      theta(1,1,k) = theta_in_wth(map_wth(1) + k)
-      exner_theta_levels(1,1,k) = exner_in_wth(map_wth(1)+ k)
-      q(1,1,k) =  m_v(map_wth(1) + k)
-      qcf(1,1,k) = m_ci(map_wth(1) + k)
-      qcf2(1,1,k)= 0.0  !dummy variable to pass to bm_calc_tau
-      ! cloud fields
-      cff(1,1,k) = cf_ice(map_wth(1) + k)
-      ! turbulence fields
-      rho_dry_theta(1,1,k) = rho_in_wth(map_wth(1) + k)
-      rho_wet_tq(1,1,k) = wetrho_in_wth(map_wth(1) + k)
-      wvar_in(1,1,k)     = wvar(map_wth(1) + k)
+    do i = 1, seg_len
+      do k = 1, nlayers
+        theta(i,1,k) = theta_in_wth(map_wth(1,i) + k)
+        exner_theta_levels(i,1,k) = exner_in_wth(map_wth(1,i)+ k)
+        q(i,1,k) =  m_v(map_wth(1,i) + k)
+        qcf(i,1,k) = m_ci(map_wth(1,i) + k)
+        ! cloud fields
+        cff(i,1,k) = cf_ice(map_wth(1,i) + k)
+        ! turbulence fields
+        rho_dry_theta(i,1,k) = rho_in_wth(map_wth(1,i) + k)
+        rho_wet_tq(i,1,k) = wetrho_in_wth(map_wth(1,i) + k)
+        wvar_in(i,1,k)     = wvar(map_wth(1,i) + k)
+      end do
+    end do
+    qcf2= 0.0_r_um  !dummy variable to pass to bm_calc_tau
+
+    do i = 1, seg_len
+      do k = 2, bl_levels
+        elm_in(i,1,k) = lmix_bl(map_wth(1,i) + k-1)
+      end do
     end do
 
-    do k = 2, bl_levels
-      elm_in(1,1,k) = lmix_bl(map_wth(1) + k-1)
+    do i = 1, seg_len
+      do k = 0, nlayers
+        ! pressure on theta levels
+        p_theta_levels(i,1,k) = p_zero*(exner_in_wth(map_wth(1,i) + k))**(1.0_r_def/kappa)
+      end do
     end do
-
-    do k = 1, nlayers-1
-      ! pressure on theta levels
-      p_theta_levels(1,1,k) = p_zero*(exner_in_wth(map_wth(1) + k))**(1.0_r_def/kappa)
-    end do
-    ! pressure on theta levels
-    p_theta_levels(1,1,0) = p_zero*(exner_in_wth(map_wth(1) + 0))**(1.0_r_def/kappa)
-    ! pressure on theta levels
-    p_theta_levels(1,1,nlayers) = p_zero*(exner_in_wth(map_wth(1) + nlayers))** &
-                    (1.0_r_def/kappa)
 
     call bm_calc_tau(q, theta, exner_theta_levels, qcf, bl_levels, cff, &
                     p_theta_levels, wvar_in, elm_in, rho_dry_theta,     &
@@ -174,13 +170,17 @@ contains
     ! update output fields
     !-----------------------------------------------------------------------
     do k = 1, nlayers
-      tau_dec_bm(map_wth(1) + k) = tau_dec_out(1,1,k)
-      tau_hom_bm(map_wth(1) + k) = tau_hom_out(1,1,k)
-      tau_mph_bm(map_wth(1) + k) = tau_mph_out(1,1,k)
+      do i = 1, seg_len
+        tau_dec_bm(map_wth(1,i) + k) = tau_dec_out(i,1,k)
+        tau_hom_bm(map_wth(1,i) + k) = tau_hom_out(i,1,k)
+        tau_mph_bm(map_wth(1,i) + k) = tau_mph_out(i,1,k)
+      end do
     end do
-    tau_dec_bm(map_wth(1) + 0) = tau_dec_bm(map_wth(1) + 1)
-    tau_hom_bm(map_wth(1) + 0) = tau_hom_bm(map_wth(1) + 1)
-    tau_mph_bm(map_wth(1) + 0) = tau_mph_bm(map_wth(1) + 1)
+    do i = 1, seg_len
+      tau_dec_bm(map_wth(1,i) + 0) = tau_dec_bm(map_wth(1,i) + 1)
+      tau_hom_bm(map_wth(1,i) + 0) = tau_hom_bm(map_wth(1,i) + 1)
+      tau_mph_bm(map_wth(1,i) + 0) = tau_mph_bm(map_wth(1,i) + 1)
+    end do
 
   end subroutine bm_tau_code
 

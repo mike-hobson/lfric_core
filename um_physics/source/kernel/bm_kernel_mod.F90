@@ -13,7 +13,7 @@ module bm_kernel_mod
                                  GH_INTEGER,            &
                                  ANY_DISCONTINUOUS_SPACE_1, &
                                  ANY_DISCONTINUOUS_SPACE_9, &
-                                 GH_WRITE, CELL_COLUMN
+                                 GH_WRITE, DOMAIN
   use constants_mod,      only : r_def, r_double, i_def, i_um, r_um
   use fs_continuity_mod,  only : W3, Wtheta
   use kernel_mod,         only : kernel_type
@@ -53,7 +53,7 @@ module bm_kernel_mod
          arg_type(GH_FIELD, GH_REAL, GH_WRITE,     WTHETA), & ! svar_tb
          arg_type(GH_FIELD, GH_REAL, GH_WRITE,     WTHETA)  & ! theta_inc
          /)
-    integer :: operates_on = CELL_COLUMN
+    integer :: operates_on = DOMAIN
   contains
     procedure, nopass :: bm_code
   end type
@@ -108,6 +108,7 @@ contains
   !> @param[in]     map_bl        Dofmap for cell for BL types
 
   subroutine bm_code(nlayers,      &
+                     seg_len,      &
                      theta_in_wth, &
                      exner_in_w3,  &
                      exner_in_wth, &
@@ -152,7 +153,6 @@ contains
     ! Structures holding diagnostic arrays - not used
 
     ! Other modules containing stuff passed to CLD
-    use nlsizes_namelist_mod, only: row_length, rows
     use planet_constants_mod, only: p_zero, kappa, cp
     use water_constants_mod,  only: lc
     use bm_ctl_mod,           only: bm_ctl
@@ -161,15 +161,15 @@ contains
     implicit none
 
     ! Arguments
-    integer(kind=i_def), intent(in)     :: nlayers
+    integer(kind=i_def), intent(in)     :: nlayers, seg_len
     integer(kind=i_def), intent(in)     :: ndf_wth, ndf_w3, ndf_2d
     integer(kind=i_def), intent(in)     :: undf_wth, undf_w3, undf_2d
     integer(kind=i_def), intent(in)     :: ndf_bl, undf_bl
 
-    integer(kind=i_def), intent(in),    dimension(ndf_wth)  :: map_wth
-    integer(kind=i_def), intent(in),    dimension(ndf_w3)   :: map_w3
-    integer(kind=i_def), intent(in),    dimension(ndf_2d)   :: map_2d
-    integer(kind=i_def), intent(in),    dimension(ndf_bl)   :: map_bl
+    integer(kind=i_def), intent(in),    dimension(ndf_wth,seg_len)  :: map_wth
+    integer(kind=i_def), intent(in),    dimension(ndf_w3,seg_len)   :: map_w3
+    integer(kind=i_def), intent(in),    dimension(ndf_2d,seg_len)   :: map_2d
+    integer(kind=i_def), intent(in),    dimension(ndf_bl,seg_len)   :: map_bl
 
     real(kind=r_def),    intent(in),    dimension(undf_w3)  :: exner_in_w3
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: exner_in_wth
@@ -199,71 +199,65 @@ contains
     integer(kind=i_def), intent(in),    dimension(undf_bl)  :: bl_type_ind
 
     ! Local variables for the kernel
-    integer(i_um) :: k
+    integer(i_um) :: k, i
 
-    real(r_def) :: dmv1
+    real(r_def) :: dmv1(seg_len)
 
     ! profile fields from level 1 upwards
-    real(r_um), dimension(row_length,rows,nlayers) ::         &
-         cf_inout, cfl_inout, cff_inout, area_cloud_fraction, &
-         qt, qcl_out, qcf_in, tl, tgrad_in,                   &
-         tau_dec_in, tau_hom_in, tau_mph_in, z_theta
+    real(r_um), dimension(seg_len,1,nlayers) :: cf_inout, cfl_inout, cff_inout,&
+         area_cloud_fraction, qt, qcl_out, qcf_in, tl, tgrad_in, tau_dec_in,   &
+         tau_hom_in, tau_mph_in, z_theta, wvar_in, gradrinr_in, sskew_out,     &
+         svar_turb_out, svar_bm_out
 
-    real(r_um), dimension(row_length,rows,nlayers) ::        &
-         wvar_in, gradrinr_in
-
-    real(r_um), dimension(row_length,rows) ::                &
-         zh_in, zhsc_in, dzh_in, bl_type_7_in
-
-    real(r_um), dimension(row_length,rows,nlayers) ::        &
-         sskew_out, svar_turb_out, svar_bm_out
+    real(r_um), dimension(seg_len,1) :: zh_in, zhsc_in, dzh_in, bl_type_7_in
 
     ! profile fields from level 0 upwards
-    real(r_um), dimension(row_length,rows,0:nlayers) ::       &
-         p_theta_levels
+    real(r_um), dimension(seg_len,1,0:nlayers) :: p_theta_levels
 
     ! error status
     integer(i_um) :: errorstatus
 
     errorstatus = 0
 
-    do k = 1, nlayers
-      ! liquid temperature on theta levels
-      tl(1,1,k) = (theta_in_wth(map_wth(1) + k) * exner_in_wth(map_wth(1)+ k)) - &
-                  (lc * m_cl(map_wth(1) + k)) / cp
-      ! total water and ice water on theta levels
-      qt(1,1,k) =  m_v(map_wth(1) + k) + m_cl(map_wth(1) + k)
-      qcf_in(1,1,k) = m_ci(map_wth(1) + k)
-      ! cloud fields
-      cf_inout(1,1,k) = cf_bulk(map_wth(1) + k)
-      cff_inout(1,1,k) = cf_ice(map_wth(1) + k)
-      cfl_inout(1,1,k) = cf_liq(map_wth(1) + k)
-      area_cloud_fraction(1,1,k) = cf_area(map_wth(1) + k)
-      tgrad_in(1,1,k) = dsldzm(map_wth(1) + k)
-      tau_dec_in(1,1,k) = tau_dec_bm(map_wth(1) + k)
-      tau_hom_in(1,1,k) = tau_hom_bm(map_wth(1) + k)
-      tau_mph_in(1,1,k) = tau_mph_bm(map_wth(1) + k)
-      z_theta(1,1,k) = height_wth(map_wth(1) + k) - height_wth(map_wth(1) + 0)
-      wvar_in(1,1,k)     = wvar(map_wth(1) + k)
-      gradrinr_in(1,1,k) = gradrinr(map_wth(1) + k)
+    do i = 1, seg_len
+      do k = 1, nlayers
+        ! liquid temperature on theta levels
+        tl(i,1,k) = (theta_in_wth(map_wth(1,i) + k) &
+                    * exner_in_wth(map_wth(1,i)+ k)) - &
+                    (lc * m_cl(map_wth(1,i) + k)) / cp
+        ! total water and ice water on theta levels
+        qt(i,1,k) =  m_v(map_wth(1,i) + k) + m_cl(map_wth(1,i) + k)
+        qcf_in(i,1,k) = m_ci(map_wth(1,i) + k)
+        ! cloud fields
+        cf_inout(i,1,k) = cf_bulk(map_wth(1,i) + k)
+        cff_inout(i,1,k) = cf_ice(map_wth(1,i) + k)
+        cfl_inout(i,1,k) = cf_liq(map_wth(1,i) + k)
+        area_cloud_fraction(i,1,k) = cf_area(map_wth(1,i) + k)
+        tgrad_in(i,1,k) = dsldzm(map_wth(1,i) + k)
+        tau_dec_in(i,1,k) = tau_dec_bm(map_wth(1,i) + k)
+        tau_hom_in(i,1,k) = tau_hom_bm(map_wth(1,i) + k)
+        tau_mph_in(i,1,k) = tau_mph_bm(map_wth(1,i) + k)
+        z_theta(i,1,k) = height_wth(map_wth(1,i) + k) &
+                       - height_wth(map_wth(1,i) + 0)
+        wvar_in(i,1,k)     = wvar(map_wth(1,i) + k)
+        gradrinr_in(i,1,k) = gradrinr(map_wth(1,i) + k)
+      end do
     end do
 
     ! 2d fields for gradrinr-based entrainment zones
-    zh_in(1,1)        = zh(map_2d(1))
-    zhsc_in(1,1)       = zhsc(map_2d(1))
-    dzh_in(1,1)       = real(inv_depth(map_2d(1)), r_um)
-    bl_type_7_in(1,1) = bl_type_ind(map_bl(1)+6)
-
-    do k = 1, nlayers-1
-      ! pressure on theta levels
-      p_theta_levels(1,1,k) = p_zero*(exner_in_wth(map_wth(1) + k))**(1.0_r_def/kappa)
-      ! pressure on rho levels without level 1
+    do i = 1, seg_len
+      zh_in(i,1)        = zh(map_2d(1,i))
+      zhsc_in(i,1)       = zhsc(map_2d(1,i))
+      dzh_in(i,1)       = real(inv_depth(map_2d(1,i)), r_um)
+      bl_type_7_in(i,1) = bl_type_ind(map_bl(1,i)+6)
     end do
-    ! pressure on theta levels
-    p_theta_levels(1,1,0) = p_zero*(exner_in_wth(map_wth(1) + 0))**(1.0_r_def/kappa)
-    ! pressure on theta levels
-    p_theta_levels(1,1,nlayers) = p_zero*(exner_in_wth(map_wth(1) + nlayers))** &
-                    (1.0_r_def/kappa)
+
+    do i = 1, seg_len
+      do k = 0, nlayers
+        ! pressure on theta levels
+        p_theta_levels(i,1,k) = p_zero*(exner_in_wth(map_wth(1,i) + k))**(1.0_r_def/kappa)
+      end do
+    end do
 
     call bm_ctl( p_theta_levels, tgrad_in, wvar_in,                   &
                  tau_dec_in, tau_hom_in, tau_mph_in, z_theta,         &
@@ -277,31 +271,39 @@ contains
     ! update main model prognostics
     !-----------------------------------------------------------------------
     ! Save old value of m_v at level 1 for level 0 increment
-    dmv1 = m_v(map_wth(1) + 1)
-    do k = 1, nlayers
-      ! potential temperature increment on theta levels
-      theta_inc(map_wth(1) + k) = tl(1,1,k)/exner_in_wth(map_wth(1) + k) -  &
-                                  theta_in_wth(map_wth(1) + k)
-      ! water vapour on theta levels
-      m_v(map_wth(1) + k)       = qt(1,1,k)
-      ! cloud liquid water on theta levels
-      m_cl(map_wth(1) + k)      = qcl_out(1,1,k)
-      ! cloud fractions on theta levels
-      cf_bulk(map_wth(1) + k)   = cf_inout(1,1,k)
-      cf_liq(map_wth(1) + k)    = cfl_inout(1,1,k)
-      cf_ice(map_wth(1) + k)    = cff_inout(1,1,k)
-      cf_area(map_wth(1) + k)   = cf_inout(1,1,k)
-      sskew_bm(map_wth(1) + k)  = sskew_out(1,1,k)
-      svar_bm(map_wth(1) + k)   = svar_bm_out(1,1,k)
-      svar_tb(map_wth(1) + k)   = svar_turb_out(1,1,k)
+    do i = 1, seg_len
+      dmv1(i) = m_v(map_wth(1,i) + 1)
     end do
-    theta_inc(map_wth(1) + 0) = theta_inc(map_wth(1) + 1)
-    m_v(map_wth(1) + 0)       = m_v(map_wth(1) + 0) + m_v(map_wth(1) + 1) - dmv1
-    m_cl(map_wth(1) + 0)      = m_cl(map_wth(1) + 1)
-    cf_bulk(map_wth(1) + 0)   = cf_bulk(map_wth(1) + 1)
-    cf_liq(map_wth(1) + 0)    = cf_liq(map_wth(1) + 1)
-    cf_ice(map_wth(1) + 0)    = cf_ice(map_wth(1) + 1)
-    cf_area(map_wth(1) + 0)   = cf_area(map_wth(1) + 1)
+
+    do k = 1, nlayers
+      do i = 1, seg_len
+        ! potential temperature increment on theta levels
+        theta_inc(map_wth(1,i) + k) = tl(i,1,k)/exner_in_wth(map_wth(1,i) + k) &
+                                    - theta_in_wth(map_wth(1,i) + k)
+        ! water vapour on theta levels
+        m_v(map_wth(1,i) + k)       = qt(i,1,k)
+        ! cloud liquid water on theta levels
+        m_cl(map_wth(1,i) + k)      = qcl_out(i,1,k)
+        ! cloud fractions on theta levels
+        cf_bulk(map_wth(1,i) + k)   = cf_inout(i,1,k)
+        cf_liq(map_wth(1,i) + k)    = cfl_inout(i,1,k)
+        cf_ice(map_wth(1,i) + k)    = cff_inout(i,1,k)
+        cf_area(map_wth(1,i) + k)   = cf_inout(i,1,k)
+        sskew_bm(map_wth(1,i) + k)  = sskew_out(i,1,k)
+        svar_bm(map_wth(1,i) + k)   = svar_bm_out(i,1,k)
+        svar_tb(map_wth(1,i) + k)   = svar_turb_out(i,1,k)
+      end do
+    end do
+    do i = 1, seg_len
+      theta_inc(map_wth(1,i) + 0) = theta_inc(map_wth(1,i) + 1)
+      m_v(map_wth(1,i) + 0)       = m_v(map_wth(1,i) + 0) &
+                                  + m_v(map_wth(1,i) + 1) - dmv1(i)
+      m_cl(map_wth(1,i) + 0)      = m_cl(map_wth(1,i) + 1)
+      cf_bulk(map_wth(1,i) + 0)   = cf_bulk(map_wth(1,i) + 1)
+      cf_liq(map_wth(1,i) + 0)    = cf_liq(map_wth(1,i) + 1)
+      cf_ice(map_wth(1,i) + 0)    = cf_ice(map_wth(1,i) + 1)
+      cf_area(map_wth(1,i) + 0)   = cf_area(map_wth(1,i) + 1)
+    end do
 
   end subroutine bm_code
 

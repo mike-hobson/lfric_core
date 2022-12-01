@@ -11,7 +11,7 @@ use argument_mod,      only: arg_type,          &
                              GH_FIELD, GH_REAL, &
                              GH_INTEGER,        &
                              GH_READ, GH_WRITE, &
-                             CELL_COLUMN,       &
+                             DOMAIN,       &
                              ANY_DISCONTINUOUS_SPACE_9, &
                              ANY_DISCONTINUOUS_SPACE_1
 use fs_continuity_mod, only: WTHETA, W3
@@ -67,7 +67,7 @@ type, public, extends(kernel_type) :: pc2_initiation_kernel_type
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                    & ! svar_tb
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA)                     & ! rh_crit_wth
        /)
-   integer :: operates_on = CELL_COLUMN
+   integer :: operates_on = DOMAIN
 contains
   procedure, nopass :: pc2_initiation_code
 end type
@@ -131,7 +131,7 @@ contains
 !> @param[in]     undf_bl        Number of total DOFs for BL types
 !> @param[in]     map_bl         Dofmap for cell for BL types
 
-subroutine pc2_initiation_code( nlayers,                           &
+subroutine pc2_initiation_code( nlayers, seg_len,                  &
                                 mv_wth,                            &
                                 ml_wth,                            &
                                 mi_wth,                            &
@@ -183,8 +183,6 @@ subroutine pc2_initiation_code( nlayers,                           &
     ! UM modules
     !---------------------------------------
 
-    use nlsizes_namelist_mod,       only: row_length, rows, model_levels
-    use atm_step_local,             only: rhc_row_length, rhc_rows
     use pc2_initiation_ctl_mod,     only: pc2_initiation_ctl
     use planet_constants_mod,       only: p_zero, kappa, lcrcp, planet_radius
     use gen_phys_inputs_mod,        only: l_mr_physics
@@ -193,14 +191,13 @@ subroutine pc2_initiation_code( nlayers,                           &
     use level_heights_mod,     only: r_theta_levels
 
     ! Redirect routine names to avoid clash with existing qsat routines
-    use qsat_mod, only: qsat_wat_new     => qsat_wat,                       &
-                        qsat_wat_mix_new => qsat_wat_mix
+    use qsat_mod, only: qsat_wat_mix
 
     implicit none
 
     ! Arguments
 
-    integer(kind=i_def), intent(in) :: nlayers
+    integer(kind=i_def), intent(in) :: nlayers, seg_len
     integer(kind=i_def), intent(in) :: ndf_wth , ndf_w3
     integer(kind=i_def), intent(in) :: undf_wth, undf_w3
     integer(kind=i_def), intent(in) :: ndf_2d, undf_2d
@@ -236,18 +233,16 @@ subroutine pc2_initiation_code( nlayers,                           &
     integer(kind=i_def), intent(in), dimension(undf_2d) :: cumulus
     real(kind=r_def), intent(in), dimension(undf_wth) :: height_wth
 
-    logical, dimension(row_length,rows) :: l_cumulus
-
     ! Start of timestep values
     real(kind=r_def), intent(in),     dimension(undf_wth) :: mv_n_wth
     real(kind=r_def), intent(in),     dimension(undf_wth) :: ml_n_wth
     real(kind=r_def), intent(in),     dimension(undf_wth) :: theta_n_wth
     real(kind=r_def), intent(in),     dimension(undf_wth) :: exner_n_wth
 
-    integer(kind=i_def), intent(in), dimension(ndf_wth) :: map_wth
-    integer(kind=i_def), intent(in), dimension(ndf_w3)  :: map_w3
-    integer(kind=i_def), intent(in), dimension(ndf_2d)  :: map_2d
-    integer(kind=i_def), intent(in), dimension(ndf_bl)  :: map_bl
+    integer(kind=i_def), intent(in), dimension(ndf_wth,seg_len) :: map_wth
+    integer(kind=i_def), intent(in), dimension(ndf_w3,seg_len)  :: map_w3
+    integer(kind=i_def), intent(in), dimension(ndf_2d,seg_len)  :: map_2d
+    integer(kind=i_def), intent(in), dimension(ndf_bl,seg_len)  :: map_bl
 
     ! The changes to the fields as a result
     real(kind=r_def), intent(inout), dimension(undf_wth) :: dtheta_inc_wth
@@ -260,39 +255,23 @@ subroutine pc2_initiation_code( nlayers,                           &
 
     real(kind=r_def), intent(in), dimension(undf_wth) :: rh_crit_wth
 
-    real(r_um), dimension(row_length,rows,model_levels) ::   &
-                  qv_work, qcl_work, qcf_work,               &
-                  cfl_work, cff_work, bcf_work,              &
-                  t_work, theta_work, rhts,                  &
-                  t_incr, qv_incr, qcl_incr, qcf_incr,       &
-                  cfl_incr, cff_incr, bcf_incr,              &
-                  rhcpt, zeros
+    logical, dimension(seg_len,1) :: l_cumulus
 
-    real(r_um), dimension(row_length,rows,model_levels) ::   &
-                  tgrad_in, tau_dec_in,                      &
-                  tau_hom_in, tau_mph_in, z_theta
+    real(r_um), dimension(seg_len,1,nlayers) :: qv_work, qcl_work, qcf_work,   &
+         cfl_work, cff_work, bcf_work, t_work, theta_work, rhts, t_incr,       &
+         qv_incr, qcl_incr, qcf_incr, cfl_incr, cff_incr, bcf_incr, rhcpt,     &
+         zeros, tgrad_in, tau_dec_in, tau_hom_in, tau_mph_in, z_theta, wvar_in,&
+         gradrinr_in, tlts, qtts, ptts, qsl_tl, p_theta_levels, sskew_out,     &
+         svar_turb_out, svar_bm_out
 
-    real(r_um), dimension(row_length,rows,model_levels) ::   &
-                  wvar_in, gradrinr_in
+    real(r_um), dimension(seg_len,1) :: zh_in, zhsc_in, dzh_in, bl_type_7_in,  &
+         p_star, zlcl_mix
 
-    real(r_um), dimension(row_length,rows) ::                &
-                  zh_in, zhsc_in, dzh_in, bl_type_7_in
+    real(r_um), dimension(seg_len,1,nlayers+1) :: p_rho_levels
 
-    real(r_um), dimension(row_length,rows,model_levels) ::   &
-                  tlts, qtts, ptts, qsl_tl
+    real(r_um) :: t_n
 
-    real(r_um), dimension(row_length,rows,model_levels) :: &
-                  p_theta_levels
-
-    real(r_um), dimension(row_length,rows,model_levels+1) ::   &
-                  p_rho_levels
-
-    real(r_um), dimension(row_length,rows,model_levels) ::        &
-                  sskew_out, svar_turb_out, svar_bm_out
-
-    real(r_um), dimension(row_length,rows) :: t_n, p_star, zlcl_mix
-
-    integer(i_um) :: k
+    integer(i_um) :: k, i
 
     ! Hardwired things for PC2
     !
@@ -301,91 +280,90 @@ subroutine pc2_initiation_code( nlayers,                           &
     logical,       parameter :: calculate_increments  = .false.
 
     ! Convert cumulus flag from integer to logical
-    l_cumulus(1,1) = (cumulus(map_2d(1)) == 1_i_def)
-
-    zlcl_mix(1,1) = zlcl_mixed(map_2d(1))
-
-    r_theta_levels(1,1,:) = height_wth(map_wth(1):map_wth(1)+nlayers) &
-                          + planet_radius
+    do i = 1, seg_len
+      l_cumulus(i,1) = (cumulus(map_2d(1,i)) == 1_i_def)
+      zlcl_mix(i,1) = zlcl_mixed(map_2d(1,i))
+      r_theta_levels(i,1,:) = height_wth(map_wth(1,i):map_wth(1,i)+nlayers) &
+                            + planet_radius
+    end do
 
     zeros=0.0_r_um
     !-----------------------------------------------------------------------
     ! Initialisation of prognostic variables and arrays
     !-----------------------------------------------------------------------
 
-    p_star(1,1) = p_zero*(exner_wth(map_wth(1) + 0))     &
+    do i = 1, seg_len
+      p_star(i,1) = p_zero*(exner_wth(map_wth(1,i) + 0))     &
                                    **(1.0_r_def/kappa)
+      p_rho_levels(i,1,nlayers+1) = 0.0_r_um
+      do k = 1, nlayers
+        ! Calculate temperature, this array will be updated.
+        t_work(i,1,k)  = theta_wth(map_wth(1,i) + k) *                  &
+                         exner_wth(map_wth(1,i) + k)
 
-    p_rho_levels(1,1,model_levels+1) = 0.0_r_um
-
-    do k = 1, model_levels
-
-      ! Calculate temperature, this array will be updated.
-      t_work(1,1,k)  = theta_wth(map_wth(1) + k) *                  &
-                       exner_wth(map_wth(1) + k)
-
-      ! Pressure at centre of theta levels
-      p_theta_levels(1,1,k)    = p_zero*(exner_wth(map_wth(1) + k)) &
+        ! Pressure at centre of theta levels
+        p_theta_levels(i,1,k)    = p_zero*(exner_wth(map_wth(1,i) + k)) &
                                            **(1.0_r_def/kappa)
 
-      ! pressure at layer boundaries
-      p_rho_levels(1,1,k) = p_zero*( exner_w3(map_w3(1) + k-1))     &
+        ! pressure at layer boundaries
+        p_rho_levels(i,1,k) = p_zero*( exner_w3(map_w3(1,i) + k-1))     &
                                            **(1.0_r_def/kappa)
 
-      ! Bimodal cloud scheme inputs
-      tgrad_in(1,1,k)   = dsldzm(map_wth(1) + k)
-      wvar_in(1,1,k)    = wvar(map_wth(1) + k)
-      gradrinr_in(1,1,k)= gradrinr(map_wth(1) + k)
-      tau_dec_in(1,1,k) = tau_dec_bm(map_wth(1) + k)
-      tau_hom_in(1,1,k) = tau_hom_bm(map_wth(1) + k)
-      tau_mph_in(1,1,k) = tau_mph_bm(map_wth(1) + k)
-      z_theta(1,1,k) = height_wth(map_wth(1) + k) - height_wth(map_wth(1) + 0)
+        ! Bimodal cloud scheme inputs
+        tgrad_in(i,1,k)   = dsldzm(map_wth(1,i) + k)
+        wvar_in(i,1,k)    = wvar(map_wth(1,i) + k)
+        gradrinr_in(i,1,k)= gradrinr(map_wth(1,i) + k)
+        tau_dec_in(i,1,k) = tau_dec_bm(map_wth(1,i) + k)
+        tau_hom_in(i,1,k) = tau_hom_bm(map_wth(1,i) + k)
+        tau_mph_in(i,1,k) = tau_mph_bm(map_wth(1,i) + k)
+        z_theta(i,1,k) = height_wth(map_wth(1,i) + k) - height_wth(map_wth(1,i) + 0)
 
-      ! Moist prognostics
-      qv_work(1,1,k)   = mv_wth(map_wth(1) + k)
-      qcl_work(1,1,k)  = ml_wth(map_wth(1) + k)
-      qcf_work(1,1,k)  = mi_wth(map_wth(1) + k)
+        ! Moist prognostics
+        qv_work(i,1,k)   = mv_wth(map_wth(1,i) + k)
+        qcl_work(i,1,k)  = ml_wth(map_wth(1,i) + k)
+        qcf_work(i,1,k)  = mi_wth(map_wth(1,i) + k)
 
-      ! Critical relative humidity
-      rhcpt(1,1,k)     = rh_crit_wth(map_wth(1) + k)
+        ! Critical relative humidity
+        rhcpt(i,1,k)     = rh_crit_wth(map_wth(1,i) + k)
 
-      ! Some start of timestep fields:
-      ! Pressure on theta levels at start of time-step
-      ptts(1,1,k) = p_zero*(exner_n_wth(map_wth(1) + k))     &
+        ! Some start of timestep fields:
+        ! Pressure on theta levels at start of time-step
+        ptts(i,1,k) = p_zero*(exner_n_wth(map_wth(1,i) + k))     &
                                            **(1.0_r_def/kappa)
 
-      ! Temperature at start of timestep
-      t_n(1,1)    = theta_n_wth(map_wth(1) + k) *                &
-                    exner_n_wth(map_wth(1) + k)
+        ! Temperature at start of timestep
+        t_n    = theta_n_wth(map_wth(1,i) + k) *                &
+                      exner_n_wth(map_wth(1,i) + k)
 
-      ! Q total at start of time-step
-      qtts(1,1,k) = mv_n_wth(map_wth(1) + k) + ml_n_wth(map_wth(1) + k)
+        ! Q total at start of time-step
+        qtts(i,1,k) = mv_n_wth(map_wth(1,i) + k) + ml_n_wth(map_wth(1,i) + k)
 
-      ! Liquid temperature
-      tlts(1,1,k) = t_n(1,1) - ( lcrcp * ml_n_wth(map_wth(1) + k) )
+        ! Liquid temperature
+        tlts(i,1,k) = t_n - ( lcrcp * ml_n_wth(map_wth(1,i) + k) )
 
-    end do     ! k
+      end do     ! k
+    end do
 
-    ! 2d fields for gradrinr-based entrainment zones
-    zh_in(1,1)        = zh(map_2d(1))
-    zhsc_in(1,1)      = zhsc(map_2d(1))
-    dzh_in(1,1)       = real(inv_depth(map_2d(1)), r_um)
-    bl_type_7_in(1,1) = bl_type_ind(map_bl(1)+6)
+    do i = 1, seg_len
+      ! 2d fields for gradrinr-based entrainment zones
+      zh_in(i,1)        = zh(map_2d(1,i))
+      zhsc_in(i,1)      = zhsc(map_2d(1,i))
+      dzh_in(i,1)       = real(inv_depth(map_2d(1,i)), r_um)
+      bl_type_7_in(i,1) = bl_type_ind(map_bl(1,i)+6)
+    end do
 
     ! Calculate qsat(TL) with respect to liquid water, operate on whole column.
-    if ( l_mr_physics ) then
-      call qsat_wat_mix_new(qsl_tl(1,1,:), tlts(1,1,:), ptts(1,1,:), model_levels )
-    else
-      call qsat_wat_new(qsl_tl(1,1,:), tlts(1,1,:), ptts(1,1,:), model_levels )
-    end if
+    call qsat_wat_mix(qsl_tl, tlts, ptts, seg_len, 1, nlayers )
 
-    do k = 1, model_levels
-      ! Total relative humidity (using start of time-step liquid temperature).
-      rhts(1,1,k) = qtts(1,1,k) / qsl_tl(1,1,k)
-      ! Recast LFRic cloud fractions onto cloud fraction work arrays.
-      bcf_work(1,1,k) = bcf_wth(map_wth(1) + k)
-      cfl_work(1,1,k) = cfl_wth(map_wth(1) + k)
-      cff_work(1,1,k) = cff_wth(map_wth(1) + k)
+    do i = 1, seg_len
+      do k = 1, nlayers
+        ! Total relative humidity (using start of time-step liquid temperature).
+        rhts(i,1,k) = qtts(i,1,k) / qsl_tl(i,1,k)
+        ! Recast LFRic cloud fractions onto cloud fraction work arrays.
+        bcf_work(i,1,k) = bcf_wth(map_wth(1,i) + k)
+        cfl_work(i,1,k) = cfl_wth(map_wth(1,i) + k)
+        cff_work(i,1,k) = cff_wth(map_wth(1,i) + k)
+      end do
     end do
 
     ! Initialize
@@ -399,9 +377,9 @@ subroutine pc2_initiation_code( nlayers,                           &
 
     call pc2_initiation_ctl(                               &
                             ! Dimensions of Rh crit array
-                            rhc_row_length,                &
-                            rhc_rows,                      &
-                            ! Pass in zlcl_mixed=zero for NOW
+                            seg_len,                       &
+                            1,                             &
+                            ! Pass in zlcl_mix
                             zlcl_mix,                      &
                             ! Model switches
                             l_mr_physics,                  &
@@ -455,37 +433,39 @@ subroutine pc2_initiation_code( nlayers,                           &
                             zeros )
 
     ! Recast back to LFRic space
-    do k = 1, model_levels
-      ! *_work arrays have been updated
+    do k = 1, nlayers
+      do i = 1, seg_len
+        ! *_work arrays have been updated
 
-      ! New theta found from new temperature.
-      theta_work(1,1,k) = t_work(1,1,k) /                  &
-                          exner_wth(map_wth(1) + k)
-      ! All increments found from difference between the updated *_work values
-      ! and the values that were intent in.
-      dtheta_inc_wth(map_wth(1) + k) = theta_work(1,1,k)   &
-                                     - theta_wth(map_wth(1) + k)
-      !
-      dmv_inc_wth (map_wth(1)+k) = qv_work(1,1,k)  - mv_wth(map_wth(1) + k)
-      dmcl_inc_wth(map_wth(1)+k) = qcl_work(1,1,k) - ml_wth(map_wth(1) + k)
-      dmci_inc_wth(map_wth(1)+k) = qcf_work(1,1,k) - mi_wth(map_wth(1) + k)
-      dcfl_inc_wth(map_wth(1)+k) = cfl_work(1,1,k) - cfl_wth(map_wth(1) + k)
-      dcff_inc_wth(map_wth(1)+k) = cff_work(1,1,k) - cff_wth(map_wth(1) + k)
-      dbcf_inc_wth(map_wth(1)+k) = bcf_work(1,1,k) - bcf_wth(map_wth(1) + k)
+        ! New theta found from new temperature.
+        theta_work(i,1,k) = t_work(i,1,k) /                  &
+                          exner_wth(map_wth(1,i) + k)
+        ! All increments found from difference between the updated *_work values
+        ! and the values that were intent in.
+        dtheta_inc_wth(map_wth(1,i) + k) = theta_work(i,1,k)   &
+                                       - theta_wth(map_wth(1,i) + k)
+        !
+        dmv_inc_wth (map_wth(1,i)+k) = qv_work(i,1,k)  - mv_wth(map_wth(1,i) + k)
+        dmcl_inc_wth(map_wth(1,i)+k) = qcl_work(i,1,k) - ml_wth(map_wth(1,i) + k)
+        dmci_inc_wth(map_wth(1,i)+k) = qcf_work(i,1,k) - mi_wth(map_wth(1,i) + k)
+        dcfl_inc_wth(map_wth(1,i)+k) = cfl_work(i,1,k) - cfl_wth(map_wth(1,i) + k)
+        dcff_inc_wth(map_wth(1,i)+k) = cff_work(i,1,k) - cff_wth(map_wth(1,i) + k)
+        dbcf_inc_wth(map_wth(1,i)+k) = bcf_work(i,1,k) - bcf_wth(map_wth(1,i) + k)
 
-      sskew_bm(map_wth(1)+k)     = sskew_out(1,1,k)
-      svar_bm(map_wth(1)+k)      = svar_bm_out(1,1,k)
-      svar_tb(map_wth(1)+k)      = svar_turb_out(1,1,k)
-
+        sskew_bm(map_wth(1,i)+k)     = sskew_out(i,1,k)
+        svar_bm(map_wth(1,i)+k)      = svar_bm_out(i,1,k)
+        svar_tb(map_wth(1,i)+k)      = svar_turb_out(i,1,k)
+      end do
     end do
-
-    dtheta_inc_wth(map_wth(1)+0) = dtheta_inc_wth(map_wth(1)+1)
-    dmv_inc_wth   (map_wth(1)+0) = dmv_inc_wth   (map_wth(1)+1)
-    dmcl_inc_wth  (map_wth(1)+0) = dmcl_inc_wth  (map_wth(1)+1)
-    dmci_inc_wth  (map_wth(1)+0) = dmci_inc_wth  (map_wth(1)+1)
-    dcfl_inc_wth  (map_wth(1)+0) = dcfl_inc_wth  (map_wth(1)+1)
-    dcff_inc_wth  (map_wth(1)+0) = dcff_inc_wth  (map_wth(1)+1)
-    dbcf_inc_wth  (map_wth(1)+0) = dbcf_inc_wth  (map_wth(1)+1)
+    do i = 1, seg_len
+      dtheta_inc_wth(map_wth(1,i)+0) = dtheta_inc_wth(map_wth(1,i)+1)
+      dmv_inc_wth   (map_wth(1,i)+0) = dmv_inc_wth   (map_wth(1,i)+1)
+      dmcl_inc_wth  (map_wth(1,i)+0) = dmcl_inc_wth  (map_wth(1,i)+1)
+      dmci_inc_wth  (map_wth(1,i)+0) = dmci_inc_wth  (map_wth(1,i)+1)
+      dcfl_inc_wth  (map_wth(1,i)+0) = dcfl_inc_wth  (map_wth(1,i)+1)
+      dcff_inc_wth  (map_wth(1,i)+0) = dcff_inc_wth  (map_wth(1,i)+1)
+      dbcf_inc_wth  (map_wth(1,i)+0) = dbcf_inc_wth  (map_wth(1,i)+1)
+    end do
 
 end subroutine pc2_initiation_code
 

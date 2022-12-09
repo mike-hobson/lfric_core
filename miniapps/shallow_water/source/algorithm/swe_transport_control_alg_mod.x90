@@ -75,7 +75,6 @@ contains
                                             min_value,             &
                                             log_space,             &
                                             reversible,            &
-                                            use_density_predictor, &
                                             horizontal_monotone,   &
                                             vertical_monotone,     &
                                             vertical_monotone_order
@@ -85,7 +84,6 @@ contains
     type(mesh_type), pointer, intent(in) :: mesh
 
     integer(kind=i_def)           :: config
-    logical(kind=l_def)           :: use_divergence_factor
     type(transport_metadata_type) :: transport_metadata
 
     integer(kind=i_def), allocatable :: local_mesh_ids(:)
@@ -100,14 +98,6 @@ contains
       write(log_scratch_space,'(3A)') 'Setting up ',trim(field_names(config)),' transport metadata'
       call log_event(log_scratch_space, LOG_LEVEL_INFO)
 
-      ! Set hardwired defaults based upon which field is being advected
-      if ( trim(field_names(config)) == 'geopot' .or. &
-           trim(field_names(config)) == 'q' ) then
-        use_divergence_factor = use_density_predictor
-      else
-        use_divergence_factor = .false.
-      end if
-
       transport_metadata = transport_metadata_type( field_names(config),             &
                                                     equation_form(config),           &
                                                     splitting(config),               &
@@ -120,7 +110,6 @@ contains
                                                     enforce_min_value(config),       &
                                                     min_value(config),               &
                                                     log_space(config),               &
-                                                    use_divergence_factor,           &
                                                     reversible(config) )
 
       call transport_metadata_collection%set_transport_metadata(transport_metadata)
@@ -146,12 +135,14 @@ contains
   !> @param[in,out] advection_inc   Advection increment of the shallow water
   !!                                prognostics [u, geopot, buoyancy, q]
   !> @param[in]     advected_fields Fields to advect: [u, geopot, buoyancy, q]
+  !> @param[in]     state_n         Fields at time n
   !> @param[in]     state_np1       Estimate of fields at time n+1
   !> @param[in]     model_clock     Time within the model
 
-  subroutine swe_transport_control_alg_step( advection_inc,    &
-                                             advected_fields,  &
-                                             state_np1,        &
+  subroutine swe_transport_control_alg_step( advection_inc,   &
+                                             advected_fields, &
+                                             state_n,         &
+                                             state_np1,       &
                                              model_clock )
 
     use fem_constants_mod,               only: get_mass_matrix
@@ -167,11 +158,13 @@ contains
     type(field_vector_type),         intent(inout) :: advection_inc
     type(field_vector_type), target, intent(in)    :: advected_fields
     type(field_vector_type), target, intent(in)    :: state_np1
+    type(field_vector_type), target, intent(in)    :: state_n
     class(model_clock_type),         intent(in)    :: model_clock
 
-    ! Fields from advected_fields and state_np1 vector
+    ! Fields from advected_fields, state_n and state_np1 vector
     type(field_type), pointer :: wind_np1 => null(), &
                                  wind_n   => null(), &
+                                 wind     => null(), &
                                  geopot   => null(), &
                                  buoyancy => null(), &
                                  q        => null()
@@ -210,12 +203,13 @@ contains
     ! Pre-transport initialisation tasks
     ! ------------------------------------------------------------------------ !
 
-    ! Get individual advected and state_np1 fields
-    wind_n   => advected_fields%vector(isw_u)
+    ! Get individual advected, state_n and state_np1 fields
+    wind     => advected_fields%vector(isw_u)
     q        => advected_fields%vector(isw_q)
     buoyancy => advected_fields%vector(isw_b)
     geopot   => advected_fields%vector(isw_g)
     wind_np1 => state_np1%vector(isw_u)
+    wind_n   => state_n%vector(isw_u)
 
     ! Create transport_runtime object (advecting wind etc)
     transport_runtime = transport_runtime_type(wind_n, wind_np1, model_clock)
@@ -316,7 +310,7 @@ contains
 
       call log_event( "Transporting wind...", LOG_LEVEL_INFO)
       transport_metadata => transport_metadata_collection%get_transport_metadata('wind')
-      call wind_transport_alg( advection_inc%vector(isw_u), wind_n, &
+      call wind_transport_alg( advection_inc%vector(isw_u), wind, &
                                cast_dt, transport_metadata )
       ! We don't change advection_inc%vector(isw_u) as wind_transport_alg
       ! already returns weak increment

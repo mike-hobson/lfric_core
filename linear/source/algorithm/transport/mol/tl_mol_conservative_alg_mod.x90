@@ -64,8 +64,6 @@ module tl_mol_conservative_alg_mod
     integer(i_def)                :: mesh_id
     type(field_type),     pointer :: advecting_wind => null()
     type(field_type),     pointer :: ls_advecting_wind => null()
-    type(field_type),     pointer :: divergence_factor => null()
-    type(field_type),     pointer :: ls_divergence_factor => null()
     type(field_type),     pointer :: old_flux_inc => null()
     type(field_type),     pointer :: field_start => null()
     type(operator_type),  pointer :: div => null()
@@ -80,7 +78,6 @@ module tl_mol_conservative_alg_mod
     type(field_type)              :: flux_step
     integer(i_def)                :: stage, s, step
     integer(i_def)                :: nstage, substep
-    logical(l_def)                :: include_div_term_with_density
     real(r_def)                   :: inv_num_substeps
     integer(i_def)                :: number_substeps
     real(r_def)                   :: dt_substep
@@ -105,7 +102,6 @@ module tl_mol_conservative_alg_mod
     number_substeps               = transport_runtime%get_number_substeps(mesh_id,direction,transport_metadata%get_splitting())
     dt_substep                    = transport_runtime%get_dt_substep(mesh_id,direction,transport_metadata%get_splitting())
     enforce_min_value             = transport_metadata%get_enforce_min_value()
-    include_div_term_with_density = transport_metadata%get_divergence_factor()
     advecting_wind                => tl_transport_runtime%get_directional_advecting_wind(mesh_id,direction)
     ls_advecting_wind             => transport_runtime%get_directional_advecting_wind(mesh_id,direction)
     inv_num_substeps              = 1.0_r_def/real(number_substeps, r_def)
@@ -142,12 +138,6 @@ module tl_mol_conservative_alg_mod
     call invoke( setval_c(flux_inc, 0.0_r_def) )
     call invoke( setval_c(ls_flux_inc, 0.0_r_def) )
 
-    ! Get the div-term if required
-    if ( include_div_term_with_density ) then
-      call log_event('T.L. mol conservative with div factor not yet implemented', &
-                     LOG_LEVEL_ERROR)
-    end if
-
     ! Can use either transport_runtime or tl_transport_runtime to determine this
     ! as both should give the same value
     final_split_step = ( transport_runtime%get_tracer_step_ctr() &
@@ -160,13 +150,6 @@ module tl_mol_conservative_alg_mod
     !       array for each substep and each RK stage to use in the perturbation
     ! ======================================================================== !
 
-    ! Get the div-term if required
-    ! In this case we are solving: d(rho)/dt + div(div_factor*rho u) = 0
-    ! Otherwise we are dealing with solving:  d(rho)/dt + div(rho u) = 0
-    if ( include_div_term_with_density ) then
-      ls_divergence_factor => transport_runtime%get_div_factor(mesh_id)
-    end if
-
     ! ------------------------------------------------------------------------ !
     ! Start of substepping loop
     ! ------------------------------------------------------------------------ !
@@ -176,11 +159,6 @@ module tl_mol_conservative_alg_mod
 
       ! Reset field_n ready for the this substep
       call ls_field_np1%copy_field(ls_field_n)
-
-      ! Include the div-term if required (this needs to be done at every sub-step)
-      if ( include_div_term_with_density ) then
-        call invoke( inc_X_times_Y(ls_field_np1, ls_divergence_factor) )
-      end if
 
       ls_stage_loop: do stage = 1, nstage
 
@@ -289,13 +267,6 @@ module tl_mol_conservative_alg_mod
     !   linearisation stage stage
     ! ======================================================================== !
 
-    ! Get the div-term if required
-    if ( include_div_term_with_density ) then
-      divergence_factor => tl_transport_runtime%get_div_factor(mesh_id)
-      call log_event('T.L.: divergence factor in mol conservative not ' // &
-                     'yet implemented', LOG_LEVEL_ERROR)
-    end if
-
     ! ------------------------------------------------------------------------ !
     ! Start of substepping loop
     ! ------------------------------------------------------------------------ !
@@ -305,13 +276,6 @@ module tl_mol_conservative_alg_mod
 
       ! Reset field_n ready for the this substep
       call field_np1%copy_field(field_n)
-
-      if ( include_div_term_with_density ) then
-        ! Not yet implemented, but this might be:
-        ! field_np1 = ls_field_np1*div_factor + field_np1*ls_div_factor
-        call log_event('T.L.: divergence factor in mol conservative not ' // &
-                       'yet implemented', LOG_LEVEL_ERROR)
-      end if
 
       stage_loop: do stage = 1, nstage
 
@@ -429,9 +393,6 @@ module tl_mol_conservative_alg_mod
     if ( allocated(rk_weights) ) deallocate(rk_weights)
     if ( allocated(stored_ls_field) ) deallocate(stored_ls_field)
     nullify( div, advecting_wind, ls_advecting_wind )
-    if ( include_div_term_with_density ) then
-      nullify( divergence_factor, ls_divergence_factor )
-    end if
 
     if ( subroutine_timers ) call timer('tl_mol_conservative_alg')
 

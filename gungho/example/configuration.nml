@@ -225,6 +225,7 @@ stretching_method='linear',
 &transport
   advective_then_flux = .true.
   broken_w2_projection = .false.
+  cap_density_predictor = 0.01
   profile_size = 3
   field_names = 'density', 'potential_temperature', 'wind'
   equation_form = 1, 2, 2

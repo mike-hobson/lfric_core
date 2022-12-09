@@ -79,7 +79,6 @@ contains
     integer(kind=i_def)           :: monotone_order = vertical_monotone_order_high
     logical(kind=l_def)           :: enforce_min_value = .true.
     logical(kind=l_def)           :: logspace = .true.
-    logical(kind=l_def)           :: divergence_factor = .false.
     real(kind=r_def)              :: min_value = 1.9_r_def
     logical(kind=l_def)           :: reversible = .false.
     type(transport_metadata_type) :: our_metadata
@@ -98,7 +97,6 @@ contains
                                            enforce_min_value,    &
                                            min_value,            &
                                            logspace,             &
-                                           divergence_factor,    &
                                            reversible)
 
     ! Check all properties of metadata object
@@ -114,7 +112,6 @@ contains
     @assertEqual(enforce_min_value, our_metadata%get_enforce_min_value())
     @assertEqual(min_value, our_metadata%get_min_value())
     @assertEqual(logspace, our_metadata%get_log_space())
-    @assertEqual(divergence_factor, our_metadata%get_divergence_factor())
 
   end subroutine test_all
 

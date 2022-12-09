@@ -31,7 +31,6 @@ module transport_metadata_mod
     logical(kind=l_def)    :: enforce_min_value  ! enforce a min value (=T/F)
     real(kind=r_def)       :: min_value          ! the min value to be enforced
     logical(kind=l_def)    :: log_space ! Do interpolation in log space
-    logical(kind=l_def)    :: divergence_factor ! Compute divergence factor (=1-beta*dt*div(u^n))
     logical(kind=l_def)    :: reversible ! Use a reversible transport scheme
 
     contains
@@ -46,7 +45,6 @@ module transport_metadata_mod
     procedure, public :: get_enforce_min_value
     procedure, public :: get_min_value
     procedure, public :: get_log_space
-    procedure, public :: get_divergence_factor
     procedure, public :: get_horizontal_monotone
     procedure, public :: get_vertical_monotone
     procedure, public :: get_vertical_monotone_order
@@ -74,7 +72,6 @@ contains
                                             enforce_min_value,               &
                                             min_value,                       &
                                             log_space,                       &
-                                            divergence_factor,               &
                                             reversible)                      &
                                             result(self)
 
@@ -94,7 +91,6 @@ contains
     logical(kind=l_def),    intent(in) :: enforce_min_value
     real(kind=r_def),       intent(in) :: min_value
     logical(kind=l_def),    intent(in) :: log_space
-    logical(kind=l_def),    intent(in) :: divergence_factor
     logical(kind=l_def),    intent(in) :: reversible
 
     self%fname                   = trim(fname)
@@ -109,7 +105,6 @@ contains
     self%enforce_min_value       = enforce_min_value
     self%min_value               = min_value
     self%log_space               = log_space
-    self%divergence_factor       = divergence_factor
     self%reversible              = reversible
 
   end function transport_metadata_constructor
@@ -315,21 +310,6 @@ contains
     log_space = self%log_space
 
   end function get_log_space
-
-  !> @brief Get the divergence factor option
-  !> @param[in] self     The transport_metadata object
-  !> @return             The divergence factor switch
-  function get_divergence_factor(self) result(divergence_factor)
-
-    implicit none
-
-    class(transport_metadata_type), intent(in) :: self
-    logical(kind=l_def)                        :: divergence_factor
-
-    divergence_factor = self%divergence_factor
-
-  end function get_divergence_factor
-
 
   !> @brief Get the reversible option
   !> @param[in] self     The transport_metadata object

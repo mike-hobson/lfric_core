@@ -60,7 +60,6 @@ module mol_conservative_alg_mod
 
     integer(i_def)                :: mesh_id
     type(field_type), pointer     :: advecting_wind => null()
-    type(field_type), pointer     :: divergence_factor => null()
     type(field_type), pointer     :: old_flux_inc => null()
     type(field_type), pointer     :: field_start => null()
     type(operator_type), pointer  :: div => null()
@@ -71,7 +70,6 @@ module mol_conservative_alg_mod
     type(field_type)              :: adv_inc, flux_inc
     integer(i_def)                :: stage, s, step
     integer(i_def)                :: nstage, substep
-    logical(l_def)                :: include_div_term_with_density
     real(r_def)                   :: inv_num_substeps
     integer(i_def)                :: number_substeps
     real(r_def)                   :: dt_substep
@@ -100,7 +98,6 @@ module mol_conservative_alg_mod
     number_substeps               = transport_runtime%get_number_substeps(mesh_id,direction,transport_metadata%get_splitting())
     dt_substep                    = transport_runtime%get_dt_substep(mesh_id,direction,transport_metadata%get_splitting())
     enforce_min_value             = transport_metadata%get_enforce_min_value()
-    include_div_term_with_density = transport_metadata%get_divergence_factor()
     advecting_wind                => transport_runtime%get_directional_advecting_wind(mesh_id, direction)
     inv_num_substeps              = 1.0_r_def/real(number_substeps, r_def)
     div                           => get_directional_im3_div(mesh_id, direction)
@@ -127,9 +124,6 @@ module mol_conservative_alg_mod
     ! Get the div-term if required
     ! In this case we are solving: d(rho)/dt + div(div_factor*rho u) = 0
     ! Otherwise we are dealing with solving:  d(rho)/dt + div(rho u) = 0
-    if ( include_div_term_with_density ) then
-      divergence_factor => transport_runtime%get_div_factor(mesh_id)
-    end if
 
     final_split_step = ( transport_runtime%get_tracer_step_ctr() &
                          == transport_runtime%get_num_dry_steps() )
@@ -143,11 +137,6 @@ module mol_conservative_alg_mod
 
       ! Reset field_n ready for the this substep
       call field_np1%copy_field(field_n)
-
-      ! Include the div-term if required (this needs to be done at every sub-step)
-      if ( include_div_term_with_density ) then
-        call invoke( inc_X_times_Y(field_np1, divergence_factor) )
-      end if
 
       stage_loop: do stage = 1,nstage
 
@@ -315,7 +304,7 @@ module mol_conservative_alg_mod
     if ( allocated(rk_field) ) deallocate(rk_field)
     if ( allocated(rk_weights) ) deallocate(rk_weights)
 
-    nullify( div, advecting_wind, mesh, transport_runtime, divergence_factor )
+    nullify( div, advecting_wind, mesh, transport_runtime )
 
     if ( subroutine_timers ) call timer('mol_conservative_alg')
 

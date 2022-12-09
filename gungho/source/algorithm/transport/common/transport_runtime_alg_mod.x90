@@ -57,7 +57,6 @@ module transport_runtime_alg_mod
     type(field_type),    allocatable, dimension(:)   :: departure_points_x_w2
     type(field_type),    allocatable, dimension(:)   :: departure_points_y_w2
     type(field_type),    allocatable, dimension(:)   :: departure_points_z_w2
-    type(field_type),    allocatable, dimension(:)   :: div_factor
     type(field_type),    allocatable, dimension(:)   :: field_n
     type(field_type),    allocatable, dimension(:,:) :: rho_d_n
     type(field_type),    allocatable, dimension(:,:) :: rho_d_np1
@@ -91,7 +90,6 @@ module transport_runtime_alg_mod
     procedure, public  :: get_departure_points_x_w2
     procedure, public  :: get_departure_points_y_w2
     procedure, public  :: get_departure_points_z_w2
-    procedure, public  :: get_div_factor
     procedure, public  :: get_field_n
     procedure, public  :: get_rho_d_n
     procedure, public  :: get_rho_d_np1
@@ -137,15 +135,13 @@ contains
                                              calc_hori_dep_pts, &
                                              select_detj_at_w2
     use split_w2_field_kernel_mod,     only: split_w2_field_kernel_type
-    use timestepping_config_mod,       only: beta
     use transport_config_mod,          only: max_vert_cfl_calc,           &
                                              max_vert_cfl_calc_dep_point, &
                                              max_vert_cfl_calc_uniform
     use map_w2_to_sh_w2_alg_mod,       only: sample_w2_to_sh_w2_alg
     use calc_max_cfl_kernel_mod,       only: calc_max_cfl_kernel_type
     use dg_matrix_vector_kernel_mod,   only: dg_matrix_vector_kernel_type
-    use fem_constants_mod,             only: get_div, &
-                                             get_inverse_W3_mass_matrix
+    use fem_constants_mod,             only: get_inverse_W3_mass_matrix
     use operator_mod,                  only: operator_type
 
     implicit none
@@ -166,8 +162,6 @@ contains
     type(field_type),      pointer :: wind_np1 => null()
     type(field_type),      target  :: shifted_wind_n
     type(field_type),      target  :: shifted_wind_np1
-    type(field_type)               :: rhs
-    real(kind=r_def)               :: minus_beta_dt
     real(kind=r_def)               :: cfl_min, cfl_max
     real(kind=r_def)               :: h_cfl_min, h_cfl_max
     real(kind=r_def)               :: v_cfl_min, v_cfl_max
@@ -175,8 +169,6 @@ contains
     logical(kind=l_def)            :: any_scheme_mol, any_scheme_split
     logical(kind=l_def)            :: any_scheme_ffsl, any_shifted
     logical(kind=l_def)            :: any_horz_dep_pts, any_vert_dep_pts
-    type(operator_type),   pointer :: mm_w3_inv => null(), &
-                                      div       => null()
 
     type(mesh_type),           pointer :: tmp_mesh => null()
     type(function_space_type), pointer :: w3_fs => null()
@@ -232,7 +224,6 @@ contains
               self%departure_points_x_w2(self%n_meshes),     &
               self%departure_points_y_w2(self%n_meshes),     &
               self%departure_points_z_w2(self%n_meshes),     &
-              self%div_factor(self%n_meshes),                &
               self%horizontal_cfl_max(self%n_meshes),        &
               self%vertical_cfl_max(self%n_meshes),          &
               self%total_cfl_max(self%n_meshes),             &
@@ -283,7 +274,6 @@ contains
       call self%departure_points_z_w2(mesh_idx)%initialise( w2_fs )
       call self%departure_points_x_w2(mesh_idx)%initialise( w2_fs )
       call self%departure_points_y_w2(mesh_idx)%initialise( w2_fs )
-      call self%div_factor(mesh_idx)%initialise( w3_fs  )
       call self%field_n(mesh_idx)%initialise( w3_fs  )
     end do
 
@@ -410,21 +400,6 @@ contains
           'Transport: maximum total CFL ', self%total_cfl_max(mesh_idx)
       call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
-      !========================================================================!
-      ! Compute the divergence factor for use in density advection
-      ! div_factor = 1 - beta*dt*m3_inv*div*wind_n
-      minus_beta_dt = -beta*cast_dt
-      mm_w3_inv => get_inverse_w3_mass_matrix(self%mesh_ids(mesh_idx))
-      div       => get_div(self%mesh_ids(mesh_idx))
-      call rhs%initialise( self%div_factor(mesh_idx)%get_function_space() )
-      call invoke( name = "compute_density_predictor",                          &
-                   dg_matrix_vector_kernel_type(self%div_factor(mesh_idx),      &
-                                                wind_n, div),                   &
-                   dg_matrix_vector_kernel_type(rhs, self%div_factor(mesh_idx), &
-                                                mm_w3_inv),                     &
-                   setval_c(self%div_factor(mesh_idx), 1.0_r_def),              &
-                   inc_X_plus_bY(self%div_factor(mesh_idx), minus_beta_dt, rhs) )
-
     end do
 
     !==========================================================================!
@@ -483,7 +458,6 @@ contains
     if ( allocated( self%departure_points_x_w2 ) )     deallocate( self%departure_points_x_w2 )
     if ( allocated( self%departure_points_y_w2 ) )     deallocate( self%departure_points_y_w2 )
     if ( allocated( self%departure_points_z_w2 ) )     deallocate( self%departure_points_z_w2 )
-    if ( allocated( self%div_factor ) )                deallocate( self%div_factor )
     if ( allocated( self%field_n ) )                   deallocate( self%field_n )
     if ( allocated( self%rho_d_n ) )                   deallocate( self%rho_d_n )
     if ( allocated( self%rho_d_np1 ) )                 deallocate( self%rho_d_np1 )
@@ -522,7 +496,6 @@ contains
     if (.not. allocated( dest%departure_points_y_w2 ) )     allocate( dest%departure_points_y_w2(dest%n_meshes) )
     if (.not. allocated( dest%departure_points_x_w2 ) )     allocate( dest%departure_points_x_w2(dest%n_meshes) )
     if (.not. allocated( dest%departure_points_z_w2 ) )     allocate( dest%departure_points_z_w2(dest%n_meshes) )
-    if (.not. allocated( dest%div_factor ) )                allocate( dest%div_factor(dest%n_meshes) )
     if (.not. allocated( dest%field_n ) )                   allocate( dest%field_n(dest%n_meshes) )
     if (.not. allocated( dest%rho_d_n ) )                   allocate( dest%rho_d_n(dest%n_meshes, dest%num_dry_steps) )
     if (.not. allocated( dest%rho_d_np1 ) )                 allocate( dest%rho_d_np1(dest%n_meshes, dest%num_dry_steps) )
@@ -542,7 +515,6 @@ contains
       call source%departure_points_x_w2(mesh_idx)%copy_field(dest%departure_points_x_w2(mesh_idx))
       call source%departure_points_y_w2(mesh_idx)%copy_field(dest%departure_points_y_w2(mesh_idx))
       call source%departure_points_z_w2(mesh_idx)%copy_field(dest%departure_points_z_w2(mesh_idx))
-      call source%div_factor(mesh_idx)%copy_field(dest%div_factor(mesh_idx))
       call source%field_n(mesh_idx)%copy_field(dest%field_n(mesh_idx))
       do i = 1, source%num_dry_steps
         call source%rho_d_n(mesh_idx,i)%copy_field(dest%rho_d_n(mesh_idx,i))
@@ -1121,24 +1093,6 @@ contains
     call check_initialised_field(departure_points_z_w2, field_name, mesh_id)
 
   end function get_departure_points_z_w2
-
-  !> @brief Returns a pointer to the divergence factor
-  !> @param[in] mesh_id The ID of the mesh to get the object for
-  !> @return The divergence factor field
-  function get_div_factor(self, mesh_id) result(div_factor)
-
-    implicit none
-
-    class(transport_runtime_type), target, intent(in) :: self
-    integer(kind=i_def),                   intent(in) :: mesh_id
-    type(field_type),                      pointer    :: div_factor
-    character(str_def)                                :: field_name
-
-    field_name = 'div_factor'
-    div_factor => self%div_factor(self%idx_from_mesh_id(mesh_id))
-    call check_initialised_field(div_factor, field_name, mesh_id)
-
-  end function get_div_factor
 
   !> @brief Returns number of split transport steps for the dry density
   !> @return The number of split transport steps for the dry density

@@ -53,6 +53,7 @@ module swe_timestep_alg_mod
   use swe_mixed_diag_precon_alg_mod,  only: swe_mixed_diag_preconditioner_type
   use swe_mixed_operator_alg_mod,     only: swe_mixed_operator_type
   use swe_mixed_schur_precon_alg_mod, only: swe_mixed_schur_preconditioner_type
+  use swe_predictors_alg_mod,         only: swe_predictors_alg
   use swe_rhs_alg_mod,                only: swe_rhs_alg
   use swe_transport_control_alg_mod,  only: swe_transport_control_alg_init, &
                                             swe_transport_control_alg_step, &
@@ -74,11 +75,12 @@ module swe_timestep_alg_mod
 
   ! 'State' items private to the algorithm that need to be
   !  created once but used every step
-  type( field_vector_type ) :: state,     &
-                               state_n,   &
-                               state_inc, &
-                               rhs_n,     &
-                               rhs_adv,   &
+  type( field_vector_type ) :: state,      &
+                               state_n,    &
+                               state_inc,  &
+                               adv_fields, &
+                               rhs_n,      &
+                               rhs_adv,    &
                                rhs_np1
 
   ! Operator, preconditioner and iterative solver for mixed problem
@@ -166,12 +168,13 @@ contains
     type(field_type), intent(in) :: q
 
     !=== Create internal state field arrays ================================!
-    state     = field_vector_type(bundle_size)
-    state_n   = field_vector_type(bundle_size)
-    rhs_np1   = field_vector_type(bundle_size)
-    rhs_adv   = field_vector_type(bundle_size)
-    rhs_n     = field_vector_type(bundle_size)
-    state_inc = field_vector_type(bundle_size)
+    state      = field_vector_type(bundle_size)
+    state_n    = field_vector_type(bundle_size)
+    adv_fields = field_vector_type(bundle_size)
+    rhs_np1    = field_vector_type(bundle_size)
+    rhs_adv    = field_vector_type(bundle_size)
+    rhs_n      = field_vector_type(bundle_size)
+    state_inc  = field_vector_type(bundle_size)
 
     !=== Initialise internal state field objects =============================!
     call state%import_field(wind, isw_u)
@@ -179,11 +182,12 @@ contains
     call state%import_field(buoyancy, isw_b)
     call state%import_field(q, isw_q)
 
-    state_n   = state
-    rhs_adv   = state
-    rhs_n     = state
-    rhs_np1   = state
-    state_inc = state
+    state_n    = state
+    adv_fields = state
+    rhs_adv    = state
+    rhs_n      = state
+    rhs_np1    = state
+    state_inc  = state
 
     ! Initialise advection stepper
     call swe_transport_control_alg_init(mesh)
@@ -396,7 +400,7 @@ contains
     type(field_type), intent(inout) :: geopot
     type(field_type), intent(inout) :: buoyancy
     type(field_type), intent(inout) :: q
-    type(field_type), intent(in )    :: s_geopot
+    type(field_type), intent(in)    :: s_geopot
 
     ! Loop indices
     integer(kind=i_def) :: outer
@@ -406,8 +410,8 @@ contains
     real(kind=r_def), dimension(bundle_size) :: si_err
 
     ! Useful variables
-    real(kind=r_def)   :: alpha_dt
-    real(kind=r_def)   :: beta_dt
+    real(kind=r_def) :: alpha_dt
+    real(kind=r_def) :: beta_dt
 
     if ( subroutine_timers ) call timer('shallow_water_alg_si')
     !--- Do a single timestep --------------------------------------------------
@@ -420,12 +424,13 @@ contains
     end if
     call state%import_field(q, isw_q)
 
-    state_n = state
-    rhs_np1 = state
-    rhs_adv = state
-    rhs_n   = state
+    state_n    = state
+    adv_fields = state
+    rhs_np1    = state
+    rhs_adv    = state
+    rhs_n      = state
 
-    ! auxiliary constants
+    ! auxiliary constants (note beta_dt is negative)
     alpha_dt = alpha * real(model_clock%get_seconds_per_step(), r_def)
     beta_dt = (alpha - 1.0_r_def) &
               * real(model_clock%get_seconds_per_step(), r_def)
@@ -433,13 +438,17 @@ contains
     ! Compute timestep n part of rhs of the shallow water equations system
     call swe_rhs_alg( rhs_n, beta_dt, state_n, s_geopot )
 
+    ! Set predictors for transport
+    call swe_predictors_alg( adv_fields, state_n%vector(isw_u), rhs_n%vector(isw_u), beta_dt )
+
     outer_dynamics_loop: do outer = 1,outer_iterations
 
       ! Advect quantities
       call rhs_adv%set_scalar(0.0_r_def)
-      call swe_transport_control_alg_step( rhs_adv,  &
-                                           state_n,  &
-                                           state,    &
+      call swe_transport_control_alg_step( rhs_adv,    &
+                                           adv_fields, &
+                                           state_n,    &
+                                           state,      &
                                            model_clock )
 
       ! Vorticity solved for in advection alg, does not appear in mixed solve
@@ -554,7 +563,8 @@ contains
     end if
     call state%import_field(q, isw_q)
 
-    state_n = state
+    state_n    = state
+    adv_fields = state
 
     ! initialise RHS variables
     rhs_adv = state
@@ -571,9 +581,10 @@ contains
 
     ! Advect quantities
     call rhs_adv%set_scalar(0.0_r_def)
-    call swe_transport_control_alg_step( rhs_adv,  &
-                                         state_n,  &
-                                         state,    &
+    call swe_transport_control_alg_step( rhs_adv,    &
+                                         adv_fields, &
+                                         state_n,    &
+                                         state,      &
                                          model_clock )
 
     ! Put RHS together

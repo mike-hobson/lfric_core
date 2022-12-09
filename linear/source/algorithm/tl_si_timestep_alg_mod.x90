@@ -31,6 +31,7 @@ module tl_si_timestep_alg_mod
   use timestepping_config_mod,     only: alpha,                                &
                                          outer_iterations, inner_iterations,   &
                                          spinup_period, spinup_alpha, spinup_winds
+  use transport_config_mod,        only: use_density_predictor
   use derived_config_mod,          only: bundle_size
   use boundaries_config_mod,       only: limited_area
   use fem_constants_mod,           only: get_mass_matrix,       &
@@ -680,6 +681,10 @@ contains
       ! explicit advection
       call advected_u%initialise( vector_space = rhs_n(igh_u)%get_function_space() )
       call mass_matrix_solver_alg(advected_u, rhs_n(igh_u))
+      if ( use_density_predictor ) then
+        call log_event('T.L. si timestep: transport with density predictor not yet implemented', &
+                       LOG_LEVEL_ERROR)
+      end if
     end if
 
     !==========================================================================

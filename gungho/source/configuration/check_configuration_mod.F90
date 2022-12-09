@@ -25,7 +25,9 @@ module check_configuration_mod
                                   max_vert_cfl_calc_dep_point, &
                                   equation_form,               &
                                   dry_field_name,              &
-                                  field_names
+                                  field_names,                 &
+                                  advective_then_flux,         &
+                                  use_density_predictor
   use transport_enumerated_types_mod,                          &
                             only: scheme_mol_3d,               &
                                   scheme_ffsl_3d,              &
@@ -239,6 +241,11 @@ contains
           write( log_scratch_space, '(A)' ) 'fv_vertical_order must be even'
           call log_event( log_scratch_space, LOG_LEVEL_ERROR )
         end if
+      end if
+      if (use_density_predictor .AND. .NOT. advective_then_flux) then
+        ! Check that advective_then_flux is true if using density predictor
+        write( log_scratch_space, '(A)' ) 'Density predictor requires advective_then_flux transport'
+        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
 
       ! Check the mixing namelist

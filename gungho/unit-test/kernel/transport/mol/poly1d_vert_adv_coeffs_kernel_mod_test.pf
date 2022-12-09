@@ -58,6 +58,7 @@ contains
                                  slice_order = slice_order_cubic,                          &
                                  vertical_sl_order = vertical_sl_order_quintic,            &
                                  use_density_predictor = .false.,                          &
+                                 cap_density_predictor = 0.001_r_def,                      &
                                  ffsl_flux_splitting = ffsl_flux_splitting_full,           &
                                  ffsl_advective_splitting = ffsl_advective_splitting_full, &
                                  dry_field_name='tracer',                                  &

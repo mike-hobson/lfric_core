@@ -92,7 +92,6 @@ contains
     integer(kind=i_def), intent(in) :: number_of_meshes
     integer(kind=i_def)             :: config
     type(transport_metadata_type)   :: transport_metadata
-    logical(kind=l_def), parameter  :: use_divergence_factor = .false.
 
     ! ------------------------------------------------------------------------ !
     ! Allocate arrays for initial/true fields
@@ -154,7 +153,6 @@ contains
                                                     enforce_min_value(config),       &
                                                     min_value(config),               &
                                                     log_space(config),               &
-                                                    use_divergence_factor,           &
                                                     reversible(config) )
 
       call transport_metadata_collection%set_transport_metadata(transport_metadata)

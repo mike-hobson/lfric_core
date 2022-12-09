@@ -79,7 +79,6 @@ module mol_consistent_alg_mod
     logical(kind=l_def)                :: final_rk_stage
     logical(kind=l_def)                :: final_substep
     logical(kind=l_def)                :: final_split_step
-    logical(kind=l_def)                :: include_div_term_with_density
     real(kind=r_def)                   :: dt_substep
     real(kind=r_def)                   :: min_value
     real(kind=r_def),      allocatable :: rk_weights(:,:)
@@ -94,7 +93,6 @@ module mol_consistent_alg_mod
     type(field_type),          pointer :: mr_wt_start => null()
     type(field_type),          pointer :: rho_d_start => null()
     type(field_type),          pointer :: old_flux_inc => null()
-    type(field_type),          pointer :: divergence_factor => null()
     type(field_type)                   :: flux_X
     type(field_type)                   :: mr_sh_w3_n, mr_sh_w3_np1, mr_sh_w3_start
     type(field_type)                   :: mr_sh_w3_for_flux, mr_wt_for_flux
@@ -158,14 +156,6 @@ module mol_consistent_alg_mod
     number_substeps = transport_runtime%get_number_substeps(prime_extrusion_mesh_id,direction,transport_metadata%get_splitting())
     dt_substep = transport_runtime%get_dt_substep(prime_extrusion_mesh_id,direction,transport_metadata%get_splitting())
     enforce_min_value = transport_metadata%get_enforce_min_value()
-    include_div_term_with_density = transport_metadata%get_divergence_factor()
-
-    ! Get the div-term if required: not implemented yet
-    if ( include_div_term_with_density ) then
-      divergence_factor => transport_runtime%get_div_factor(shifted_mesh_id)
-      call log_event('mol_consistent_alg not implemented with divergence factor', &
-                     LOG_LEVEL_ERROR)
-    end if
 
     ! Transform mixing ratio to shifted W3
     call invoke( inject_wt_to_sh_w3_kernel_type(mr_sh_w3_n, mr_wt_n),     &

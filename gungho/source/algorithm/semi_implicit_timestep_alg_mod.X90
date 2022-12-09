@@ -31,10 +31,9 @@ module semi_implicit_timestep_alg_mod
   use aerosol_config_mod,         only: glomap_mode, glomap_mode_ukca
 
   use formulation_config_mod,     only: use_physics, dlayer_on,   &
-                                        use_wavedynamics,                     &
+                                        use_wavedynamics,         &
                                         moisture_formulation,     &
                                         moisture_formulation_dry, &
-                                        si_momentum_equation,                 &
                                         exner_from_eos
   use io_config_mod,              only: subroutine_timers,                    &
                                         write_conservation_diag, write_diag,  &
@@ -75,7 +74,6 @@ module semi_implicit_timestep_alg_mod
   use operator_mod,               only: operator_type
 
   ! Algorithms
-  use mass_matrix_solver_alg_mod, only: mass_matrix_solver_alg
   use rhs_alg_mod,                only: rhs_alg
   use gungho_transport_control_alg_mod, &
                                   only: gungho_transport_control_alg_init, &
@@ -101,6 +99,7 @@ module semi_implicit_timestep_alg_mod
                                   only: update_prognostic_scalars_alg
   use mixing_alg_mod,             only: mixing_alg
   use si_diagnostics_mod,         only: output_diags_for_si
+  use predictors_alg_mod,         only: predictors_alg
 
   ! LAM
   use limited_area_lbc_alg_mod,   only: lam_solver_lbc, &
@@ -359,15 +358,15 @@ contains
     ! Quadrature object
     type( quadrature_xyoz_type ), pointer :: qr => null()
 
-    type(operator_type), pointer :: mm_wt  => null()
-    type(operator_type), pointer :: mm_vel => null()
+    type(operator_type), pointer :: mm_wt   => null()
+    type(operator_type), pointer :: mm_vel  => null()
 
     integer(kind=i_def) :: outer, inner, reset_ref_state
     real(kind=r_def)    :: varalpha, varbeta ! alpha, beta weight to use
                                              ! these may differ from input values
                                              ! during the spinup period
 
-    ! Density field used for moisture conservation diagnostics
+    ! Density field used for moisture conservation diagnostics and predictor
     logical(kind=l_def) :: write_moisture_diag
 
     ! Fields after slow physics to be advected (i.e. field_n + slow phys inc)
@@ -449,11 +448,8 @@ contains
                   moist_dyn, .false., .false. )
 
     call copy_bundle(state_after_slow, advected_state,  bundle_size)
-    if ( .not. si_momentum_equation ) then
-      ! Predictor of the wind field (u-beta*cast_dt*rhs) to be advected if
-      ! using explicit advection
-      call mass_matrix_solver_alg(advected_state(igh_u), rhs_n(igh_u))
-    end if
+    ! Set predictors for transport
+    call predictors_alg(advected_state,state_n(igh_u),rhs_n(igh_u),varbeta,model_clock)
 
     !==========================================================================
     ! Start the Outer (advection) loop

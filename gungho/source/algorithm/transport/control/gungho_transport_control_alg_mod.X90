@@ -55,7 +55,6 @@ contains
                                             enforce_min_value,     &
                                             min_value,             &
                                             log_space,             &
-                                            use_density_predictor, &
                                             reversible,            &
                                             horizontal_monotone,   &
                                             vertical_monotone,     &
@@ -66,7 +65,6 @@ contains
     type(mesh_type), pointer, intent(in) :: mesh
 
     integer(kind=i_def)           :: config
-    logical(kind=l_def)           :: use_divergence_factor
     type(transport_metadata_type) :: transport_metadata
 
     integer(kind=i_def), allocatable :: local_mesh_ids(:)
@@ -83,11 +81,6 @@ contains
       call log_event(log_scratch_space, LOG_LEVEL_INFO)
 
       ! Set hardwired defaults based upon which field is being advected
-      if ( trim(field_names(config)) == 'density' ) then
-        use_divergence_factor = use_density_predictor
-      else
-        use_divergence_factor = .false.
-      end if
 
       transport_metadata = transport_metadata_type( field_names(config),             &
                                                     equation_form(config),           &
@@ -101,7 +94,6 @@ contains
                                                     enforce_min_value(config),       &
                                                     min_value(config),               &
                                                     log_space(config),               &
-                                                    use_divergence_factor,           &
                                                     reversible(config) )
 
       call transport_metadata_collection%set_transport_metadata(transport_metadata)

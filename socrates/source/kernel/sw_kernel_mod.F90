@@ -287,7 +287,8 @@ subroutine sw_code(nlayers,                                                    &
     l_rayleigh_sw, l_trans_zen_correction, &
     i_cloud_ice_type_sw, i_cloud_liq_type_sw, &
     i_cloud_ice_type_swinc, i_cloud_liq_type_swinc, &
-    cloud_vertical_decorr, topography, topography_flat
+    cloud_vertical_decorr, topography, topography_flat, &
+    liu_aparam, liu_bparam
   use aerosol_config_mod, only: l_radaer, sulphuric_strat_climatology
   use set_thermodynamic_mod, only: set_thermodynamic
   use set_cloud_field_mod, only: set_cloud_field
@@ -547,6 +548,8 @@ subroutine sw_code(nlayers,                                                    &
       ice_rsd_1d             = sigma_mc(wth_1:wth_nlayers),                    &
       cloud_vertical_decorr  = cloud_vertical_decorr,                          &
       conv_vertical_decorr   = cloud_vertical_decorr,                          &
+      liq_dim_aparam         = liu_aparam,                                     &
+      liq_dim_bparam         = liu_bparam,                                     &
       rand_seed              = rand_seed,                                      &
       layer_heat_capacity_1d = layer_heat_capacity,                            &
       l_rayleigh             = l_rayleigh_sw,                                  &
@@ -668,6 +671,8 @@ subroutine sw_code(nlayers,                                                    &
       ice_rsd_1d             = sigma_mc(wth_1:wth_nlayers),                    &
       cloud_vertical_decorr  = cloud_vertical_decorr,                          &
       conv_vertical_decorr   = cloud_vertical_decorr,                          &
+      liq_dim_aparam         = liu_aparam,                                     &
+      liq_dim_bparam         = liu_bparam,                                     &
       rand_seed              = rand_seed,                                      &
       layer_heat_capacity_1d = layer_heat_capacity,                            &
       l_rayleigh             = l_rayleigh_sw,                                  &

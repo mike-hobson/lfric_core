@@ -258,7 +258,7 @@ subroutine lw_code(nlayers,                                                    &
   use radiation_config_mod, only: &
     i_cloud_ice_type_lw, i_cloud_liq_type_lw, &
     i_cloud_ice_type_lwinc, i_cloud_liq_type_lwinc, &
-    cloud_vertical_decorr
+    cloud_vertical_decorr, liu_aparam, liu_bparam
   use aerosol_config_mod, only: l_radaer, sulphuric_strat_climatology
   use set_thermodynamic_mod, only: set_thermodynamic
   use set_cloud_field_mod, only: set_cloud_field
@@ -516,6 +516,8 @@ subroutine lw_code(nlayers,                                                    &
       ice_rsd_1d              = sigma_mc(wth_1:wth_nlayers),                   &
       cloud_vertical_decorr   = cloud_vertical_decorr,                         &
       conv_vertical_decorr    = cloud_vertical_decorr,                         &
+      liq_dim_aparam          = liu_aparam,                                    &
+      liq_dim_bparam          = liu_bparam,                                    &
       rand_seed               = rand_seed,                                     &
       layer_heat_capacity_1d  = layer_heat_capacity,                           &
       l_mixing_ratio          = .true.,                                        &
@@ -655,6 +657,8 @@ subroutine lw_code(nlayers,                                                    &
       ice_rsd_1d              = sigma_mc(wth_1:wth_nlayers),                   &
       cloud_vertical_decorr   = cloud_vertical_decorr,                         &
       conv_vertical_decorr    = cloud_vertical_decorr,                         &
+      liq_dim_aparam          = liu_aparam,                                    &
+      liq_dim_bparam          = liu_bparam,                                    &
       rand_seed               = rand_seed,                                     &
       layer_heat_capacity_1d  = layer_heat_capacity,                           &
       l_mixing_ratio          = .true.,                                        &

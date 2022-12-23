@@ -22,6 +22,9 @@
       <axis id="horizon_angles" name="horizon_angles" n_glo="16"/>
       <axis id="horizon_aspects" name="horizon_aspects" n_glo="16"/>
       <axis id="radiation_levels" name="radiation_levels"/>
+      <axis id="aero_modes" name="aero_modes" n_glo="6"/>
+      <axis id="sw_bands_aero_modes" name="sw_bands_aero_modes" n_glo="36"/>
+      <axis id="lw_bands_aero_modes" name="lw_bands_aero_modes" n_glo="54"/>
     </axis_definition>
 
     <grid_definition>
@@ -51,7 +54,22 @@
 	<axis axis_ref="monthly_axis"/>
 	<axis axis_ref="plant_func_types"/>
       </grid>
-    </grid_definition>
+      <grid id="aero_mode_grid">
+	<domain domain_ref="face"/>
+	<axis axis_ref="vert_axis_full_levels"/>
+	<axis axis_ref="aero_modes"/>
+      </grid>
+      <grid id="sw_aero_grid">
+	<domain domain_ref="face"/>
+	<axis axis_ref="vert_axis_full_levels"/>
+	<axis axis_ref="sw_bands_aero_modes"/>
+      </grid>
+      <grid id="lw_aero_grid">
+	<domain domain_ref="face"/>
+	<axis axis_ref="vert_axis_full_levels"/>
+	<axis axis_ref="lw_bands_aero_modes"/>
+      </grid>
+     </grid_definition>
 
     <field_definition prec="8" >
 
@@ -271,6 +289,14 @@
 	<field id="checkpoint_sw_direct_toa_rtsi" name="sw_direct_toa_rtsi" long_name="toa_direct_shortwave_flux" unit="W m-2" domain_ref="face" />
 	<field id="checkpoint_sw_heating_rate_rtsi" name="sw_heating_rate_rtsi" long_name="shortwave_heating_rate" unit="K s-1" grid_ref="full_level_face_grid" />
 	<field id="checkpoint_lw_heating_rate_rtsi" name="lw_heating_rate_rtsi" long_name="longwave_heating_rate" unit="K s-1" grid_ref="full_level_face_grid" />
+	<!-- radiation fields from radaer -->
+	<field id="checkpoint_aer_mix_ratio" name="aer_mix_ratio" long_name="aer_mix_ratio" unit="kg kg-1" grid_ref="aero_mode_grid" />
+	<field id="checkpoint_aer_sw_absorption" name="aer_sw_absorption" long_name="aer_sw_absorption" unit="1" grid_ref="sw_aero_grid" />
+	<field id="checkpoint_aer_sw_scattering" name="aer_sw_scattering" long_name="aer_sw_scattering" unit="1" grid_ref="sw_aero_grid" />
+	<field id="checkpoint_aer_sw_asymmetry" name="aer_sw_asymmetry" long_name="aer_sw_asymmetry" unit="1" grid_ref="sw_aero_grid" />
+	<field id="checkpoint_aer_lw_absorption" name="aer_lw_absorption" long_name="aer_lw_absorption" unit="1" grid_ref="lw_aero_grid" />
+	<field id="checkpoint_aer_lw_scattering" name="aer_lw_scattering" long_name="aer_lw_scattering" unit="1" grid_ref="lw_aero_grid" />
+	<field id="checkpoint_aer_lw_asymmetry" name="aer_lw_asymmetry" long_name="aer_lw_asymmetry" unit="1" grid_ref="lw_aero_grid" />
 	<!-- snow fields -->
 	<field id="checkpoint_tile_snow_mass" name="tile_snow_mass" long_name="tile_snow_mass" unit="kg m-2" domain_ref="face" axis_ref="surface_tiles" />
 	<field id="checkpoint_tile_snow_rgrain" name="tile_snow_rgrain" long_name="tile_snow_grain_size" unit="microns" domain_ref="face" axis_ref="surface_tiles" />
@@ -1130,6 +1156,14 @@
 	<field id="restart_sw_direct_toa_rtsi" name="sw_direct_toa_rtsi" long_name="toa_direct_shortwave_flux" unit="W m-2" operation="instant" domain_ref="face" />
 	<field id="restart_sw_heating_rate_rtsi" name="sw_heating_rate_rtsi" long_name="shortwave_heating_rate" unit="K s-1" operation="instant" grid_ref="full_level_face_grid" />
 	<field id="restart_lw_heating_rate_rtsi" name="lw_heating_rate_rtsi" long_name="longwave_heating_rate" unit="K s-1" operation="instant" grid_ref="full_level_face_grid" />
+	<!-- radiation fields from radaer -->
+	<field id="restart_aer_mix_ratio" name="aer_mix_ratio" long_name="aer_mix_ratio" unit="kg kg-1" operation="instant" grid_ref="aero_mode_grid" />
+	<field id="restart_aer_sw_absorption" name="aer_sw_absorption" long_name="aer_sw_absorption" unit="1" operation="instant" grid_ref="sw_aero_grid" />
+	<field id="restart_aer_sw_scattering" name="aer_sw_scattering" long_name="aer_sw_scattering" unit="1" operation="instant" grid_ref="sw_aero_grid" />
+	<field id="restart_aer_sw_asymmetry" name="aer_sw_asymmetry" long_name="aer_sw_asymmetry" unit="1" operation="instant" grid_ref="sw_aero_grid" />
+	<field id="restart_aer_lw_absorption" name="aer_lw_absorption" long_name="aer_lw_absorption" unit="1" operation="instant" grid_ref="lw_aero_grid" />
+	<field id="restart_aer_lw_scattering" name="aer_lw_scattering" long_name="aer_lw_scattering" unit="1" operation="instant" grid_ref="lw_aero_grid" />
+	<field id="restart_aer_lw_asymmetry" name="aer_lw_asymmetry" long_name="aer_lw_asymmetry" unit="1" operation="instant" grid_ref="lw_aero_grid" />
 	<!-- snow fields -->
 	<field id="restart_tile_snow_mass" name="tile_snow_mass" long_name="tile_snow_mass" unit="kg m-2" operation="instant" domain_ref="face" axis_ref="surface_tiles" />
 	<field id="restart_tile_snow_rgrain" name="tile_snow_rgrain" long_name="tile_snow_grain_size" unit="microns" operation="instant" domain_ref="face" axis_ref="surface_tiles" />

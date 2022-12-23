@@ -266,7 +266,7 @@ subroutine read_field_face(xios_field_name, field_proxy)
   character(len=*),               intent(in)    :: xios_field_name
   class(field_parent_proxy_type), intent(inout) :: field_proxy
 
-  integer(i_def) :: i, undf
+  integer(i_def) :: i, undf, ndata
   integer(i_def) :: fs_id
   integer(i_def) :: domain_size, axis_size
   character(str_def) :: domain_id
@@ -283,6 +283,7 @@ subroutine read_field_face(xios_field_name, field_proxy)
 
   ! Get the size of undf as we only read in up to last owned
   undf = field_proxy%vspace%get_last_dof_owned()
+  ndata = field_proxy%vspace%get_ndata()
   fs_id = field_proxy%vspace%which()
 
   ! get the horizontal / vertical domain sizes
@@ -295,7 +296,7 @@ subroutine read_field_face(xios_field_name, field_proxy)
   end if
 
   ! Size the array to be what is expected
-  allocate(recv_field(domain_size*axis_size))
+  allocate(recv_field(domain_size*axis_size*ndata))
 
   ! Read the data into a temporary array - this should be in the correct order
   ! as long as we set up the horizontal domain using the global index
@@ -309,21 +310,21 @@ subroutine read_field_face(xios_field_name, field_proxy)
     type is (field_r32_proxy_type)
     do i = 0, axis_size-1
       field_proxy%data(i+1:undf:axis_size) = &
-             real(recv_field(i*(domain_size)+1:(i*(domain_size)) + domain_size), real32)
+             real(recv_field(i*(domain_size*ndata)+1:(i*(domain_size*ndata)) + domain_size*ndata), real32)
     end do
     call field_proxy%set_dirty()
 
     type is (field_r64_proxy_type)
     do i = 0, axis_size-1
       field_proxy%data(i+1:undf:axis_size) = &
-             real(recv_field(i*(domain_size)+1:(i*(domain_size)) + domain_size), real64)
+             real(recv_field(i*(domain_size*ndata)+1:(i*(domain_size*ndata)) + domain_size*ndata), real64)
     end do
     call field_proxy%set_dirty()
 
     type is (integer_field_proxy_type)
     do i = 0, axis_size-1
       field_proxy%data(i+1:undf:axis_size) = &
-             int( recv_field(i*(domain_size)+1:(i*(domain_size)) + domain_size), i_def)
+             int( recv_field(i*(domain_size*ndata)+1:(i*(domain_size*ndata)) + domain_size*ndata), i_def)
     end do
     call field_proxy%set_dirty()
 

@@ -17,6 +17,7 @@ module radaer_alg_mod
   use timer_mod,                       only: timer
   use constants_mod,                   only: i_def
   use radiation_config_mod,            only: n_radstep
+  use aerosol_config_mod,              only: n_radaer_step
 
   implicit none
 
@@ -31,13 +32,6 @@ contains
   !>@param[in]     theta_in_wth          Potential temperature (theta) wth space
   !>@param[in]     exner_in_wth          Exner Pressure in theta space
   !>@param[in]     trop_level            Level of tropopause
-  !>@param[in,out] aer_mix_ratio         MODE aerosol mixing ratios
-  !>@param[in,out] aer_sw_absorption     MODE aerosol SW absorption
-  !>@param[in,out] aer_sw_scattering     MODE aerosol SW scattering
-  !>@param[in,out] aer_sw_asymmetry      MODE aerosol SW asymmetry
-  !>@param[in,out] aer_lw_absorption     MODE aerosol LW absorption
-  !>@param[in,out] aer_lw_scattering     MODE aerosol LW scattering
-  !>@param[in,out] aer_lw_asymmetry      MODE aerosol LW asymmetry
   !>@param[in]     timestep              Current timestep number
 
   subroutine radaer_alg( aerosol_fields,                                       &
@@ -45,10 +39,6 @@ contains
                          theta_in_wth,                                         &
                          exner_in_wth,                                         &
                          trop_level,                                           &
-                         aer_mix_ratio,                                        &
-                         aer_sw_absorption, aer_sw_scattering,                 &
-                         aer_sw_asymmetry, aer_lw_absorption,                  &
-                         aer_lw_scattering, aer_lw_asymmetry,                  &
                          timestep )
 
     use radaer_kernel_mod, only: radaer_kernel_type
@@ -61,13 +51,6 @@ contains
     type( field_type ), intent( in )               :: theta_in_wth
     type( field_type ), intent( in )               :: exner_in_wth
     type( integer_field_type ), intent( in )       :: trop_level
-    type( field_type ), intent( inout )            :: aer_mix_ratio
-    type( field_type ), intent( inout )            :: aer_sw_absorption
-    type( field_type ), intent( inout )            :: aer_sw_scattering
-    type( field_type ), intent( inout )            :: aer_sw_asymmetry
-    type( field_type ), intent( inout )            :: aer_lw_absorption
-    type( field_type ), intent( inout )            :: aer_lw_scattering
-    type( field_type ), intent( inout )            :: aer_lw_asymmetry
     integer( kind=i_def ), intent( in )            :: timestep
 
     ! Temporary unpacked fields from collection aerosol_fields
@@ -131,11 +114,18 @@ contains
     type( field_type ), pointer :: pvol_du_cor_ins => null()
 
     type( field_type ), pointer :: lit_fraction_rts => null()
+    type( field_type ), pointer :: aer_mix_ratio => null()
+    type( field_type ), pointer :: aer_sw_absorption => null()
+    type( field_type ), pointer :: aer_sw_scattering => null()
+    type( field_type ), pointer :: aer_sw_asymmetry => null()
+    type( field_type ), pointer :: aer_lw_absorption => null()
+    type( field_type ), pointer :: aer_lw_scattering => null()
+    type( field_type ), pointer :: aer_lw_asymmetry => null()
 
     if ( subroutine_timers ) call timer('radaer_alg')
 
     ! Call on radiation time steps only
-    if (mod(timestep-1_i_def, n_radstep) == 0) then
+    if (mod(timestep-1_i_def, n_radaer_step*n_radstep) == 0) then
 
       ! Unpack fields from aerosol_fields
       call aerosol_fields%get_field('n_ait_sol', n_ait_sol)
@@ -198,6 +188,13 @@ contains
       call aerosol_fields%get_field('pvol_du_cor_ins', pvol_du_cor_ins)
 
       call radiation_fields%get_field('lit_fraction_rts', lit_fraction_rts)
+      call radiation_fields%get_field('aer_mix_ratio', aer_mix_ratio)
+      call radiation_fields%get_field('aer_sw_absorption', aer_sw_absorption)
+      call radiation_fields%get_field('aer_sw_scattering', aer_sw_scattering)
+      call radiation_fields%get_field('aer_sw_asymmetry', aer_sw_asymmetry)
+      call radiation_fields%get_field('aer_lw_absorption', aer_lw_absorption)
+      call radiation_fields%get_field('aer_lw_scattering', aer_lw_scattering)
+      call radiation_fields%get_field('aer_lw_asymmetry', aer_lw_asymmetry)
 
       call invoke( radaer_kernel_type( theta_in_wth,                           &
                                        exner_in_wth,                           &

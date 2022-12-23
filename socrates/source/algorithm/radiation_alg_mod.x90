@@ -53,13 +53,6 @@ contains
 ! @param[in]     tile_swinc_diffuse_albedo Tile SWINC diffuse albedos
 ! @param[in]     tile_lw_albedo         Tile LW albedos (1 - emissivity)
 ! @param[in]     tile_lwinc_albedo      Tile LWINC albedos (1 - emissivity)
-! @param[in]     aer_mix_ratio          MODE aerosol mixing ratios
-! @param[in]     aer_sw_absorption      MODE aerosol SW absorption
-! @param[in]     aer_lw_absorption      MODE aerosol LW absorption
-! @param[in]     aer_sw_scattering      MODE aerosol SW scattering
-! @param[in]     aer_lw_scattering      MODE aerosol LW scattering
-! @param[in]     aer_sw_asymmetry       MODE aerosol SW asymmetry
-! @param[in]     aer_lw_asymmetry       MODE aerosol LW asymmetry
 
 subroutine radiation_alg(dtheta_rad, theta, exner, mr,                        &
                          derived_fields, radiation_fields,                    &
@@ -67,10 +60,7 @@ subroutine radiation_alg(dtheta_rad, theta, exner, mr,                        &
                          aerosol_fields, surface_fields, timestep,            &
                          tile_sw_direct_albedo, tile_sw_diffuse_albedo,       &
                          tile_swinc_direct_albedo, tile_swinc_diffuse_albedo, &
-                         tile_lw_albedo, tile_lwinc_albedo, aer_mix_ratio,    &
-                         aer_sw_absorption, aer_lw_absorption,                &
-                         aer_sw_scattering, aer_lw_scattering,                &
-                         aer_sw_asymmetry,  aer_lw_asymmetry)
+                         tile_lw_albedo, tile_lwinc_albedo)
 
   implicit none
 
@@ -82,10 +72,6 @@ subroutine radiation_alg(dtheta_rad, theta, exner, mr,                        &
   type( field_type ), intent( in )    :: tile_swinc_diffuse_albedo
   type( field_type ), intent( in )    :: tile_lw_albedo
   type( field_type ), intent( in )    :: tile_lwinc_albedo
-  type( field_type ), intent( in )    :: aer_mix_ratio
-  type( field_type ), intent( in )    :: aer_sw_absorption, aer_lw_absorption
-  type( field_type ), intent( in )    :: aer_sw_scattering, aer_lw_scattering
-  type( field_type ), intent( in )    :: aer_sw_asymmetry,  aer_lw_asymmetry
   type( field_collection_type ), intent(in) :: derived_fields
   type( field_collection_type ), intent(inout) :: radiation_fields
   type( field_collection_type ), intent(in) :: cloud_fields
@@ -169,6 +155,13 @@ subroutine radiation_alg(dtheta_rad, theta, exner, mr,                        &
   type( field_type ), pointer :: sw_up_blue_tile_rtsi     => null()
 
   type( field_type ), pointer :: ozone               => null()
+  type( field_type ), pointer :: aer_mix_ratio       => null()
+  type( field_type ), pointer :: aer_sw_absorption   => null()
+  type( field_type ), pointer :: aer_sw_scattering   => null()
+  type( field_type ), pointer :: aer_sw_asymmetry    => null()
+  type( field_type ), pointer :: aer_lw_absorption   => null()
+  type( field_type ), pointer :: aer_lw_scattering   => null()
+  type( field_type ), pointer :: aer_lw_asymmetry    => null()
 
   type( field_type ), pointer :: latitude            => null()
   type( field_type ), pointer :: longitude           => null()
@@ -251,6 +244,13 @@ subroutine radiation_alg(dtheta_rad, theta, exner, mr,                        &
   call radiation_fields%get_field('sw_up_blue_tile_rtsi', sw_up_blue_tile_rtsi)
 
   call radiation_fields%get_field('ozone', ozone)
+  call radiation_fields%get_field('aer_mix_ratio', aer_mix_ratio)
+  call radiation_fields%get_field('aer_sw_absorption', aer_sw_absorption)
+  call radiation_fields%get_field('aer_sw_scattering', aer_sw_scattering)
+  call radiation_fields%get_field('aer_sw_asymmetry', aer_sw_asymmetry)
+  call radiation_fields%get_field('aer_lw_absorption', aer_lw_absorption)
+  call radiation_fields%get_field('aer_lw_scattering', aer_lw_scattering)
+  call radiation_fields%get_field('aer_lw_asymmetry', aer_lw_asymmetry)
 
   call derived_fields%get_field('exner_in_wth', exner_in_wth)
   call derived_fields%get_field('rho_in_wth', rho_in_wth)

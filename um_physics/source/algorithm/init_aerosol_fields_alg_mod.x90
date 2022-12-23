@@ -152,21 +152,8 @@ contains
     call aerosol_fields%get_field('n_cor_ins', n_cor_ins)
     call aerosol_fields%get_field('cor_ins_du', cor_ins_du)
 
-    call aerosol_fields%get_field('emiss_bc_biofuel', emiss_bc_biofuel)
-    call aerosol_fields%get_field('emiss_bc_fossil', emiss_bc_fossil)
-    call aerosol_fields%get_field('emiss_bc_biomass', emiss_bc_biomass)
-    call aerosol_fields%get_field('emiss_dms_land', emiss_dms_land)
-    call aerosol_fields%get_field('dms_conc_ocean', dms_conc_ocean)
-    call aerosol_fields%get_field('emiss_monoterp', emiss_monoterp)
-    call aerosol_fields%get_field('emiss_om_biofuel', emiss_om_biofuel)
-    call aerosol_fields%get_field('emiss_om_fossil', emiss_om_fossil)
-    call aerosol_fields%get_field('emiss_om_biomass', emiss_om_biomass)
-    call aerosol_fields%get_field('emiss_so2_low', emiss_so2_low)
-    call aerosol_fields%get_field('emiss_so2_high', emiss_so2_high)
-    call aerosol_fields%get_field('emiss_so2_nat', emiss_so2_nat)
     call aerosol_fields%get_field('soil_clay', soil_clay)
     call aerosol_fields%get_field('soil_sand', soil_sand)
-    call aerosol_fields%get_field('surf_wetness', surf_wetness)
     call aerosol_fields%get_field('dust_mrel', dust_mrel)
     call aerosol_fields%get_field('dust_flux', dust_flux)
 
@@ -208,6 +195,20 @@ contains
     call aerosol_fields%get_field('pvol_du_cor_ins', pvol_du_cor_ins)
 
     if (aerosol == aerosol_um .and. glomap_mode == glomap_mode_ukca) then
+
+      call aerosol_fields%get_field('emiss_bc_biofuel', emiss_bc_biofuel)
+      call aerosol_fields%get_field('emiss_bc_fossil', emiss_bc_fossil)
+      call aerosol_fields%get_field('emiss_bc_biomass', emiss_bc_biomass)
+      call aerosol_fields%get_field('emiss_dms_land', emiss_dms_land)
+      call aerosol_fields%get_field('dms_conc_ocean', dms_conc_ocean)
+      call aerosol_fields%get_field('emiss_monoterp', emiss_monoterp)
+      call aerosol_fields%get_field('emiss_om_biofuel', emiss_om_biofuel)
+      call aerosol_fields%get_field('emiss_om_fossil', emiss_om_fossil)
+      call aerosol_fields%get_field('emiss_om_biomass', emiss_om_biomass)
+      call aerosol_fields%get_field('emiss_so2_low', emiss_so2_low)
+      call aerosol_fields%get_field('emiss_so2_high', emiss_so2_high)
+      call aerosol_fields%get_field('emiss_so2_nat', emiss_so2_nat)
+      call aerosol_fields%get_field('surf_wetness', surf_wetness)
 
       ! UKCA GLOMAP-mode prognostic aerosol scheme selected.
       ! Note: Emissions fields are processed by UKCA on all time steps.
@@ -345,23 +346,8 @@ contains
                    setval_c(acc_ins_du,        5.0e-12_r_def), &
                    setval_c(n_cor_ins,         1.0e-20_r_def), &
                    setval_c(cor_ins_du,        5.0e-12_r_def), &
-                   ! Dummy values - find better values
-                   ! Emissions - not used
-                   setval_c(emiss_bc_biofuel,      0.0_r_def), &
-                   setval_c(emiss_bc_fossil,       0.0_r_def), &
-                   setval_c(emiss_bc_biomass,      0.0_r_def), &
-                   setval_c(emiss_dms_land,        0.0_r_def), &
-                   setval_c(dms_conc_ocean,        0.0_r_def), &
-                   setval_c(emiss_monoterp,        0.0_r_def), &
-                   setval_c(emiss_om_biofuel,      0.0_r_def), &
-                   setval_c(emiss_om_fossil,       0.0_r_def), &
-                   setval_c(emiss_om_biomass,      0.0_r_def), &
-                   setval_c(emiss_so2_low,         0.0_r_def), &
-                   setval_c(emiss_so2_high,        0.0_r_def), &
-                   setval_c(emiss_so2_nat,         0.0_r_def), &
                    setval_c(soil_clay,             0.0_r_def), &
                    setval_c(soil_sand,             0.0_r_def), &
-                   setval_c(surf_wetness,          0.0_r_def), &
                    setval_c(dust_mrel,             0.0_r_def), &
                    setval_c(dust_flux,             0.0_r_def), &
                    ! Default values of CDNC for microphysics and
@@ -445,23 +431,8 @@ contains
                    setval_c(acc_ins_du,        5.0e-12_r_def), &
                    setval_c(n_cor_ins,         1.0e-20_r_def), &
                    setval_c(cor_ins_du,        5.0e-12_r_def), &
-                   ! Dummy values - find better values
-                   ! Emissions - not used
-                   setval_c(emiss_bc_biofuel,      0.0_r_def), &
-                   setval_c(emiss_bc_fossil,       0.0_r_def), &
-                   setval_c(emiss_bc_biomass,      0.0_r_def), &
-                   setval_c(emiss_dms_land,        0.0_r_def), &
-                   setval_c(dms_conc_ocean,        0.0_r_def), &
-                   setval_c(emiss_monoterp,        0.0_r_def), &
-                   setval_c(emiss_om_biofuel,      0.0_r_def), &
-                   setval_c(emiss_om_fossil,       0.0_r_def), &
-                   setval_c(emiss_om_biomass,      0.0_r_def), &
-                   setval_c(emiss_so2_low,         0.0_r_def), &
-                   setval_c(emiss_so2_high,        0.0_r_def), &
-                   setval_c(emiss_so2_nat,         0.0_r_def), &
                    setval_c(soil_clay,             0.0_r_def), &
                    setval_c(soil_sand,             0.0_r_def), &
-                   setval_c(surf_wetness,          0.0_r_def), &
                    setval_c(dust_mrel,             0.0_r_def), &
                    setval_c(dust_flux,             0.0_r_def), &
                    ! CDNC for use in microphysics and particle properties
@@ -534,22 +505,8 @@ contains
                    setval_c(acc_ins_du,            0.0_r_def), &
                    setval_c(n_cor_ins,             0.0_r_def), &
                    setval_c(cor_ins_du,            0.0_r_def), &
-                   ! Emissions values
-                   setval_c(emiss_bc_biofuel,      0.0_r_def), &
-                   setval_c(emiss_bc_fossil,       0.0_r_def), &
-                   setval_c(emiss_bc_biomass,      0.0_r_def), &
-                   setval_c(emiss_dms_land,        0.0_r_def), &
-                   setval_c(dms_conc_ocean,        0.0_r_def), &
-                   setval_c(emiss_monoterp,        0.0_r_def), &
-                   setval_c(emiss_om_biofuel,      0.0_r_def), &
-                   setval_c(emiss_om_fossil,       0.0_r_def), &
-                   setval_c(emiss_om_biomass,      0.0_r_def), &
-                   setval_c(emiss_so2_low,         0.0_r_def), &
-                   setval_c(emiss_so2_high,        0.0_r_def), &
-                   setval_c(emiss_so2_nat,         0.0_r_def), &
                    setval_c(soil_clay,             0.0_r_def), &
                    setval_c(soil_sand,             0.0_r_def), &
-                   setval_c(surf_wetness,          0.0_r_def), &
                    setval_c(dust_mrel,             0.0_r_def), &
                    setval_c(dust_flux,             0.0_r_def), &
                    ! CDNC and particle properties

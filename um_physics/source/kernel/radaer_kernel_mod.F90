@@ -290,7 +290,7 @@ subroutine radaer_code( nlayers,                                               &
 
 
   use constants_mod,                     only: r_def, i_def, r_um, i_um
-
+  use aerosol_config_mod,                only: n_radaer_step
   use socrates_init_mod,                 only: n_sw_band,                      &
                                                sw_n_band_exclude,              &
                                                sw_index_exclude,               &
@@ -768,7 +768,10 @@ subroutine radaer_code( nlayers,                                               &
   end do
 
   ! Only calculate SW on lit points
-  if (lit_fraction(map_2d(1)) > 0.0_r_def) then
+  ! If superstepping (n_radaer_step>1) then need to calculate on all points
+  ! for use when the sun moves later
+  if (lit_fraction(map_2d(1)) > 0.0_r_def .or. &
+       n_radaer_step > 1) then
 
     ! Short wave (e.g. ip_solar )
     call ukca_radaer_band_average(                                             &

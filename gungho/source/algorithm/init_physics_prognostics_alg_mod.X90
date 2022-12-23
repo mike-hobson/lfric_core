@@ -20,7 +20,9 @@ module init_physics_prognostics_alg_mod
   use init_chemistry_fields_alg_mod,    only : init_chemistry_fields_alg
   use init_aerosol_fields_alg_mod,      only : init_aerosol_fields_alg
 
-  use section_choice_config_mod, only: surface, surface_jules
+  use section_choice_config_mod, only: surface, surface_jules, &
+                                       aerosol, aerosol_um
+  use aerosol_config_mod,        only: glomap_mode, glomap_mode_ukca
 #endif
   use log_mod,                        only : log_event,         &
                                              LOG_LEVEL_INFO
@@ -90,7 +92,9 @@ contains
       call init_soil_fields_alg(soil_fields)
       call init_snow_fields_alg(snow_fields)
     end if
-    call init_chemistry_fields_alg(chemistry_fields)
+    if (aerosol == aerosol_um .and. glomap_mode == glomap_mode_ukca) then
+      call init_chemistry_fields_alg(chemistry_fields)
+    end if
     call init_aerosol_fields_alg(aerosol_fields)
 
     call log_event( 'Physics field collections initialised', LOG_LEVEL_INFO )

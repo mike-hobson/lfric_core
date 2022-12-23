@@ -17,6 +17,7 @@ module glomap_aerosol_alg_mod
   use mr_indices_mod,                  only: imr_ci, imr_v, nummr
   use timer_mod,                       only: timer
   use radiation_config_mod,            only: n_radstep
+  use aerosol_config_mod,              only: n_radaer_step
 
   implicit none
 
@@ -201,7 +202,7 @@ contains
 
     ! Logical to determine if the radiation scheme will be called on this
     ! timestep
-    rad_this_tstep = (mod(timestep-1_i_def, n_radstep) == 0)
+    rad_this_tstep = (mod(timestep-1_i_def, n_radaer_step*n_radstep) == 0)
 
     call invoke(glomap_aerosol_kernel_type( rad_this_tstep,                    &
                                             theta_in_wth,                      &

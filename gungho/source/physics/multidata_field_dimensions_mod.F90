@@ -37,6 +37,7 @@ contains
     use jules_surface_types_mod, only: npft
     use nlsizes_namelist_mod,    only: sm_levels
     use ancil_info,              only: rad_nband
+    use um_physics_init_mod,     only: sw_band_mode, lw_band_mode, mode_dimen
     use dust_parameters_mod,     only: ndiv
     use extrusion_config_mod,    only: number_of_layers
 #endif
@@ -80,6 +81,12 @@ contains
             dim = ndiv
       case ('radiation_levels')
             dim = number_of_layers+1
+      case ('aero_modes')
+            dim = mode_dimen
+      case ('sw_bands_aero_modes')
+            dim = sw_band_mode
+      case ('lw_bands_aero_modes')
+            dim = lw_band_mode
       case ('')
             dim = 1 ! ordinary (non-multidata) field
 #endif

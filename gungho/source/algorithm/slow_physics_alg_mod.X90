@@ -95,7 +95,6 @@ module slow_physics_alg_mod
   use ancil_info,                only: rad_nband
   use jules_control_init_mod,    only: n_land_tile
   use fsd_condensate_alg_mod,    only: fsd_condensate_alg
-  use um_physics_init_mod,       only: sw_band_mode, lw_band_mode, mode_dimen
   use bm_tau_alg_mod,            only: bm_tau_alg
   use um_sizes_init_mod,         only: um_sizes_init
 #endif
@@ -189,9 +188,6 @@ contains
     type( field_type ) :: dcfl_pc2_rad, dbcf_pc2_rad
 #ifdef UM_PHYSICS
     type( integer_field_type ) :: trop_level
-    type( field_type ) :: aer_mix_ratio
-    type( field_type ) :: aer_sw_absorption, aer_sw_scattering, aer_sw_asymmetry
-    type( field_type ) :: aer_lw_absorption, aer_lw_scattering, aer_lw_asymmetry
     type( field_type ) :: tile_lw_albedo
     type( field_type ) :: tile_lwinc_albedo
     type( field_type ) :: tile_sw_diffuse_albedo, tile_sw_direct_albedo
@@ -380,19 +376,6 @@ contains
       !--------------------------------------------------------------------
       ! UM radaer scheme
       !--------------------------------------------------------------------
-      vector_space=>function_space_collection%get_fs(mesh,0,Wtheta,mode_dimen)
-      call aer_mix_ratio%initialise(vector_space)
-      vector_space=>function_space_collection%get_fs(mesh,0,Wtheta,         &
-                                                     sw_band_mode)
-      call aer_sw_absorption%initialise(vector_space)
-      call aer_sw_scattering%initialise(vector_space)
-      call aer_sw_asymmetry%initialise(vector_space)
-      vector_space=>function_space_collection%get_fs(mesh,0,Wtheta,         &
-                                                     lw_band_mode)
-      call aer_lw_absorption%initialise(vector_space)
-      call aer_lw_scattering%initialise(vector_space)
-      call aer_lw_asymmetry%initialise(vector_space)
-
       if ( aerosol == aerosol_um .and.                                         &
            ( ( glomap_mode == glomap_mode_climatology )  .or.                  &
              ( glomap_mode == glomap_mode_ukca ) .or.                          &
@@ -403,9 +386,6 @@ contains
                          theta,                                                &
                          exner_in_wth,                                         &
                          trop_level,                                           &
-                         aer_mix_ratio,                                        &
-                         aer_sw_absorption,aer_sw_scattering,aer_sw_asymmetry, &
-                         aer_lw_absorption,aer_lw_scattering,aer_lw_asymmetry, &
                          clock%get_step() )
       end if
 
@@ -431,10 +411,7 @@ contains
                           clock%get_step(),                                    &
                           tile_sw_direct_albedo, tile_sw_diffuse_albedo,       &
                           tile_swinc_direct_albedo, tile_swinc_diffuse_albedo, &
-                          tile_lw_albedo, tile_lwinc_albedo, aer_mix_ratio,    &
-                          aer_sw_absorption, aer_lw_absorption,                &
-                          aer_sw_scattering, aer_lw_scattering,                &
-                          aer_sw_asymmetry,  aer_lw_asymmetry )
+                          tile_lw_albedo, tile_lwinc_albedo )
       radiation_done = .true. ! Collect this increment later on
 
       if (cloud == cloud_um .and. scheme == scheme_pc2) then

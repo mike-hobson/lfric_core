@@ -1,0 +1,14 @@
+<file_definition type="one_file" par_access="collective" time_counter="none">
+
+  <!-- Ancillary files only used by global simulations -->
+  <file id="land_area_ancil" name="land_area_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="false" enabled=".FALSE.">
+    <field id="land_area_fraction" name="land_area_fraction" long_name="land_area_fraction" unit="1" operation="once" domain_ref="face"/>
+  </file>
+
+  <file id="plant_func_ancil" name="plant_func_ancil" mode="read" output_freq="1mo" convention="UGRID" cyclic="true" enabled=".FALSE.">
+    <field id="plant_func_time" name="month_number" unit="months" operation="once" axis_ref="monthly_axis"/>
+    <field id="canopy_height_data" name="canopy_height" long_name="canopy_height" unit="1" operation="once" grid_ref="pft_monthly_grid"/>
+    <field id="leaf_area_index_data" name="leaf_area_index" long_name="leaf_area_index" unit="1" operation="once" grid_ref="pft_monthly_grid"/>
+  </file>
+
+</file_definition>

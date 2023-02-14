@@ -1,4 +1,4 @@
 access-list=*
-owner=matthew.hambley
+owner=ben.shipway
 project=gungho
-title=Functional testing suite for Gung Ho
+title=Functional testing suite for the Gung Ho dynamical core.

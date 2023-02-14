@@ -209,7 +209,7 @@
                   # what should be done if the miniapp itself has
                   # optimisations.
                   mkdir -p `dirname $TMP_TARGET_DIR/optimisation`
-                  svn export --force {{SOURCE_LFRIC}}/gungho/optimisation $TMP_TARGET_DIR/optimisation
+                  svn export --force {{SOURCE_LFRIC}}/miniapps/gungho_model/optimisation $TMP_TARGET_DIR/optimisation
 
                   unset TMP_SOURCE_DIR
                   unset TMP_TARGET_DIR

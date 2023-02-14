@@ -9,7 +9,6 @@ module linear_driver_mod
   use cli_mod,                    only : get_initial_filename
   use constants_mod,              only : i_def, i_native, imdi
   use field_mod,                  only : field_type
-  use gungho_mod,                 only : program_name
   use gungho_diagnostics_driver_mod, &
                                   only : gungho_diagnostics_driver
   use gungho_model_mod,           only : initialise_infrastructure, &
@@ -48,6 +47,8 @@ module linear_driver_mod
   private
   public initialise, run, finalise
 
+  character(*), parameter :: application_name = "linear"
+
   ! Model run working data set
   type (model_data_type) :: model_data
   type(model_clock_type), allocatable :: model_clock
@@ -71,7 +72,7 @@ contains
 
     ! Initialise infrastructure and setup constants
     call initialise_infrastructure( filename,          &
-                                    program_name,      &
+                                    application_name,  &
                                     mesh,              &
                                     twod_mesh,         &
                                     shifted_mesh,      &
@@ -138,7 +139,7 @@ contains
 
     implicit none
 
-    write( log_scratch_space,'(A)' ) 'Running '//program_name//' ...'
+    write( log_scratch_space,'(A)' ) 'Running '//application_name//' ...'
     call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
 
     do while ( model_clock%tick() )
@@ -182,14 +183,14 @@ contains
 
     implicit none
 
-    call log_event( 'Finalising '//program_name//' ...', LOG_LEVEL_ALWAYS )
+    call log_event( 'Finalising '//application_name//' ...', LOG_LEVEL_ALWAYS )
 
     ! Output the fields stored in the model_data (checkpoint and dump)
     call output_model_data( model_data, model_clock )
 
     ! Model configuration finalisation
     call finalise_model( model_data, &
-                         program_name )
+                         application_name )
 
     call finalise_linear_model( )
 
@@ -197,7 +198,7 @@ contains
     call finalise_model_data( model_data )
 
     ! Finalise infrastructure and constants
-    call finalise_infrastructure( program_name )
+    call finalise_infrastructure( application_name )
 
   end subroutine finalise
 

@@ -181,7 +181,7 @@ contains
     call init_comm( program_name, communicator )
 
     call get_initial_filename( filename )
-    call load_configuration( filename )
+    call load_configuration( filename, program_name )
 
     call init_logger( communicator, program_name )
 

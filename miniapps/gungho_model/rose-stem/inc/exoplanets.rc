@@ -4,7 +4,7 @@
 {# https://code.metoffice.gov.uk/trac/lfric/wiki/GungHo/RoseStemCsarFunctionality #}
 
 {%- set exoplanets_groups = {
-        'exo-hs':['run_application("gungho", "held-suarez",
+        'exo-hs':['run_application("gungho_model", "held-suarez",
                                    resolutions=[("C24_MG",3600.0),("C48_MG",1800.0)],
                                    checkkgo=False,
                                    env={"crun":30,
@@ -20,7 +20,7 @@
                                    publish=True
                                   )'
                  ],
-        'exo-el':['run_application("gungho", "earth-like",
+        'exo-el':['run_application("gungho_model", "earth-like",
                                    resolutions=[("C24_MG",3600.0),("C48_MG",1800.0)],
                                    checkkgo=False,
                                    env={"crun":40,
@@ -36,7 +36,7 @@
                                    publish=True
                                   )'
                  ],
-        'exo-tle':['run_application("gungho", "tidally-locked-earth",
+        'exo-tle':['run_application("gungho_model", "tidally-locked-earth",
                                     resolutions=[("C24_MG",3600.0),("C48_MG",1800.0)],
                                     checkkgo=False,
                                     env={"crun": 40,

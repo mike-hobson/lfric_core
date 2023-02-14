@@ -37,7 +37,6 @@ do-unit-test/rerun:
 
 do-unit-test/build: $(UNIT_TEST_EXE)
 
-$(UNIT_TEST_EXE): WITHOUT_PROGRAMS = 1
 $(UNIT_TEST_EXE): export EXTERNAL_STATIC_LIBRARIES += pfunit
 $(UNIT_TEST_EXE): do-unit-test/generate \
                   $(addsuffix /extract, $(TEST_DIR))

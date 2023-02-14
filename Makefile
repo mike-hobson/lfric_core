@@ -26,6 +26,7 @@ OPERATE_ON ?= lfric_atm                                  \
               components/inventory                       \
               mesh_tools                                 \
               linear                                     \
+              miniapps/gungho_model                      \
               miniapps/skeleton                          \
               miniapps/da_dev                            \
               miniapps/diagnostics                       \

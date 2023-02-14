@@ -8,8 +8,7 @@ export PROJECT_SOURCE = $(ROOT_DIR)/gungho/source
 .PHONY: import-gungho
 import-gungho:
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
-						SOURCE_DIR=$(PROJECT_SOURCE) \
-						WITHOUT_PROGRAMS=1
+						SOURCE_DIR=$(PROJECT_SOURCE)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone/psyclone.mk \
 	          SOURCE_DIR=$(PROJECT_SOURCE) \
 	          OPTIMISATION_PATH=$(OPTIMISATION_PATH)

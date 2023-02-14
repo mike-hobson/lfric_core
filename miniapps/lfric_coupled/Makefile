@@ -200,8 +200,7 @@ build: ALWAYS
 	$(call MESSAGE,Extracting Gungho dynamical core)
 	$(call MESSAGE,========================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
-	         SOURCE_DIR=$(ROOT_DIR)/gungho/source \
-	         WITHOUT_PROGRAMS=1
+	         SOURCE_DIR=$(ROOT_DIR)/gungho/source
 	$(call MESSAGE,========================================)
 	$(call MESSAGE,Extracting UM physics )
 	$(call MESSAGE,========================================)

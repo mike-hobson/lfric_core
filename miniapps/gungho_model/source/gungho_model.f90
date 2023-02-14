@@ -13,16 +13,18 @@
 !> @details This top-level code simply calls initialise, run and finalise
 !>          routines that are required to run the model.
 
-program gungho
+program gungho_model
 
   use gungho_driver_mod, only : initialise, run, finalise
 
   implicit none
 
-  call initialise()
+  character(*), parameter :: application_name = "gungho_model"
 
-  call run()
+  call initialise( application_name )
 
-  call finalise()
+  call run( application_name )
 
-end program gungho
+  call finalise( application_name )
+
+end program gungho_model

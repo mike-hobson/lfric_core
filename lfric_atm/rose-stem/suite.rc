@@ -701,8 +701,8 @@ echo $RELATIVE_LOG_ROOT > $DESTINATION_DIRECTORY/compile.log.path
                       find . -regex \'.*PET0+\..+\.Log\' -exec cp {} $ROSE_TASK_LOG_DIR \;
                       find . -regex \'.*PET0+\..+\.Log\' -exec cat {} \;
 
-                      test -f gungho-checksums.txt && \
-                      cp gungho-checksums.txt $DESTINATION_DIRECTORY/'+pathFragment+'/'+compiler+'.checksums
+                      test -f lfric_atm-checksums.txt && \
+                      cp lfric_atm-checksums.txt $DESTINATION_DIRECTORY/'+pathFragment+'/'+compiler+'.checksums
 
                       # Move nodal .m output
                       touch $CYLC_TASK_WORK_DIR/tmp.m

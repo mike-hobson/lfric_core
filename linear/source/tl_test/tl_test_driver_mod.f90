@@ -10,7 +10,6 @@
 module tl_test_driver_mod
 
   use constants_mod,              only : i_def, i_native, imdi
-  use gungho_mod,                 only : program_name
   use gungho_model_mod,           only : initialise_infrastructure, &
                                          initialise_model,          &
                                          finalise_infrastructure,   &
@@ -77,11 +76,12 @@ contains
   !>@brief     Sets up the required state in preparation for run.
   !>@param[in] filename            Name of the file containing the desired
   !!                               configuration
-  subroutine initialise( filename )
+  subroutine initialise( filename, program_name )
 
     implicit none
 
-    character(*),      intent(in) :: filename
+    character(*), intent(in) :: filename
+    character(*), intent(in) :: program_name
 
     ! Initialise infrastructure and setup constants
     call initialise_infrastructure( filename,          &
@@ -280,9 +280,11 @@ contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !>@brief Tidies up after a run.
-  subroutine finalise()
+  subroutine finalise( program_name )
 
     implicit none
+
+    character(*), intent(in) :: program_name
 
     call log_event( 'Finalising '//program_name//' ...', LOG_LEVEL_ALWAYS )
 

@@ -20,10 +20,12 @@ program lfric_coupled
 
   implicit none
 
-  call initialise()
+  character(*), parameter :: application_name = "coupled"
 
-  call run()
+  call initialise( application_name )
 
-  call finalise()
+  call run( application_name )
+
+  call finalise( application_name )
 
 end program lfric_coupled

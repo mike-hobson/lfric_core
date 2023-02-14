@@ -13,7 +13,6 @@ module gungho_driver_mod
   use clock_mod,                  only : clock_type
   use derived_config_mod,         only : l_esm_couple
   use driver_io_mod,              only : get_io_context
-  use gungho_mod,                 only : program_name
   use gungho_diagnostics_driver_mod, &
                                   only : gungho_diagnostics_driver
   use gungho_model_mod,           only : initialise_infrastructure, &
@@ -71,12 +70,14 @@ contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Sets up required state in preparation for run.
-  subroutine initialise()
+  subroutine initialise( program_name )
 
     use io_context_mod,         only : io_context_type
     use lfric_xios_context_mod, only : lfric_xios_context_type
 
     implicit none
+
+    character(*), intent(in) :: program_name
 
     class(io_context_type), pointer :: io_context => null()
 
@@ -123,10 +124,11 @@ contains
   !>@brief Timesteps the model, calling the desired timestepping algorithm
   !>       based upon the configuration.
   !>
-  subroutine run()
+  subroutine run( program_name )
 
     implicit none
 
+    character(*), intent(in) :: program_name
 
     write(log_scratch_space,'(A)') 'Running '//program_name//' ...'
     call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
@@ -216,9 +218,11 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !>@brief Tidies up after a run.
   !>
-  subroutine finalise()
+  subroutine finalise( program_name )
 
     implicit none
+
+    character(*), intent(in) :: program_name
 
     call log_event( 'Finalising '//program_name//' ...', LOG_LEVEL_ALWAYS )
 

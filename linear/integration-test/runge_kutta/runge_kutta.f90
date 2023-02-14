@@ -26,6 +26,8 @@ program runge_kutta
                                  run_rk_alg
   implicit none
 
+  character(*), parameter :: application_name = "runge_kutta"
+
   character(:), allocatable :: filename
 
   ! Variables used for parsing command line arguments
@@ -106,7 +108,7 @@ program runge_kutta
      call log_event( "Unknown test", LOG_LEVEL_ERROR )
   end select
 
-  call initialise( filename )
+  call initialise( filename, application_name )
   deallocate( filename )
 
   if (do_test_timesteps) then
@@ -137,6 +139,6 @@ program runge_kutta
     call run_rk_alg()
   endif
 
-  call finalise()
+  call finalise( application_name )
 
 end program runge_kutta

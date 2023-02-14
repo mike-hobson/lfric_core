@@ -24,9 +24,7 @@ module gungho_mod
   implicit none
 
   private
-  public :: load_configuration, program_name
-
-  character(*), parameter :: program_name = 'gungho'
+  public :: load_configuration
 
 contains
 
@@ -34,13 +32,14 @@ contains
   !>
   !> @param file_unit I/O unit for file holding namelists.
   !>
-  subroutine load_configuration( filename )
+  subroutine load_configuration( filename, program_name )
 
     use check_configuration_mod,  only : check_configuration
 
     implicit none
 
     character(*), intent(in) :: filename
+    character(*), intent(in) :: program_name
 
     character(*), parameter :: &
                   required_configuration(12) = ['finite_element             ', &

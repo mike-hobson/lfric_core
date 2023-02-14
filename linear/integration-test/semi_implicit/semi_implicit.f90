@@ -24,6 +24,8 @@ program semi_implicit
 
   implicit none
 
+  character(*), parameter :: application_name = 'semi_implicit'
+
   character(:), allocatable :: filename
 
   ! Variables used for parsing command line arguments
@@ -92,7 +94,7 @@ program semi_implicit
      call log_event( "Unknown test", LOG_LEVEL_ERROR )
   end select
 
-  call initialise( filename )
+  call initialise( filename, application_name )
   deallocate( filename )
 
   if (do_test_timesteps) then
@@ -114,6 +116,6 @@ program semi_implicit
     call run_semi_imp_alg()
   endif
 
-  call finalise()
+  call finalise( application_name )
 
 end program semi_implicit

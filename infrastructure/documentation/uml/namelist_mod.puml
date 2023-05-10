@@ -1,0 +1,15 @@
+' Copyright (c) 2023,  Met Office, on behalf of HMSO and Queen's Printer
+' For further details please refer to the file LICENCE.original which you
+' should have received as part of this distribution.
+
+@startuml
+
+!include look.iuml
+!include utilities/namelist_mod.iuml
+!include utilities/namelist_item_mod.iuml
+!include utilities/keyvalue_mod.iuml
+
+namelist_mod::namelist_type o-> "*" namelist_item_mod::namelist_item_type
+namelist_item_mod::namelist_item_type o-> keyvalue_mod::keyvalue_type
+
+@enduml

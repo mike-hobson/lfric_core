@@ -1,0 +1,211 @@
+!-----------------------------------------------------------------------------
+! (C) Crown copyright 2022 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+!> @brief Unit-tests for objects contain key-value pairs (keyvalue_type)
+!>
+module keyvalue_mod_test
+
+  use, intrinsic :: iso_fortran_env, only: int32, int64, real32, real64
+
+  use keyvalue_mod, only: i32_keyvalue_type,       i64_keyvalue_type,     &
+                          i32_arr_keyvalue_type,   i64_arr_keyvalue_type, &
+                          r32_keyvalue_type,       r64_keyvalue_type,     &
+                          r32_arr_keyvalue_type,   r64_arr_keyvalue_type, &
+                          logic_keyvalue_type,     str_keyvalue_type,     &
+                          logic_arr_keyvalue_type, str_arr_keyvalue_type
+
+  use pFUnit_mod
+
+  implicit none
+
+  private
+
+  public :: test_integer, test_real, test_logic, test_string
+
+
+contains
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @test
+  subroutine test_integer()
+
+    implicit none
+
+    type(i32_keyvalue_type)     :: test_unit_i32
+    type(i64_keyvalue_type)     :: test_unit_i64
+    type(i32_arr_keyvalue_type) :: test_unit_i32_arr
+    type(i64_arr_keyvalue_type) :: test_unit_i64_arr
+
+    character(*),   parameter :: key           = 'fish'
+    character(*),   parameter :: big_key       = 'big_fish'
+    character(*),   parameter :: shoal_key     = 'fish_shoal'
+    character(*),   parameter :: big_shoal_key = 'big_shoal'
+    integer(int32), parameter :: turbot = 15
+    integer(int32), parameter :: plaice = 20
+    integer(int64), parameter :: big_turbot = 30000
+    integer(int64), parameter :: big_plaice = 50000
+
+    integer(int32), parameter :: shoal(2)     = [turbot, plaice]
+    integer(int64), parameter :: big_shoal(2) = [big_turbot, big_plaice]
+
+
+    call test_unit_i32%initialise( key, turbot )
+    call test_unit_i64%initialise( big_key, big_turbot )
+
+    call test_unit_i32_arr%initialise( shoal_key, shoal )
+    call test_unit_i64_arr%initialise( big_shoal_key, big_shoal )
+
+    @assertEqual( key,        test_unit_i32%get_key() )
+    @assertEqual( turbot,     test_unit_i32%value  )
+    @assertEqual( big_key,    test_unit_i64%get_key() )
+    @assertEqual( big_turbot, test_unit_i64%value  )
+
+    @assertEqual( shoal_key,     test_unit_i32_arr%get_key() )
+    @assertEqual( big_shoal_key, test_unit_i64_arr%get_key() )
+    @assertEqual( shoal,         test_unit_i32_arr%value )
+    @assertEqual( big_shoal,     test_unit_i64_arr%value )
+
+    ! Test that you can directly alter the values
+    test_unit_i32%value = plaice
+    test_unit_i64%value = big_plaice
+
+    @assertEqual( plaice,     test_unit_i32%value )
+    @assertEqual( big_plaice, test_unit_i64%value )
+
+    deallocate( test_unit_i32_arr%value )
+    deallocate( test_unit_i64_arr%value )
+    allocate( test_unit_i32_arr%value, source=[plaice] )
+    allocate( test_unit_i64_arr%value, source=[big_plaice] )
+
+    @assertEqual( [plaice],     test_unit_i32_arr%value  )
+    @assertEqual( [big_plaice], test_unit_i64_arr%value  )
+
+  end subroutine test_integer
+
+  @test
+  subroutine test_real()
+
+    implicit none
+
+    type(r32_keyvalue_type)     :: test_unit_r32
+    type(r64_keyvalue_type)     :: test_unit_r64
+    type(r32_arr_keyvalue_type) :: test_unit_r32_arr
+    type(r64_arr_keyvalue_type) :: test_unit_r64_arr
+
+    character(*), parameter :: key           = 'fish'
+    character(*), parameter :: big_key       = 'big_fish'
+    character(*), parameter :: shoal_key     = 'fish_shoal'
+    character(*), parameter :: big_shoal_key = 'big_shoal'
+
+    real(real32), parameter :: turbot = 15.0
+    real(real32), parameter :: plaice = 20.0
+    real(real64), parameter :: big_turbot = 30000.0
+    real(real64), parameter :: big_plaice = 50000.0
+
+    real(real32), parameter :: shoal(2)     = [turbot, plaice]
+    real(real64), parameter :: big_shoal(2) = [big_turbot, big_plaice]
+
+    call test_unit_r32%initialise( key, turbot )
+    call test_unit_r64%initialise( big_key, big_turbot )
+    call test_unit_r32_arr%initialise( shoal_key, shoal )
+    call test_unit_r64_arr%initialise( big_shoal_key, big_shoal )
+
+    @assertEqual( key,        test_unit_r32%get_key() )
+    @assertEqual( turbot,     test_unit_r32%value  )
+    @assertEqual( big_key,    test_unit_r64%get_key() )
+    @assertEqual( big_turbot, test_unit_r64%value  )
+
+    @assertEqual( shoal_key,     test_unit_r32_arr%get_key() )
+    @assertEqual( big_shoal_key, test_unit_r64_arr%get_key() )
+    @assertEqual( shoal,         test_unit_r32_arr%value )
+    @assertEqual( big_shoal,     test_unit_r64_arr%value )
+
+    ! Test that you can directly alter the values
+    test_unit_r32%value = plaice
+    test_unit_r64%value = big_plaice
+
+    @assertEqual( plaice,     test_unit_r32%value  )
+    @assertEqual( big_plaice, test_unit_r64%value  )
+
+    deallocate( test_unit_r32_arr%value )
+    deallocate( test_unit_r64_arr%value )
+    allocate( test_unit_r32_arr%value, source=[plaice] )
+    allocate( test_unit_r64_arr%value, source=[big_plaice] )
+
+    @assertEqual( [plaice],     test_unit_r32_arr%value  )
+    @assertEqual( [big_plaice], test_unit_r64_arr%value  )
+
+  end subroutine test_real
+
+  @test
+  subroutine test_logic()
+
+    implicit none
+
+    type(logic_keyvalue_type)     :: test_unit_logic
+    type(logic_arr_keyvalue_type) :: test_unit_logic_arr
+
+    character(*), parameter :: key = 'height'
+    logical, parameter :: tall  = .true.
+    logical, parameter :: short = .false.
+    logical, parameter :: crowd(2) = [short, tall]
+
+    call test_unit_logic%initialise( key, tall )
+    call test_unit_logic_arr%initialise( key, crowd )
+
+    @assertEqual( key,  test_unit_logic%get_key() )
+    @assertEqual( key,  test_unit_logic_arr%get_key() )
+
+    @assertTrue( tall  .eqv. test_unit_logic%value )
+    @assertTrue( crowd .eqv. test_unit_logic_arr%value )
+
+    ! Test that you can directly alter the values
+    test_unit_logic%value = short
+    deallocate(test_unit_logic_arr%value)
+    allocate(test_unit_logic_arr%value, source=[short])
+
+    @assertEqual( key, test_unit_logic%get_key() )
+    @assertTrue( short  .eqv. test_unit_logic%value )
+    @assertTrue([short] .eqv. test_unit_logic_arr%value )
+
+  end subroutine test_logic
+
+
+  @test
+  subroutine test_string()
+
+    implicit none
+
+    type(str_keyvalue_type)     :: test_unit_str
+    type(str_arr_keyvalue_type) :: test_unit_str_arr
+
+    character(*), parameter :: key = 'muppets'
+    character(*), parameter :: one = 'piggy'
+    character(*), parameter :: two = 'gonzo'
+    character(*), parameter :: crowd(2) = [one, two]
+
+    call test_unit_str%initialise( key, one )
+    call test_unit_str_arr%initialise( key, crowd )
+
+    @assertEqual( key, test_unit_str%get_key() )
+    @assertEqual( key, test_unit_str_arr%get_key() )
+
+    @assertEqual( one,      test_unit_str%value )
+    @assertEqual( crowd(1), test_unit_str_arr%value(1) )
+    @assertEqual( crowd(2), test_unit_str_arr%value(2) )
+
+    ! Test that you can directly alter the values
+    test_unit_str%value = two
+    deallocate(test_unit_str_arr%value)
+    allocate(test_unit_str_arr%value(1))
+    test_unit_str_arr%value(1) = two
+
+    @assertEqual( two, test_unit_str%value )
+    @assertEqual( two, test_unit_str_arr%value(1) )
+
+  end subroutine test_string
+
+end module keyvalue_mod_test
+

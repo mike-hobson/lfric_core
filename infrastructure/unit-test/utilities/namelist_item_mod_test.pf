@@ -1,0 +1,154 @@
+!-----------------------------------------------------------------------------
+! (C) Crown copyright 2022 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+!> @brief Unit-tests for object container (namelist_item_type) which holds
+!>        concrete key-value pairs from abstract class (keyval_type).
+!> @details The container class namelist_item_type is purely to allow
+!>          arrays of key-value pairs of different concrete types.
+!>
+module namelist_item_mod_test
+
+  use, intrinsic :: iso_fortran_env, only: int32, int64, real32, real64
+
+  use constants_mod,     only: str_def
+  use namelist_item_mod, only: namelist_item_type
+
+  use pFUnit_mod
+
+  implicit none
+
+  private
+
+  public :: test_array
+
+
+contains
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  @test
+  subroutine test_array()
+
+    implicit none
+
+    type(namelist_item_type), allocatable :: test_array_unit(:)
+
+    character(*),   parameter :: tall_key = 'tall'
+    integer(int32), parameter :: tall  = 6.0
+    integer(int32)            :: test_tall
+
+    character(*),   parameter :: short_key = 'short'
+    integer(int64), parameter :: short = 3.0
+    integer(int64)            :: test_short
+
+    character(*),   parameter :: fish_key = 'mackeral'
+    real(real32),   parameter :: smelly   = 12.0
+    real(real32)              :: test_smelly
+
+    character(*),   parameter :: bat_key = 'pointy'
+    real(real64),   parameter :: wings = 2.0
+    real(real64)              :: test_wings
+
+    character(*),   parameter :: mammal_key = 'human'
+    logical,        parameter :: greedy = .true.
+    logical                   :: test_greedy
+
+    character(*),   parameter :: mineral_key = 'gold'
+    character(*),   parameter :: price = 'loads'
+    character(str_def)        :: test_price
+
+    character(*),   parameter   :: cheese_key = 'french'
+    integer(int32), parameter   :: cheeses(2)  = [6, 3]
+    integer(int32), allocatable :: test_cheeses(:)
+
+    character(*),   parameter   :: car_key = 'british'
+    integer(int64), parameter   :: bust(2) = [32, 27]
+    integer(int64), allocatable :: test_bust(:)
+
+    character(*),   parameter   :: spooky_key = 'ghoul'
+    real(real32),   parameter   :: mould(2) = [12.0, 72.0]
+    real(real32),   allocatable :: test_mould(:)
+
+    character(*),   parameter   :: goose_key = 'pointy'
+    real(real64),   parameter   :: feet(2) = [27.0, 36.0]
+    real(real64),   allocatable :: test_feet(:)
+
+    character(*),   parameter   :: water_key = 'waste'
+    logical,        parameter   :: firm(2) = [.true., .false.]
+    logical,        allocatable :: test_firm(:)
+
+    character(*),   parameter   :: green_key = 'gold'
+    character(*),   parameter   :: deep(2) = ['little','lot   ']
+    character(str_def), allocatable :: test_deep(:)
+
+    allocate(test_array_unit(12))
+    call test_array_unit(1)%initialise(  tall_key,    tall    )
+    call test_array_unit(2)%initialise(  short_key,   short   )
+    call test_array_unit(3)%initialise(  fish_key,    smelly  )
+    call test_array_unit(4)%initialise(  bat_key,     wings   )
+    call test_array_unit(5)%initialise(  mammal_key,  greedy  )
+    call test_array_unit(6)%initialise(  mineral_key, price   )
+    call test_array_unit(7)%initialise(  cheese_key,  cheeses )
+    call test_array_unit(8)%initialise(  car_key,     bust    )
+    call test_array_unit(9)%initialise(  spooky_key,  mould   )
+    call test_array_unit(10)%initialise( goose_key,   feet    )
+    call test_array_unit(11)%initialise( water_key,   firm    )
+    call test_array_unit(12)%initialise( green_key,   deep    )
+
+    call test_array_unit(1)%get_value(  test_tall    )
+    call test_array_unit(2)%get_value(  test_short   )
+    call test_array_unit(3)%get_value(  test_smelly  )
+    call test_array_unit(4)%get_value(  test_wings   )
+    call test_array_unit(5)%get_value(  test_greedy  )
+    call test_array_unit(6)%get_value(  test_price   )
+    call test_array_unit(7)%get_value(  test_cheeses )
+    call test_array_unit(8)%get_value(  test_bust    )
+    call test_array_unit(9)%get_value(  test_mould   )
+    call test_array_unit(10)%get_value( test_feet    )
+    call test_array_unit(11)%get_value( test_firm    )
+    call test_array_unit(12)%get_value( test_deep    )
+
+    @assertEqual( tall,    test_tall    )
+    @assertEqual( short,   test_short   )
+    @assertEqual( smelly,  test_smelly  )
+    @assertEqual( wings,   test_wings   )
+    @assertEqual( greedy,  test_greedy  )
+
+    @assertEqual( price,   test_price   )
+    @assertEqual( cheeses, test_cheeses )
+    @assertEqual( bust,    test_bust    )
+    @assertEqual( mould,   test_mould   )
+    @assertEqual( feet,    test_feet    )
+
+    @assertTrue( firm .eqv. test_firm )
+    @assertEqual( trim(deep(1)), trim(test_deep(1)) )
+    @assertEqual( trim(deep(2)), trim(test_deep(2)) )
+
+    @assertEqual( tall_key,    trim( test_array_unit(1)%get_key() ))
+    @assertEqual( short_key,   trim( test_array_unit(2)%get_key() ))
+    @assertEqual( fish_key,    trim( test_array_unit(3)%get_key() ))
+    @assertEqual( bat_key,     trim( test_array_unit(4)%get_key() ))
+    @assertEqual( mammal_key,  trim( test_array_unit(5)%get_key() ))
+    @assertEqual( mineral_key, trim( test_array_unit(6)%get_key() ))
+    @assertEqual( cheese_key,  trim( test_array_unit(7)%get_key() ))
+    @assertEqual( car_key,     trim( test_array_unit(8)%get_key() ))
+    @assertEqual( spooky_key,  trim( test_array_unit(9)%get_key() ))
+    @assertEqual( goose_key,   trim( test_array_unit(10)%get_key() ))
+    @assertEqual( water_key,   trim( test_array_unit(11)%get_key() ))
+    @assertEqual( green_key,   trim( test_array_unit(12)%get_key() ))
+
+
+    deallocate (test_array_unit)
+    deallocate (test_cheeses)
+    deallocate (test_bust)
+    deallocate (test_mould)
+    deallocate (test_feet)
+    deallocate (test_firm)
+    deallocate (test_deep)
+
+    return
+  end subroutine test_array
+
+end module namelist_item_mod_test

@@ -1,0 +1,259 @@
+!-----------------------------------------------------------------------------
+! (C) Crown copyright 2022 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+!> @brief Unit-tests for <namelist_type> object
+!>
+module namelist_mod_test
+
+  use, intrinsic :: iso_fortran_env, only: int32, int64, real32, real64
+
+  use namelist_mod,      only: namelist_type
+  use namelist_item_mod, only: namelist_item_type
+
+  use constants_mod,   only: imdi, rmdi, cmdi, i_def, r_def, str_def
+
+  use pFUnit_mod
+
+  implicit none
+
+  private
+  public :: test_listname, &
+            test_integers, &
+            test_reals,    &
+            test_logicals, &
+            test_strings
+
+contains
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @test
+  subroutine test_integers()
+
+    implicit none
+
+    type(namelist_type)      :: test_unit
+    type(namelist_item_type) :: members(6)
+
+    integer(int32) :: returned32
+    integer(int64) :: returned64
+
+    integer(int32), allocatable :: returned32_arr(:)
+    integer(int64), allocatable :: returned64_arr(:)
+
+    integer(int32), parameter :: test_32_input(3) = [1,2,3]
+    integer(int64), parameter :: test_64_input(3) = [5,6,7]
+
+    call members(1)%initialise( "fee", 1_int32 )
+    call members(2)%initialise( "fi",  8_int64 )
+    call members(3)%initialise( "fo",  5_int32 )
+    call members(4)%initialise( "fum", 3_int64 )
+    call members(5)%initialise( 'hey', test_32_input )
+    call members(6)%initialise( 'ho',  test_64_input )
+
+    call test_unit%initialise( 'Integer test', members )
+
+    call test_unit%get_value( "fee", returned32 )
+    @assertEqual( 1_int32, returned32 )
+
+    call test_unit%get_value( "fi", returned64 )
+    @assertEqual( 8_int64, returned64 )
+
+    call test_unit%get_value( "fo", returned32 )
+    @assertEqual( 5_int32, returned32 )
+
+    call test_unit%get_value( "fum", returned64 )
+    @assertEqual( 3_int64, returned64 )
+
+    call test_unit%get_value( "hey", returned32_arr )
+    @assertEqual( test_32_input, returned32_arr )
+
+    call test_unit%get_value( "ho",  returned64_arr )
+    @assertEqual( test_64_input, returned64_arr )
+
+    call test_unit%clear()
+    if ( allocated(returned32_arr) ) deallocate(returned32_arr)
+    if ( allocated(returned64_arr) ) deallocate(returned64_arr)
+
+  end subroutine test_integers
+
+
+  @test
+  subroutine test_reals()
+
+    implicit none
+
+    type(namelist_type)      :: test_unit
+    type(namelist_item_type) :: members(8)
+
+    real(real32) :: returned32
+    real(real64) :: returned64
+
+    real(r_def), parameter :: kgo_var = 10.0_r_def
+    real(r_def), parameter :: kgo_arr_var(2) = [5.0_r_def, 36.0_r_def]
+
+    real(real32), allocatable :: returned32_arr(:)
+    real(real64), allocatable :: returned64_arr(:)
+
+    real(real32), parameter :: kgo_32_input(3) = [1.0,2.0,3.0]
+    real(real64), parameter :: kgo_64_input(3) = [5.0,6.0,7.0]
+
+    call members(1)%initialise( "tic",   1.0_real32 )
+    call members(2)%initialise( "tac",   8.0_real64 )
+    call members(3)%initialise( "toe",   5.0_real32 )
+    call members(4)%initialise( "enee",  3.0_real64 )
+    call members(5)%initialise( 'mynee', kgo_32_input )
+    call members(6)%initialise( 'mo',    kgo_64_input )
+    call members(7)%initialise( 'fish',  kgo_var )
+    call members(8)%initialise( 'fry',   kgo_arr_var )
+
+
+    call test_unit%initialise( 'Reals test', members )
+
+    call test_unit%get_value( 'tic', returned32 )
+    @assertEqual( 1.0_real32, returned32 )
+
+    call test_unit%get_value( 'tac', returned64 )
+    @assertEqual( 8.0_real64, returned64 )
+
+    call test_unit%get_value( 'toe', returned32 )
+    @assertEqual( 5.0_real32, returned32 )
+
+    call test_unit%get_value( 'enee', returned64 )
+    @assertEqual( 3.0_real64, returned64 )
+
+    call test_unit%get_value( 'mynee', returned32_arr )
+    @assertEqual( kgo_32_input, returned32_arr )
+
+    call test_unit%get_value( 'mo',  returned64_arr )
+    @assertEqual( kgo_64_input, returned64_arr )
+
+    call test_unit%get_value( 'fish', returned64 )
+    @assertEqual( kgo_var, returned64 )
+
+    call test_unit%get_value( 'fry', returned64_arr )
+    @assertEqual( kgo_arr_var, returned64_arr )
+
+    call test_unit%clear()
+    if ( allocated(returned32_arr) ) deallocate(returned32_arr)
+    if ( allocated(returned64_arr) ) deallocate(returned64_arr)
+
+  end subroutine test_reals
+
+
+  @test
+  subroutine test_logicals()
+
+    implicit none
+
+    type(namelist_type)      :: test_unit
+    type(namelist_item_type) :: members(2)
+
+    logical :: kgo_logic = .true.
+    logical :: kgo_logic_arr(3) = [ .true.,  &
+                                    .false., &
+                                    .true. ]
+
+    logical :: test_logic
+    logical, allocatable :: test_logic_arr(:)
+
+    call members(1)%initialise( "dog", kgo_logic )
+    call members(2)%initialise( "cat", kgo_logic_arr )
+
+    call test_unit%initialise( 'Logicals test', members )
+
+    call test_unit%get_value( "dog",  test_logic )
+    @assertEqual( kgo_logic, test_logic )
+
+    ! Use assertTrue as pfunit doesn't like
+    ! using assertEqual for logical arrays
+    call test_unit%get_value( "cat",  test_logic_arr )
+    @assertTrue( kgo_logic_arr .eqv. test_logic_arr )
+
+    call test_unit%clear()
+    if ( allocated(test_logic_arr) ) deallocate (test_logic_arr)
+
+  end subroutine test_logicals
+
+
+  @test
+  subroutine test_strings()
+
+    implicit none
+
+    type(namelist_type)      :: test_unit
+    type(namelist_item_type) :: members(4)
+
+    character(9) :: kgo_long       = 'TomTomTom'
+    character(6) :: kgo_long_trunc = 'TomTom'
+    character(3) :: kgo_str        = 'Tom'
+    character(6) :: kgo_str_arr(3) = [ 'Big   ', 'Tom   ', 'Tomato' ]
+
+    character(6) :: kgo_long_arr(3)       = [ 'BigBad', 'TomTum', 'Tomato' ]
+    character(3) :: kgo_long_arr_trunc(3) = [ 'Big',    'Tom',    'Tom'    ]
+
+    character(str_def) :: test_str
+    character(str_def), allocatable :: test_str_arr(:)
+
+    character(6) :: test_str_trunc
+    character(str_def), allocatable :: test_str_arr_trunc(:)
+
+    call members(1)%initialise( "apple",  kgo_str )
+    call members(2)%initialise( "pear",   kgo_str_arr )
+    call members(3)%initialise( "plum",   kgo_long )
+    call members(4)%initialise( "orange", kgo_long_arr )
+
+    call test_unit%initialise( 'Strings test', members )
+
+    call test_unit%get_value( "apple",  test_str )
+    @assertEqual( kgo_str, test_str )
+
+    ! Use assertTrue as pfunit doesn't like
+    ! using assertEqual for string arrays
+    call test_unit%get_value( "pear",  test_str_arr )
+    @assertEqual( trim(kgo_str_arr(1)), trim(test_str_arr(1)) )
+    @assertEqual( trim(kgo_str_arr(2)), trim(test_str_arr(2)) )
+    @assertEqual( trim(kgo_str_arr(3)), trim(test_str_arr(3)) )
+
+    call test_unit%get_value( "plum",  test_str_trunc )
+    @assertEqual( kgo_long_trunc, test_str_trunc )
+
+    call test_unit%clear()
+
+    if ( allocated(test_str_arr) )       deallocate (test_str_arr)
+    if ( allocated(test_str_arr_trunc) ) deallocate (test_str_arr_trunc)
+
+  end subroutine test_strings
+
+  @test
+  subroutine test_listname()
+
+    implicit none
+
+    type(namelist_type)       :: test_unit
+    type(namelist_item_type)  :: members(2)
+
+    character(:), allocatable :: listname
+    integer(int32)            :: test_int
+
+    ! nml_parameters is looped over in order. Test that
+    ! under populated parameter arrays non-starting from
+    ! index 1 don't cause a failure.
+    call members(2)%initialise( "bob", 1_int32)
+
+    call test_unit%initialise('test_list', members)
+
+    listname = test_unit%get_listname()
+
+    @assertEqual( 'test_list', listname )
+
+    call test_unit%get_value( "bob",  test_int )
+    @assertEqual( 1_int32, test_int )
+
+    call test_unit%clear()
+    if ( allocated(listname) ) deallocate(listname)
+
+  end subroutine test_listname
+
+end module namelist_mod_test

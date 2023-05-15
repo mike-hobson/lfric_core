@@ -137,6 +137,8 @@ class FortranAnalyser(Analyser):
         #
         self._usePattern = re.compile(r'^\s*USE\s+([^,\s]+)',
                                       flags=re.IGNORECASE)
+        self.__openmp_use_pattern = re.compile(r'^\s*!\$\s+USE\s+([^,\s]+)',
+                                               flags=re.IGNORECASE)
         self._externalPattern \
             = re.compile(r'^\s*EXTERNAL\s+([^,\s]+(:?\s*,\s*[^,\s]+)*)',
                          flags=re.IGNORECASE)
@@ -413,6 +415,18 @@ class FortranAnalyser(Analyser):
                 moduleName = match.group(1).lower()
                 logger.info('    Depends on module ' + moduleName)
                 add_dependency(program_unit, moduleName)
+                continue
+
+            match = self.__openmp_use_pattern.match(comment)
+            if match is not None:
+                """
+                There is no knowledge of whether OpenMP is actually turned on
+                or not. This means that the dependency will always exist even
+                if it shouldn't when OpenMP is off.
+                """
+                module_name = match.group(1).lower()
+                logger.info(f'    Depends on module {module_name} with OpenMP')
+                add_dependency(program_unit, module_name)
                 continue
 
             match = self._externalPattern.match(code)

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 ##############################################################################
 # Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
 # For further details please refer to the file LICENCE.original which you
@@ -545,4 +544,32 @@ class TestFortranAnalyser():
                 (u'boo', test_filename, u'gribble', Path('gribble.f90')),
                 (u'boo', test_filename, u'ibble', Path('ibble.f90')),
                 (u'boo', test_filename, u'wibble', Path('wibble.f90'))] \
+            == sorted(dependencies)
+
+    def test_openmp_sentinel(self, database, tmp_path):
+        """
+        Ensure OpenMP "sentinel" markup is handled.
+        """
+        database.addModule('special_thread_sauce_mod',
+                           Path('special_thread_sauce_mod.f90'))
+        test_filename = tmp_path / 'sentinel.f90'
+        test_filename.write_text(dedent('''
+            module test_mod
+              !$ use special_thread_sauce_mod, only : thread_sauce
+              implicit none
+            end module test_mod
+            '''))
+        test_unit = FortranAnalyser([], database)
+        test_unit.analyse(test_filename)
+
+        dependencies = list(database.getCompileDependencies())
+        assert [('test_mod', test_filename, 'module',
+                 'special_thread_sauce_mod',
+                 Path('special_thread_sauce_mod.f90'), 'module')] \
+            == sorted(dependencies)
+
+        dependencies = list(database.getLinkDependencies('test_mod'))
+        assert [('test_mod', test_filename,
+                 'special_thread_sauce_mod',
+                 Path('special_thread_sauce_mod.f90'))] \
             == sorted(dependencies)

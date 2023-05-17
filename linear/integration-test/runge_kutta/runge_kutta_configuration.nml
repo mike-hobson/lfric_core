@@ -17,8 +17,11 @@ vertical_method='trapezoidal',
 limited_area=.false.,
 /
 &checks
-energy_correction='none',
 limit_cfl=.false.,
+/
+&energy_correction
+encorr_usage='none',
+integral_method='fe',
 /
 &section_choice
 dynamics='gungho',

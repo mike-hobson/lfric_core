@@ -6,10 +6,11 @@
 !> @brief Integrate total energy evaluated at W3 locations
 module update_energy_correction_alg_mod
 
-  use checks_config_mod,             only: correction_hours,      &
-                                           energy_correction,     &
-                                           energy_correction_diag
   use constants_mod,                 only: r_def, i_def, pi
+  use energy_correction_config_mod,  only: encorr_usage,      &
+                                           encorr_usage_diag, &
+                                           reset_hours
+
   use field_mod,                     only: field_type
   use function_space_mod,            only: function_space_type
   use log_mod,                       only: log_event,         &
@@ -57,7 +58,7 @@ contains
     real( kind=r_def ) :: net_energy_source
 
     area = 4.0_r_def * pi * radius ** 2_i_def
-    correction_period = correction_hours * 3600.0_r_def
+    correction_period = reset_hours * 3600.0_r_def
 
     fs_2d => accumulated_fluxes%get_function_space()
     dA    => get_da_msl_proj(twod_mesh%get_id())
@@ -67,7 +68,7 @@ contains
                  sum_X(net_energy_source, accumulated_fluxes) )
 
     ! Total energy correction during previous correction period
-    if ( energy_correction == energy_correction_diag ) then
+    if ( encorr_usage == encorr_usage_diag ) then
       energy_corr_previous = 0.0_r_def
     else
       energy_corr_previous = cv * total_dry_mass *                           &
@@ -85,14 +86,15 @@ contains
     write(log_scratch_space, '(''total_dry_mass = '', e30.22)') total_dry_mass
     call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
 
-    write(log_scratch_space, '(''total_energy_previous = '', e30.22)') total_energy_previous
+    write(log_scratch_space, '(''energy_discrepancy = '', e30.22)') &
+                                 energy_discrepancy
     call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
 
     write(log_scratch_space, '(''total_energy = '', e30.22)') total_energy
     call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
 
-    write(log_scratch_space, '(''temperature_correction_rate = '', e30.22)') &
-                                 temperature_correction_rate
+    write(log_scratch_space, '(''net_energy_source = '', e30.22)') &
+                                 net_energy_source
     call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
 
     write(log_scratch_space, '(''surf_heat = '', e30.22)') surf_heat

@@ -33,8 +33,6 @@ zhloc_depth_fac=0.4,
 limited_area=.false.,
 /
 &checks
-correction_hours=24,
-energy_correction='none',
 limit_cfl=.false.,
 /
 &section_choice

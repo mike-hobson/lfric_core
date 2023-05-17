@@ -7,8 +7,8 @@
 !> @details Creates the physics prognostic fields
 module create_physics_prognostics_mod
 
-  use checks_config_mod,              only : energy_correction,     &
-                                             energy_correction_none
+  use energy_correction_config_mod,   only : encorr_usage, &
+                                             encorr_usage_none
   use clock_mod,                      only : clock_type
   use constants_mod,                  only : i_def, l_def
   use field_mod,                      only : field_type
@@ -309,7 +309,7 @@ contains
       'v_in_w2h',      w2h_space )
 
     ! 2D fields
-    if ( energy_correction /= energy_correction_none ) then
+    if ( encorr_usage /= encorr_usage_none ) then
       call add_physics_field( derived_fields, depository,               &
                               prognostic_fields, adv_fields_last_outer, &
                               'temp_correction_field',                  &

@@ -222,8 +222,6 @@ vertical_monotone_order  = 4*3
 ! These namelist options do not affect the shallow water miniapp and should be left alone
 
 &checks
-correction_hours=24
-energy_correction='none'
 limit_cfl=.false.
 /
 
@@ -234,6 +232,10 @@ limit_cfl=.false.
   n_dep_pt_iterations = 1
   vertical_limit      = 'boundary'
   vertical_method     = 'euler'
+/
+
+&energy_correction
+  encorr_usage = 'none'
 /
 
 &extrusion

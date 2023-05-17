@@ -35,7 +35,6 @@ sg_orog_mixing='none',
 limited_area=.false.,
 /
 &checks
-energy_correction='none',
 limit_cfl=.false.,
 /
 &section_choice
@@ -63,6 +62,9 @@ method='euler',
 n_dep_pt_iterations=1,
 vertical_limit='exponential',
 vertical_method='trapezoidal',
+/
+&energy_correction
+encorr_usage='none',
 /
 &extrusion
 domain_top=6000.0,

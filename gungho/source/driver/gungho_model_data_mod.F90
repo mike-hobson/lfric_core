@@ -79,11 +79,11 @@ module gungho_model_data_mod
 #endif
   use linked_list_mod,                    only : linked_list_type, &
                                                  linked_list_item_type
-  use checks_config_mod,                  only : energy_correction,      &
-                                                 energy_correction_none
-  use calc_total_energy_alg_mod,          only : calc_total_energy_alg
-  use calc_total_mass_alg_mod,            only : calc_total_mass_alg
-  use compute_column_integral_kernel_mod,                                            &
+  use energy_correction_config_mod,       only : encorr_usage, &
+                                                 encorr_usage_none
+  use compute_total_energy_alg_mod,       only : compute_total_energy_alg
+  use compute_total_mass_alg_mod,         only : compute_total_mass_alg
+  use compute_column_integral_kernel_mod, &
                                           only : compute_column_integral_kernel_type
   use geometric_constants_mod,            only : get_height
   use planet_config_mod,                  only : radius
@@ -440,9 +440,9 @@ subroutine create_model_data( model_data,         &
       call model_data%prognostic_fields%get_field('exner',exner)
       call model_data%prognostic_fields%get_field('rho',rho)
 
-      if ( energy_correction /= energy_correction_none ) then
+      if ( encorr_usage /= encorr_usage_none ) then
         if ( geometry /= geometry_spherical ) then
-          write(log_scratch_space, '(a)')                       &
+          write(log_scratch_space, '(a)') &
           'Energy correction valid for spherical geometry only.'
           call log_event(log_scratch_space, log_level_error)
         end if
@@ -489,16 +489,13 @@ subroutine create_model_data( model_data,         &
       end select
 
       ! Initialise energy correction
-      if ( energy_correction /= energy_correction_none ) then
+      if ( encorr_usage /= encorr_usage_none ) then
+        call compute_total_mass_alg( model_data%total_dry_mass, rho, mesh )
 
-        ! Total mass of dry atmosphere
-        call calc_total_mass_alg( model_data%total_dry_mass, rho, &
-                                  mesh, twod_mesh )
-
-        ! Total energy
-        call calc_total_energy_alg( model_data%derived_fields, exner, rho,              &
-                                    model_data%mr,                                      &
-                                    mesh, twod_mesh, model_data%total_energy_previous )
+        call compute_total_energy_alg( model_data%total_energy_previous,                &
+                                       model_data%derived_fields, u, theta, exner, rho, &
+                                       model_data%mr,                                   &
+                                       mesh, twod_mesh )
 
         ! Initialise flux sum to zero
         call scalar_to_field_alg(0.0_r_def, accumulated_fluxes)

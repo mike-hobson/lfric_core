@@ -6,8 +6,9 @@
 !>@brief Calls to the slow physics schemes
 module slow_physics_alg_mod
 
-  use checks_config_mod,         only: energy_correction,       &
-                                       energy_correction_simple
+  use energy_correction_config_mod,                  &
+                                 only: encorr_usage, &
+                                       encorr_usage_apply
   use clock_mod,                 only: clock_type
   use timestepping_config_mod,   only: outer_iterations
   use cloud_config_mod,          only: scheme, scheme_pc2, scheme_bimodal, &
@@ -316,7 +317,7 @@ contains
     !--------------------------------------------------------------------
     ! Energy correction
     !--------------------------------------------------------------------
-    if ( energy_correction == energy_correction_simple ) then
+    if ( encorr_usage == encorr_usage_apply ) then
       ! Convert absolute temperature increment to a potential temperature
       ! increment
       call dtheta_encorr%initialise( vector_space = theta%get_function_space() )

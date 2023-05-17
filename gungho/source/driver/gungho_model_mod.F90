@@ -422,15 +422,13 @@ contains
   !> @param[in] mesh  The primary mesh
   !> @param[in,out] model_data The working data set for the model run
   !>
-  subroutine initialise_model( mesh, &
-                               model_data )
+  subroutine initialise_model( mesh, model_data )
     implicit none
 
-    type(mesh_type),         intent(in),    pointer :: mesh
+    type( mesh_type ),       intent(in),    pointer :: mesh
     type( model_data_type ), intent(inout), target  :: model_data
 
     type( field_collection_type ), pointer :: prognostic_fields => null()
-    type( field_collection_type ), pointer :: diagnostic_fields => null()
     type( field_type ),            pointer :: mr(:) => null()
 
     type( field_type), pointer :: theta => null()
@@ -442,7 +440,6 @@ contains
 
     ! Get pointers to field collections for use downstream
     prognostic_fields => model_data%prognostic_fields
-    diagnostic_fields => model_data%diagnostic_fields
     mr => model_data%mr
 
     ! Get pointers to fields in the prognostic/diagnostic field collections

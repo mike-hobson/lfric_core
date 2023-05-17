@@ -10,10 +10,6 @@ topology='fully_periodic',
 &boundaries
 limited_area=.false.,
 /
-&checks
-correction_hours=24,
-energy_correction='none',
-/
 &extrusion
 domain_top=10.0,
 method='uniform',

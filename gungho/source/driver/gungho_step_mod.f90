@@ -11,11 +11,11 @@
 
 module gungho_step_mod
 
-  use checks_config_mod,              only : energy_correction,      &
-                                             energy_correction_none, &
-                                             correction_hours
   use conservation_algorithm_mod,     only : conservation_algorithm
   use constants_mod,                  only : i_def, r_def, l_def
+  use energy_correction_config_mod,   only : encorr_usage,      &
+                                             encorr_usage_none, &
+                                             reset_hours
   use field_collection_mod,           only : field_collection_type
   use field_mod,                      only : field_type
   use formulation_config_mod,         only : use_physics,             &
@@ -28,6 +28,7 @@ module gungho_step_mod
   use log_mod,                        only : log_event,         &
                                              log_scratch_space, &
                                              LOG_LEVEL_DEBUG,   &
+                                             LOG_LEVEL_ERROR,   &
                                              LOG_LEVEL_INFO,    &
                                              LOG_LEVEL_TRACE
 
@@ -50,8 +51,8 @@ module gungho_step_mod
   use update_energy_correction_alg_mod,                                   &
                                       only : update_energy_correction_alg
   use scalar_to_field_alg_mod,        only : scalar_to_field_alg
-  use calc_total_energy_alg_mod,      only : calc_total_energy_alg
-  use calc_total_mass_alg_mod,        only : calc_total_mass_alg
+  use compute_total_energy_alg_mod,   only : compute_total_energy_alg
+  use compute_total_mass_alg_mod,     only : compute_total_mass_alg
 
   implicit none
 
@@ -106,9 +107,9 @@ module gungho_step_mod
     type( field_type), pointer :: accumulated_fluxes => null()
     type( field_type), pointer :: temp_correction_field => null()
 
-    real( r_def )      :: dt
-    real( r_def )      :: dtemp_encorr
-    logical(l_def) :: use_moisture
+    real( r_def )    :: dt
+    real( r_def )    :: dtemp_encorr
+    logical( l_def ) :: use_moisture
 
     write( log_scratch_space, '("/", A, "\ ")' ) repeat( "*", 76 )
     call log_event( log_scratch_space, LOG_LEVEL_TRACE )
@@ -177,7 +178,7 @@ module gungho_step_mod
 
     end select
 
-    if ( energy_correction /= energy_correction_none ) then
+    if ( encorr_usage /= encorr_usage_none ) then
       call derived_fields%get_field('accumulated_fluxes', accumulated_fluxes)
       ! temperature_correction_rate is stored in this field so that it
       ! maybe written to checkpoint file
@@ -188,14 +189,13 @@ module gungho_step_mod
                            convection_fields,  &
                            microphysics_fields )
       if ( mod( nint( dt * model_clock%get_step() ), &
-                3600_i_def * correction_hours ) == 0 ) then
+                3600_i_def * reset_hours ) == 0 ) then
 
-        ! Total mass of dry atmosphere
-        call calc_total_mass_alg( model_data%total_dry_mass, rho, &
-                                  mesh, twod_mesh )
-
-        call calc_total_energy_alg( model_data%derived_fields, exner, rho, mr, &
-                                    mesh, twod_mesh, model_data%total_energy )
+        call compute_total_mass_alg( model_data%total_dry_mass, rho, mesh )
+        call compute_total_energy_alg( model_data%total_energy,   &
+                                       model_data%derived_fields, &
+                                       u, theta, exner, rho, mr,  &
+                                       mesh, twod_mesh )
 
         call update_energy_correction_alg(                                     &
                                        model_data%temperature_correction_rate, &

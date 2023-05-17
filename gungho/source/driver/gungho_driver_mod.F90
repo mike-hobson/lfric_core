@@ -199,7 +199,7 @@ contains
       ! ancillaries needs to be that of the start of timestep, but the
       ! first thing that happens in a timestep is that the clock ticks to the
       ! end of timestep date.
-      if (ancil_option == ancil_option_updating) then
+      if ( ancil_option == ancil_option_updating ) then
         call update_variable_fields( model_data%ancil_times_list, &
                                      model_clock, model_data%ancil_fields )
         call update_ancils_alg( model_data%ancil_times_list, &

@@ -7,6 +7,18 @@
 
 module um_ukca_init_mod
 
+  ! UM modules used
+  use dms_flux_mod_4a, only: i_liss_merlivat
+  use atmos_ukca_callback_mod, only: bl_tracer_mix
+
+  ! UM modules containing things that needs setting and setup routines
+  use mphys_diags_mod, only: l_praut_diag, l_pracw_diag, l_piacw_diag,         &
+                             l_psacw_diag
+  use bl_diags_mod, only: bl_diag
+  use ukca_nmspec_mod, only: nm_spec_active, nmspec_len
+  use ukca_option_mod, only: i_mode_nucscav, l_ukca_plume_scav
+  use ukca_scavenging_mod, only: ukca_set_conv_indices, tracer_info
+
   use log_mod, only : log_event,                                               &
                       log_scratch_space,                                       &
                       LOG_LEVEL_ERROR, LOG_LEVEL_INFO
@@ -15,7 +27,8 @@ module um_ukca_init_mod
 
   ! LFRic namelists which have been read
   use aerosol_config_mod,        only: glomap_mode,                            &
-                                       glomap_mode_ukca
+                                       glomap_mode_ukca,                       &
+                                       glomap_mode_dust_and_clim
   use section_choice_config_mod, only: aerosol, aerosol_um
   use chemistry_config_mod,      only: chem_scheme, chem_scheme_offline_ox,    &
                                        chem_scheme_strattrop, chem_scheme_none,&
@@ -45,6 +58,7 @@ module um_ukca_init_mod
                           ukca_chem_strattrop,                                 &
                           ukca_age_reset_by_level,                             &
                           ukca_activation_arg,                                 &
+                          ukca_activation_off,                                 &
                           ukca_maxlen_fieldname,                               &
                           ukca_maxlen_message,                                 &
                           ukca_maxlen_procname,                                &
@@ -58,11 +72,26 @@ module um_ukca_init_mod
   private
   public :: um_ukca_init
 
+  ! Ignore non-dust emissions when true
+  logical :: l_dust_only
+
   ! Number of entrainment levels considered by UM routine tr_mix
   integer(i_um), parameter, public :: nlev_ent_tr_mix = 3
 
   ! Number of emission field entries required for the UKCA configuration
   integer(i_um) :: n_emiss_slots
+
+  ! --------------------------------------------------------------------------
+  ! List of dust_only required chemistry emissions
+  ! This can be retired when GLOMAP can be run without chemistry
+
+  character(len=ukca_maxlen_emiss_tracer_name), parameter ::   &
+      required_2d_emissions(4) = [ 'DMS       ', 'Monoterp  ', &
+                                   'SO2_low   ', 'SO2_high  ' ]
+
+  character(len=ukca_maxlen_emiss_tracer_name), parameter :: &
+      required_emissions(5) = [ 'DMS       ', 'Monoterp  ',  &
+                                'SO2_low   ', 'SO2_high  ', 'SO2_nat   ' ]
 
   ! --------------------------------------------------------------------------
   ! UKCA field name definitions follow here.
@@ -367,7 +396,6 @@ module um_ukca_init_mod
   character(len=ukca_maxlen_emiss_tracer_name), allocatable, public ::         &
     emiss_names_fullht(:)
 
-
 contains
 
   subroutine um_ukca_init()
@@ -375,8 +403,15 @@ contains
 
   implicit none
 
-    if ( (aerosol == aerosol_um .and. glomap_mode == glomap_mode_ukca) .or.    &
-          chem_scheme /= chem_scheme_none ) then
+    if ( ( aerosol == aerosol_um ) .and.                                       &
+         ( glomap_mode == glomap_mode_dust_and_clim ) ) then
+
+        call aerosol_ukca_dust_only_init( row_length, rows, model_levels,      &
+                                          bl_levels, timestep, l_param_conv )
+
+    else if ( ( aerosol == aerosol_um .and.                                    &
+                glomap_mode == glomap_mode_ukca ) .or.                         &
+              chem_scheme /= chem_scheme_none ) then
 
         call ukca_init( row_length, rows, model_levels, bl_levels,             &
                         ntype, npft, brd_leaf, ndl_leaf, c3_grass, c4_grass,   &
@@ -419,17 +454,6 @@ contains
                         i_c4_grass, i_shrub, i_urban, i_lake, i_soil, i_ice,   &
                         dzsoil_layer1, timestep, l_param_conv )
 
-    ! UM module used
-    use dms_flux_mod_4a, only: i_liss_merlivat
-    use atmos_ukca_callback_mod, only: bl_tracer_mix
-
-    ! UM modules containing things that needs setting and setup routines
-    use mphys_diags_mod, only: l_praut_diag, l_pracw_diag, l_piacw_diag,       &
-                               l_psacw_diag
-    use bl_diags_mod, only: bl_diag
-    use ukca_nmspec_mod, only: nm_spec_active, nmspec_len
-    use ukca_option_mod, only: i_mode_nucscav, l_ukca_plume_scav
-    use ukca_scavenging_mod, only: ukca_set_conv_indices, tracer_info
     use ukca_mode_setup, only: i_ukca_bc_tuned
 
     implicit none
@@ -598,7 +622,8 @@ contains
     end if
 
     ! Retrieve the lists of required fields for the configuration
-    CALL get_ukca_field_lists()
+    l_dust_only = .false.
+    call set_ukca_field_lists()
 
     ! Set up indexing data needed for plume scavenging of UKCA tracers in the
     ! GR convection scheme
@@ -614,7 +639,7 @@ contains
     end if
 
     ! Register emissions required for this run
-    CALL ukca_emiss_init()
+    call ukca_emiss_init()
 
     ! Switch on optional UM microphysics diagnostics required by UKCA
     if (any(env_names_fullht_real(:) == fldname_autoconv))                     &
@@ -826,14 +851,15 @@ contains
   end subroutine ukca_emiss_init
 
 
-  !>@brief Get the lists of fields required for the UKCA configuration
-  subroutine get_ukca_field_lists()
+  !>@brief Set the lists of fields required for the UKCA configuration
+  subroutine set_ukca_field_lists()
 
     implicit none
 
     ! Local variables
 
     integer :: i
+    integer :: j
     integer :: n
     integer :: n_tot
 
@@ -846,7 +872,7 @@ contains
     character(len=ukca_maxlen_procname) :: ukca_errproc
 
     ! Get list of tracers required by the current UKCA configuration
-    CALL ukca_get_tracer_varlist( tracer_names, ukca_errcode,                  &
+    call ukca_get_tracer_varlist( tracer_names, ukca_errcode,                  &
                                   error_message=ukca_errmsg,                   &
                                   error_routine=ukca_errproc )
     if (ukca_errcode /= 0) then
@@ -864,7 +890,7 @@ contains
     end do
 
     ! Get list of NTPs required by the current UKCA configuration
-    CALL ukca_get_ntp_varlist( ntp_names, ukca_errcode,                        &
+    call ukca_get_ntp_varlist( ntp_names, ukca_errcode,                        &
                                error_message=ukca_errmsg,                      &
                                error_routine=ukca_errproc )
     if (ukca_errcode /= 0) then
@@ -887,7 +913,7 @@ contains
     ! be requested here to force UKCA to set up the group lists prior to
     ! their use in kernel calls. (Setup within kernels is not thread-safe.)
 
-    CALL ukca_get_envgroup_varlists(                                           &
+    call ukca_get_envgroup_varlists(                                           &
            ukca_errcode,                                                       &
            varnames_scalar_real_ptr=env_names_scalar_real,                     &
            varnames_flat_integer_ptr=env_names_flat_integer,                   &
@@ -1061,7 +1087,7 @@ contains
 
     ! Get list of active offline emissions species in the current UKCA
     ! configuration
-    CALL ukca_get_emission_varlist( emiss_names, n_slots, ukca_errcode,        &
+    call ukca_get_emission_varlist( emiss_names, n_slots, ukca_errcode,        &
                                     error_message=ukca_errmsg,                 &
                                     error_routine=ukca_errproc )
     if (ukca_errcode /= 0) then
@@ -1082,10 +1108,297 @@ contains
     ! Allow for one emission field for each active emission species
     ! (consistent with GA9 requirements).
     n_emiss_slots = 0
-    do i = 1, size(emiss_names)
-      n_emiss_slots = n_emiss_slots + n_slots(i)
+    if (l_dust_only) then
+      do i = 1, size(emiss_names)
+        do j = 1, size(required_emissions)
+          if ( required_emissions(j) == emiss_names(i) ) then
+            n_emiss_slots = n_emiss_slots + n_slots(i)
+          end if
+        end do
+      end do
+    else
+      do i = 1, size(emiss_names)
+        n_emiss_slots = n_emiss_slots + n_slots(i)
+      end do
+    end if
+
+  end subroutine set_ukca_field_lists
+
+  subroutine aerosol_ukca_dust_only_init( row_length, rows, model_levels,      &
+                                          bl_levels, timestep, l_param_conv )
+
+    implicit none
+
+    integer, intent(in) :: row_length      ! X dimension of model grid
+    integer, intent(in) :: rows            ! Y dimension of model grid
+    integer, intent(in) :: model_levels    ! Z dimension of model grid
+    integer, intent(in) :: bl_levels       ! No. of Z levels in boundary layer
+    real(r_um), intent(in) :: timestep     ! Model time step (s)
+    logical, intent(in) :: l_param_conv    ! True if convection is parameterized
+
+    ! Local variables
+
+    integer(i_um) :: emiss_id
+    integer(i_um) :: n_emissions
+    integer(i_um) :: n
+    integer(i_um) :: n_previous
+    integer(i_um) :: i
+
+    logical :: l_three_dim
+
+    character(len=ukca_maxlen_emiss_long_name) :: long_name
+    character(len=ukca_maxlen_emiss_tracer_name), allocatable :: tmp_names(:)
+
+    character(len=ukca_maxlen_emiss_var_name) :: field_varname
+    character(len=*), parameter  :: emiss_units = 'kg m-2 s-1'
+
+    ! Variables for UKCA error handling
+    integer :: ukca_errcode
+    character(len=ukca_maxlen_message) :: ukca_errmsg
+    character(len=ukca_maxlen_procname) :: ukca_errproc
+
+    ! Set up proto-GA configuration based on GA9.
+    ! The ASAD Newton-Raphson Offline Oxidants scheme (ukca_chem_offline)
+    ! is substituted for the Explicit backward-Euler scheme used in GA9
+    ! which cannot be called by columns. Hence, configuration values for
+    ! nrsteps and l_ukca_asad_columns are included.
+    ! Other configuration values, with the exception of temporary logicals
+    ! specifiying fixes, are set to match GA9 science settings or taken
+    ! from the LFRic context. Unlike GA9, all fixes that are controlled by
+    ! temporary logicals will be on. (i.e. the defaults for these
+    ! logicals, .true. by convention in UKCA, are not overridden.)
+
+    call ukca_setup( ukca_errcode,                                             &
+           ! Context information
+           !
+           row_length=row_length,                                              &
+           rows=rows,                                                          &
+           model_levels=model_levels,                                          &
+           bl_levels=bl_levels,                                                &
+           nlev_ent_tr_mix=nlev_ent_tr_mix,                                    &
+           timestep=timestep,                                                  &
+
+           ! General UKCA configuration options
+           !
+           i_ukca_chem=ukca_chem_offline,                                      &
+           l_ukca_mode=.true.,                                                 &
+           l_fix_tropopause_level=.true.,                                      &
+           l_ukca_persist_off=.true.,                                          &
+
+           ! Chemistry configuration options
+           !
+           i_ukca_chem_version=111,                                            &
+           chem_timestep=3600,                                                 &
+           nrsteps=1,                                                          &
+           l_ukca_asad_columns=.true.,                                         &
+           l_ukca_intdd=.false.,                                               &
+
+           ! UKCA emissions configuration options
+           !
+           mode_parfrac=2.5_r_um,                                              &
+           l_support_ems_vertprof=.true.,                                      &
+
+           ! UKCA environmental driver configuration options
+           !
+           l_param_conv=l_param_conv,                                          &
+           l_ctile=.true.,                                                     &
+
+           ! General GLOMAP configuration options
+           !
+           i_mode_nzts=15,                                                     &
+           i_mode_setup=6,                                                     &
+           l_mode_bhn_on=.false.,                                              &
+           l_mode_bln_on=.false.,                                              &
+           i_mode_nucscav=i_mode_nucscav,                                      &
+           mode_activation_dryr=37.5_r_um,                                     &
+           mode_incld_so2_rfrac=0.25_r_um,                                     &
+           l_cv_rainout=.not.(l_ukca_plume_scav),                              &
+           l_dust_slinn_impc_scav=.true.,                                      &
+
+           ! GLOMAP emissions configuration options
+           !
+           l_ukca_primdu=.true.,                                               &
+
+           ! GLOMAP feedback configuration options
+           !
+           l_ukca_radaer=.false.,                                              &
+           i_ukca_activation_scheme=ukca_activation_off,                       &
+
+           ! Callback procedures
+           !
+           proc_bl_tracer_mix = bl_tracer_mix,                                 &
+
+           ! Return status information
+           !
+           error_message=ukca_errmsg,                                          &
+           error_routine=ukca_errproc )
+
+    if (ukca_errcode /= 0) then
+      write( log_scratch_space, '(A,I0,A)' )                                   &
+           'UKCA error ', ukca_errcode, ' in ' // trim(ukca_errproc) // ' : '  &
+           // trim(ukca_errmsg)
+      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+    end if
+
+    ! Retrieve the lists of required fields for the configuration
+    l_dust_only = .true.
+    call set_ukca_field_lists()
+
+    ! Set up indexing data needed for plume scavenging of UKCA tracers in the
+    ! GR convection scheme
+    if (l_ukca_plume_scav) then
+      n = 4
+      allocate(nm_spec_active(n))
+
+      do i = 1, n
+        nm_spec_active(i) = tracer_names(i+7)(1:nmspec_len)
+      end do
+
+      call ukca_set_conv_indices()
+      tracer_info%i_ukca_first = 1
+      tracer_info%i_ukca_last  = n
+
+    end if
+
+    ! Switch on optional UM microphysics diagnostics required by UKCA
+    if (any(env_names_fullht_real(:) == fldname_autoconv))                     &
+      l_praut_diag = .true.
+    if (any(env_names_fullht_real(:) == fldname_accretion))                    &
+      l_pracw_diag = .true.
+    if (any(env_names_fullht_real(:) == fldname_rim_cry))                      &
+      l_piacw_diag = .true.
+    if (any(env_names_fullht_real(:) == fldname_rim_agg))                      &
+      l_psacw_diag = .true.
+
+    ! Switch on optional UM boundary layer diagnostics required by UKCA
+    if (any(env_names_bllev_real(:) == fldname_bl_tke))                        &
+      bl_diag%l_request_tke = .true.
+
+    ! Emissions registration:
+    ! One emission field is provided for each active emission species (as for
+    ! GA9).
+    ! Register 2D emissions first, followed by 3D emissions; emissions
+    ! must be registered in order of dimensionality for compatibility with
+    ! the UKCA time step call which expects an array of 2D emission fields
+    ! and an array of 3D emission fields. These arrays are expected to
+    ! contain fields corresponding to consecutive emission id numbers,
+    ! starting at 1, with the 3D fields having the highest numbers.
+    ! The names of the emission species corresponding to each field array
+    ! are given in separate reference arrays created below.
+
+    n_emissions = size(emiss_names)
+    allocate(tmp_names(n_emissions))
+
+    ! Register 2D emissions
+    n = 0
+    do i = 1, n_emissions
+      if ( any( required_2d_emissions(:) == emiss_names(i) ) ) then
+
+        field_varname = 'emissions_' // emiss_names(i)
+        l_three_dim = .false.
+
+        ! Assign long name as in GA9 ancil file.
+        ! *** WARNING ***
+        ! This is currently hard-wired in the absence of functionality
+        ! to handle the NetCDF variable attributes that provide the long names
+        ! in the UM. There is therefore no guarantee of compatibility with
+        ! arbitrary ancil files and care must be taken to ensure that the
+        ! data in the ancil files provided are consistent with the names
+        ! defined here.
+
+        select case( emiss_names(i) )
+        case('DMS')
+          long_name = 'DMS emissions expressed as sulfur'
+
+        case('Monoterp')
+          long_name = 'Monoterpene surf emissions expressed as carbon'
+
+        case('SO2_low')
+          long_name = 'SO2 low level emissions expressed as sulfur'
+
+        case('SO2_high')
+          long_name = 'SO2 high level emissions expressed as sulfur'
+
+        end select
+
+        if (emiss_names(i) == 'SO2_high') then
+          call ukca_register_emission( n_emiss_slots, field_varname, &
+                                       emiss_names(i), emiss_units,  &
+                                       l_three_dim, emiss_id,        &
+                                       long_name=long_name,          &
+                                       vert_fact='high_level',       &
+                                       lowest_lev=8, highest_lev=8 )
+        else
+          call ukca_register_emission( n_emiss_slots, field_varname, &
+                                       emiss_names(i), emiss_units,  &
+                                       l_three_dim, emiss_id,        &
+                                       long_name=long_name,          &
+                                       vert_fact='surface' )
+        end if
+
+        n = n + 1
+
+        if (emiss_id /= int( n, i_um )) then
+          write( log_scratch_space, '(2(A,I0))' ) &
+            'Unexpected id (', emiss_id,          &
+            ') assigned on registering a 2D UKCA emission. Expected ', n
+          call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+        end if
+
+        tmp_names(n) = emiss_names(i)
+
+      end if
     end do
 
-  end subroutine get_ukca_field_lists
+    ! Create reference array of 2D emission names
+    allocate(emiss_names_flat(n))
+    do i = 1, n
+      emiss_names_flat(i) = tmp_names(i)
+    end do
+
+    ! Register 3D emissions
+    n_previous = n
+    n = 0
+
+    do i = 1, n_emissions
+      if ( emiss_names(i) == 'SO2_nat' ) then
+
+        field_varname = 'emissions_' // emiss_names(i)
+        l_three_dim = .true.
+
+        ! Assign long name as in GA9 ancil file.
+        ! *** WARNING ***
+        ! This is currently hard-wired in the absence of functionality
+        ! to handle the NetCDF variable attributes. There is therefore
+        ! no guarantee of compatibility with arbitrary ancil files.
+
+        long_name = 'SO2 natural emissions expressed as sulfur'
+
+        call ukca_register_emission( n_emiss_slots, field_varname,             &
+                                     emiss_names(i), emiss_units, l_three_dim, &
+                                     emiss_id, long_name=long_name,            &
+                                     vert_fact='all_levels' )
+
+        n = n + 1
+
+        if (emiss_id /= int( n + n_previous, i_um )) then
+          write( log_scratch_space, '(2(A,I0))' ) &
+            'Unexpected id (', emiss_id,          &
+            ') assigned on registering 3D UKCA emission. Expected ', n
+          call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+        end if
+
+        tmp_names(n) = emiss_names(i)
+
+      end if
+    end do
+
+    ! Create reference array of 3D emission names
+    allocate(emiss_names_fullht(n))
+    do i = 1, n
+      emiss_names_fullht(i) = tmp_names(i)
+    end do
+
+  end subroutine aerosol_ukca_dust_only_init
 
 end module um_ukca_init_mod

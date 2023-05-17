@@ -14,6 +14,7 @@ module um_physics_init_mod
                                         glomap_mode,                           &
                                         glomap_mode_climatology,               &
                                         glomap_mode_ukca,                      &
+                                        glomap_mode_dust_and_clim,             &
                                         glomap_mode_radaer_test,               &
                                         glomap_mode_off,                       &
                                         aclw_file,                             &
@@ -337,7 +338,7 @@ contains
       ! Options which are bespoke to the aerosol scheme chosen
       select case (glomap_mode)
 
-        case(glomap_mode_climatology)
+        case(glomap_mode_climatology, glomap_mode_dust_and_clim)
           ! l_glomap_clim_aie1 is not used in LFRic. The 1st indirect effect is
           ! controlled through the radiation namelist: droplet_effective_radius
           l_glomap_clim_aie2 = .true.
@@ -689,7 +690,9 @@ contains
     ! aerosol tracers - contained in UM module ukca_option_mod
     ! ----------------------------------------------------------------
 
-    if ( aerosol == aerosol_um .and. glomap_mode == glomap_mode_ukca ) then
+    if ( aerosol == aerosol_um .and.              &
+         ( glomap_mode == glomap_mode_ukca ) .or. &
+         ( glomap_mode == glomap_mode_dust_and_clim ) ) then
       l_ukca = .true.
       l_ukca_plume_scav = .true.
       if (l_ukca_plume_scav) then
@@ -791,7 +794,9 @@ contains
     ! scheme being either off or running in diagnostic mode to calculate
     ! dust emissions only if these are potentially required by UKCA.
 
-    if (aerosol == aerosol_um .and. glomap_mode == glomap_mode_ukca) THEN
+    if ( aerosol == aerosol_um .and.              &
+         ( glomap_mode == glomap_mode_ukca ) .or. &
+         ( glomap_mode == glomap_mode_dust_and_clim ) ) then
       i_dust = i_dust_flux
       dust_veg_emiss = 1
       us_am = 1.45              ! Increases friction velocity

@@ -63,7 +63,7 @@ type, public, extends(kernel_type) :: aerosol_ukca_kernel_type
        arg_type( GH_FIELD, GH_REAL, GH_READWRITE, WTHETA ), & ! n_acc_ins
        arg_type( GH_FIELD, GH_REAL, GH_READWRITE, WTHETA ), & ! acc_ins_du
        arg_type( GH_FIELD, GH_REAL, GH_READWRITE, WTHETA ), & ! n_cor_ins
-       arg_type( GH_FIELD, GH_REAL, GH_READWRITE, WTHETA ), & ! acc_cor_du
+       arg_type( GH_FIELD, GH_REAL, GH_READWRITE, WTHETA ), & ! cor_ins_du
        arg_type( GH_FIELD, GH_REAL, GH_READWRITE, WTHETA ), & ! cloud_drop_no_conc
        arg_type( GH_FIELD, GH_REAL, GH_READWRITE, WTHETA ), & ! drydp_ait_sol
        arg_type( GH_FIELD, GH_REAL, GH_READWRITE, WTHETA ), & ! drydp_acc_sol
@@ -117,7 +117,7 @@ type, public, extends(kernel_type) :: aerosol_ukca_kernel_type
        arg_type( GH_SCALAR, GH_INTEGER, GH_READ ),          & ! previous_time_daynum
        arg_type( GH_FIELD, GH_REAL, GH_READ, WTHETA ),      & ! o3
        arg_type( GH_FIELD, GH_REAL, GH_READ, WTHETA ),      & ! no3
-       arg_type( GH_FIELD, GH_REAL, GH_READ, WTHETA ),      & ! ho
+       arg_type( GH_FIELD, GH_REAL, GH_READ, WTHETA ),      & ! oh
        arg_type( GH_FIELD, GH_REAL, GH_READ, WTHETA ),      & ! ho2
        arg_type( GH_FIELD, GH_REAL, GH_READ, WTHETA ),      & ! h2o2_limit
        arg_type( GH_FIELD, GH_REAL, GH_READ, WTHETA ),      & ! theta_wth
@@ -726,7 +726,7 @@ subroutine aerosol_ukca_code( nlayers,                                         &
   use timestep_mod, only: timestep
 
   ! JULES modules
-  use jules_surface_types_mod, only: npft, ice, ntype
+  use jules_surface_types_mod, only: npft, ntype
   use jules_surface_mod,        only: l_urban2t
   use jules_sea_seaice_mod, only: nice
   use jules_urban_mod,           only: l_moruses
@@ -2036,6 +2036,10 @@ subroutine aerosol_ukca_code( nlayers,                                         &
       trim(ukca_errmsg) // ' in UKCA procedure ' // trim(ukca_errproc)
     call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end if
+
+  ! Clear emissions fields
+  deallocate(emissions_fullht)
+  deallocate(emissions_flat)
 
   ! Clear environmental driver fields
   deallocate(environ_landpft_real)

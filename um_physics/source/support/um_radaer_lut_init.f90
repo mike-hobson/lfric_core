@@ -7,19 +7,20 @@
 
 module um_radaer_lut_init_mod
 
-  use aerosol_config_mod,        only : glomap_mode,             &
-                                        glomap_mode_climatology, &
-                                        glomap_mode_off,         &
-                                        glomap_mode_ukca,        &
-                                        glomap_mode_radaer_test, &
-                                        aclw_file,               &
-                                        acsw_file,               &
-                                        anlw_file,               &
-                                        answ_file,               &
-                                        crlw_file,               &
-                                        crsw_file,               &
-                                        prec_file,               &
-                                        l_radaer
+  use aerosol_config_mod,        only : aclw_file,                 &
+                                        acsw_file,                 &
+                                        anlw_file,                 &
+                                        answ_file,                 &
+                                        crlw_file,                 &
+                                        crsw_file,                 &
+                                        glomap_mode,               &
+                                        glomap_mode_climatology,   &
+                                        glomap_mode_dust_and_clim, &
+                                        glomap_mode_off,           &
+                                        glomap_mode_radaer_test,   &
+                                        glomap_mode_ukca,          &
+                                        l_radaer,                  &
+                                        prec_file
   use section_choice_config_mod, only : aerosol, &
                                         aerosol_um
   use socrates_init_mod,         only : sw_wavelength_short, &
@@ -53,8 +54,10 @@ contains
     if ( aerosol == aerosol_um ) then
 
       select case (glomap_mode)
-        case( glomap_mode_climatology , glomap_mode_ukca, &
-              glomap_mode_radaer_test )
+      case( glomap_mode_climatology,   &
+            glomap_mode_dust_and_clim, &
+            glomap_mode_radaer_test,   &
+            glomap_mode_ukca )
 
           if ( l_radaer ) then
 

@@ -28,7 +28,10 @@ module semi_implicit_timestep_alg_mod
                                         smagorinsky_placement,             &
                                         smagorinsky_placement_outer
 
-  use aerosol_config_mod,         only: glomap_mode, glomap_mode_ukca
+  use aerosol_config_mod,         only: glomap_mode,               &
+                                        glomap_mode_dust_and_clim, &
+                                        glomap_mode_ukca
+
   use microphysics_config_mod,    only: microphysics_casim
 
   use formulation_config_mod,     only: use_physics, dlayer_on,   &
@@ -754,7 +757,9 @@ contains
     ! Call UKCA for GLOMAP-mode prognostic aerosol updates
     !--------------------------------------------------------------------
 #ifdef UM_PHYSICS
-    if (aerosol == aerosol_um .and. glomap_mode == glomap_mode_ukca) then
+    if ( aerosol == aerosol_um .and.            &
+         ( glomap_mode == glomap_mode_ukca .or. &
+           glomap_mode == glomap_mode_dust_and_clim ) ) then
       call aerosol_ukca_alg ( chemistry_fields, aerosol_fields,          &
                               radiation_fields, derived_fields,          &
                               microphysics_fields, turbulence_fields,    &

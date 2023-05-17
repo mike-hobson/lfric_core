@@ -98,13 +98,14 @@ module slow_physics_alg_mod
   use pc2_checks_alg_mod,        only: pc2_checks_alg
   use methox_alg_mod,            only: methox_alg
   use microphysics_config_mod,   only: microphysics_casim
-  use aerosol_config_mod,        only: activation_scheme,                      &
-                                       activation_scheme_jones,                &
-                                       l_radaer,                               &
-                                       glomap_mode,                            &
-                                       glomap_mode_climatology,                &
-                                       glomap_mode_ukca,                       &
-                                       glomap_mode_radaer_test,                &
+  use aerosol_config_mod,        only: activation_scheme,         &
+                                       activation_scheme_jones,   &
+                                       glomap_mode,               &
+                                       glomap_mode_climatology,   &
+                                       glomap_mode_dust_and_clim, &
+                                       glomap_mode_ukca,          &
+                                       glomap_mode_radaer_test,   &
+                                       l_radaer,                  &
                                        sulphuric_strat_climatology
   use ancil_info,                only: rad_nband
   use jules_control_init_mod,    only: n_land_tile
@@ -361,6 +362,7 @@ contains
         ! necessarily default to false
         if ( sulphuric_strat_climatology .or.                                  &
              ( ( ( glomap_mode == glomap_mode_climatology ) .or.               &
+                 ( glomap_mode == glomap_mode_dust_and_clim ) .or.             &
                  ( glomap_mode == glomap_mode_ukca ) .or.                      &
                  ( glomap_mode == glomap_mode_radaer_test ) ) .and.            &
                l_radaer ) ) then
@@ -372,8 +374,10 @@ contains
         !--------------------------------------------------------------------
         ! GLOMAP-mode aerosol climatology
         !--------------------------------------------------------------------
-        if (glomap_mode == glomap_mode_climatology .and.                       &
-            (activation_scheme == activation_scheme_jones .or. l_radaer)) then
+        if ( ( ( glomap_mode == glomap_mode_climatology ) .or.       &
+               ( glomap_mode == glomap_mode_dust_and_clim ) ) .and.  &
+             ( ( activation_scheme == activation_scheme_jones ) .or. &
+               ( l_radaer ) ) ) then
           call glomap_aerosol_alg ( aerosol_fields, cloud_fields, theta,       &
                                     exner_in_wth, mr_n, clock%get_step() )
         end if
@@ -496,6 +500,7 @@ contains
       !--------------------------------------------------------------------
       if ( aerosol == aerosol_um .and.                                         &
            ( ( glomap_mode == glomap_mode_climatology )  .or.                  &
+             ( glomap_mode == glomap_mode_dust_and_clim ) .or.                 &
              ( glomap_mode == glomap_mode_ukca ) .or.                          &
              ( glomap_mode == glomap_mode_radaer_test) ) .and.                 &
            l_radaer ) then

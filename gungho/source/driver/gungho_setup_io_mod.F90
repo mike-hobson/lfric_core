@@ -98,8 +98,10 @@ module gungho_setup_io_mod
   use derived_config_mod,        only: l_esm_couple
 #ifdef UM_PHYSICS
   use surface_config_mod,        only: sea_alb_var_chl, albedo_obs
-  use aerosol_config_mod,        only: glomap_mode, glomap_mode_ukca, &
-                                       glomap_mode_climatology
+  use aerosol_config_mod,        only: glomap_mode,               &
+                                       glomap_mode_climatology,   &
+                                       glomap_mode_dust_and_clim, &
+                                       glomap_mode_ukca
   use chemistry_config_mod,      only: chem_scheme, chem_scheme_strattrop, &
                                        chem_scheme_strat_test
 #endif
@@ -196,9 +198,8 @@ module gungho_setup_io_mod
 
 #ifdef UM_PHYSICS
     ! Setup ancillary files
-    if( ancil_option == ancil_option_fixed .or. &
-        ancil_option == ancil_option_updating ) then
-
+    if ( ancil_option == ancil_option_fixed .or. &
+         ancil_option == ancil_option_updating ) then
       ! Set land area ancil filename from namelist
       write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
                                trim(land_area_ancil_path)
@@ -286,9 +287,11 @@ module gungho_setup_io_mod
 
     end if
 
-    if (glomap_mode == glomap_mode_climatology .and. &
-         (ancil_option == ancil_option_fixed .or. &
-          ancil_option == ancil_option_updating) ) then
+    if ( ( ( glomap_mode == glomap_mode_dust_and_clim ) .or.    &
+           ( glomap_mode == glomap_mode_climatology   ) ) .and. &
+         ( ( ancil_option == ancil_option_fixed       ) .or.    &
+           ( ancil_option == ancil_option_updating    ) ) ) then
+
       ! Set aerosol ancil filename from namelist
       if ( coarse_aerosol_ancil ) then
         aerosol_ancil_directory = coarse_ancil_directory
@@ -489,12 +492,19 @@ module gungho_setup_io_mod
                                                          xios_id="oh_ancil", &
                                                          io_mode=FILE_MODE_READ ) )
 
-      write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
+    end if
+
+    if ( ( ( glomap_mode == glomap_mode_dust_and_clim ).or. &
+           ( glomap_mode == glomap_mode_ukca   ) ) .and.    &
+         ( ( ancil_option == ancil_option_fixed ) .or.      &
+           ( ancil_option == ancil_option_updating ) ) ) then
+
+      ! Set aerosol emission ancil filenames from namelist
+      write(ancil_fname,'(A)') trim(ancil_directory)//'/'//                    &
                                trim(soil_dust_ancil_path)
       call files_list%insert_item( lfric_xios_file_type( ancil_fname,               &
                                                          xios_id="soil_dust_ancil", &
                                                          io_mode=FILE_MODE_READ ) )
-
     end if
 #endif
 

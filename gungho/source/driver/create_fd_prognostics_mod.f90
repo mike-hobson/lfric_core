@@ -225,8 +225,8 @@ contains
                              mesh, twod_mesh, twod=.true.)
       call setup_ancil_field("ozone", depository, fd_field_collection, &
                              mesh, twod_mesh)
-    else if (ancil_option == ancil_option_fixed .or. &
-             ancil_option == ancil_option_updating) then
+    else if ( ( ancil_option == ancil_option_fixed ) .or. &
+              ( ancil_option == ancil_option_updating ) ) then
       ! convection fields
       call setup_ancil_field("dd_mf_cb", depository, fd_field_collection, &
                              mesh, twod_mesh, twod=.true.)

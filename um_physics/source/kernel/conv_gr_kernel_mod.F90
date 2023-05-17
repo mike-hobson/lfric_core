@@ -507,6 +507,10 @@ contains
                                 fldname_n_cor_ins,                             &
                                 fldname_cor_ins_du
 
+    use aerosol_config_mod,        only: glomap_mode,               &
+                                         glomap_mode_dust_and_clim, &
+                                         glomap_mode_ukca
+
     use log_mod, only : log_event, log_scratch_space, LOG_LEVEL_ERROR
 
     !---------------------------------------
@@ -745,6 +749,9 @@ contains
     ! Variables for retrieving tracer names for a UKCA configuration
     integer :: ukca_errcode
     character(len=ukca_maxlen_fieldname), pointer :: ukca_tracer_names(:)
+    character(len=ukca_maxlen_fieldname), target  ::                         &
+                 local_dust_tracer_list(4) = [ 'Acc_INS_N ' , 'Acc_INS_DU' , &
+                                               'Cor_INS_N ' , 'Cor_INS_DU' ]
 
     ! Fields which are not used and only required for subroutine argument list,
     ! hence are unset in the kernel
@@ -871,8 +878,13 @@ contains
     ! Enable tracers for UKCA if a UKCA tracer list is available
     ! (This indicates that a UKCA configuration has been set up)
     if (outer == outer_iterations) then
-      call ukca_get_tracer_varlist(ukca_tracer_names, ukca_errcode)
-      l_tracer = (ukca_errcode == 0)
+      if ( glomap_mode == glomap_mode_dust_and_clim ) then
+        ukca_tracer_names => local_dust_tracer_list
+        l_tracer = .true.
+      else
+        call ukca_get_tracer_varlist( ukca_tracer_names, ukca_errcode )
+        l_tracer = ( ukca_errcode == 0 )
+      end if
     else
       l_tracer = .false.
     end if

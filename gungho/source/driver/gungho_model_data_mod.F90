@@ -231,7 +231,7 @@ subroutine create_model_data( model_data,         &
     ! If checkpoint reading has been specified then override these options
     if (checkpoint_read) then
       prognostic_init_choice = init_option_checkpoint_dump
-      if (ancil_option /= ancil_option_updating) then
+      if ( ancil_option /= ancil_option_updating ) then
         ancil_choice = ancil_option_none
       end if
     end if

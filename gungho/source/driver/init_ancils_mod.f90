@@ -31,10 +31,14 @@ module init_ancils_mod
   use jules_control_init_mod,         only : n_land_tile
   use jules_surface_types_mod,        only : npft
   use dust_parameters_mod,            only : ndiv
-  use initialization_config_mod,      only : ancil_option,ancil_option_updating,&
-                                             sst_source, sst_source_start_dump
-  use aerosol_config_mod,             only : glomap_mode, glomap_mode_ukca, &
-                                             glomap_mode_climatology
+  use initialization_config_mod,      only : ancil_option,          &
+                                             ancil_option_updating, &
+                                             sst_source,            &
+                                             sst_source_start_dump
+  use aerosol_config_mod,             only : glomap_mode,               &
+                                             glomap_mode_climatology,   &
+                                             glomap_mode_dust_and_clim, &
+                                             glomap_mode_ukca
   use jules_surface_config_mod,       only : l_vary_z0m_soil, l_urban2t
   use surface_config_mod,             only : sea_alb_var_chl, albedo_obs
   use radiation_config_mod,           only : topography, topography_slope, &
@@ -277,12 +281,14 @@ contains
                              twod_mesh, time_axis=ozone_time_axis)
     call ancil_times_list%insert_item(ozone_time_axis)
 
-    !=====  AEROSOL ANCILS  =====
-    if (glomap_mode == glomap_mode_climatology) then
-      call aerosol_time_axis%initialise("aerosols_time",          &
-                                      file_id="aerosols_ancil", &
-                                      interp_flag=interp_flag,  &
-                                      pop_freq="five_days")
+    !=====  AEROSOL ANCILS =====
+
+    if ( ( glomap_mode == glomap_mode_climatology ) .or. &
+         ( glomap_mode == glomap_mode_dust_and_clim ) ) then
+      call aerosol_time_axis%initialise( "aerosols_time",          &
+                                         file_id="aerosols_ancil", &
+                                         interp_flag=interp_flag,  &
+                                         pop_freq="five_days" )
       call setup_ancil_field("acc_sol_bc", depository, ancil_fields, mesh,  &
                              twod_mesh, time_axis=aerosol_time_axis,        &
                              alt_mesh=aerosol_mesh, alt_twod_mesh=aerosol_twod_mesh)
@@ -334,11 +340,27 @@ contains
       call setup_ancil_field("n_cor_sol",  depository, ancil_fields, mesh,  &
                              twod_mesh, time_axis=aerosol_time_axis,        &
                              alt_mesh=aerosol_mesh, alt_twod_mesh=aerosol_twod_mesh)
-      ! The following fields will need adding when dust is available in the
+
+      ! The following fields will need including when dust is available in the
       ! ancillary file:
       !   acc_sol_du, cor_sol_du, n_acc_ins, acc_ins_du, n_cor_ins, cor_ins_du
+
       call ancil_times_list%insert_item(aerosol_time_axis)
     end if
+
+    !=====  EMISSION ANCILS (dust only) =====
+    if ( ( glomap_mode == glomap_mode_dust_and_clim ) .or. &
+         ( glomap_mode == glomap_mode_ukca ) ) then
+
+      ! -- Single level ancils
+      call setup_ancil_field( "soil_clay", depository, ancil_fields, &
+                              mesh, twod_mesh, twod=.true. )
+      call setup_ancil_field( "soil_sand", depository, ancil_fields, &
+                              mesh, twod_mesh, twod=.true. )
+      call setup_ancil_field( "dust_mrel", depository, ancil_fields, &
+                              mesh, twod_mesh, twod=.true., ndata=ndiv )
+
+    endif  ! glomap_dust_and_clim
 
     !=====  EMISSION ANCILS  =====
     if ( glomap_mode == glomap_mode_ukca   .and.                         &
@@ -424,13 +446,6 @@ contains
                            mesh, twod_mesh, twod=.true.,              &
                            time_axis=em_so2_hi_time_axis)
       call ancil_times_list%insert_item(em_so2_hi_time_axis)
-
-      call setup_ancil_field("soil_clay", depository, ancil_fields,         &
-                           mesh, twod_mesh, twod=.true.)
-      call setup_ancil_field("soil_sand", depository, ancil_fields,         &
-                           mesh, twod_mesh, twod=.true.)
-      call setup_ancil_field("dust_mrel", depository, ancil_fields,         &
-                           mesh, twod_mesh, twod=.true., ndata=ndiv)
 
       ! -- 3-D ancils
       !-- natural SO2 emissions, currently single-time

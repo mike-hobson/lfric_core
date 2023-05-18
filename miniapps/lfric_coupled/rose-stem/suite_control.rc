@@ -85,7 +85,7 @@
                                        },
                          },
                      plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR",
-                     checkkgo=False
+                     checkkgo=True
                      )',
    ],
    'nightly'  : ['null_task_graph()']

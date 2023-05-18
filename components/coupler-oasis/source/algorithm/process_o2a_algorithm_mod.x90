@@ -15,16 +15,11 @@ module process_o2a_algorithm_mod
   use log_mod,                    only: log_event, LOG_LEVEL_INFO
   use mesh_mod,                   only: mesh_type
   use multi_insert_kernel_mod,    only: multi_insert_kernel_type
+  use cpl_field_send_mod,         only: set_r_sea_ice_frac_raw
 
   implicit none
 
-  private
-  ! Raw sea ice fractions that are unaltered by post processing
-  ! for use in scaling data going from atmos to ocean
-  type( field_type ) :: sea_ice_frac_raw
-
-  public process_o2a_algorithm, initialise_sea_ice_frac_raw
-  public sea_ice_frac_raw
+  public process_o2a_algorithm
 
   contains
 
@@ -101,35 +96,20 @@ module process_o2a_algorithm_mod
 
    ! Save raw sea ice fractions before any post processing
    ! for use in scaling data going from atmos to ocean
-   call invoke(setval_X(sea_ice_frac_raw, sea_ice_fraction_ptr),               &
+   call set_r_sea_ice_frac_raw(sea_ice_fraction_ptr)
 
    ! Process data that has just come through the coupler
-               process_o2a_kernel_type( sea_surf_temp_ptr,                     &
-                                        sea_ice_fraction_ptr,                  &
-                                        sea_ice_thickness_ptr,                 &
-                                        sea_ice_layer_t_ptr,                   &
-                                        sea_ice_conductivity_ptr,              &
-                                        sea_ice_snow_depth_ptr,                &
-                                        melt_pond_fraction_ptr,                &
-                                        melt_pond_depth_ptr                    &
-                                      )                                        &
+   call invoke(process_o2a_kernel_type( sea_surf_temp_ptr,        &
+                                        sea_ice_fraction_ptr,     &
+                                        sea_ice_thickness_ptr,    &
+                                        sea_ice_layer_t_ptr,      &
+                                        sea_ice_conductivity_ptr, &
+                                        sea_ice_snow_depth_ptr,   &
+                                        melt_pond_fraction_ptr,   &
+                                        melt_pond_depth_ptr       &
+                                      )                           &
               )   ! Close invoke.
 
   end subroutine process_o2a_algorithm
-
-  !> @brief Initialises sea_ice_frac_raw.
-  !> @param[in] sice_space Sea ice function space
-  subroutine initialise_sea_ice_frac_raw(sice_space)
-
-    use function_space_mod, only: function_space_type
-
-    implicit none
-
-    type(function_space_type), intent(in), pointer :: sice_space
-
-    call sea_ice_frac_raw%initialise( vector_space = sice_space, &
-                                      name = "sea_ice_frac_raw" )
-
-  end subroutine initialise_sea_ice_frac_raw
 
 end module process_o2a_algorithm_mod

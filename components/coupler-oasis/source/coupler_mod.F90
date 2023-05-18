@@ -19,10 +19,12 @@ module coupler_mod
                                             namsrcfld, namdstfld, oasis_in,    &
                                             prism_real
 #endif
+  use cpl_field_send_mod,             only: cpl_field_send, &
+                                            initialise_send_fields
+  use cpl_field_receive_mod,          only: cpl_field_receive
   use field_mod,                      only: field_type, field_proxy_type
   use field_parent_mod,               only: field_parent_type
   use pure_abstract_field_mod,        only: pure_abstract_field_type
-  use mesh_mod,                       only: mesh_type
   use function_space_mod,             only: function_space_type
   use finite_element_config_mod,      only: element_order
   use fs_continuity_mod,              only: W3, Wtheta
@@ -49,9 +51,7 @@ module coupler_mod
                                             acc_step, ldump_prep
   use coupler_update_prognostics_mod, only: coupler_update_prognostics,       &
                                             initialise_snow_mass
-  use process_o2a_algorithm_mod,      only: process_o2a_algorithm,            &
-                                            initialise_sea_ice_frac_raw,      &
-                                            sea_ice_frac_raw
+  use process_o2a_algorithm_mod,      only: process_o2a_algorithm
   use derived_config_mod,             only: l_esm_couple
   use esm_couple_config_mod,          only: l_esm_couple_test
 
@@ -74,18 +74,25 @@ module coupler_mod
 #endif
 
   private
+
+  !maximum number of components lfric can send the same data
+  integer(i_def), parameter             :: nmax = 8
+
+  !length of the snd_field/rcv_field
+  integer(i_def)                        :: icpl_size
+
   !Max length of coupling field names.
   !UM uses 20, but NEMO names can be
   !much longer and OASIS caters for a
   !max length of 80 so we use that
   integer(i_def),        parameter      :: slength = 80
+
+  !Index to sort data for sending
+  integer(i_def), allocatable           :: slocal_index(:)
+
   !name of component in OASIS
   character(len=80),     parameter      :: cpl_name = 'lfric'
 #ifdef MCT
-  !length of the snd_field/rcv_field
-  integer(i_def)                        :: icpl_size
-  !index to sort data for sending
-  integer(i_def), allocatable           :: slocal_index(:)
   !OASIS component id
   integer(i_def)                        :: il_comp_id
   !keeps info about level
@@ -99,8 +106,6 @@ module coupler_mod
   character(len=2), parameter           :: cpl_flev = "01"
   !this is len of cpl_flev
   character(len=6), parameter           :: cpl_fmt = "(i2.2)"
-  !maximum number of components lfric can send the same data
-  integer(i_def),   parameter           :: nmax = 8
 
   !routines
   public cpl_finalize, cpl_initialize, cpl_define, cpl_init_fields, &
@@ -108,234 +113,6 @@ module coupler_mod
   public cpl_fields
 
   contains
-  !>@brief Sends field to another component
-  !>
-  !> @param [in]     sfield      Field to be sent
-  !> @param [in]     model_clock Time within the model.
-  !> @param [in,out] ldfaif      Failure flag for send operation
-  !
-  subroutine cpl_field_send(sfield, ice_frac_proxy, model_clock, ldfail)
-   implicit none
-   type( field_type),        intent(in)    :: sfield
-   !proxy of the sea ice fraction field
-   type( field_proxy_type ), intent(in)    :: ice_frac_proxy
-   class(model_clock_type),  intent(in)    :: model_clock
-   logical(l_def),           intent(inout) :: ldfail
-
-#ifdef MCT
-   !model time since the start of the run
-   integer(i_def)                  :: mtime
-   !oasis id for varialble or data level
-   integer(i_def)                  :: svar_id
-   !proxy of the field
-   type( field_proxy_type )        :: sfield_proxy
-   !name of the field being sent
-   character(len=slength)          :: sname
-   !error return by OASIS
-   integer(i_def)                  :: ierror
-   !error return by OASIS
-   integer(i_def)                  :: kinfo
-   !temporarry array to keep
-   !sorted data for before sending
-   real(r_def)                     :: sdata(icpl_size)
-   !unsorted data for given data level
-   real(r_def)                     :: wdata(icpl_size)
-   !index for coupling data
-   integer(i_def)                  :: i
-   !index for data levels
-   integer(i_def)                  :: k
-   !number of data-levels
-   integer(i_def)                  :: nlev
-   !number of components the data will be sent
-   integer(i_def)                  :: ncpl
-   !maximum 8 components to send the same variable
-   integer(i_def), dimension(nmax) :: cpl_freqs
-   !number of steps between coupling
-   real(r_def)                     :: isteps
-   !min,max used for printing to screen
-   real(r_def)                     :: min_value, max_value
-   !unsorted sea ice fraction data
-   real(r_def)                     :: ice_frac_data(icpl_size)
-
-   sname        = trim(adjustl(sfield%get_name()))
-   sfield_proxy = sfield%get_proxy()
-   nlev         = sfield_proxy%vspace%get_ndata()
-   mtime                                                                    &
-     = int( model_clock%seconds_from_steps(model_clock%get_step())          &
-            - model_clock%seconds_from_steps(model_clock%get_first_step()), &
-            i_def )
-
-   do k = 1, nlev
-      svar_id = sfield%get_cpl_id(k)
-      if (svar_id /= imdi) then
-         !oasis put on this timestep
-         call oasis_put_inquire(svar_id, mtime, ierror)
-         if (ierror == oasis_sent .or. ierror == oasis_sentout) then
-            call oasis_get_ncpl(svar_id, ncpl, kinfo)
-            !coupling frequency
-            call oasis_get_freqs(svar_id, oasis_out, ncpl, cpl_freqs(1:ncpl), &
-                                                                       kinfo)
-            if (ncpl > nmax) then
-              write(log_scratch_space, '(3A)' ) &
-                                 "PROBLEM cpl_field_send: field ", &
-                                 trim(sname), &
-                                 " trying to send to more than nmax components"
-              call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-            endif
-
-            !can handle only cases when coupling frequency is the same for all
-            !components
-            if (maxval(cpl_freqs(1:ncpl)) == minval(cpl_freqs(1:ncpl))) then
-
-              !mean value for sending
-              if (model_clock%get_step() == model_clock%get_first_step()) then
-                 isteps = 1.0
-              else
-                 isteps = real(cpl_freqs(1), r_def) / real(model_clock%get_seconds_per_step(), r_def)
-              endif
-
-              ! The averaging process is simply a matter of taking our field value and
-              ! dividing by the number of timesteps over which it has been accumulated.
-              ! UNLESS we're on the first exchange following a restart! In which case
-              ! the averaging has already been done and we just want to deal with the
-              ! raw field obtained straight from the start dump!
-              wdata(:) = sfield_proxy%data(k:nlev*icpl_size:nlev)/isteps
-
-              ! Some fields will need to be divided by ice fraction that has
-              ! just been passed from the sea ice model before being coupled
-              ! (time travelling sea ice)
-              if( sname == 'lf_topmelt' .OR. sname == 'lf_iceheatflux'         &
-                       .OR. sname == 'lf_sublimation'                          &
-                       .OR. sname == 'ln_pensolar' ) then
-                 ice_frac_data(:) = ice_frac_proxy%data(k:nlev*icpl_size:nlev)
-                 WHERE( ice_frac_data(:) /= 0.0_r_def )
-                    wdata(:) = wdata(:) / ice_frac_data(:)
-                 END WHERE
-              endif
-
-              ! Move our outgoing field to the send buffer
-              do i = 1, icpl_size
-                 sdata(i) = wdata(slocal_index(i))
-              enddo
-
-              min_value = MINVAL(sdata)
-              max_value = MAXVAL(sdata)
-
-              call oasis_put(svar_id, mtime, sdata(:), ierror)
-              write(log_scratch_space, '(3A, 2E12.3)' ) &
-                                 "cpl_field_send: field ", &
-                                 trim(sname), &
-                                 " sent with min,max = ", &
-                                 min_value, max_value
-              call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
-
-              ! Reset field to 0 ready to start accumultion for the next exchange
-              sfield_proxy%data(k:nlev*icpl_size:nlev) = 0.0_r_def
-              acc_step = 0.0
-            else
-              write(log_scratch_space, '(3A)' ) "PROBLEM cpl_field_send: field ", &
-                     trim(sname), " different frequencies for different components"
-              call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-            endif
-         else
-            write(log_scratch_space, '(3A)' ) "cpl_field_send: field ", &
-                           trim(sname), " NOT exchanged on this timestep"
-            call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
-         endif
-      else
-         ldfail = .true.
-         write(log_scratch_space, '(3A)' ) "PROBLEM cpl_field_send: field ", &
-                                           trim(sname), " cpl_id NOT set"
-         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      endif
-   enddo
-
-#else
-   write(log_scratch_space, '(A)' ) &
-                  "cpl_field_send: to use OASIS cpp directive MCT must be set"
-   call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-
-#endif
-
-  end subroutine cpl_field_send
-
-  !>@brief Revceives field from another component
-  !>
-  !> @param [in]    rfield field to be sent
-  !> @param [in]    mtime  current model time
-  !> @param [out]   ldex field exchange flag
-  !> @param [in,out] ldfail failure flag for receive operation
-  !
-  subroutine cpl_field_receive( rfield, mtime, ldex, ldfail)
-   implicit none
-   type(field_type), intent(inout)              ::  rfield
-   integer(i_def), intent(in)                   ::  mtime
-   logical(l_def), intent(out)                  ::  ldex
-   logical(l_def), intent(inout)                ::  ldfail
-#ifdef MCT
-   !number of data-levels
-   integer(i_def)                               ::  nlev
-   !name of the verialbe to be sent
-   character(len=slength)                       ::  rname
-   !proxy of the field
-   type( field_proxy_type )                     ::  rfield_proxy
-   !oasis id for varialble or data level
-   integer(i_def)                               ::  rvar_id
-   !error return by oasis_get
-   integer(i_def)                               ::  ierror
-   !data received from OASIS
-   real(r_def)                                  ::  rdata(icpl_size)
-   !data ordered according to LFRic convention
-   real(r_def)                                  ::  wdata(icpl_size)
-   !index over coupling data length
-   integer(i_def)                               ::  i
-   !index over data levels
-   integer(i_def)                               ::  k
-
-   rname                = trim(adjustl(rfield%get_name()))
-   rfield_proxy         = rfield%get_proxy()
-   nlev                 = rfield_proxy%vspace%get_ndata()
-
-   ldex = .false.
-
-   do k = 1, nlev
-      rvar_id = rfield%get_cpl_id(k)
-      if (rvar_id /= imdi) then
-         call oasis_get(rvar_id, mtime, rdata(:), ierror)
-         if (ierror == oasis_recvd .or. ierror == oasis_recvout) then
-            do i = 1, icpl_size
-               wdata(slocal_index(i)) = rdata(i)
-            enddo
-            rfield_proxy%data(k:icpl_size*nlev:nlev) = wdata(:)
-            ldex = .true.
-            write(log_scratch_space, '(3A)' ) &
-                               "cpl_field_receive: field ", &
-                               trim(rname), &
-                               " received"
-            call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
-         else
-            write(log_scratch_space, '(3A)' ) "cpl_field_receive: field ", &
-                                           trim(rname), &
-                                           " NOT exchanged on this timestep"
-            call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
-         endif
-      else
-         ldfail = .true.
-         write(log_scratch_space, '(3A)' ) "PROBLEM cpl_field_receive: field ",&
-                                            trim(rname), " cpl_id NOT set"
-         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      endif
-   enddo
-
-   if (.not.ldfail) call rfield_proxy%set_dirty()
-#else
-   ldex = .false.
-   write(log_scratch_space, '(A)' ) &
-                "cpl_field_receive: to use OASIS cpp directive MCT must be set"
-   call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-
-#endif
-  end subroutine cpl_field_receive
 
   !>@brief Initializes OASIS coupler
   !>
@@ -695,7 +472,7 @@ module coupler_mod
 
    ! Initialize extra coupling variables
    call initialise_extra_coupling_fields( fld_cpld_fs, sice_space )
-   call initialise_sea_ice_frac_raw( sice_space )
+   call initialise_send_fields( fld_cpld_fs, sice_space )
    call initialise_snow_mass( sice_space )
 
    nullify(field)
@@ -899,17 +676,12 @@ module coupler_mod
     type( field_collection_iterator_type)        :: iter
     !pointer to sea ice fractions
     type( field_type ),         pointer          :: ice_frac_ptr   => null()
-    !proxy of the sea ice fraction field
-    type( field_proxy_type )                     :: ice_frac_proxy
 
     lfail = .false.
     ldump_prep = .false.
 
     ! increment accumulation step
     acc_step = acc_step + 1.0
-
-    ! Ice fractions are needed for some coupling exchanges
-    ice_frac_proxy = sea_ice_frac_raw%get_proxy()
 
     call iter%initialise(dcpl_snd)
     do
@@ -920,7 +692,8 @@ module coupler_mod
         type is (field_type)
           field_ptr => field
           call cpl_diagnostics(field_ptr, depository, model_clock)
-          call cpl_field_send(field_ptr, ice_frac_proxy, model_clock, lfail)
+          call cpl_field_send(field_ptr, model_clock, lfail, &
+                              nmax, icpl_size, slength, slocal_index)
           call field_ptr%write_field(trim(field%get_name()))
         class default
           write(log_scratch_space, '(2A)' ) "PROBLEM cpl_snd: field ", &
@@ -963,15 +736,10 @@ module coupler_mod
    type( field_collection_iterator_type)        :: iter
    !pointer to sea ice fractions
    type( field_type ),         pointer          :: ice_frac_ptr        => null()
-   !proxy of the sea ice fraction field
-   type( field_proxy_type )                     :: ice_frac_proxy
 
    lfail = .false.
    ldump_prep = .true.
    acc_step = acc_step + 1.0
-
-   ! Ice fractions are needed for some coupling exchanges
-   ice_frac_proxy = sea_ice_frac_raw%get_proxy()
 
    ! We need to loop over each output field and ensure it gets updated
    call iter%initialise(dcpl_snd)
@@ -1044,7 +812,8 @@ module coupler_mod
       select type(field)
         type is (field_type)
           field_ptr => field
-          call cpl_field_receive(field_ptr, mtime, l_process_data, lfail)
+          call cpl_field_receive(field_ptr, mtime, l_process_data, lfail, &
+                                 icpl_size, slength, slocal_index)
         class default
           write(log_scratch_space, '(2A)' ) "PROBLEM cpl_rcv: field ", &
                         trim(field%get_name())//" is NOT field_type"

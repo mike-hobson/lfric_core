@@ -656,8 +656,8 @@ contains
       ! Retrieve height field and set as pot_energy then calculate column potential energy
       call height_w3%copy_field_properties(pot_energy)
       call invoke( setval_X(pot_energy, height_w3), &
-                 inc_aX_times_Y(gravity, pot_energy, rho_field), &
-                 compute_column_integral_kernel_type(pot_energy, height_w3, &
+                   inc_aX_times_Y(gravity, pot_energy, rho_field), &
+                   compute_column_integral_kernel_type(pot_energy, height_w3, &
                                                  height_wth, tot_col_pot_energy, &
                                                  radius) )
       call tot_col_pot_energy%write_field(tot_col_pot_energy%get_name())
@@ -724,19 +724,14 @@ contains
       pressure_flag = init_diag(pressure, 'processed__pressure_in_wth')
     end if
 
-    call exner%copy_field_properties(pressure)
+    if (pressure_flag .and. use_xios_io) then
 
-    call invoke(setval_X(pressure, exner), &
-                inc_X_powreal_a(pressure, one_over_kappa), &
-                inc_a_times_X(p_zero, pressure))
+      call invoke(setval_X(pressure, exner), &
+                  inc_X_powreal_a(pressure, one_over_kappa), &
+                  inc_a_times_X(p_zero, pressure))
 
-    if (use_xios_io) then
-      fs = pressure%which_function_space()
-      if (fs == W3) then
-        call pressure%write_field('processed__pressure_in_w3')
-      else if (fs == Wtheta) then
-        call pressure%write_field('processed__pressure_in_wth')
-      end if
+      call pressure%write_field(pressure%get_name())
+
     end if
 
   end subroutine pressure_diag_alg

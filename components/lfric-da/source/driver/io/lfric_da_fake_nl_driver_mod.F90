@@ -34,7 +34,6 @@ module lfric_da_fake_nl_driver_mod
                                 only: create_extrusion
   use lfric_da_fake_nl_init_files_mod, &
                                 only: init_da_dev_files
-  use field_collection_mod,     only: field_collection_type
 
 #ifdef USE_XIOS
   use driver_io_mod,            only: init_io, final_io, filelist_populator, &
@@ -177,24 +176,11 @@ contains
   !> @brief Initialise the model IO
   !>
   !> @param [in]    program_name     The program name
-  !> @param [inout] field_collection The field collection containing the
-  !!                                 test field to write checksums with
-  subroutine finalise( program_name, field_collection  )
+  subroutine finalise( program_name )
 
     implicit none
 
     character(len=*),            intent(in)    :: program_name
-    type(field_collection_type), intent(inout) :: field_collection
-
-    type(field_type), pointer :: working_field => null()
-
-    call field_collection%get_field( test_field, working_field )
-
-    !---------------------------------------------------------------------------
-    ! Model finalise
-    !---------------------------------------------------------------------------
-    ! Write checksums to file
-    call checksum_alg( program_name, working_field, test_field )
 
 #ifdef USE_XIOS
     if ( use_xios_io ) then

@@ -19,14 +19,13 @@ program jedi_forecast_pseudo
   use log_mod,                 only : log_event, log_scratch_space, &
                                       LOG_LEVEL_ALWAYS
 
-  use lfric_da_fake_nl_driver_mod, only : finalise
-
   ! Data types and methods to get/store configurations
   use jedi_state_config_mod,        only : jedi_state_config_type
   use jedi_pseudo_model_config_mod, only : jedi_pseudo_model_config_type
   use cli_mod,                      only : get_initial_filename
 
   ! Jedi emulator objects
+  use jedi_checksum_mod,     only : output_checksum
   use lfric_da_duration_mod, only : jedi_duration_type
   use jedi_run_mod,          only : jedi_run_type
   use jedi_geometry_mod,     only : jedi_geometry_type
@@ -94,6 +93,6 @@ program jedi_forecast_pseudo
 
   call log_event( 'Finalising ' // program_name // ' ...', LOG_LEVEL_ALWAYS )
   ! To provide KGO
-  call finalise( program_name, jedi_state%io_collection )
+  call output_checksum( program_name, jedi_state%io_collection )
 
 end program jedi_forecast_pseudo

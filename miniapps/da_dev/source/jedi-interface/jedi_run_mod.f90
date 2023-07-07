@@ -102,16 +102,23 @@ end subroutine initialise_infrastructure
 !>
 subroutine jedi_run_destructor(self)
 
-  use lfric_da_comm_mod,      only: final_external_comm, &
-                                    final_internal_comm
-  use driver_collections_mod, only: final_collections
-  use driver_config_mod,      only: final_config
-  use mpi_mod,                only: destroy_comm
-
+  use lfric_da_comm_mod,           only: final_external_comm, &
+                                         final_internal_comm
+  use driver_collections_mod,      only: final_collections
+  use driver_config_mod,           only: final_config
+  use mpi_mod,                     only: destroy_comm
+  use lfric_da_comm_mod,           only: final_external_comm, &
+                                         final_internal_comm
+  use driver_config_mod,           only: final_config
+  use mpi_mod,                     only: destroy_comm
+  use lfric_da_fake_nl_driver_mod, only: finalise
 
   implicit none
 
   type(jedi_run_type), intent(inout) :: self
+
+  ! Finalise infrastructure
+  call finalise( self%jedi_run_name )
 
   ! Finalise collections
   call final_collections()

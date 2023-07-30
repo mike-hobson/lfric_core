@@ -7,7 +7,7 @@
    <axis_definition>
     <axis id="vert_axis_half_levels" name="half_levels"/>
     <axis id="vert_axis_full_levels" name="full_levels"/>
-    <axis id="monthly_axis" name="monthly_axis" n_glo="12"/>
+    <axis id="monthly_climatology" name="monthly_climatology" n_glo="12"/>
     <axis id="multi_data_axis" name="multi_data_axis" n_glo="5"/>
     <axis id="radiation_levels" name="radiation_levels"/>
    </axis_definition>
@@ -36,11 +36,11 @@
      <grid id="monthly_half_level_face_grid">
        <domain domain_ref="face"/>
        <axis axis_ref="vert_axis_half_levels"/>
-       <axis axis_ref="monthly_axis"/>
+       <axis axis_ref="monthly_climatology"/>
      </grid>
      <grid id="multi_data_monthly_single_level_face_grid">
        <domain domain_ref="face"/>
-       <axis axis_ref="monthly_axis"/>
+       <axis axis_ref="monthly_climatology"/>
        <axis axis_ref="multi_data_axis"/>
      </grid>
     </grid_definition>
@@ -70,12 +70,12 @@
 
       <!-- File definition for output dump fields -->
       <file id="io_dev_time_varying_input" name="io_dev_time_varying_input" mode="read" output_freq="1ts" convention="UGRID" cyclic=".TRUE." enabled=".FALSE.">
-        <field id="W3_2D_field_data" name="W3_2D_field" long_name="Time-varying, single-level field on W3 function space" unit="1" operation="instant" axis_ref="monthly_axis" domain_ref="face" />
+        <field id="W3_2D_field_data" name="W3_2D_field" long_name="Time-varying, single-level field on W3 function space" unit="1" operation="instant" axis_ref="monthly_climatology" domain_ref="face" />
         <field id="multi_data_field_data" name="multi_data_field" long_name="Time-varying, multi-data (ndata=5) field on W3, 2D function space" unit="1" operation="instant" grid_ref="multi_data_monthly_single_level_face_grid" />
         <field id="W3_field_data" name="W3_field" long_name="Time-varying field on W3 function space" unit="1" operation="instant" grid_ref="monthly_half_level_face_grid" />
-        <field id="seconds_field_data" name="W3_2D_field" unit="1" operation="instant" axis_ref="monthly_axis" domain_ref="face" />
-        <field id="days_field_data" name="W3_2D_field" unit="1" operation="instant" axis_ref="monthly_axis" domain_ref="face" />
-        <field id="months_field_data" name="W3_2D_field" unit="1" operation="instant" axis_ref="monthly_axis" domain_ref="face" />
+        <field id="seconds_field_data" name="W3_2D_field" unit="1" operation="instant" axis_ref="monthly_climatology" domain_ref="face" />
+        <field id="days_field_data" name="W3_2D_field" unit="1" operation="instant" axis_ref="monthly_climatology" domain_ref="face" />
+        <field id="months_field_data" name="W3_2D_field" unit="1" operation="instant" axis_ref="monthly_climatology" domain_ref="face" />
       </file>
 
       <!-- File definition for output dump fields -->

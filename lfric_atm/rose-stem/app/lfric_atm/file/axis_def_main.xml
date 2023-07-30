@@ -14,7 +14,7 @@
   <axis id="sea_ice_categories" name="sea_ice_categories" n_glo="1"/>
   <axis id="bl_types" name="bl_types" n_glo="7"/>
   <axis id="entrainment_levels" name="entrainment_levels" n_glo="3"/>
-  <axis id="monthly_axis" name="monthly_axis" n_glo="12"/>
+  <axis id="monthly_climatology" name="monthly_climatology" n_glo="12"/>
   <axis id="lbc_axis" name="lbc_axis" n_glo="7"/>
   <axis id="reynolds_timeseries" name="reynolds_timeseries" n_glo="14001"/>
   <axis id="isccp_ctp_tau_bins" name="isccp_ctp_tau_bins" n_glo="49"/>

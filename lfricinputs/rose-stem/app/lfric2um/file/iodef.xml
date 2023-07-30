@@ -14,7 +14,7 @@
       <axis id="snow_layers_and_tiles" name="snow_layers_and_tiles" n_glo="27"/>
       <axis id="soil_levels" name="soil_levels" n_glo="4"/>
       <axis id="plant_func_types" name="plant_func_types" n_glo="5"/>
-      <axis id="monthly_axis" name="monthly_axis" n_glo="12"/>
+      <axis id="monthly_climatology" name="monthly_climatology" n_glo="12"/>
     </axis_definition>
 
     <grid_definition>
@@ -37,12 +37,12 @@
       <grid id="3D_monthly_grid">
 	<domain domain_ref="face"/>
 	<axis axis_ref="vert_axis_full_levels"/>
-	<axis axis_ref="monthly_axis"/>
+	<axis axis_ref="monthly_climatology"/>
       </grid>
       <grid id="pft_monthly_grid">
 	<domain domain_ref="face"/>
 	<axis axis_ref="plant_func_types"/>
-	<axis axis_ref="monthly_axis"/>
+	<axis axis_ref="monthly_climatology"/>
       </grid>
     </grid_definition>
 

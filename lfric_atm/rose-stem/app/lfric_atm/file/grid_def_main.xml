@@ -34,7 +34,7 @@
   <grid id="3D_monthly_grid">
     <domain domain_ref="face"/>
     <axis axis_ref="vert_axis_full_levels"/>
-    <axis axis_ref="monthly_axis"/>
+    <axis axis_ref="monthly_climatology"/>
   </grid>
   <grid id="full_level_face_time_grid">
     <domain domain_ref="face"/>

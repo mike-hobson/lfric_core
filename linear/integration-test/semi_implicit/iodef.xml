@@ -9,7 +9,7 @@
    <axis_definition>
     <axis id="vert_axis_half_levels" name="half_levels"/>
     <axis id="vert_axis_full_levels" name="full_levels"/>
-    <axis id="monthly_axis" name="monthly_axis" n_glo="12"/>
+    <axis id="monthly_climatology" name="monthly_climatology" n_glo="12"/>
    </axis_definition>
 
 
@@ -33,7 +33,7 @@
     <grid id="3D_monthly_grid">
       <domain domain_ref="face"/>
       <axis axis_ref="vert_axis_half_levels"/>
-      <axis axis_ref="monthly_axis"/>
+      <axis axis_ref="monthly_climatology"/>
     </grid>
    </grid_definition>
 

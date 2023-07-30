@@ -2,7 +2,7 @@
 <grid_definition>
   <grid id="pft_monthly_grid">
     <domain domain_ref="face"/>
-    <axis axis_ref="monthly_axis"/>
+    <axis axis_ref="monthly_climatology"/>
     <axis axis_ref="plant_func_types"/>
   </grid>
 </grid_definition>

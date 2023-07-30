@@ -6,7 +6,7 @@
     <axis_definition>
       <axis id="vert_axis_half_levels" name="half_levels"/>
       <axis id="vert_axis_full_levels" name="full_levels"/>
-      <axis id="monthly_axis" name="monthly_axis" n_glo="12"/>
+      <axis id="monthly_climatology" name="monthly_climatology" n_glo="12"/>
       <axis id="radiation_levels" name="radiation_levels"/>
     </axis_definition>
 
@@ -30,7 +30,7 @@
       <grid id="monthly_half_level_face_grid">
        <domain domain_ref="face"/>
        <axis axis_ref="vert_axis_half_levels"/>
-       <axis axis_ref="monthly_axis"/>
+       <axis axis_ref="monthly_climatology"/>
      </grid>
     </grid_definition>
 
@@ -69,7 +69,7 @@
     <axis_definition>
       <axis id="vert_axis_half_levels" name="half_levels"/>
       <axis id="vert_axis_full_levels" name="full_levels"/>
-      <axis id="monthly_axis" name="monthly_axis" n_glo="12"/>
+      <axis id="monthly_climatology" name="monthly_climatology" n_glo="12"/>
       <axis id="radiation_levels" name="radiation_levels"/>
     </axis_definition>
 
@@ -93,7 +93,7 @@
       <grid id="monthly_half_level_face_grid">
        <domain domain_ref="face"/>
        <axis axis_ref="vert_axis_half_levels"/>
-       <axis axis_ref="monthly_axis"/>
+       <axis axis_ref="monthly_climatology"/>
      </grid>
     </grid_definition>
 
@@ -132,7 +132,7 @@
     <axis_definition>
       <axis id="vert_axis_half_levels" name="half_levels"/>
       <axis id="vert_axis_full_levels" name="full_levels"/>
-      <axis id="monthly_axis" name="monthly_axis" n_glo="12"/>
+      <axis id="monthly_climatology" name="monthly_climatology" n_glo="12"/>
       <axis id="radiation_levels" name="radiation_levels"/>
     </axis_definition>
 
@@ -156,7 +156,7 @@
       <grid id="monthly_half_level_face_grid">
        <domain domain_ref="face"/>
        <axis axis_ref="vert_axis_half_levels"/>
-       <axis axis_ref="monthly_axis"/>
+       <axis axis_ref="monthly_climatology"/>
      </grid>
     </grid_definition>
 
@@ -196,7 +196,7 @@
     <axis id="vert_axis_half_levels" name="half_levels"/>
     <axis id="vert_axis_full_levels" name="full_levels"/>
     <axis id="radiation_levels" name="radiation_levels"/>
-    <axis id="monthly_axis" name="monthly_axis" n_glo="12"/>
+    <axis id="monthly_climatology" name="monthly_climatology" n_glo="12"/>
     <axis id="ls_axis" name="ls_axis" n_glo="6"/>
    </axis_definition>
 
@@ -221,7 +221,7 @@
     <grid id="3D_monthly_grid">
       <domain domain_ref="face"/>
       <axis axis_ref="vert_axis_half_levels"/>
-      <axis axis_ref="monthly_axis"/>
+      <axis axis_ref="monthly_climatology"/>
     </grid>
     <grid id="full_level_face_time_grid">
       <domain domain_ref="face"/>

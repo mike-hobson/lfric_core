@@ -76,7 +76,7 @@ contains
             dim = soil_lev_tile
       case ('land_tile_rad_band')
             dim = n_land_tile*rad_nband
-      case ('monthly_axis')
+      case ('monthly_climatology')
             dim = 12
       case ('boundary_layer_types')
             dim = 7

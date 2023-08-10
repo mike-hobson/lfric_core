@@ -16,15 +16,15 @@ module gungho_driver_mod
   use extrusion_mod,              only : TWOD
   use gungho_diagnostics_driver_mod, &
                                   only : gungho_diagnostics_driver
+  use gungho_init_fields_mod,     only : create_model_data, &
+                                         initialise_model_data, &
+                                         output_model_data, &
+                                         finalise_model_data
   use gungho_modeldb_mod,         only : modeldb_type
   use gungho_model_mod,           only : initialise_infrastructure, &
                                          initialise_model, &
                                          finalise_infrastructure, &
                                          finalise_model
-  use gungho_model_data_mod,      only : create_model_data, &
-                                         initialise_model_data, &
-                                         output_model_data, &
-                                         finalise_model_data
   use gungho_step_mod,            only : gungho_step
   use initial_output_mod,         only : write_initial_output
   use io_config_mod,              only : write_diag, &
@@ -111,12 +111,12 @@ contains
     end if
 
     ! Instantiate the fields stored in model_data
-    call create_model_data( modeldb%model_data, &
-                            mesh, twod_mesh, aerosol_mesh, aerosol_twod_mesh, &
-                            modeldb%clock )
+    call create_model_data( modeldb,         &
+                            mesh, twod_mesh, &
+                            aerosol_mesh, aerosol_twod_mesh )
 
     ! Initialise the fields stored in the model_data
-    call initialise_model_data( modeldb%model_data, modeldb%clock, mesh, twod_mesh )
+    call initialise_model_data( modeldb, mesh, twod_mesh )
 
     ! Initial output
     io_context => get_io_context()
@@ -186,7 +186,7 @@ contains
     if ( lbc_option == lbc_option_gungho_file .or. &
          lbc_option == lbc_option_um2lfric_file) then
 
-      call update_lbcs_file_alg( modeldb%model_data%lbc_times_list, &
+      call update_lbcs_file_alg( modeldb%model_axes%lbc_times_list, &
                                  modeldb%clock, modeldb%model_data%lbc_fields )
     endif
 
@@ -214,11 +214,11 @@ contains
     ! first thing that happens in a timestep is that the clock ticks to the
     ! end of timestep date.
     if ( ancil_option == ancil_option_updating ) then
-      call update_variable_fields( modeldb%model_data%ancil_times_list, &
+      call update_variable_fields( modeldb%model_axes%ancil_times_list, &
                                    modeldb%clock,                       &
                                    modeldb%model_data%ancil_fields,     &
                                    regrid_operation )
-      call update_ancils_alg( modeldb%model_data%ancil_times_list, &
+      call update_ancils_alg( modeldb%model_axes%ancil_times_list, &
                               modeldb%clock,                       &
                               modeldb%model_data%ancil_fields,     &
                               modeldb%model_data%surface_fields)

@@ -17,7 +17,7 @@ module tl_test_driver_mod
                                          initialise_model,          &
                                          finalise_infrastructure,   &
                                          finalise_model
-  use gungho_model_data_mod,      only : create_model_data,     &
+  use gungho_init_fields_mod,     only : create_model_data,     &
                                          initialise_model_data, &
                                          finalise_model_data
   use gungho_modeldb_mod,         only : modeldb_type
@@ -102,32 +102,25 @@ contains
     aerosol_twod_mesh => twod_mesh
 
     ! Instantiate the fields stored in model_data
-    call create_model_data( modeldb%model_data, &
-                            mesh,               &
-                            twod_mesh,          &
-                            aerosol_mesh,       &
-                            aerosol_twod_mesh,  &
-                            modeldb%clock )
+    call create_model_data( modeldb,      &
+                            mesh,         &
+                            twod_mesh,    &
+                            aerosol_mesh, &
+                            aerosol_twod_mesh )
 
     ! Instantiate the linearisation state
-    call linear_create_ls( modeldb%model_data, &
-                           mesh,               &
-                           twod_mesh )
+    call linear_create_ls( modeldb, mesh )
 
     ! Initialise the fields stored in the model_data prognostics. This needs
     ! to be done before initialise_model.
-    call initialise_model_data( modeldb%model_data, modeldb%clock, &
-                                mesh, twod_mesh )
+    call initialise_model_data( modeldb, mesh, twod_mesh )
 
     ! Model configuration initialisation
     call initialise_model( mesh,  &
                            modeldb%model_data )
 
     ! Initialise the linearisation state
-    call linear_init_ls( mesh,      &
-                         twod_mesh, &
-                         modeldb,   &
-                         modeldb%clock )
+    call linear_init_ls( mesh, twod_mesh, modeldb )
 
   end subroutine initialise
 

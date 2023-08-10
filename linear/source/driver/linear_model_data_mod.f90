@@ -40,7 +40,6 @@ module linear_model_data_mod
                                              LOG_LEVEL_INFO,    &
                                              LOG_LEVEL_ERROR
   use mesh_mod,                       only : mesh_type
-  use model_clock_mod,                only : model_clock_type
   use moist_dyn_mod,                  only : num_moist_factors
   use moist_dyn_factors_alg_mod,      only : moist_dyn_factors_alg
   use mr_indices_mod,                 only : nummr, &
@@ -60,18 +59,17 @@ contains
   !!          analytical definition. But this could be extended to include
   !!          the preparation for reading ls fields from a file,
   !!          with a time axis.
-  !> @param[inout] model_data The working data set for a model run
+  !> @param[inout] modeldb   The working data set for a model run
   !> @param[in]    mesh      The current 3d mesh
   !> @param[in]    twod_mesh The current 2d mesh
-  subroutine linear_create_ls( model_data, mesh, &
-                               twod_mesh )
+  !>
+  subroutine linear_create_ls( modeldb, mesh )
 
     implicit none
 
-    type( model_data_type ), target, intent(inout) :: model_data
+    type( modeldb_type ), target, intent(inout) :: modeldb
 
     type( mesh_type ), pointer, intent(in) :: mesh
-    type( mesh_type ), pointer, intent(in) :: twod_mesh
 
     type( field_collection_type ), pointer :: depository => null()
     type( field_collection_type ), pointer :: prognostics => null()
@@ -90,12 +88,12 @@ contains
     logical(l_def),   parameter :: interp_flag=.true.
     character(len=*), parameter :: axis_id="ls_axis"
 
-    depository => model_data%depository
-    prognostics => model_data%prognostic_fields
-    ls_times_list => model_data%ls_times_list
-    ls_fields => model_data%ls_fields
-    ls_mr => model_data%ls_mr
-    ls_moist_dyn => model_data%ls_moist_dyn
+    depository => modeldb%model_data%depository
+    prognostics => modeldb%model_data%prognostic_fields
+    ls_times_list => modeldb%model_axes%ls_times_list
+    ls_fields => modeldb%model_data%ls_fields
+    ls_mr => modeldb%model_data%ls_mr
+    ls_moist_dyn => modeldb%model_data%ls_moist_dyn
 
     write(log_scratch_space,'(A,A)') "Create ls fields: "// &
           "Setting up ls field collection"
@@ -215,7 +213,7 @@ contains
   !> @param[inout] modeldb     The working data set for a model run
   !> @param[in]    model_clock Time within the model.
   !>
-  subroutine linear_init_ls( mesh, twod_mesh, modeldb, model_clock )
+  subroutine linear_init_ls( mesh, twod_mesh, modeldb )
 
     use gungho_step_mod,                only : gungho_step
 
@@ -225,7 +223,6 @@ contains
     type( mesh_type ), pointer, intent(in) :: twod_mesh
 
     type( modeldb_type ), target, intent(inout) :: modeldb
-    class(model_clock_type),         intent(in)    :: model_clock
 
     integer(i_def)              :: i
     type( field_type ), pointer :: ls_field => null()
@@ -253,7 +250,7 @@ contains
               call gungho_step( mesh,      &
                                 twod_mesh, &
                                 modeldb,   &
-                                model_clock )
+                                modeldb%clock )
             end do
 
             ! Copy the prognostic fields to the LS and then zero the prognostics.
@@ -274,8 +271,8 @@ contains
 
       case( ls_option_file )
 
-        call init_ls_file_alg( modeldb%model_data%ls_times_list, &
-                               model_clock,                      &
+        call init_ls_file_alg( modeldb%model_axes%ls_times_list, &
+                               modeldb%clock,                    &
                                modeldb%model_data%ls_fields,     &
                                modeldb%model_data%ls_mr,         &
                                modeldb%model_data%ls_moist_dyn )

@@ -26,13 +26,11 @@ program da_dev
   use driver_time_mod,        only: init_time
   use constants_mod,          only: i_native
   use log_mod,                only: log_event, log_level_trace
-  use model_clock_mod,        only: model_clock_type
   use mpi_mod,                only: global_mpi
 
   implicit none
 
-  type(modeldb_type)                  :: modeldb
-  type(model_clock_type), allocatable :: model_clock
+  type(modeldb_type) :: modeldb
 
   character(*), parameter :: program_name = "da_dev"
 
@@ -53,17 +51,16 @@ program da_dev
   call modeldb%model_data%diagnostic_fields%initialise(name="diagnostics", table_len=100)
 
   call log_event( 'Initialising ' // program_name // ' ...', log_level_trace )
-  call init_time( model_clock )
-  call initialise( program_name, modeldb, model_clock)
+  call init_time( modeldb%clock )
+  call initialise( program_name, modeldb )
 
   call log_event( 'Running ' // program_name // ' ...', log_level_trace )
-  do while ( model_clock%tick() )
-    call step( modeldb, model_clock )
+  do while ( modeldb%clock%tick() )
+    call step( modeldb, modeldb%clock )
   end do
 
   call log_event( 'Finalising ' // program_name // ' ...', log_level_trace )
-  call finalise( program_name, modeldb, model_clock )
-  deallocate( model_clock )
+  call finalise( program_name, modeldb, modeldb%clock )
 
   call final_collections()
   call final_logger( program_name )

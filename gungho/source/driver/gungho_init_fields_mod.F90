@@ -3,20 +3,20 @@
 ! The file LICENCE, distributed with this code, contains details of the terms
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
-!> @brief Container for Gung Ho model run working data set inclduing methods
-!> to initialise, copy and finalise the data set
+!> @brief Initialise, copy and finalise the data set.
 !>
-!> This module provides a type to hold all the model fields and methods to
-!> initialise (create and read), copy and finalise (write and destroy) the
-!> data contained within the type.
+!> Methods to initialise (create and read), copy and finalise (write and
+!> destroy) the working data set.
 !>
-module gungho_model_data_mod
+module gungho_init_fields_mod
 
   use mr_indices_mod,                     only : nummr
   use moist_dyn_mod,                      only : num_moist_factors
   use field_mod,                          only : field_type
   use field_parent_mod,                   only : write_interface
   use field_collection_mod,               only : field_collection_type
+  use gungho_modeldb_mod,                 only : modeldb_type
+  use gungho_model_data_mod,              only : model_data_type
   use constants_mod,                      only : i_def, l_def, r_def
   use log_mod,                            only : log_event,       &
                                                  LOG_LEVEL_INFO,  &
@@ -97,99 +97,6 @@ module gungho_model_data_mod
 
   private
 
-  !> Holds the working data set for a model run and other working state.
-  !>
-  type :: model_data_type
-
-    private
-
-    !> Stores all the fields used by the model - the remaining collections store
-    !> pointers to the data in the depository.
-    type( field_collection_type ), public :: depository
-
-    !> @name Fields needed to time-step the model.
-    !> @{
-
-    !> All the prognostic fields (except for field arrays: auxiliary prognostic)
-    type( field_collection_type ), public   :: prognostic_fields
-    !> All the diagnostic fields
-    type( field_collection_type ), public   :: diagnostic_fields
-    !> Fields that should be advected
-    type( field_collection_type ), public   :: adv_fields_last_outer
-    type( field_collection_type ), public   :: adv_fields_all_outer
-    !> FD fields derived from FE fields for use in physics time-stepping schemes
-    type( field_collection_type ), public   :: derived_fields
-    !> LBC fields - lateral boundary conditions to run a limited area model
-    type( field_collection_type ), public   :: lbc_fields
-    !> Linked list of time axis objects used to update time-varying lbcs
-    type( linked_list_type ),      public   :: lbc_times_list
-    !> Fields owned by the radiation scheme
-    type( field_collection_type ), public   :: radiation_fields
-    !> Fields owned by the microphysics scheme
-    type( field_collection_type ), public   :: microphysics_fields
-    !> Fields owned by the electric scheme
-    type( field_collection_type ), public   :: electric_fields
-    !> Fields owned by the orographic drag schemes
-    type( field_collection_type ), public   :: orography_fields
-    !> Fields owned by the turbulence scheme
-    type( field_collection_type ), public   :: turbulence_fields
-    !> Fields owned by the convection schemes
-    type( field_collection_type ), public   :: convection_fields
-    !> Fields owned by the cloud schemes
-    type( field_collection_type ), public   :: cloud_fields
-    !> Fields owned by the surface exchange scheme
-    type( field_collection_type ), public   :: surface_fields
-    !> Fields owned by the soil hydrology scheme
-    type( field_collection_type ), public   :: soil_fields
-    !> Fields owned by the snow scheme
-    type( field_collection_type ), public   :: snow_fields
-    !> Fields owned by the chemistry schemes
-    type( field_collection_type ), public   :: chemistry_fields
-    !> Fields owned by the aerosol schemes
-    type( field_collection_type ), public   :: aerosol_fields
-    !> Fields owned by the stochastic physics schemes
-    type( field_collection_type ), public   :: stph_fields
-    !> Array of fields containing the moisture mixing ratios
-    !>  (auxiliary prognostic)
-    type( field_type ), allocatable, public :: mr(:)
-    !> Array of fields containing the moist dynamics (auxiliary prognostic)
-    type( field_type ), allocatable, public :: moist_dyn(:)
-    !> Array of fields containing coupling data
-    type( field_collection_type ), public :: cpl_snd
-    type( field_collection_type ), public :: cpl_rcv
-    !> @}
-
-    !> FD fields used to read initial conditions from LFRic-Input files
-    type( field_collection_type ), public   :: fd_fields
-
-    !> Fields used to store data read in from ancillary files
-    type( field_collection_type ), public   :: ancil_fields
-    !> Linked list of time axis objects used to update time-varying ancils
-    type( linked_list_type ),      public   :: ancil_times_list
-
-    !> Fields for the tangent linear linearisation state
-    type( field_collection_type ), public   :: ls_fields
-    !> Array of linearisation fields containing the moisture mixing ratios
-    type( field_type ), allocatable, public :: ls_mr(:)
-    !> Array of linearisation fields containing the moist dynamics
-    type( field_type ), allocatable, public :: ls_moist_dyn(:)
-    !> Linked list of time axis objects used to update time-varying
-    !> linearisation state
-    type( linked_list_type ),      public   :: ls_times_list
-
-    !> Rate of temperature adjustment for energy correction
-    real( kind=r_def ), public :: temperature_correction_rate
-    !> Total mass of dry atmosphere used for energy correction
-    real( kind=r_def ), public :: total_dry_mass
-    !> Total energy of moist atmosphere for calculating energy correction
-    real( kind=r_def ), public :: total_energy
-    !> Total energy of moist atmosphere at previous energy correction step
-    real( kind=r_def ), public :: total_energy_previous
-
-    contains
-
-  end type model_data_type
-
   ! Set these to select how to initialize model prognostic fields
   integer(i_def) :: prognostic_init_choice, ancil_choice
 
@@ -199,29 +106,27 @@ module gungho_model_data_mod
 contains
 
   !> @brief Create the fields contained in model_data
-  !> @param[inout] model_data The working data set for a model run
+  !> @param[inout] modeldb   The working data set for a model run
   !> @param[in]    mesh      The current 3d mesh
   !> @param[in]    twod_mesh The current 2d mesh
   !> @param[in]    aerosol_mesh      Aerosol 3d mesh
   !> @param[in]    aerosol_twod_mesh Aerosol 2d mesh
-  !> @param[in]    model_cock        The model clock
-subroutine create_model_data( model_data,         &
-                              mesh,               &
-                              twod_mesh,          &
-                              aerosol_mesh,       &
-                              aerosol_twod_mesh,  &
-                              model_clock         )
+subroutine create_model_data( modeldb,      &
+                              mesh,         &
+                              twod_mesh,    &
+                              aerosol_mesh, &
+                              aerosol_twod_mesh )
+
 
     implicit none
 
-    type( model_data_type ), intent(inout)       :: model_data
-    type( mesh_type ),       intent(in), pointer :: mesh
-    type( mesh_type ),       intent(in), pointer :: twod_mesh
-    type( mesh_type ),       intent(in), pointer :: aerosol_mesh
-    type( mesh_type ),       intent(in), pointer :: aerosol_twod_mesh
-    type(model_clock_type),  intent(in)          :: model_clock
+    type( modeldb_type ), intent(inout)       :: modeldb
+    type( mesh_type ),    intent(in), pointer :: mesh
+    type( mesh_type ),    intent(in), pointer :: twod_mesh
+    type( mesh_type ),    intent(in), pointer :: aerosol_mesh
+    type( mesh_type ),    intent(in), pointer :: aerosol_twod_mesh
 
-    type( field_mapper_type ), target :: field_mapper
+    type(field_mapper_type), target :: field_mapper
 
     !-------------------------------------------------------------------------
     ! Select how to initialize model prognostic fields
@@ -248,84 +153,89 @@ subroutine create_model_data( model_data,         &
     !-------------------------------------------------------------------------
 
     ! Field bundles - allocate the fields so thay can be cleared
-    allocate(model_data%moist_dyn(num_moist_factors))
-    allocate(model_data%mr(nummr))
-    allocate(model_data%ls_moist_dyn(num_moist_factors))
-    allocate(model_data%ls_mr(nummr))
+    allocate(modeldb%model_data%moist_dyn(num_moist_factors))
+    allocate(modeldb%model_data%mr(nummr))
+    allocate(modeldb%model_data%ls_moist_dyn(num_moist_factors))
+    allocate(modeldb%model_data%ls_mr(nummr))
 
     ! Create gungho prognostics and auxilliary (diagnostic) fields
     call create_gungho_prognostics( mesh,                             &
-                                    model_data%depository,            &
-                                    model_data%prognostic_fields,     &
-                                    model_data%diagnostic_fields,     &
-                                    model_data%adv_fields_all_outer,  &
-                                    model_data%adv_fields_last_outer, &
-                                    model_data%mr,                    &
-                                    model_data%moist_dyn )
+                                    modeldb%model_data%depository,            &
+                                    modeldb%model_data%prognostic_fields,     &
+                                    modeldb%model_data%diagnostic_fields,     &
+                                    modeldb%model_data%adv_fields_all_outer,  &
+                                    modeldb%model_data%adv_fields_last_outer, &
+                                    modeldb%model_data%mr,                    &
+                                    modeldb%model_data%moist_dyn )
 
-    if (limited_area) call create_lbc_fields( mesh,                         &
-                                              model_data%depository,        &
-                                              model_data%prognostic_fields, &
-                                              model_data%lbc_fields,        &
-                                              model_data%lbc_times_list )
+    if (limited_area) call create_lbc_fields( &
+      mesh,                                   &
+      modeldb%model_data%depository,          &
+      modeldb%model_data%prognostic_fields,   &
+      modeldb%model_data%lbc_fields,          &
+      modeldb%model_axes%lbc_times_list       &
+    )
 
     ! Create prognostics used by physics
     if (use_physics) then
-      call field_mapper%init( model_data%depository,            &
-                              model_data%prognostic_fields,     &
-                              model_data%adv_fields_all_outer,  &
-                              model_data%adv_fields_last_outer, &
-                              model_data%derived_fields,        &
-                              model_data%radiation_fields,      &
-                              model_data%microphysics_fields,   &
-                              model_data%electric_fields,       &
-                              model_data%orography_fields,      &
-                              model_data%turbulence_fields,     &
-                              model_data%convection_fields,     &
-                              model_data%cloud_fields,          &
-                              model_data%surface_fields,        &
-                              model_data%soil_fields,           &
-                              model_data%snow_fields,           &
-                              model_data%chemistry_fields,      &
-                              model_data%aerosol_fields,        &
-                              model_data%stph_fields )
-      call create_physics_prognostics( mesh, twod_mesh, field_mapper, model_clock )
+      call field_mapper%init( modeldb%model_data%depository,            &
+                              modeldb%model_data%prognostic_fields,     &
+                              modeldb%model_data%adv_fields_all_outer,  &
+                              modeldb%model_data%adv_fields_last_outer, &
+                              modeldb%model_data%derived_fields,        &
+                              modeldb%model_data%radiation_fields,      &
+                              modeldb%model_data%microphysics_fields,   &
+                              modeldb%model_data%electric_fields,       &
+                              modeldb%model_data%orography_fields,      &
+                              modeldb%model_data%turbulence_fields,     &
+                              modeldb%model_data%convection_fields,     &
+                              modeldb%model_data%cloud_fields,          &
+                              modeldb%model_data%surface_fields,        &
+                              modeldb%model_data%soil_fields,           &
+                              modeldb%model_data%snow_fields,           &
+                              modeldb%model_data%chemistry_fields,      &
+                              modeldb%model_data%aerosol_fields,        &
+                              modeldb%model_data%stph_fields )
+      call create_physics_prognostics( mesh, twod_mesh, field_mapper, &
+                                       modeldb%clock )
 
 #ifdef UM_PHYSICS
       ! Create FD prognostic fields
       select case ( prognostic_init_choice )
         case ( init_option_fd_start_dump )
           call create_fd_prognostics(mesh, twod_mesh,       &
-                                     model_data%fd_fields,  &
-                                     model_data%depository)
+                                     modeldb%model_data%fd_fields,  &
+                                     modeldb%model_data%depository)
       end select
 
       ! Create and populate collection of fields to be read from ancillary files
       select case ( ancil_choice )
         case ( ancil_option_fixed, ancil_option_updating )
-          call create_fd_ancils( model_data%depository,   &
-                                 model_data%ancil_fields, &
-                                 mesh, twod_mesh ,        &
-                                 aerosol_mesh,            &
-                                 aerosol_twod_mesh,       &
-                                 model_data%ancil_times_list )
+          call create_fd_ancils( modeldb%model_data%depository,   &
+                                 modeldb%model_data%ancil_fields, &
+                                 mesh, twod_mesh ,                &
+                                 aerosol_mesh,                    &
+                                 aerosol_twod_mesh,               &
+                                 modeldb%model_axes%ancil_times_list )
       end select
 #endif
     end if
 
   end subroutine create_model_data
 
-  !-------------------------------------------------------------------------------
-  !> @brief Initialises the working data set dependent of namelist configuration
-  !> @param [inout] model_data The working data set for a model run
-  subroutine initialise_model_data( model_data, model_clock, mesh, twod_mesh )
+  !------------------------------------------------------------------------------
+  !> @brief Initialises the working data set dependent of namelist
+  !>        configuration.
+  !>
+  !> @param [inout] modeldb The working data set for a model run.
+  !>
+  subroutine initialise_model_data( modeldb, mesh, twod_mesh )
 
     implicit none
 
-    type( model_data_type ), intent(inout) :: model_data
-    class(model_clock_type), intent(in)    :: model_clock
-    type( mesh_type ), intent(in), pointer :: mesh
-    type( mesh_type ), intent(in), pointer :: twod_mesh
+    type(modeldb_type), intent(inout) :: modeldb
+    type( mesh_type ),  intent(in), pointer :: mesh
+    type( mesh_type ),  intent(in), pointer :: twod_mesh
 
     type( field_type ), pointer :: theta => null()
     type( field_type ), pointer :: rho   => null()
@@ -343,19 +253,19 @@ subroutine create_model_data( model_data,         &
     ! Initialise all the physics fields here. We'll then re initialise
     ! them below if need be
     if (use_physics) then
-          call init_physics_prognostics_alg( model_data%radiation_fields,    &
-                                             model_data%microphysics_fields, &
-                                             model_data%electric_fields,     &
-                                             model_data%orography_fields,    &
-                                             model_data%turbulence_fields,   &
-                                             model_data%convection_fields,   &
-                                             model_data%cloud_fields,        &
-                                             model_data%surface_fields,      &
-                                             model_data%soil_fields,         &
-                                             model_data%snow_fields,         &
-                                             model_data%chemistry_fields,    &
-                                             model_data%aerosol_fields,      &
-                                             model_data%stph_fields)
+          call init_physics_prognostics_alg( modeldb%model_data%radiation_fields,    &
+                                             modeldb%model_data%microphysics_fields, &
+                                             modeldb%model_data%electric_fields,     &
+                                             modeldb%model_data%orography_fields,    &
+                                             modeldb%model_data%turbulence_fields,   &
+                                             modeldb%model_data%convection_fields,   &
+                                             modeldb%model_data%cloud_fields,        &
+                                             modeldb%model_data%surface_fields,      &
+                                             modeldb%model_data%soil_fields,         &
+                                             modeldb%model_data%snow_fields,         &
+                                             modeldb%model_data%chemistry_fields,    &
+                                             modeldb%model_data%aerosol_fields,      &
+                                             modeldb%model_data%stph_fields)
 
     end if
 
@@ -367,22 +277,22 @@ subroutine create_model_data( model_data,         &
         ! Initialise prognostics analytically according to
         ! namelist options
 
-        call init_gungho_prognostics( model_data%prognostic_fields, &
-                                      model_data%mr,                &
-                                      model_data%moist_dyn,         &
-                                      model_data%adv_fields_last_outer )
+        call init_gungho_prognostics( modeldb%model_data%prognostic_fields, &
+                                      modeldb%model_data%mr,                &
+                                      modeldb%model_data%moist_dyn,         &
+                                      modeldb%model_data%adv_fields_last_outer )
 
       case ( init_option_checkpoint_dump )
 
         ! Initialize prognostics using a checkpoint file
         ! from a previous run
 
-        call read_checkpoint( model_data%prognostic_fields, &
-                              model_clock%get_first_step() - 1,   &
+        call read_checkpoint( modeldb%model_data%prognostic_fields, &
+                              modeldb%clock%get_first_step() - 1,   &
                               checkpoint_stem_name )
 
         ! Update factors for moist dynamics
-        call moist_dyn_factors_alg( model_data%moist_dyn, model_data%mr )
+        call moist_dyn_factors_alg( modeldb%model_data%moist_dyn, modeldb%model_data%mr )
 
       case ( init_option_fd_start_dump )
 
@@ -391,13 +301,13 @@ subroutine create_model_data( model_data,         &
           ! Initialise FD prognostic fields from a UM2LFRic dump
 
           ! Read in from a UM2LFRic dump file
-          call init_fd_prognostics_dump( model_data%fd_fields )
+          call init_fd_prognostics_dump( modeldb%model_data%fd_fields )
 
           ! Populate prognostics from input finite difference fields
-          call map_fd_to_prognostics( model_data%prognostic_fields,          &
-                                      model_data%mr,                         &
-                                      model_data%moist_dyn,                  &
-                                      model_data%fd_fields )
+          call map_fd_to_prognostics( modeldb%model_data%prognostic_fields,          &
+                                      modeldb%model_data%mr,                         &
+                                      modeldb%model_data%moist_dyn,                  &
+                                      modeldb%model_data%fd_fields )
 
         else
           call log_event("Gungho: Prognostic initialisation from an FD dump not valid "// &
@@ -419,25 +329,25 @@ subroutine create_model_data( model_data,         &
 
     ! initialise coupling fields
 #ifdef COUPLED
-    if(l_esm_couple) call cpl_init_fields(model_data%cpl_rcv)
+    if(l_esm_couple) call cpl_init_fields(modeldb%model_data%cpl_rcv)
 #endif
 
     if (limited_area) then
 
       select case( lbc_option )
         case ( lbc_option_analytic )
-          call init_lbcs_analytic_alg( model_data%prognostic_fields, &
-                                       model_data%lbc_fields )
+          call init_lbcs_analytic_alg( modeldb%model_data%prognostic_fields, &
+                                       modeldb%model_data%lbc_fields )
 
         case ( lbc_option_gungho_file )
-          call init_lbcs_file_alg( model_data%lbc_times_list, &
-                                   model_clock,                     &
-                                   model_data%lbc_fields )
+          call init_lbcs_file_alg( modeldb%model_axes%lbc_times_list, &
+                                   modeldb%clock,                     &
+                                   modeldb%model_data%lbc_fields )
 
         case ( lbc_option_um2lfric_file )
-          call init_lbcs_file_alg( model_data%lbc_times_list, &
-                                   model_clock,                     &
-                                   model_data%lbc_fields )
+          call init_lbcs_file_alg( modeldb%model_axes%lbc_times_list, &
+                                   modeldb%clock,                     &
+                                   modeldb%model_data%lbc_fields )
 
         case ( lbc_option_none )
           call log_event( "Gungho: No LBC option specified, yet limited area", LOG_LEVEL_ERROR )
@@ -446,16 +356,16 @@ subroutine create_model_data( model_data,         &
     end if
 
     ! Set a default value for temperature_correction_rate for all runs
-    model_data%temperature_correction_rate = 0.0_r_def
+    modeldb%model_data%temperature_correction_rate = 0.0_r_def
 
     ! Assuming this is only relevant for physics runs at the moment
     if (use_physics) then
 
       ! Initial derived fields
-      call model_data%prognostic_fields%get_field('u',u)
-      call model_data%prognostic_fields%get_field('theta',theta)
-      call model_data%prognostic_fields%get_field('exner',exner)
-      call model_data%prognostic_fields%get_field('rho',rho)
+      call modeldb%model_data%prognostic_fields%get_field('u',u)
+      call modeldb%model_data%prognostic_fields%get_field('theta',theta)
+      call modeldb%model_data%prognostic_fields%get_field('exner',exner)
+      call modeldb%model_data%prognostic_fields%get_field('rho',rho)
 
       if ( encorr_usage /= encorr_usage_none ) then
         if ( geometry /= geometry_spherical ) then
@@ -463,16 +373,16 @@ subroutine create_model_data( model_data,         &
           'Energy correction valid for spherical geometry only.'
           call log_event(log_scratch_space, log_level_error)
         end if
-        call model_data%derived_fields%get_field('temp_correction_field',temp_correction_field)
-        call model_data%derived_fields%get_field('accumulated_fluxes',accumulated_fluxes)
+        call modeldb%model_data%derived_fields%get_field('temp_correction_field',temp_correction_field)
+        call modeldb%model_data%derived_fields%get_field('accumulated_fluxes',accumulated_fluxes)
       end if
 
-      if (model_clock%is_spinning_up()) then
+      if (modeldb%clock%is_spinning_up()) then
         call set_any_dof_alg(u, T, 0.0_r_def)
       end if
       call map_physics_fields_alg(u, exner, rho, theta,     &
-                                  model_data%moist_dyn,     &
-                                  model_data%derived_fields)
+                                  modeldb%model_data%moist_dyn,     &
+                                  modeldb%model_data%derived_fields)
 
       ! Initialise ancillary fields
       select case ( ancil_choice )
@@ -482,52 +392,53 @@ subroutine create_model_data( model_data,         &
         case ( ancil_option_start_dump )
           call log_event( "Gungho: Ancillaries are being read from start dump ", LOG_LEVEL_INFO )
           ! Update the tiled surface temperature with the calculated tstar
-          call update_tstar_alg(model_data%surface_fields, &
-                                model_data%fd_fields, put_field=.true. )
+          call update_tstar_alg(modeldb%model_data%surface_fields, &
+                                modeldb%model_data%fd_fields, put_field=.true. )
         case ( ancil_option_fixed, ancil_option_updating )
-          call init_variable_fields( model_data%ancil_times_list,          &
-                                     model_clock, model_data%ancil_fields, &
+          call init_variable_fields( modeldb%model_axes%ancil_times_list, &
+                                     modeldb%clock,                       &
+                                     modeldb%model_data%ancil_fields,     &
                                      regrid_operation )
           if (.not. checkpoint_read) then
             ! These parts only need to happen on a new run
             call log_event( "Gungho: Reading ancillaries from file ", LOG_LEVEL_INFO )
-            call read_state( model_data%ancil_fields )
-            call process_inputs_alg( model_data%ancil_fields,   &
-                                     model_data%fd_fields,      &
-                                     model_data%surface_fields, &
-                                     model_data%soil_fields,    &
-                                     model_data%snow_fields,    &
-                                     model_data%radiation_fields )
+            call read_state( modeldb%model_data%ancil_fields )
+            call process_inputs_alg( modeldb%model_data%ancil_fields,   &
+                                     modeldb%model_data%fd_fields,      &
+                                     modeldb%model_data%surface_fields, &
+                                     modeldb%model_data%soil_fields,    &
+                                     modeldb%model_data%snow_fields,    &
+                                     modeldb%model_data%radiation_fields )
 
             ! Free up any prognostics not required
-            call model_data%depository%remove_field("can_water_in")
-            call model_data%fd_fields%remove_field("can_water_in")
-            call model_data%depository%remove_field("land_tile_temp")
-            call model_data%fd_fields%remove_field("land_tile_temp")
-            call model_data%depository%remove_field("tstar_sea_ice")
-            call model_data%fd_fields%remove_field("tstar_sea_ice")
-            call model_data%depository%remove_field("tile_snow_mass_in")
-            call model_data%fd_fields%remove_field("tile_snow_mass_in")
-            call model_data%depository%remove_field("n_snow_layers_in")
-            call model_data%fd_fields%remove_field("n_snow_layers_in")
-            call model_data%depository%remove_field("snow_depth_in")
-            call model_data%fd_fields%remove_field("snow_depth_in")
-            call model_data%depository%remove_field("tile_snow_rgrain_in")
-            call model_data%fd_fields%remove_field("tile_snow_rgrain_in")
-            call model_data%depository%remove_field("snow_under_canopy_in")
-            call model_data%fd_fields%remove_field("snow_under_canopy_in")
-            call model_data%depository%remove_field("snowpack_density_in")
-            call model_data%fd_fields%remove_field("snowpack_density_in")
+            call modeldb%model_data%depository%remove_field("can_water_in")
+            call modeldb%model_data%fd_fields%remove_field("can_water_in")
+            call modeldb%model_data%depository%remove_field("land_tile_temp")
+            call modeldb%model_data%fd_fields%remove_field("land_tile_temp")
+            call modeldb%model_data%depository%remove_field("tstar_sea_ice")
+            call modeldb%model_data%fd_fields%remove_field("tstar_sea_ice")
+            call modeldb%model_data%depository%remove_field("tile_snow_mass_in")
+            call modeldb%model_data%fd_fields%remove_field("tile_snow_mass_in")
+            call modeldb%model_data%depository%remove_field("n_snow_layers_in")
+            call modeldb%model_data%fd_fields%remove_field("n_snow_layers_in")
+            call modeldb%model_data%depository%remove_field("snow_depth_in")
+            call modeldb%model_data%fd_fields%remove_field("snow_depth_in")
+            call modeldb%model_data%depository%remove_field("tile_snow_rgrain_in")
+            call modeldb%model_data%fd_fields%remove_field("tile_snow_rgrain_in")
+            call modeldb%model_data%depository%remove_field("snow_under_canopy_in")
+            call modeldb%model_data%fd_fields%remove_field("snow_under_canopy_in")
+            call modeldb%model_data%depository%remove_field("snowpack_density_in")
+            call modeldb%model_data%fd_fields%remove_field("snowpack_density_in")
 
           end if
 
           ! Free up any ancils which are no longer needed
-          call model_data%depository%remove_field("land_area_fraction")
-          call model_data%ancil_fields%remove_field("land_area_fraction")
-          call model_data%depository%remove_field("land_tile_fraction")
-          call model_data%ancil_fields%remove_field("land_tile_fraction")
-          call model_data%depository%remove_field("stdev_topog_index")
-          call model_data%ancil_fields%remove_field("stdev_topog_index")
+          call modeldb%model_data%depository%remove_field("land_area_fraction")
+          call modeldb%model_data%ancil_fields%remove_field("land_area_fraction")
+          call modeldb%model_data%depository%remove_field("land_tile_fraction")
+          call modeldb%model_data%ancil_fields%remove_field("land_tile_fraction")
+          call modeldb%model_data%depository%remove_field("stdev_topog_index")
+          call modeldb%model_data%ancil_fields%remove_field("stdev_topog_index")
 #endif
         case default
           ! No valid ancil option selected
@@ -537,11 +448,11 @@ subroutine create_model_data( model_data,         &
 
       ! Initialise energy correction
       if ( encorr_usage /= encorr_usage_none ) then
-        call compute_total_mass_alg( model_data%total_dry_mass, rho, mesh )
+        call compute_total_mass_alg( modeldb%model_data%total_dry_mass, rho, mesh )
 
-        call compute_total_energy_alg( model_data%total_energy_previous,                &
-                                       model_data%derived_fields, u, theta, exner, rho, &
-                                       model_data%mr,                                   &
+        call compute_total_energy_alg( modeldb%model_data%total_energy_previous,                &
+                                       modeldb%model_data%derived_fields, u, theta, exner, rho, &
+                                       modeldb%model_data%mr,                                   &
                                        mesh, twod_mesh )
 
         ! Initialise flux sum to zero
@@ -550,13 +461,13 @@ subroutine create_model_data( model_data,         &
         if ( checkpoint_read ) then
           ! Read scalar temperature_correction_rate from checkponted field
           ! temp_correction_field
-          call field_to_scalar_alg(model_data%temperature_correction_rate, &
+          call field_to_scalar_alg(modeldb%model_data%temperature_correction_rate, &
                                    temp_correction_field)
           write(log_scratch_space, '(''restart_temperature_correction_rate = '', e30.22)') &
-               model_data%temperature_correction_rate
+               modeldb%model_data%temperature_correction_rate
           call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
         else
-          model_data%temperature_correction_rate = 0.0_r_def
+          modeldb%model_data%temperature_correction_rate = 0.0_r_def
           call scalar_to_field_alg(0.0_r_def, temp_correction_field)
         end if
 
@@ -655,4 +566,4 @@ subroutine create_model_data( model_data,         &
 
   end subroutine finalise_model_data
 
-end module gungho_model_data_mod
+end module gungho_init_fields_mod

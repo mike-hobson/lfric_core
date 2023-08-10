@@ -34,7 +34,7 @@ module multires_coupling_driver_mod
                                                        finalise_model,            &
                                                        initialise_infrastructure, &
                                                        finalise_infrastructure
-  use gungho_model_data_mod,                    only : create_model_data,     &
+  use gungho_init_fields_mod,                   only : create_model_data,     &
                                                        finalise_model_data,   &
                                                        initialise_model_data
   use multires_coupling_config_mod, &
@@ -115,28 +115,24 @@ contains
     call log_event( 'Creating and Initialising Model Data...', LOG_LEVEL_ALWAYS )
 
     ! Instantiate the fields stored in model_data
-    call create_model_data( dynamics_mesh_modeldb%model_data, &
-                            dynamics_mesh,                    &
-                            dynamics_2D_mesh,                 &
-                            aerosol_mesh,                     &
-                            aerosol_2D_mesh,                  &
-                            dynamics_mesh_modeldb%clock )
-    call create_model_data( physics_mesh_modeldb%model_data, &
-                            physics_mesh,                    &
-                            physics_2D_mesh,                 &
-                            aerosol_mesh,                    &
-                            aerosol_2D_mesh,                 &
-                            physics_mesh_modeldb%clock )
+    call create_model_data( dynamics_mesh_modeldb, &
+                            dynamics_mesh,         &
+                            dynamics_2D_mesh,      &
+                            aerosol_mesh,          &
+                            aerosol_2D_mesh )
+    call create_model_data( physics_mesh_modeldb, &
+                            physics_mesh,         &
+                            physics_2D_mesh,      &
+                            aerosol_mesh,         &
+                            aerosol_2D_mesh )
 
 
     ! Initialise the fields stored in the model_data
-    call initialise_model_data( dynamics_mesh_modeldb%model_data, &
-                                dynamics_mesh_modeldb%clock,      &
-                                dynamics_mesh,                    &
+    call initialise_model_data( dynamics_mesh_modeldb, &
+                                dynamics_mesh,         &
                                 dynamics_2D_mesh )
-    call initialise_model_data( physics_mesh_modeldb%model_data,  &
-                                dynamics_mesh_modeldb%clock,      &
-                                physics_mesh,                     &
+    call initialise_model_data( physics_mesh_modeldb, &
+                                physics_mesh,         &
                                 physics_2D_mesh )
 
    ! Initial output
@@ -178,7 +174,7 @@ contains
 
     ! Update time-varying fields
     call update_variable_fields(                         &
-      dynamics_mesh_modeldb%model_data%ancil_times_list, &
+      dynamics_mesh_modeldb%model_axes%ancil_times_list, &
       dynamics_mesh_modeldb%clock,                       &
       dynamics_mesh_modeldb%model_data%ancil_fields )
     ! Perform gungho timestep

@@ -20,7 +20,7 @@ module lfric_da_linear_driver_mod
                                          initialise_model,          &
                                          finalise_infrastructure,   &
                                          finalise_model
-  use gungho_model_data_mod,      only : create_model_data, &
+  use gungho_init_fields_mod,     only : create_model_data, &
                                          initialise_model_data, &
                                          output_model_data, &
                                          finalise_model_data
@@ -71,13 +71,12 @@ contains
   !> @brief Sets up required state in preparation for run.
   !> @param [in]     program_name An identifier given to the model being run
   !> @param [in,out] modeldb      The structure that holds model state
-  subroutine initialise( program_name, modeldb, model_clock )
+  subroutine initialise( program_name, modeldb )
 
     implicit none
 
     character(*),           intent(in)    :: program_name
     type(modeldb_type),     intent(inout) :: modeldb
-    type(model_clock_type), intent(inout) :: model_clock
 
     class(io_context_type), pointer :: io_context        => null()
     type( mesh_type ),      pointer :: aerosol_mesh      => null()
@@ -86,7 +85,7 @@ contains
     ! Initialise infrastructure and setup constants
     call initialise_infrastructure( program_name,       &
                                     modeldb%model_data, &
-                                    model_clock,        &
+                                    modeldb%clock,      &
                                     modeldb%mpi )
 
     ! Get primary and 2D meshes for initialising model data
@@ -106,12 +105,9 @@ contains
     end if
 
     ! Instantiate the fields stored in model_data
-    call create_model_data( modeldb%model_data, &
-                            mesh,               &
-                            twod_mesh,          &
-                            aerosol_mesh,       &
-                            aerosol_twod_mesh,  &
-                            model_clock )
+    call create_model_data( modeldb,         &
+                            mesh, twod_mesh, &
+                            aerosol_mesh, aerosol_twod_mesh )
 
     ! Instantiate the fields required to read the initial
     ! conditions from a file.
@@ -122,15 +118,13 @@ contains
     end if
 
     ! Instantiate the linearisation state
-    call linear_create_ls( modeldb%model_data, &
-                           mesh,               &
-                           twod_mesh )
+    call linear_create_ls( modeldb, mesh )
 
     ! Initialise the fields stored in the model_data
     if ( init_option == init_option_fd_start_dump ) then
       call init_fd_prognostics_dump( modeldb%model_data%fd_fields )
     else
-      call initialise_model_data( modeldb%model_data, model_clock, mesh, twod_mesh )
+      call initialise_model_data( modeldb, mesh, twod_mesh )
     end if
 
     ! Model configuration initialisation
@@ -138,10 +132,7 @@ contains
                            modeldb%model_data )
 
     ! Initialise the linearisation state
-    call linear_init_ls( mesh,       &
-                         twod_mesh,  &
-                         modeldb,    &
-                         model_clock )
+    call linear_init_ls( mesh, twod_mesh, modeldb )
 
     ! Initialise the linear model perturbation state
     call linear_init_pert( mesh,      &
@@ -150,8 +141,9 @@ contains
 
     ! Initial output
     io_context => get_io_context()
-    call write_initial_output( mesh, twod_mesh,                 &
-                               modeldb%model_data, model_clock, &
+    call write_initial_output( mesh, twod_mesh,    &
+                               modeldb%model_data, &
+                               modeldb%clock,      &
                                io_context, nodal_output_on_w3 )
 
     ! Linear model configuration initialisation
@@ -173,7 +165,7 @@ contains
     type(model_clock_type), intent(inout) :: model_clock
 
     if ( ls_option == ls_option_file ) then
-      call update_ls_file_alg( modeldb%model_data%ls_times_list, &
+      call update_ls_file_alg( modeldb%model_axes%ls_times_list, &
                                model_clock,                      &
                                modeldb%model_data%ls_fields,     &
                                modeldb%model_data%ls_mr,         &

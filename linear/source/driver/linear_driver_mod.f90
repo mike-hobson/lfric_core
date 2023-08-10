@@ -18,7 +18,7 @@ module linear_driver_mod
                                          initialise_model, &
                                          finalise_infrastructure, &
                                          finalise_model
-  use gungho_model_data_mod,      only : create_model_data, &
+  use gungho_init_fields_mod,     only : create_model_data, &
                                          initialise_model_data, &
                                          output_model_data, &
                                          finalise_model_data
@@ -106,12 +106,11 @@ contains
     end if
 
     ! Instantiate the fields stored in model_data
-    call create_model_data( modeldb%model_data, &
-                            mesh,               &
-                            twod_mesh,          &
-                            aerosol_mesh,       &
-                            aerosol_twod_mesh , &
-                            modeldb%clock )
+    call create_model_data( modeldb,      &
+                            mesh,         &
+                            twod_mesh,    &
+                            aerosol_mesh, &
+                            aerosol_twod_mesh )
 
     ! Instantiate the fields required to read the initial
     ! conditions from a file.
@@ -122,16 +121,13 @@ contains
     end if
 
     ! Instantiate the linearisation state
-    call linear_create_ls( modeldb%model_data, &
-                           mesh,               &
-                           twod_mesh )
+    call linear_create_ls( modeldb, mesh )
 
     ! Initialise the fields stored in the model_data
     if ( init_option == init_option_fd_start_dump ) then
       call init_fd_prognostics_dump( modeldb%model_data%fd_fields )
     else
-      call initialise_model_data( modeldb%model_data, modeldb%clock, &
-                                  mesh, twod_mesh )
+      call initialise_model_data( modeldb, mesh, twod_mesh )
     end if
 
     ! Model configuration initialisation
@@ -139,10 +135,7 @@ contains
                            modeldb%model_data )
 
     ! Initialise the linearisation state
-    call linear_init_ls( mesh,      &
-                         twod_mesh, &
-                         modeldb,   &
-                         modeldb%clock )
+    call linear_init_ls( mesh, twod_mesh, modeldb )
 
     ! Initialise the linear model perturbation state
     call linear_init_pert( mesh,      &
@@ -172,7 +165,7 @@ contains
     type(modeldb_type), intent(inout) :: modeldb
 
     if ( ls_option == ls_option_file ) then
-      call update_ls_file_alg( modeldb%model_data%ls_times_list, &
+      call update_ls_file_alg( modeldb%model_axes%ls_times_list, &
                                modeldb%clock,                    &
                                modeldb%model_data%ls_fields,     &
                                modeldb%model_data%ls_mr,         &

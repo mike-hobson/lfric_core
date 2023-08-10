@@ -13,6 +13,7 @@
 module gungho_modeldb_mod
 
   use gungho_model_data_mod, only : model_data_type
+  use gungho_time_axes_mod,  only : gungho_time_axes_type
   use model_clock_mod,       only : model_clock_type
   use mpi_mod,               only : mpi_type
 
@@ -28,6 +29,12 @@ module gungho_modeldb_mod
 
     !> Stores all the fields used by the model
     type( model_data_type ), public :: model_data
+
+    !> Stores all the time exes used by the model.
+    !>
+    !> @todo Deliberately sub-optimal name in order to leave space for
+    !>       driver equivalent.
+    type(gungho_time_axes_type), public :: model_axes
 
     !> Tracks time in the model
     type(model_clock_type), public, allocatable :: clock

@@ -27,8 +27,6 @@ module driver_collections_mod
   use mesh_collection_mod,           only: mesh_collection_type,           &
                                            mesh_collection
 
-  use base_mesh_config_mod,          only: prepartitioned
-
   implicit none
 
   private
@@ -42,10 +40,7 @@ subroutine init_collections()
 
   implicit none
 
-  if ( .not. prepartitioned ) then
-    allocate( global_mesh_collection, source=global_mesh_collection_type() )
-  end if
-
+  allocate( global_mesh_collection,    source=global_mesh_collection_type() )
   allocate( local_mesh_collection,     source=local_mesh_collection_type() )
   allocate( mesh_collection,           source=mesh_collection_type() )
   allocate( function_space_collection, source=function_space_collection_type() )

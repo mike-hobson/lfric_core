@@ -1,7 +1,8 @@
 module gas_calc_all_mod
 
-  use constants_mod,       only: i_def, r_def
+  use constants_mod,       only: i_def, r_def, r_um
   use gas_calc_mod,        only: gas_calc
+  use rad_input_mod,       only: co2_mmr
   use well_mixed_gases_config_mod, only: clim_fcg_years_ch4,      &
                                          clim_fcg_nyears_ch4,     &
                                          clim_fcg_levls_ch4,      &
@@ -81,6 +82,8 @@ contains
     else
       co2_mix_ratio_now = co2_mix_ratio
     end if
+    ! CO2 value needed by JULES - contained stored in rad_input
+    co2_mmr = real(co2_mix_ratio_now, r_um)
 
     ! Update N2O
     if ( l_time_varying_n2o ) then

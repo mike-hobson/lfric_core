@@ -9,11 +9,10 @@
 module jules_control_init_mod
 
   ! LFRic namelists which have been read
-  use gas_calc_all_mod,            only : co2_mix_ratio_now
   use surface_config_mod,          only : n_sea_ice_tile_in => n_sea_ice_tile
 
   ! Other LFRic modules used
-  use constants_mod,        only : r_um, i_def
+  use constants_mod,        only : i_def
 
   implicit none
 
@@ -76,7 +75,6 @@ contains
     use jules_vegetation_mod, only: l_triffid
     use jules_model_environment_mod, only: lsm_id, jules
     use nlsizes_namelist_mod, only: land_field, ntiles, sm_levels
-    use rad_input_mod, only: co2_mmr
     use jules_surface_types_mod, only:                                         &
         set_derived_variables_jules_surface_types,                             &
         print_nlist_jules_surface_types, check_jules_surface_types
@@ -184,10 +182,6 @@ contains
     ! if multiple cells are passed to kernels.
     co2_dim_len = 1
     co2_dim_row = 1
-
-    ! CO2 value needed by JULES - contained stored in rad_input, but
-    !                             retrieved from gas_calc_all
-    co2_mmr = real(co2_mix_ratio_now, r_um)
 
     ! Initialise LSM to be JULES (other options do exist; CABLE, Rivers-only)
     lsm_id = jules

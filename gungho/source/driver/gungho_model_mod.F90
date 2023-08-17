@@ -510,7 +510,6 @@ contains
     if ( use_physics ) then
 
       ! Initialise time-varying trace gases
-      ! This must be done before jules_control_init
       call gas_calc_all()
 
       if (radiation == radiation_socrates) then

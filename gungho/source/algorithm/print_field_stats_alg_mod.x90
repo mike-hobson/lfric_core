@@ -140,7 +140,7 @@ subroutine print_field_stats_alg(field, level, printmin, printmax, name)
         '     at level = ',int(gmin_lev/gmin_count),' ',int(gmax_lev/gmax_count)
         call log_event( log_scratch_space, level )
 
-        write(log_scratch_space,'(A,F16.8,A,F16.8)') &
+        write(log_scratch_space,'(A,ES16.8E2,A,ES16.8E2)') &
         '    at height = ',gmin_height/gmin_count,' ',gmax_height/gmax_count
         call log_event( log_scratch_space, level )
 

@@ -11,6 +11,7 @@ module external_forcing_alg_mod
                                              theta_forcing_held_suarez,          &
                                              theta_forcing_earth_like,           &
                                              theta_forcing_tidally_locked_earth, &
+                                             theta_forcing_shallow_hot_jupiter,  &
                                              theta_forcing_temp_tend,            &
                                              wind_forcing,                       &
                                              wind_forcing_none,                  &
@@ -22,6 +23,7 @@ module external_forcing_alg_mod
   use held_suarez_fv_wind_kernel_mod,  only: held_suarez_fv_wind_kernel_type
   use earth_like_kernel_mod,           only: earth_like_kernel_type
   use tidally_locked_earth_kernel_mod, only: tidally_locked_earth_kernel_type
+  use shallow_hot_jupiter_kernel_mod,  only: shallow_hot_jupiter_kernel_type
 
   ! Derived Types
   use constants_mod,                   only: i_def, r_def, l_def
@@ -128,6 +130,15 @@ contains
           call invoke(tidally_locked_earth_kernel_type(dtheta_forcing, theta, &
                                                        exner_in_wth, chi,     &
                                                        panel_id, kappa, dt) )
+
+        case(theta_forcing_shallow_hot_jupiter)
+
+          call log_event( 'slow_physics: Running shallow hot Jupiter theta forcing', &
+                          LOG_LEVEL_INFO )
+
+          call invoke(shallow_hot_jupiter_kernel_type(dtheta_forcing, theta, &
+                                                      exner_in_wth, height_wth, chi, &
+                                                      panel_id, kappa, dt) )
 
         case(theta_forcing_temp_tend)
 

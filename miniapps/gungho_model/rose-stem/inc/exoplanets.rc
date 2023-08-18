@@ -52,6 +52,22 @@
                                    publish=False
                                   )'
                  ],
+         'exo-shj':['run_application("gungho_model", "shallow-hot-jupiter",
+                                     resolutions=[("C24_MG",2400.0),("C48_MG",1200.0)],
+                                     checkkgo=False,
+                                     env={"crun":40,
+                                         "nrun": {("C24_MG",2400.0):1080,
+                                                  ("C48_MG",1200.0):2160},
+                                         "directives":{"default":{"mpi_parts":54,
+                                                                  "threads":1,
+                                                                  "wallclock":"00:10:00"},
+                                                         "C48_MG":{"mpi_parts":216,
+                                                                  "threads":1,
+                                                                  "wallclock":"00:20:00"} } },
+                                    plotstr="plot_zonal.py $NODAL_DATA_DIR/lfric_averages.nc $PLOT_DIR shallow-hot-jupiter uniform 32 33",
+                                    publish=True
+                                   )'
+                 ],
 }
 %}
 

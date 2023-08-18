@@ -67,10 +67,10 @@ contains
                                                cloud_fields_after_slow, &
                                                cloud_fields_after_adv
 
-    type(field_type) :: dtheta_tot, du_w2_tot, du_tot, dv_tot, dw_tot,    &
-                        dmv_tot, dmcl_tot, dmci_tot, dtheta_adv,          &
-                        du_w2_adv, du_adv, dv_adv, dw_adv, dmv_adv,       &
-                        dmcl_adv, dmci_adv, dbcf_adv, dcfl_adv, dcff_adv, &
+    type(field_type) :: dtheta_tot, du_w2_tot, du_tot, dv_tot, dw_tot,        &
+                        dmv_tot, dmcl_tot, dmci_tot, dtheta_adv, dtheta_slow, &
+                        du_w2_adv, du_adv, dv_adv, dw_adv, dmv_adv,           &
+                        dmcl_adv, dmci_adv, dbcf_adv, dcfl_adv, dcff_adv,     &
                         dtheta_solv, du_w2_solv, du_solv, dv_solv, dw_solv
 
     type(field_type), pointer :: u_star => null()
@@ -85,10 +85,16 @@ contains
 
     if ( subroutine_timers ) call timer ("si_diagnostics")
 
+    ! Slow physics timestep theta increments
+    ! Difference between state at time step n (X_n) and X_after_slow
+    if (init_diag(dtheta_slow, 'processed__dtheta_slow')) then
+      call invoke(X_minus_Y(dtheta_slow,state_after_slow(igh_t),state_n(igh_t)))
+      call dtheta_slow%write_field('processed__dtheta_slow')
+    end if
+
     ! Total increments
     ! Difference between current value (X) and X_n
     if (init_diag(dtheta_tot, 'processed__dtheta_tot')) then
-      call state(igh_t)%copy_field_properties(dtheta_tot)
       call invoke(X_minus_Y(dtheta_tot,state(igh_t),state_n(igh_t)))
       call dtheta_tot%write_field('processed__dtheta_tot')
     end if

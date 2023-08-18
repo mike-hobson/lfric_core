@@ -109,8 +109,6 @@ contains
     type( field_type), pointer :: v_in_w2h => null()
     type( field_type), pointer :: w_in_wth => null()
     type( field_type), pointer :: ageofair => null()
-
-#ifdef UM_PHYSICS
     type( field_type), pointer :: theta_in_w3 => null()
     type( field_type), pointer :: exner_in_wth => null()
 
@@ -124,7 +122,6 @@ contains
     character(str_def) :: name
 
     integer :: fs
-#endif
 
     procedure(write_interface), pointer  :: tmp_write_ptr => null()
 
@@ -246,9 +243,8 @@ contains
       endif
     endif
 
-#ifdef UM_PHYSICS
     ! Derived physics fields (only those on W3 or Wtheta)
-    if (use_physics .and. .not. model_clock%is_initialisation()) then
+    if (use_physics .and. use_xios_io .and. .not. model_clock%is_initialisation()) then
 
       call iterator%initialise(derived_fields)
       do
@@ -276,19 +272,19 @@ contains
       call derived_fields%get_field('exner_in_wth', exner_in_wth)
       call pressure_diag_alg(exner_in_wth)
 
+#ifdef UM_PHYSICS
       ! RH diagnostics
       call rh_diag_alg(exner_in_wth, theta, mr)
-
       ! Call PMSL algorithm
-      call prognostic_fields%get_field('theta', theta)
       call pmsl_alg(exner, derived_fields, theta, twod_mesh)
+#endif
+
       call derived_fields%get_field('theta_in_w3', theta_in_w3)
       call column_total_diagnostics_alg(rho, mr, theta_in_w3, exner, &
                                         mesh, twod_mesh,             &
                                         model_data%temperature_correction_rate)
 
     end if
-#endif
 
     if (ls_option /= ls_option_file .and. ls_option /= ls_option_analytic) then
       ! Other derived diagnostics with special pre-processing

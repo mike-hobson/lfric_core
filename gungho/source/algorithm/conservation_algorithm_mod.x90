@@ -16,6 +16,7 @@ module conservation_algorithm_mod
 
   use constants_mod,                   only: r_def, i_def, i_timestep
   use function_space_collection_mod,   only: function_space_collection
+  use field_parent_mod,                only: write_interface
   use field_mod,                       only: field_type
   use finite_element_config_mod,       only: element_order, &
                                              nqp_exact
@@ -24,6 +25,7 @@ module conservation_algorithm_mod
   use log_mod,                         only: log_event,         &
                                              log_scratch_space, &
                                              LOG_LEVEL_INFO
+  use lfric_xios_write_mod,            only: write_field_face
   use mesh_mod,                        only: mesh_type
   use quadrature_xyoz_mod,             only: quadrature_xyoz_type
   use quadrature_rule_gaussian_mod,    only: quadrature_rule_gaussian_type
@@ -34,6 +36,8 @@ module conservation_algorithm_mod
   use planet_config_mod,               only: scaled_omega, cv
   use mr_indices_mod,                  only: nummr
   use timer_mod,                       only: timer
+
+  use initialise_diagnostics_mod,      only: diagnostic_to_be_sampled
 
   implicit none
 
@@ -84,6 +88,8 @@ contains
                         total_entropy_dyn_dry
     type(mesh_type), pointer :: mesh => null()
 
+    procedure(write_interface), pointer :: write_behaviour => null()
+
     if ( subroutine_timers ) call timer('conservation_alg')
 
     ! Get a quadrature rule
@@ -94,6 +100,9 @@ contains
     geopotential => get_geopotential(mesh%get_id())
     chi          => get_coordinates(mesh%get_id())
     panel_id     => get_panel_id(mesh%get_id())
+
+    ! Set write behaviour of fields to output
+    write_behaviour => write_field_face
 
     ! Initialise Mass, Energy and Axial Angular Momentum fields
     call kinetic_uv%initialise( vector_space = w3_fs )
@@ -167,8 +176,23 @@ contains
           'Conservation: dry dynamic entropy ', total_entropy_dyn_dry
     call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
+    ! Write KE and AAM fields
+    if (diagnostic_to_be_sampled('ke_uv_in_w3')) then
+      call kinetic_uv%set_write_behaviour(write_behaviour)
+      call kinetic_uv%write_field('ke_uv_in_w3')
+    end if
+    if (diagnostic_to_be_sampled('ke_w_in_w3')) then
+      call kinetic_w%set_write_behaviour(write_behaviour)
+      call kinetic_w%write_field('ke_w_in_w3')
+    end if
+    if (diagnostic_to_be_sampled('aam_in_w3')) then
+      call aam%set_write_behaviour(write_behaviour)
+      call aam%write_field('aam_in_w3')
+    end if
+
     nullify( geopotential )
     nullify( chi, panel_id, w3_fs, mesh )
+    nullify ( write_behaviour )
 
     if ( subroutine_timers ) call timer('conservation_alg')
 

@@ -145,7 +145,7 @@ module um_physics_init_mod
                                          include_moisture_dry
 
   ! Other LFRic modules used
-  use constants_mod,        only : i_def, l_def, r_um, i_um, rmdi, r_def
+  use constants_mod,        only : i_def, l_def, r_um, i_um, rmdi, r_def, r_bl
   use log_mod,              only : log_event,         &
                                    log_scratch_space, &
                                    LOG_LEVEL_ERROR,   &
@@ -432,8 +432,8 @@ contains
         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
 
-      a_ent_shr_nml = real(a_ent_shr, r_um)
-      a_ent_2       = real(a_ent_2_in, r_um)
+      a_ent_shr_nml = real(a_ent_shr, r_bl)
+      a_ent_2       = real(a_ent_2_in, r_bl)
       bl_levels     = bl_levels_in
       if(allocated(alpha_cd))deallocate(alpha_cd)
       allocate(alpha_cd(bl_levels))
@@ -450,8 +450,8 @@ contains
           cbl_op = lem_adjust
       end select
 
-      dec_thres_cloud = real(dec_thres_cloud_in, r_um)
-      dec_thres_cu = 0.5_r_um * dec_thres_cloud_in
+      dec_thres_cloud = real(dec_thres_cloud_in, r_bl)
+      dec_thres_cu = 0.5_r_bl * dec_thres_cloud
       entr_smooth_dec = on
 
       select case (flux_bc_opt_in)
@@ -479,7 +479,7 @@ contains
         case(dyn_diag_ri_based)
           idyndiag = DynDiag_Ribased
       end select
-      near_neut_z_on_l = real(near_neut_z_on_l_in, r_um)
+      near_neut_z_on_l = real(near_neut_z_on_l_in, r_bl)
 
       ! Interpolate the vertical gradients of sl,qw and calculate
       ! stability dbdz and Kh on theta-levels
@@ -521,7 +521,7 @@ contains
         relax_sc_over_cu = off
       end if
 
-      ritrans = 0.1_r_um
+      ritrans = 0.1_r_bl
 
       select case (sbl_opt)
         case(sbl_opt_sharpest)
@@ -545,9 +545,9 @@ contains
       nl_bl_levels = k
       ! Switch for alternative TKE and variance diagnostics
       var_diags_opt = split_tke_and_inv
-      tke_diag_fac  = 1.0_r_def
+      tke_diag_fac  = 1.0_r_bl
       l_use_var_fixes = .true.
-      zhloc_depth_fac = real(zhloc_depth_fac_in, r_um)
+      zhloc_depth_fac = real(zhloc_depth_fac_in, r_bl)
 
       if (topography == topography_horizon) then
         ! Set control logical for use of skyview factor in JULES

@@ -368,8 +368,9 @@ echo $RELATIVE_LOG_ROOT > $DESTINATION_DIRECTORY/compile.log.path
             PSYCLONE_TRANSFORMATION = {{TARGET_OPT}}
             UM_FCM_TARGET_PLATFORM  = {{TARGET_OPT}}
             MAKE_THREADS          = 4
-            RDEF_PRECISION        = {{precision}}
-            R_TRAN_PRECISION      = {{precision}}
+            RDEF_PRECISION        = 64
+            R_TRAN_PRECISION      = 64
+            R_BL_PRECISION        = {{precision}}
 
             {{directives(PRIMARY_TARGET, 'build')}}
 {%-       endif %}

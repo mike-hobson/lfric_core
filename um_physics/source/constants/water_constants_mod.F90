@@ -8,7 +8,8 @@
 
 module water_constants_mod
 
-  use constants_mod, only : r_um
+  use, intrinsic :: iso_fortran_env, only: real32
+  use constants_mod, only : r_um, r_bl
   use driver_water_constants_mod, only: t_freeze_h2o_sea,             &
                                         t_freeze_h2o,                 &
                                         density_h2o,                  &
@@ -25,7 +26,7 @@ module water_constants_mod
 
   private
   public :: hcapi, hcapw, hcapv, lc, lf, rho_ice, rho_water, rhosea, tfs, tm, &
-            dpsidt
+            dpsidt, tm_bl, lc_bl, tm_32b, lc_32b
 
   !-----------------------------------------------------------------------
   ! Parameters names contained here are fixed, as these names are
@@ -37,6 +38,8 @@ module water_constants_mod
 
   ! Temperature at which fresh water freezes and ice melts, [K]
   real(r_um), parameter :: tm  = real(t_freeze_h2o, r_um)
+  real(real32), parameter :: tm_32b = real(tm, real32)
+  real(r_bl), parameter :: tm_bl  = real(t_freeze_h2o, r_bl)
 
   ! Density of pure water [kg/m3]
   real(r_um), parameter :: rho_water = real(density_h2o, r_um)
@@ -49,6 +52,8 @@ module water_constants_mod
 
   ! Latent heat of condensation of water at 0 degC [J/kg]
   real(r_um), parameter :: lc = real(latent_heat_h2o_condensation, r_um)
+  real(real32), parameter :: lc_32b = real(lc, real32)
+  real(r_bl), parameter :: lc_bl = real(latent_heat_h2o_condensation, r_bl)
 
   ! Latent heat of fusion of water at 0 degC [J/kg]
   real(r_um), parameter :: lf = real(latent_heat_h2o_fusion, r_um)

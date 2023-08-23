@@ -218,7 +218,7 @@
 		          "directives":{"default":{"wallclock":"00:05:00"} } },
                      plotstr="plot_scm.py -ukca $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR")',
     'run_application("lfric_atm", "nwp_gal9",
-                     resolutions=[("C12",1800.0)],
+                     resolutions=[("C12",1800.0)],precisions=["32","64"],
                      env={"crun":2, "nrun":72,
                           "directives":{"C12":{"mpi_parts":6,
                                                "threads":2,

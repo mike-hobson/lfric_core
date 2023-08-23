@@ -10,7 +10,7 @@ module planet_constants_mod
 
   use, intrinsic :: iso_fortran_env, only: real32
   ! Universal constants
-  use constants_mod, only: l_def, i_def, r_def, i_um, r_um, pi, rmdi, imdi
+  use constants_mod, only: l_def, i_def, r_def, i_um, r_um, pi, rmdi, imdi, r_bl
   use driver_water_constants_mod, only: gas_constant_h2o
   use conversions_mod, only: rsec_per_day
 
@@ -21,7 +21,11 @@ module planet_constants_mod
   public :: c_virtual, cp, cv, etar, g, grcp, kappa, lcrcp, lfrcp, ls, lsrcp, &
             one_minus_epsilon, one_minus_epsilon_32b, p_zero, planet_radius,  &
             pref, r, recip_a2, recip_kappa, repsilon, repsilon_32b, rv, vkman,&
-            recip_epsilon, omega, two_omega, s2r, lapse
+            recip_epsilon, omega, two_omega, s2r, lapse, lcrcp_bl, lsrcp_bl,  &
+            g_bl, grcp_bl, vkman_bl, pref_bl, kappa_bl, cp_bl, rd_bl,         &
+            c_virtual_bl, etar_bl, repsilon_bl, ls_bl, r_32b, c_virtual_32b,  &
+            etar_32b, lcrcp_32b, ls_32b, lsrcp_32b, planet_radius_bl,         &
+            recip_kappa_bl
 
   ! The following variables have been hidden as they are not currently
   ! required to build the extracted UM code. They have been left in
@@ -70,6 +74,7 @@ module planet_constants_mod
 
   ! Von Karman's constant
   real(r_um), parameter :: vkman = 0.4_r_um
+  real(r_bl), parameter :: vkman_bl = real(vkman, r_bl)
 
 !----------------------------------------------------------------------
 ! Derived planet constants
@@ -104,6 +109,28 @@ module planet_constants_mod
   ! 32-bit versions of variables
   real(real32), protected :: repsilon_32b
   real(real32), protected :: one_minus_epsilon_32b
+  real(real32), protected :: r_32b
+  real(real32), protected :: c_virtual_32b
+  real(real32), protected :: etar_32b
+  real(real32), protected :: lcrcp_32b
+  real(real32), protected :: ls_32b
+  real(real32), protected :: lsrcp_32b
+
+  ! BL precision versions
+  real(r_bl), protected :: lcrcp_bl               ! lc/cp
+  real(r_bl), protected :: lsrcp_bl               ! (lc+lf)/cp
+  real(r_bl), protected :: g_bl
+  real(r_bl), protected :: grcp_bl                ! g/cp
+  real(r_bl), protected :: pref_bl
+  real(r_bl), protected :: kappa_bl               ! r/cp
+  real(r_bl), protected :: recip_kappa_bl
+  real(r_bl), protected :: cp_bl
+  real(r_bl), protected :: c_virtual_bl           ! 1.0/repsilon-1.0
+  real(r_bl), protected :: etar_bl                ! 1.0/(1.0-repsilon)
+  real(r_bl), protected :: rd_bl
+  real(r_bl), protected :: repsilon_bl
+  real(r_bl), protected :: ls_bl                  ! lc+lf
+  real(r_bl), protected :: planet_radius_bl
 
 contains
 
@@ -171,6 +198,28 @@ subroutine set_planet_constants()
   ! Set 32-bit versions as required, eg in qsat_mod
   repsilon_32b          = real( epsilon, real32 )
   one_minus_epsilon_32b = real( 1.0_r_def - epsilon, real32 )
+  r_32b = real(r, real32)
+  c_virtual_32b = real(c_virtual, real32)
+  etar_32b = real(etar, real32)
+  lcrcp_32b = real(lcrcp, real32)
+  ls_32b = real(ls, real32)
+  lsrcp_32b = real(lsrcp, real32)
+
+  ! Set BL precision versions
+  lcrcp_bl = real(lcrcp, r_bl)
+  lsrcp_bl = real(lsrcp, r_bl)
+  g_bl = real(g, r_bl)
+  grcp_bl = real(grcp, r_bl)
+  pref_bl = real(pref, r_bl)
+  kappa_bl = real(kappa, r_bl)
+  recip_kappa_bl = real(recip_kappa, r_bl)
+  cp_bl = real(cp, r_bl)
+  rd_bl = real(r, r_bl)
+  c_virtual_bl = real(c_virtual, r_bl)
+  etar_bl = real(etar, r_bl)
+  repsilon_bl = real(repsilon, r_bl)
+  ls_bl = real(ls, r_bl)
+  planet_radius_bl = real(planet_radius, r_bl)
 
 end subroutine set_planet_constants
 

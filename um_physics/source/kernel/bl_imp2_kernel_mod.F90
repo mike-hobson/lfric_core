@@ -18,7 +18,7 @@ module bl_imp2_kernel_mod
   use blayer_config_mod,         only : fric_heating
   use cloud_config_mod,          only : scheme, scheme_smith, scheme_pc2, &
                                         scheme_bimodal
-  use constants_mod,             only : i_def, i_um, r_def, r_um
+  use constants_mod,             only : i_def, i_um, r_def, r_um, r_bl
   use fs_continuity_mod,         only : W3, Wtheta
   use kernel_mod,                only : kernel_type
   use timestepping_config_mod,   only : outer_iterations
@@ -266,7 +266,8 @@ contains
     use nlsizes_namelist_mod, only: bl_levels
     use pc2_constants_mod, only: i_cld_smith, i_cld_pc2,            &
          pc2init_logic_smooth, acf_off, i_cld_bimodal
-    use planet_constants_mod, only: p_zero, kappa, planet_radius, g, cp, lcrcp
+    use planet_constants_mod, only: p_zero, kappa, planet_radius, g => g_bl,   &
+         cp => cp_bl, lcrcp
     use timestep_mod, only: timestep
 
     ! subroutines used
@@ -356,39 +357,42 @@ contains
     ! profile fields from level 1 upwards
     real(r_um), dimension(seg_len,1,nlayers) ::                              &
          p_rho_levels, z_theta, rhcpt, t_latest, q_latest, qcl_latest,       &
-         qcf_latest, qcf2_latest, area_cloud_fraction, rho_wet_tq,           &
+         qcf_latest, qcf2_latest, area_cloud_fraction,                       &
          cf_latest, cfl_latest, cff_latest, t_earliest, q_earliest,          &
          qcl_earliest, qcf_earliest, cf_earliest, cfl_earliest,              &
          cff_earliest, qt_force, tl_force, t_inc_pc2, q_inc_pc2, qcl_inc_pc2,&
          bcf_inc_pc2, cfl_inc_pc2, sskew, svar_turb, svar_bm, qcf_total,     &
-         ri_bm, tgrad_in, tau_dec_in, tau_hom_in, tau_mph_in, wvar_in,       &
-         r_rho_levels
+         ri_bm, tgrad_in, tau_dec_in, tau_hom_in, tau_mph_in, wvar_in
+    real(r_bl), dimension(seg_len,1,nlayers) ::                              &
+         r_rho_levels, rho_wet_tq
 
     ! profile field on boundary layer levels
-    real(r_um), dimension(seg_len,1,bl_levels) :: fqw, ftl, rhokh,           &
+    real(r_bl), dimension(seg_len,1,bl_levels) :: fqw, ftl, rhokh,           &
          bq_gb, bt_gb, dtrdz_charney_grid, rdz_charney_grid, rhokh_mix, qw,  &
          tl, dqw, dtl, fqw_star, ftl_star
 
     ! profile fields on u/v points and all levels
-    real(r_um), dimension(seg_len,1,nlayers) :: r_u, r_v
+    real(r_bl), dimension(seg_len,1,nlayers) :: r_u, r_v
 
     ! profile fields on u/v points and BL levels
-    real(r_um), dimension(seg_len,1,bl_levels) :: taux, tauy,                &
+    real(r_bl), dimension(seg_len,1,bl_levels) :: taux, tauy,                &
          rhokm_u, rhokm_v, dissip_u, dissip_v, taux_star, tauy_star, cq_cm_u,&
          cq_cm_v, ct_ctq, dqw_nt, dtl_nt, du_star, dv_star
 
     ! profile fields from level 2 upwards
-    real(r_um), dimension(seg_len,1,2:bl_levels) :: rdz_u, rdz_v
+    real(r_bl), dimension(seg_len,1,2:bl_levels) :: rdz_u, rdz_v
 
     ! profile fields from level 0 upwards
-    real(r_um), dimension(seg_len,1,0:nlayers) ::                      &
-         p_theta_levels, p_rho_minus_one, r_theta_levels
+    real(r_um), dimension(seg_len,1,0:nlayers) ::                            &
+         p_theta_levels, p_rho_minus_one
+    real(r_bl), dimension(seg_len,1,0:nlayers) :: r_theta_levels
 
     ! single level real fields
     real(r_um), dimension(seg_len,1) ::                                      &
          zh, bl_type_3, bl_type_4, bl_type_6, bl_type_7, zhnl, zlcl_mix,     &
-         zlcl, dzh, qcl_inv_top, gamma1, gamma2, fric_heating_blyr,          &
-         fric_heating_incv, zhsc
+         zlcl, dzh, qcl_inv_top, zhsc
+    real(r_bl), dimension(seg_len,1) :: gamma1, gamma2, fric_heating_blyr,   &
+         fric_heating_incv
 
     ! single level integer fields
     integer(i_um), dimension(seg_len,1) :: ntml, nblyr
@@ -406,11 +410,11 @@ contains
     integer(i_um), dimension(seg_len,1) :: lcbase0, ccb0, cct0
 
     ! parameters for new BL solver
-    real(r_um) :: pnonl,p1,p2
-    real(r_um), dimension(seg_len) :: i1, e1, e2
-    real(r_um), parameter :: sqrt2 = sqrt(2.0_r_def)
+    real(r_bl) :: pnonl,p1,p2
+    real(r_bl), dimension(seg_len) :: i1, e1, e2
+    real(r_bl), parameter :: sqrt2 = sqrt(2.0_r_bl)
 
-    real(r_um) :: weight1, weight2, weight3, ftl_m, fqw_m,     &
+    real(r_bl) :: weight1, weight2, weight3, ftl_m, fqw_m,     &
          f_buoy_m, dissip_mol, fric_heating_inc, z_blyr
 
     real(r_um), parameter :: qcl_max_factor = 0.1_r_um
@@ -441,7 +445,7 @@ contains
       end do
     else
       do i = 1, seg_len
-        do k = 1, bl_levels
+        do k = 2, bl_levels
           fqw_star(i,1,k) = fqw_star_w3(map_w3(1,i) + k-1)
           ftl_star(i,1,k) = ftl_star_w3(map_w3(1,i) + k-1)
         end do
@@ -485,14 +489,14 @@ contains
     bl_diag%l_fqw = .true.
 
     do i = 1, seg_len
-      p1=bl_type_ind(map_bl(1,i)+0)*pstb+(1.0_r_def-bl_type_ind(map_bl(1,i)+0))*puns
-      p2=bl_type_ind(map_bl(1,i)+1)*pstb+(1.0_r_def-bl_type_ind(map_bl(1,i)+1))*puns
+      p1=bl_type_ind(map_bl(1,i)+0)*pstb+(1.0_r_bl-bl_type_ind(map_bl(1,i)+0))*puns
+      p2=bl_type_ind(map_bl(1,i)+1)*pstb+(1.0_r_bl-bl_type_ind(map_bl(1,i)+1))*puns
       pnonl=max(p1,p2)
-      i1(i) = (1.0_r_def+1.0_r_def/sqrt2)*(1.0_r_def+pnonl)
-      e1(i) = (1.0_r_def+1.0_r_def/sqrt2)*( pnonl + (1.0_r_def/sqrt2) + &
-              sqrt(pnonl*(sqrt2-1.0_r_def)+0.5_r_def) )
-      e2(i) = (1.0_r_def+1.0_r_def/sqrt2)*( pnonl+(1.0_r_def/sqrt2) - &
-              sqrt(pnonl*(sqrt2-1.0_r_def)+0.5_r_def))
+      i1(i) = (1.0_r_bl+1.0_r_bl/sqrt2)*(1.0_r_bl+pnonl)
+      e1(i) = (1.0_r_bl+1.0_r_bl/sqrt2)*( pnonl + (1.0_r_bl/sqrt2) + &
+              sqrt(pnonl*(sqrt2-1.0_r_bl)+0.5_r_bl) )
+      e2(i) = (1.0_r_bl+1.0_r_bl/sqrt2)*( pnonl+(1.0_r_bl/sqrt2) - &
+              sqrt(pnonl*(sqrt2-1.0_r_bl)+0.5_r_bl))
       gamma1(i,1) = i1(i)
     end do
 
@@ -571,7 +575,7 @@ contains
                          bq_gb(i,1,k)*fqw_m )/weight1
 
           dissip_mol = dissip_u(i,1,k)+dissip_v(i,1,k) + f_buoy_m
-          fric_heating_inc = max (0.0_r_def, timestep * dissip_mol             &
+          fric_heating_inc = max (0.0_r_bl, timestep * dissip_mol             &
                                            / ( cp*rho_wet_tq(i,1,k) ) )
 
           ! Save level 1 heating increment for redistribution over
@@ -592,7 +596,7 @@ contains
                            bq_gb(i,1,k)*fqw_m )/weight1
 
             dissip_mol = dissip_u(i,1,k)+dissip_v(i,1,k) + f_buoy_m
-            fric_heating_incv(i,1) = max (0.0_r_def, timestep * dissip_mol     &
+            fric_heating_incv(i,1) = max (0.0_r_bl, timestep * dissip_mol     &
                                                    / ( cp*rho_wet_tq(i,1,k) ) )
 
             if ( z_theta(i,1,k) <= zh(i,1) ) then
@@ -626,8 +630,8 @@ contains
           do k = 1, nblyr(i,1)
 
             ! Linearly decrease heating rate across surface layer
-            fric_heating_inc = 2.0_r_def * fric_heating_blyr(i,1) *            &
-                              (1.0_r_def-z_theta(i,1,k)/z_blyr)
+            fric_heating_inc = 2.0_r_bl * fric_heating_blyr(i,1) *            &
+                              (1.0_r_bl-z_theta(i,1,k)/z_blyr)
 
             t_latest(i,1,k) = t_latest(i,1,k) + fric_heating_inc
 
@@ -1077,7 +1081,7 @@ contains
 
     else !loop=1
 
-      do k = 0, bl_levels-1
+      do k = 1, bl_levels-1
         do i = 1, seg_len
           fqw_star_w3(map_w3(1,i) + k) = fqw_star(i,1,k+1)
           ftl_star_w3(map_w3(1,i) + k) = ftl_star(i,1,k+1)

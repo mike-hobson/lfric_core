@@ -12,7 +12,7 @@ module bl_exp_du_kernel_mod
                                       GH_FIELD, GH_READ, CELL_COLUMN,         &
                                       ANY_SPACE_1, ANY_SPACE_2,               &
                                       GH_REAL, GH_WRITE
-  use constants_mod,            only: r_def, i_def
+  use constants_mod,            only: r_def, i_def, r_bl
   use fs_continuity_mod,        only: W1, W2
   use kernel_mod,               only: kernel_type
   use nlsizes_namelist_mod,     only: bl_levels
@@ -87,7 +87,7 @@ contains
                             surf_interp,   &
                             ngstress,      &
                             fd_tau,        &
-                            sea_current_w2, &
+                            sea_current_w2,&
                             ndf_w2,        &
                             undf_w2,       &
                             map_w2,        &
@@ -130,10 +130,11 @@ contains
     real(kind=r_def), dimension(undf_w2_surf), intent(in) :: surf_interp
 
     ! Internal variables
-    integer(kind=i_def) :: df
-    real(kind=r_def) :: rhokm_land, rhokm_ssi, fland, flandfac, fseafac
-    real(kind=r_def) :: zh_nonloc(1)
-    real(kind=r_def), dimension(0:bl_levels-1) :: tau_grad, tau_non_grad
+    integer(kind=i_def) :: df, k
+    real(kind=r_bl) :: rhokm_land, rhokm_ssi, fland, flandfac, fseafac
+    real(kind=r_bl) :: zh_nonloc(1)
+    real(kind=r_bl), dimension(0:bl_levels-1) :: tau_grad, tau_non_grad, u_sp, &
+         rdz_sp, rhokm_sp, ngstress_sp, tau_sp, fd_tau_sp
 
     ! loop over all faces of the cell
     do df = 1,4
@@ -151,32 +152,45 @@ contains
         fseafac    = surf_interp(map_w2_surf(df) + 4)
         zh_nonloc  = surf_interp(map_w2_surf(df) + 5)
 
-        tau_land(map_w2_2d(df)) = rhokm_land * u_physics(map_w2(df)) * flandfac
+        do k = 0, bl_levels-1
+          u_sp(k) = u_physics(map_w2(df)+k)
+          rdz_sp(k) = rdz(map_w1(df)+k)
+          rhokm_sp(k) = rhokm(map_w2(df)+k)
+          ngstress_sp(k) = ngstress(map_w2(df)+k)
+          fd_tau_sp(k) = fd_tau(map_w2(df)+k)
+          tau_sp(k) = tau(map_w2(df)+k)
+        end do
+
+        tau_land(map_w2_2d(df)) = rhokm_land * u_sp(0) * flandfac
 
         ! If sea surface current (sea_current_w2) has not been obtained
         ! from coupling fields or from an ancillary file then it will simply
         ! contain uniform zeros.
         tau_ssi(map_w2_2d(df)) = rhokm_ssi *                                   &
-                 (u_physics(map_w2(df)) - sea_current_w2(map_w2(df))) * fseafac
-        tau(map_w2(df)) = fland * tau_land(map_w2_2d(df))                      &
-                        + (1.0_r_def - fland) * tau_ssi(map_w2_2d(df))
+                 (u_sp(0) - sea_current_w2(map_w2(df))) * fseafac
+        tau_sp(0) = fland * tau_land(map_w2_2d(df))                            &
+                        + (1.0_r_bl - fland) * tau_ssi(map_w2_2d(df))
 
         if (formdrag == formdrag_dist_drag) then
-          if (fland > 0.0_r_def) then
+          if (fland > 0.0_r_bl) then
             tau_land(map_w2_2d(df)) = tau_land(map_w2_2d(df))                  &
                                     + fd_tau(map_w2(df)) / fland
           end if
         end if
 
         call ex_flux_uv(pdims, pdims, pdims, bl_levels,                        &
-                        u_physics(map_w2(df):map_w2(df)+bl_levels-1),          &
+                        u_sp(0:bl_levels-1),                                   &
                         zh_nonloc,                                             &
-                        rdz(map_w1(df)+1:map_w1(df)+bl_levels-1),              &
-                        rhokm(map_w2(df):map_w2(df)+bl_levels-1),              &
-                        ngstress(map_w2(df)+1:map_w2(df)+bl_levels-1),         &
-                        fd_tau(map_w2(df):map_w2(df)+bl_levels-1),             &
-                        tau(map_w2(df):map_w2(df)+bl_levels-1),                &
+                        rdz_sp(1:bl_levels-1),                                 &
+                        rhokm_sp(0:bl_levels-1),                               &
+                        ngstress_sp(1:bl_levels-1),                            &
+                        fd_tau_sp(0:bl_levels-1),                              &
+                        tau_sp(0:bl_levels-1),                                 &
                         tau_grad(0:bl_levels-1), tau_non_grad(0:bl_levels-1))
+
+        do k = 0, bl_levels-1
+          tau(map_w2(df)+k) = tau_sp(k)
+        end do
 
       end if ! this face needs calculating
 

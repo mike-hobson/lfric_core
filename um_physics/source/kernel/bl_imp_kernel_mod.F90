@@ -14,7 +14,7 @@ module bl_imp_kernel_mod
                                      GH_WRITE, DOMAIN,          &
                                      ANY_DISCONTINUOUS_SPACE_1, &
                                      ANY_DISCONTINUOUS_SPACE_2
-  use constants_mod,             only : i_def, i_um, r_def, r_um
+  use constants_mod,             only : i_def, i_um, r_def, r_um, r_bl
   use fs_continuity_mod,         only : W3, Wtheta
   use kernel_mod,                only : kernel_type
 
@@ -214,38 +214,38 @@ contains
     logical :: l_correct
 
     ! profile fields from level 1 upwards
-    real(r_um), dimension(seg_len,1,nlayers) ::  t_latest, q_latest, &
+    real(r_bl), dimension(seg_len,1,nlayers) ::  t_latest, q_latest, &
          qcl_latest, qcf_latest, t, r_rho_levels
 
     ! profile field on boundary layer levels
-    real(r_um), dimension(seg_len,1,bl_levels) :: fqw, ftl, rhokh,       &
+    real(r_bl), dimension(seg_len,1,bl_levels) :: fqw, ftl, rhokh,       &
          dtrdz_charney_grid, rdz_charney_grid, qw, tl, dqw, dtl, ct_ctq, &
          dqw_nt, dtl_nt
 
     ! profile fields on u/v points and all levels
-    real(r_um), dimension(seg_len,1,nlayers) :: r_u, r_v
+    real(r_bl), dimension(seg_len,1,nlayers) :: r_u, r_v
 
     ! profile fields on u/v points and BL levels
-    real(r_um), dimension(seg_len,1,bl_levels) :: taux, tauy, &
+    real(r_bl), dimension(seg_len,1,bl_levels) :: taux, tauy, &
          dtrdz_u, dtrdz_v, rhokm_u, rhokm_v, cq_cm_u, cq_cm_v
 
     ! profile fields from level 2 upwards
-    real(r_um), dimension(seg_len,1,2:bl_levels) :: rdz_u, rdz_v
+    real(r_bl), dimension(seg_len,1,2:bl_levels) :: rdz_u, rdz_v
 
     ! profile fields from level 0 upwards
-    real(r_um), dimension(seg_len,1,0:nlayers) :: q, qcl, qcf, r_theta_levels
+    real(r_bl), dimension(seg_len,1,0:nlayers) :: q, qcl, qcf, r_theta_levels
 
     ! single level real fields
-    real(r_um), dimension(seg_len,1) :: gamma1, gamma2, ctctq1_1, &
+    real(r_bl), dimension(seg_len,1) :: gamma1, gamma2, ctctq1_1, &
          dqw1_1, dtl1_1, cq_cm_u_1, du_1, cq_cm_v_1, dv_1
 
     ! single level integer fields
     integer(i_um), dimension(seg_len,1) :: k_blend_tq, k_blend_uv
 
     ! parameters for new BL solver
-    real(r_um) :: pnonl,p1,p2
-    real(r_um), dimension(seg_len) :: i1, e1, e2
-    real(r_um), parameter :: sqrt2 = sqrt(2.0_r_def)
+    real(r_bl) :: pnonl,p1,p2
+    real(r_bl), dimension(seg_len) :: i1, e1, e2
+    real(r_bl), parameter :: sqrt2 = sqrt(2.0_r_bl)
 
     !-----------------------------------------------------------------------
     ! Mapping of LFRic fields into UM variables
@@ -267,7 +267,7 @@ contains
       end do
     end do
     if (l_noice_in_turb) then
-      qcf = 0.0_r_def
+      qcf = 0.0_r_bl
     else
       do i = 1, seg_len
         do k = 1, nlayers
@@ -302,6 +302,12 @@ contains
           dtl(i,1,k) = dtl_wth(map_wth(1,i) + k)
         end do
       end do
+    else
+      do i = 1, seg_len
+        dqw(i,1,1) = 0.0_r_bl
+        dtl(i,1,1) = 0.0_r_bl
+        ct_ctq(i,1,1) = 0.0_r_bl
+      end do
     end if
 
     !-----------------------------------------------------------------------
@@ -317,7 +323,7 @@ contains
       end do
     end do
     if (l_noice_in_turb) then
-      qcf_latest = 0.0_r_def
+      qcf_latest = 0.0_r_bl
     else
       do i = 1, seg_len
         do k = 1, nlayers
@@ -328,15 +334,15 @@ contains
 
     do i = 1, seg_len
       p1=bl_type_ind(map_bl(1,i)+0)*pstb + &
-           (1.0_r_def-bl_type_ind(map_bl(1,i)+0))*puns
+           (1.0_r_bl-bl_type_ind(map_bl(1,i)+0))*puns
       p2=bl_type_ind(map_bl(1,i)+1)*pstb + &
-           (1.0_r_def-bl_type_ind(map_bl(1,i)+1))*puns
+           (1.0_r_bl-bl_type_ind(map_bl(1,i)+1))*puns
       pnonl=max(p1,p2)
-      i1(i) = (1.0_r_def+1.0_r_def/sqrt2)*(1.0_r_def+pnonl)
-      e1(i) = (1.0_r_def+1.0_r_def/sqrt2)*( pnonl + (1.0_r_def/sqrt2) + &
-              sqrt(pnonl*(sqrt2-1.0_r_def)+0.5_r_def) )
-      e2(i) = (1.0_r_def+1.0_r_def/sqrt2)*( pnonl+(1.0_r_def/sqrt2) - &
-              sqrt(pnonl*(sqrt2-1.0_r_def)+0.5_r_def))
+      i1(i) = (1.0_r_bl+1.0_r_bl/sqrt2)*(1.0_r_bl+pnonl)
+      e1(i) = (1.0_r_bl+1.0_r_bl/sqrt2)*( pnonl + (1.0_r_bl/sqrt2) + &
+              sqrt(pnonl*(sqrt2-1.0_r_bl)+0.5_r_bl) )
+      e2(i) = (1.0_r_bl+1.0_r_bl/sqrt2)*( pnonl+(1.0_r_bl/sqrt2) - &
+              sqrt(pnonl*(sqrt2-1.0_r_bl)+0.5_r_bl))
       gamma1(i,1) = i1(i)
     end do
 
@@ -358,7 +364,7 @@ contains
          ! IN fields
          q, qcl, qcf, q_latest, qcl_latest, qcf_latest, t, t_latest,         &
          dtrdz_charney_grid, dtrdz_u, dtrdz_v, rhokh, rhokm_u, rhokm_v,      &
-         rdz_charney_grid, rdz_u, rdz_v, gamma1, gamma2, alpha_cd,           &
+         rdz_charney_grid, rdz_u, rdz_v, gamma1, gamma2, real(alpha_cd,r_bl),&
          r_u, r_v, r_theta_levels, r_rho_levels, k_blend_tq, k_blend_uv,     &
          ! INOUT fields
          fqw, ftl, taux, tauy, r_u, r_v, dqw, dtl,                           &

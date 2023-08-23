@@ -91,6 +91,10 @@ export PRE_PROCESS_MACROS += R_SOLVER_PRECISION=$(R_SOLVER_PRECISION)
 R_TRAN_PRECISION ?= 64
 export PRE_PROCESS_MACROS += R_TRAN_PRECISION=$(R_TRAN_PRECISION)
 
+# Set the r_bl precision for reals
+R_BL_PRECISION ?= 64
+export PRE_PROCESS_MACROS += R_BL_PRECISION=$(R_BL_PRECISION)
+
 # The compile options file overrides compile options based on file-name pattern matching.
 # Use the miniapp-specific file if it exists. Otherwise use the infrastructure file.
 ifeq (,$(wildcard $(PROJECT_DIR)/build/compile_options.mk))

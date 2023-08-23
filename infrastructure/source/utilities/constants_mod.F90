@@ -23,7 +23,7 @@ module constants_mod
             i_timestep, i_um, i_ncdf,                                    &
             l_def, l_native,                                             &
             r_def, r_double, r_ncdf, r_native, r_second, r_single, r_um, &
-            r_solver, r_tran,                                            &
+            r_solver, r_tran, r_bl,                                      &
             CMDI, UNSET_KEY, EMDI, IMDI, RMDI,                           &
             real_type, r_solver_real_type, r_tran_real_type,             &
             integer_type, logical_type,                                  &
@@ -76,6 +76,12 @@ module constants_mod
 #else
   integer,      parameter :: r_tran = real64
   character(3), parameter :: PRECISION_R_TRAN = '64'
+#endif
+
+#if (R_BL_PRECISION == 32)
+  integer, parameter :: r_bl = real32
+#else
+  integer, parameter :: r_bl = real64
 #endif
 
   integer, parameter :: real_type          = 1 !< A parameter used to indicate a real data typa

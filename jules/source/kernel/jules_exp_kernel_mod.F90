@@ -689,12 +689,13 @@ contains
 
     ! single level real fields
     real(r_um), dimension(seg_len,1) ::                                      &
-         bulk_cloud_fraction, temperature, fqw, ftl, rhokh, ddmfx,           &
+         fqw, ftl, rhokh, ddmfx,                                             &
          z0h_specified, z0m_specified, soil_clay, t1_sd, q1_sd, fb_surf,     &
          rib_gb, vshr, ustargbm, photosynth_act_rad, tstar_land, dtstar_sea, &
          tstar_sice, alpha1_sea, ashtf_prime_sea, chr1p5m_sice, rhokh_sea,   &
-         z0hssi, z0mssi, bt_blend, bq_blend, z1_uv_top, z1_tq_top, rhostar,  &
-         recip_l_mo_sea, sky
+         z0hssi, z0mssi, z1_uv_top, z1_tq_top, rhostar, recip_l_mo_sea, sky
+    real(r_um), dimension(seg_len,1,1) :: temperature, bt_blend, bq_blend,   &
+         bulk_cloud_fraction
 
     real(r_um), dimension(seg_len_halo,1) ::  flandg,               &
          flandfac, fseafac, cdr10m, rhokm_land, rhokm_ssi, rhokm
@@ -740,8 +741,9 @@ contains
     ! if they become set, please move up to be with other variables
     integer(i_um) :: asteps_since_triffid, ndry_dep_species
 
-    real(r_um), dimension(seg_len,1) ::                                      &
-         bt, bq, bt_cld, bq_cld, a_qs, a_dqsdt, dqsdt, charnock_w
+    real(r_um), dimension(seg_len,1,1) ::                                      &
+         bt, bq, bt_cld, bq_cld, a_qs, a_dqsdt, dqsdt
+    real(r_um), dimension(seg_len,1) :: charnock_w
 
     ! This is an idealised fixed value for ustar.
     real(r_um), parameter :: ustar_fixed_value = 0.1
@@ -1281,19 +1283,19 @@ contains
 
     do i = 1, seg_len
       ! thermodynamic variables
-      temperature(i,1) = theta_in_wth(map_wth(1,i)+k_blend_tq(i,1)) * &
+      temperature(i,1,1) = theta_in_wth(map_wth(1,i)+k_blend_tq(i,1)) * &
                          exner_in_wth(map_wth(1,i)+k_blend_tq(i,1))
       q(i,1,1) = m_v_n(map_wth(1,i)+k_blend_tq(i,1))
       qcl(i,1,1) = m_cl_n(map_wth(1,i)+k_blend_tq(i,1))
       if (l_noice_in_turb) then
         qcf(i,1,1) = 0.0_r_um
-        bulk_cloud_fraction(i,1) = cf_liquid(map_wth(1,i)+k_blend_tq(i,1))
+        bulk_cloud_fraction(i,1,1) = cf_liquid(map_wth(1,i)+k_blend_tq(i,1))
       else
         qcf(i,1,1) = m_ci_n(map_wth(1,i)+k_blend_tq(i,1))
-        bulk_cloud_fraction(i,1) = cf_bulk(map_wth(1,i)+k_blend_tq(i,1))
+        bulk_cloud_fraction(i,1,1) = cf_bulk(map_wth(1,i)+k_blend_tq(i,1))
       end if
       forcing%qw_1_ij(i,1) = q(i,1,1) + qcl(i,1,1) + qcf(i,1,1)
-      forcing%tl_1_ij(i,1) = temperature(i,1) - lcrcp*qcl(i,1,1) - lsrcp*qcf(i,1,1)
+      forcing%tl_1_ij(i,1) = temperature(i,1,1) - lcrcp*qcl(i,1,1) - lsrcp*qcf(i,1,1)
 
       ! pressure
       p_theta_levels(i,1,1) = p_zero*(exner_in_wth(map_wth(1,i)+k_blend_tq(i,1)))**(1.0_r_def/kappa)
@@ -1444,8 +1446,8 @@ contains
         fqw(i,1)   = (rhostar(i,1)*fixed_flux_e)/(lc*rholem)
         ftl(i,1)   = (rhostar(i,1)*fixed_flux_h)/(cp*rholem)
 
-        fb_surf(i,1) = g * ( bt_blend(i,1)*ftl(i,1) +                         &
-                             bq_blend(i,1)*fqw(i,1) ) /rhostar(i,1)
+        fb_surf(i,1) = g * ( bt_blend(i,1,1)*ftl(i,1) +                        &
+                             bq_blend(i,1,1)*fqw(i,1) ) /rhostar(i,1)
         recip_l_mo_sea(i,1) = -vkman * fb_surf(i,1)                           &
                               / ( ustargbm(i,1)*ustargbm(i,1)*ustargbm(i,1) )
         if ( fb_surf(i,1)  >   0.0_r_um) then
@@ -1454,8 +1456,8 @@ contains
 
           t1_sd(i,1) = 1.93_r_um * ftl(i,1) / (rhostar(i,1) * w_m)
           q1_sd(i,1) = 1.93_r_um * fqw(i,1) / (rhostar(i,1) * w_m)
-          tv1_sd     = temperature(i,1) * ( bt_blend(i,1)*t1_sd(i,1) +        &
-                                            bq_blend(i,1)*q1_sd(i,1) )
+          tv1_sd     = temperature(i,1,1) * ( bt_blend(i,1,1)*t1_sd(i,1) +     &
+                                            bq_blend(i,1,1)*q1_sd(i,1) )
           t1_sd(i,1) = max ( 0.0_r_um , t1_sd(i,1) )
           q1_sd(i,1) = max ( 0.0_r_um , q1_sd(i,1) )
           if (tv1_sd  <=  0.0_r_um) then
@@ -1480,14 +1482,14 @@ contains
         allocate(qs_star(pdims%i_start:pdims%i_end,pdims%j_start:pdims%j_end))
         do i = 1, seg_len
           ! start with simple extrapolation from level 1
-          fluxes%tstar_ij(i,1) = temperature(i,1) + grcp * ainfo%z1_tq_ij(i,1)
+          fluxes%tstar_ij(i,1) = temperature(i,1,1) + grcp * ainfo%z1_tq_ij(i,1)
 
           call qsat_mix(qs_star,fluxes%tstar_ij,forcing%pstar_ij,pdims%i_len,pdims%j_len)
 
           dqsdt_star = repsilon * lc * qs_star(i,1) /                          &
                        ( r * fluxes%tstar_ij(i,1) * fluxes%tstar_ij(i,1) )
 
-          theta1 = temperature(i,1) * (p_zero/p_theta_levels(i,1,1))**kappa
+          theta1 = temperature(i,1,1) * (p_zero/p_theta_levels(i,1,1))**kappa
 
           wthvbar = theta1 *                                                   &
                     (1.0_r_um+c_virtual*q(i,1,1)-qcl(i,1,1)-qcf(i,1,1)) *      &

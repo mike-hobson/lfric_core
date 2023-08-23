@@ -16,7 +16,7 @@ module bl_exp_kernel_mod
                                      ANY_DISCONTINUOUS_SPACE_3,  &
                                      ANY_DISCONTINUOUS_SPACE_4,  &
                                      ANY_DISCONTINUOUS_SPACE_5
-  use constants_mod,          only : i_def, i_um, r_def, r_um
+  use constants_mod,          only : i_def, i_um, r_def, r_um, r_bl
   use empty_data_mod,         only : empty_real_data
   use fs_continuity_mod,      only : W3, Wtheta
   use kernel_mod,             only : kernel_type
@@ -365,7 +365,8 @@ contains
     use cv_run_mod, only: i_convection_vn, i_convection_vn_6a,               &
                           cldbase_opt_dp, cldbase_opt_md
     use nlsizes_namelist_mod, only: land_field, bl_levels
-    use planet_constants_mod, only: p_zero, kappa, planet_radius, lcrcp, lsrcp
+    use planet_constants_mod, only: p_zero, kappa, planet_radius, &
+         lcrcp => lcrcp_bl, lsrcp => lsrcp_bl
     use timestep_mod, only: timestep
 
     use free_tracers_inputs_mod,    only: n_wtrac
@@ -490,43 +491,45 @@ contains
 
     ! local switches and scalars
     integer(i_um) :: error_code
-    real(r_um) :: weight1, weight2, weight3
+    real(r_bl) :: weight1, weight2, weight3
     logical :: l_spec_z0, l_extra_call, l_cape_opt
 
     ! profile fields from level 1 upwards
-    real(r_um), dimension(seg_len,1,nlayers) :: rho_dry, z_rho, z_theta,     &
+    real(r_bl), dimension(seg_len,1,nlayers) :: rho_dry, z_rho, z_theta,     &
          bulk_cloud_fraction, rho_wet_tq, u_p, v_p, rhcpt, theta,            &
          p_rho_levels, exner_rho_levels, tgrad_bm, exner_theta_levels,       &
          bulk_cf_conv, qcf_conv, r_rho_levels, visc_h, visc_m, rneutml_sq
 
     ! profile field on boundary layer levels
-    real(r_um), dimension(seg_len,1,bl_levels) :: fqw, ftl, rhokh, bq_gb,    &
-         bt_gb, dtrdz_charney_grid, rdz_charney_grid, rhokm_mix, w_mixed,    &
-         w_flux, temperature, rho_mix_tq, dzl_charney, qw, tl, bt, bq,       &
+    real(r_bl), dimension(seg_len,1,bl_levels) :: fqw, ftl, rhokh, bq_gb,    &
+         bt_gb, dtrdz_charney_grid, rdz_charney_grid, rhokm_mix,             &
+         temperature, rho_mix_tq, dzl_charney, qw, tl, bt, bq,               &
          bt_cld, bq_cld, a_qs, a_dqsdt, dqsdt, rhokm, tau_fd_x, tau_fd_y, rdz
+    real(r_um), dimension(seg_len,1,bl_levels) :: w_mixed, w_flux
 
     ! profile fields from level 2 upwards
-    real(r_um), dimension(seg_len,1,2:nlayers+1) :: bl_w_var
+    real(r_bl), dimension(seg_len,1,2:nlayers+1) :: bl_w_var
 
-    real(r_um), dimension(seg_len,1,2:bl_levels) :: f_ngstress
+    real(r_bl), dimension(seg_len,1,2:bl_levels) :: f_ngstress
 
     ! profile fields from level 0 upwards
-    real(r_um), dimension(seg_len,1,0:nlayers) :: p_theta_levels, etadot, w, &
+    real(r_bl), dimension(seg_len,1,0:nlayers) :: p_theta_levels, etadot, w, &
          q, qcl, qcf, r_theta_levels
 
     ! profile fields with a hard-wired 2
-    real(r_um), dimension(seg_len,1,2,bl_levels) :: rad_hr, micro_tends
+    real(r_bl), dimension(seg_len,1,2,bl_levels) :: rad_hr, micro_tends
 
     ! single level real fields
-    real(r_um), dimension(seg_len,1) :: p_star, tstar, zh_prev, zlcl, zhpar, &
+    real(r_bl), dimension(seg_len,1) :: p_star, tstar, zh_prev, zlcl, zhpar, &
          zh, dzh, wstar, wthvs, u_0_p, v_0_p, zlcl_uv, qsat_lcl, delthvu,    &
          bl_type_1, bl_type_2, bl_type_3, bl_type_4, bl_type_5, bl_type_6,   &
-         bl_type_7, uw0, vw0, zhnl, zeroes, surf_dep_flux, rhostar,          &
+         bl_type_7, uw0, vw0, zhnl, rhostar,                                 &
          h_blend_orog, recip_l_mo_sea, flandg, t1_sd, q1_sd, qcl_inv_top,    &
          fb_surf, rib_gb, z0m_eff_gb, zhsc, ustargbm, cos_theta_latitude,    &
          max_diff, delta_smag
+    real(r_um), dimension(seg_len,1) :: surf_dep_flux, zeroes
 
-    real(r_um), dimension(seg_len,1,3) :: t_frac, t_frac_dsc, we_lim, &
+    real(r_bl), dimension(seg_len,1,3) :: t_frac, t_frac_dsc, we_lim, &
          we_lim_dsc, zrzi, zrzi_dsc
 
     ! single level integer fields
@@ -536,7 +539,7 @@ contains
     logical, dimension(seg_len,1) :: land_sea_mask, cumulus, l_shallow
 
     ! fields on land points
-    real(r_um), dimension(:), allocatable :: sil_orog_land_gb, ho2r2_orog_gb, &
+    real(r_bl), dimension(:), allocatable :: sil_orog_land_gb, ho2r2_orog_gb, &
          sd_orog
 
     ! integer fields on land points
@@ -548,11 +551,11 @@ contains
     integer(i_um), parameter :: nscmdpkgs=15
     logical,       parameter :: l_scmdiags(nscmdpkgs)=.false.
 
-    real(r_um), dimension(seg_len,1,nlayers) :: tnuc_new, rho_wet
+    real(r_bl), dimension(seg_len,1,nlayers) :: tnuc_new, rho_wet
 
-    real(r_um), dimension(seg_len,1,0:nlayers) :: conv_prog_precip
+    real(r_bl), dimension(seg_len,1,0:nlayers) :: conv_prog_precip
 
-    real(r_um), dimension(seg_len,1) :: z0h_scm, z0m_scm, w_max, ql_ad,      &
+    real(r_bl), dimension(seg_len,1) :: z0h_scm, z0m_scm, w_max, ql_ad,      &
          cin_undilute, cape_undilute, entrain_coef, ustar_in, g_ccp, h_ccp,  &
          ccp_strength, cu_over_orog, shallowc, tnuc_nlcl, flux_e, flux_h,    &
          z0msea, tstar_sea, tstar_land, ice_fract, tstar_sice
@@ -583,7 +586,7 @@ contains
     land_field = 0
     do i = 1, seg_len
       flandg(i,1) = surf_interp(map_surf(1,i)+0)
-      if (flandg(i,1) > 0.0_r_um) then
+      if (flandg(i,1) > 0.0_r_bl) then
         land_field = land_field + 1
       end if
       fb_surf(i,1) = surf_interp(map_surf(1,i)+6)
@@ -592,17 +595,17 @@ contains
     allocate(land_index(land_field))
     l = 0
     do i = 1, seg_len
-      if (flandg(i,1) > 0.0_r_um) then
+      if (flandg(i,1) > 0.0_r_bl) then
         l = l+1
         land_index(l) = i
       end if
     end do
 
     if (l_use_surf_in_ri) then
-      tstar = 0.0_r_um
+      tstar = 0.0_r_bl
       do i = 1, seg_len
         do n = 1, n_surf_tile
-          if (tile_fraction(map_tile(1,i)+n-1) > 0.0_r_def) then
+          if (tile_fraction(map_tile(1,i)+n-1) > 0.0_r_bl) then
             tstar(i,1) = tstar(i,1) + tile_temperature(map_tile(1,i)+n-1) * tile_fraction(map_tile(1,i)+n-1)
           end if
         end do
@@ -615,10 +618,10 @@ contains
 
     do l = 1, land_field
       ! Standard deviation of orography
-      sd_orog(l) = real(sd_orog_2d(map_2d(1,land_index(l))), r_um)
+      sd_orog(l) = real(sd_orog_2d(map_2d(1,land_index(l))), r_bl)
       ! Half of peak-to-trough height over root(2) of orography (ho2r2_orog_gb)
-      ho2r2_orog_gb(l) = real(peak_to_trough_orog(map_2d(1,land_index(l))), r_um)
-      sil_orog_land_gb(l) = real(silhouette_area_orog(map_2d(1,land_index(l))), r_um)
+      ho2r2_orog_gb(l) = real(peak_to_trough_orog(map_2d(1,land_index(l))), r_bl)
+      sil_orog_land_gb(l) = real(silhouette_area_orog(map_2d(1,land_index(l))), r_bl)
     end do
 
     ! Information passed from Jules explicit
@@ -678,7 +681,7 @@ contains
         qcf_conv(i,1,k) = m_ci_n(map_wth(1,i) + k)
         bulk_cf_conv(i,1,k) = cf_bulk(map_wth(1,i) + k)
         if (l_noice_in_turb) then
-          qcf(i,1,k) = 0.0_r_um
+          qcf(i,1,k) = 0.0_r_bl
           bulk_cloud_fraction(i,1,k) = cf_liquid(map_wth(1,i) + k)
         else
           qcf(i,1,k) = m_ci_n(map_wth(1,i) + k)
@@ -710,8 +713,8 @@ contains
       end do
     end do
     ! surface currents
-    u_0_p = 0.0
-    v_0_p = 0.0
+    u_0_p = 0.0_r_bl
+    v_0_p = 0.0_r_bl
 
     !-----------------------------------------------------------------------
     ! Things saved from one timestep to the next
@@ -752,22 +755,22 @@ contains
 
     bl_diag%l_tke      = .true.
     allocate(BL_diag%tke(seg_len,1,bl_levels))
-    bl_diag%tke = 0.0_r_um
+    bl_diag%tke = 0.0_r_bl
 
     bl_diag%l_elm3d    = .true.
     allocate(BL_diag%elm3d(seg_len,1,bl_levels))
-    bl_diag%elm3d = 0.0_r_um
+    bl_diag%elm3d = 0.0_r_bl
 
     bl_diag%l_gradrich = .true.
     allocate(BL_diag%gradrich(seg_len,1,bl_levels))
-    bl_diag%gradrich = 0.0_r_um
+    bl_diag%gradrich = 0.0_r_bl
 
     ! Calculate vertical differences
     do i = 1, seg_len
       dzl_charney(i,1,1) = 2.0 * (r_theta_levels(i,1,1) - r_theta_levels(i,1,0))
       do k = 2, bl_levels
         dzl_charney(i,1,k) = dz_wth(map_wth(1,i) + k)
-        rdz(i,1,k) = 1.0_r_def/dz_wth(map_wth(1,i) + k-1)
+        rdz(i,1,k) = 1.0_r_bl/dz_wth(map_wth(1,i) + k-1)
       end do
       do k = 1, bl_levels
         rdz_charney_grid(i,1,k) = rdz_w3(map_w3(1,i) + k-1)
@@ -799,6 +802,7 @@ contains
         l_shallow, l_mid, delthvu, ql_ad, zhpar, dzh, qcl_inv_top,          &
         zlcl, zlcl_uv, conv_type, no_cumulus, w_max, w, L_cape_opt)
 
+    qsat_lcl = 0.0_r_bl
     call conv_diag_6a(                                                  &
     !     IN Parallel variables
             seg_len, 1                                                  &
@@ -904,15 +908,18 @@ contains
         end do
       end do
 
-      call  tr_mix (                                                 &
+      call  tr_mix (                                                           &
            ! IN fields
-           r_theta_levels, r_rho_levels, pdims,                      &
-           bl_levels, alpha_cd, rhokm_mix(:,:,2:), rhokm_mix(:,:,1), &
-           dtrdz_charney_grid, zeroes, zeroes, kent, we_lim,         &
-           t_frac, zrzi, kent_dsc, we_lim_dsc, t_frac_dsc,           &
-           zrzi_dsc, zhnl, zhsc, z_rho,                              &
+           real(r_theta_levels,r_um), real(r_rho_levels,r_um), pdims,          &
+           bl_levels, alpha_cd,                                                &
+           real(rhokm_mix(1:seg_len,1:1,2:bl_levels),r_um),                    &
+           real(rhokm_mix(1:seg_len,1:1,1),r_um),                              &
+           real(dtrdz_charney_grid,r_um), zeroes, zeroes, kent,                &
+           real(we_lim,r_um), real(t_frac,r_um), real(zrzi,r_um), kent_dsc,    &
+           real(we_lim_dsc,r_um), real(t_frac_dsc,r_um), real(zrzi_dsc,r_um),  &
+           real(zhnl,r_um), real(zhsc,r_um), real(z_rho,r_um),                 &
            ! INOUT / OUT fields
-           w_mixed, w_flux, surf_dep_flux                            &
+           w_mixed, w_flux, surf_dep_flux                                      &
            )
 
       do k = 1, bl_levels

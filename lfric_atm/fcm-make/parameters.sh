@@ -30,7 +30,7 @@ export socrates_rev=um13.3
 export socrates_sources=
 export ukca_rev=um13.3
 export ukca_sources=
-export um_rev=119527
+export um_rev=119694
 export um_sources=
 
 #### Do not edit the definitions below this line without

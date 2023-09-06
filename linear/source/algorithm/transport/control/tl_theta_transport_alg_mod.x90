@@ -73,13 +73,9 @@ contains
 
     ! Internal variables
     real(kind=r_def)                      :: one
-    type(field_type)                      :: temp_inc
     type(field_type),             pointer :: theta_in_ptr => null()
     type(field_type),             pointer :: theta_out_ptr => null()
     type(field_type),             pointer :: ls_theta_in_ptr => null()
-    type(operator_type),          pointer :: mm_wt => null()
-
-    type(function_space_type),    pointer :: wt_fs => null()
 
     ! ------------------------------------------------------------------------ !
     ! Convert to potential temperature to transport

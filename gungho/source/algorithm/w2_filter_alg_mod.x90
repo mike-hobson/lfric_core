@@ -27,8 +27,6 @@ contains
   !> @param[inout]   w2_field_inout   Input w2 field that is overwritten on output
   subroutine w2_filter_alg(w2_field_inout)
 
-    use reference_element_mod,         only : T
-    use set_any_dof_kernel_mod,        only : set_any_dof_kernel_type
     use physics_mappings_alg_mod,      only : map_physics_winds
     use map_fd_to_prognostics_alg_mod, only : set_wind
 
@@ -37,7 +35,7 @@ contains
     type( field_type ), intent( inout ) :: w2_field_inout
 
     ! local fields
-    type( field_type ) :: w2_only_h, w2_filtered, w2_h_filtered
+    type( field_type ) :: w2_h_filtered
 
     type( field_type ) :: u_lat, u_lon, u_up, u_up_wt
 
@@ -52,8 +50,6 @@ contains
     w2_fs => function_space_collection%get_fs( mesh, element_order, W2 )
     wt_fs => function_space_collection%get_fs( mesh, element_order, Wtheta )
 
-    call w2_only_h%initialise( w2_fs )
-    call w2_filtered%initialise( w2_fs )
     call w2_h_filtered%initialise( w2_fs )
 
     call u_lon%initialise( w3_fs )
@@ -61,21 +57,16 @@ contains
     call u_up%initialise( w3_fs )
     call u_up_wt%initialise( wt_fs )
 
-    ! Set vertical component to zero (filtering is only done horizontal)
+    ! Set vertical component to zero, explicitly removing any vertical wind
     call invoke( setval_c(u_up_wt, 0.0_r_def),        &
-                 setval_c(w2_h_filtered, 0.0_r_def),        &
-                 setval_x(w2_only_h, w2_field_inout), &
-                 set_any_dof_kernel_type(w2_only_h, T, 0.0_r_def) )
+                 setval_c(w2_h_filtered, 0.0_r_def) )
 
     ! Sample winds at the W3 points
-    call map_physics_winds(u_lon, u_lat, u_up, w2_only_h)
+    call map_physics_winds(u_lon, u_lat, u_up, w2_field_inout)
 
     ! Project back to W2 points
     call set_wind(w2_h_filtered, u_lon, u_lat, u_up_wt)
-
-    ! Repopulate the horizonal components: w2_filter = w2_in - w2_only_h + w2_h_filter
-    call invoke( inc_X_plus_Y(w2_field_inout, w2_h_filtered), &
-                 inc_X_minus_Y(w2_field_inout, w2_only_h) )
+    call invoke(setval_X(w2_field_inout, w2_h_filtered))
 
     nullify(mesh, w2_fs, w3_fs, wt_fs)
 

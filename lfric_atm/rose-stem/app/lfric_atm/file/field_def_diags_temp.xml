@@ -588,12 +588,16 @@
   <field id="stochastic__fp_spt" name="fp_spt" long_name="spt_forcing_pattern" unit="1" grid_ref="full_level_face_grid" />
   <field id="stochastic__fp_skeb" name="fp_skeb" long_name="skeb_forcing_pattern" unit="1" grid_ref="half_level_face_grid" />
   <field id="stochastic__ndisp" name="ndisp" long_name="skeb_numerical_dissipation" unit="m2 s-3" grid_ref="half_level_face_grid" />
+  <field id="stochastic__norm_xi" name="norm_xi" long_name="skeb_norm_gradient_of_vorticity" unit="m2 s-2" grid_ref="half_level_face_grid" />
+  <field id="stochastic__norm_div" name="norm_div" long_name="skeb_norm_gradient_of_divergence" unit="m2 s-2" grid_ref="half_level_face_grid" />
   <field id="stochastic__cdisp" name="cdisp" long_name="skeb_convective_dissipation" unit="m2 s-3" grid_ref="half_level_face_grid" />
   <field id="stochastic__psif_hat" name="psif_hat" long_name="skeb_streamfunction_forcing" unit="m2 s" grid_ref="half_level_face_grid" />
   <field id="stochastic__du_rot_skeb" name="du_rot_skeb" long_name="eastward_wind_increment_from_rotational_skeb" unit="m s-1" grid_ref="half_level_face_grid" />
   <field id="stochastic__dv_rot_skeb" name="dv_rot_skeb" long_name="northward_wind_increment_from_rotational_skeb" unit="m s-1" grid_ref="half_level_face_grid" />
   <field id="stochastic__du_div_skeb" name="du_div_skeb" long_name="eastward_wind_increment_from_divergent_skeb" unit="m s-1" grid_ref="half_level_face_grid" />
   <field id="stochastic__dv_div_skeb" name="dv_div_skeb" long_name="northward_wind_increment_from_divergent_skeb" unit="m s-1" grid_ref="half_level_face_grid" />  
+  <field id="stochastic__du_tot_skeb" name="du_tot_skeb" long_name="eastward_wind_increment_from_total_skeb" unit="m s-1" grid_ref="half_level_face_grid" />
+  <field id="stochastic__dv_tot_skeb" name="dv_tot_skeb" long_name="northward_wind_increment_from_total_skeb" unit="m s-1" grid_ref="half_level_face_grid" />  
   <!-- advection diagnostics -->
   <field id="advection__dtheta_adv" name="dtheta_adv" long_name="potential_temperature_increment_from_advection" unit="K" grid_ref="full_level_face_grid" />
   <field id="advection__du_adv" name="du_adv" long_name="eastward_wind_increment_from_advection" unit="m s-1" grid_ref="half_level_face_grid" />

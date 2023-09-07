@@ -25,7 +25,7 @@
     arg_type(GH_FIELD, GH_REAL, GH_READ,  W3),                          & ! rho
     arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                      & ! diff_flux
     arg_type(GH_FIELD, GH_REAL, GH_READ,  ANY_DISCONTINUOUS_SPACE_1),   & ! cape
-    arg_type(GH_FIELD, GH_REAL, GH_READ,  W3),                          & ! rdz_w3
+    arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                      & ! height
     arg_type(GH_SCALAR, GH_INTEGER, GH_READ ),                          & ! skeb_level_bottom
     arg_type(GH_SCALAR, GH_INTEGER, GH_READ ),                          & ! skeb_level_top
     arg_type(GH_SCALAR, GH_REAL, GH_READ )                              & ! gravity
@@ -64,7 +64,7 @@
                                    rho,        &
                                    diff_flux,  &
                                    cape,       &
-                                   rdz_w3,     &
+                                   height_wth, &
                                    skeb_level_bottom, &
                                    skeb_level_top,    &
                                    gravity,    &
@@ -93,7 +93,7 @@
     real(kind=r_def),    intent(in),    dimension(undf_w3)  :: rho
     real(kind=r_def),    intent(in),    dimension(undf_wth) :: diff_flux
     real(kind=r_def),    intent(in),    dimension(undf_2d)  :: cape
-    real(kind=r_def),    intent(in),    dimension(undf_w3)  :: rdz_w3
+    real(kind=r_def),    intent(in),    dimension(undf_wth)  :: height_wth
 
     ! Scalars
     integer(kind=i_def), intent(in) :: skeb_level_bottom, skeb_level_top
@@ -119,8 +119,9 @@
 
     do k=skeb_level_bottom, skeb_level_top
 
-      cdisp(map_w3(1) + k)=ABS(diff_flux(map_wth(1) + k) - diff_flux(map_wth(1) + k-1) ) *cape_kk &
-                          *rdz_w3(map_w3(1) + k - 1) /( gravity * rho(map_w3(1) + k) )
+      cdisp(map_w3(1) + k-1)=ABS(diff_flux(map_wth(1) + k+1) - diff_flux(map_wth(1) + k-1) ) *cape_kk &
+                          /( gravity * rho(map_w3(1) + k-1) * &
+                        (height_wth(map_wth(1)+k+1)-height_wth(map_wth(1)+k-1)))
     end do
 
     end subroutine skeb_conv_disp_code

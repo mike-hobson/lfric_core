@@ -19,11 +19,13 @@ module skeb_ndisp_alg_mod
     ! use collections
     use function_space_collection_mod,  only: function_space_collection
     ! xios output and timers
-    use io_config_mod,             only: subroutine_timers
+    use io_config_mod,             only: subroutine_timers, write_diag, &
+         use_xios_io
     use timer_mod,                 only: timer
     ! configs and loging
     use base_mesh_config_mod,      only: geometry, &
                                          geometry_spherical
+    use initialise_diagnostics_mod, only: diagnostic_to_be_sampled
 
     implicit none
 
@@ -147,8 +149,8 @@ module skeb_ndisp_alg_mod
   call r_xi%initialise( vector_space = w1_fs  )
   call r_u%initialise( vector_space = w2h_fs  )
   call grad_div_u%initialise( vector_space = w2h_fs  )
-  call norm_gu%initialise( vector_space = w3_fs  )
-  call norm_xi%initialise( vector_space = w3_fs  )
+  call ndisp%copy_field_properties(norm_gu)
+  call ndisp%copy_field_properties(norm_xi)
   call grad_perp_xi%initialise( vector_space = w2_fs  )
   do i = 1,3
     call physical_grad_div(i)%initialise( vector_space = w3_fs  )
@@ -167,22 +169,21 @@ module skeb_ndisp_alg_mod
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Calculate horizontal divergence of wind in W3, div_u_h
-  call invoke( setval_c(u_h, 0.0_r_def),       &
-                  ! Extract wind horizontal coords
-                  extract_uv_kernel_type(u_h, u ),&
-                  ! Do divergence: apply diverge operator (div_h) to horizontal
-                  ! wind u_h, output is r_div_u on W3
-                  dg_matrix_vector_kernel_type( r_div_u, u_h, div_h ),      &
-                  ! Convert to pointwise W3 field for output
-                  dg_matrix_vector_kernel_type( div_u_h, r_div_u , m3_inv ) )
-
+  call invoke( setval_c(u_h, 0.0_r_def),                                  &
+               ! Extract wind horizontal coords
+               extract_uv_kernel_type(u_h, u ),                           &
+               ! Do divergence: apply diverge operator (div_h) to horizontal
+               ! wind u_h, output is r_div_u on W3
+               dg_matrix_vector_kernel_type( r_div_u, u_h, div_h ),       &
+               ! Convert to pointwise W3 field for output
+               dg_matrix_vector_kernel_type( div_u_h, r_div_u , m3_inv ), &
   ! Calculate vertical component of vorticity in W1, xi
-  call invoke ( setval_c(r_xi, 0.0_r_def),                          &
-                  ! Compute vorticity: curl of u, output: r_xi
-                  transpose_matrix_vector_kernel_type(r_xi, u, curl), &
-                  ! Enforce BC
-                  enforce_bc_kernel_type(r_xi),                       &
-                  setval_c(xi, 0.0_r_def) )
+               setval_c(r_xi, 0.0_r_def),                                 &
+               ! Compute vorticity: curl of u, output: r_xi
+               transpose_matrix_vector_kernel_type(r_xi, u, curl),        &
+               ! Enforce BC
+               enforce_bc_kernel_type(r_xi),                              &
+               setval_c(xi, 0.0_r_def) )
 
   ! Integrate quadrature points
   call mass_matrix_solver_alg(xi, r_xi)
@@ -197,16 +198,16 @@ module skeb_ndisp_alg_mod
   !  using grad_perp_xi and  grad_div_u respectively.
 
   ! Compute strong curl of vertical component of vorticity (grad_perp(xi)) in W2
-  call invoke( strong_curl_kernel_type(grad_perp_xi, xi) )
-
+  call invoke( strong_curl_kernel_type(grad_perp_xi, xi), &
+               inc_a_times_X(0.5_r_def, grad_perp_xi),    &
   ! Compute weak gradient of div(u_h) in W2H grad_div_u
-  call invoke ( setval_c(r_u, 0.0_r_def),                                  &
-                ! Do gradient of the horizontal wind divergence (div grad u_h),
-                ! output as r_u
-                transpose_matrix_vector_kernel_type(r_u, div_u_h, div_h), &
-                inc_a_times_X(-1.0_r_def, r_u),                           &
-                enforce_bc_kernel_type(r_u),                              &
-                setval_c(grad_div_u, 0.0_r_def) )
+               setval_c(r_u, 0.0_r_def),                                 &
+               ! Do gradient of the horizontal wind divergence (div grad u_h),
+               ! output as r_u
+               transpose_matrix_vector_kernel_type(r_u, div_u_h, div_h), &
+               inc_a_times_X(-1.0_r_def, r_u),                           &
+               enforce_bc_kernel_type(r_u),                              &
+               setval_c(grad_div_u, 0.0_r_def) )
 
   ! Integrate quadrature
   call mass_matrix_solver_alg(grad_div_u, r_u)
@@ -214,25 +215,37 @@ module skeb_ndisp_alg_mod
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !!  4)  Do Norm of gradients of vorticity and divergence  !!
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  call invoke( setval_c(norm_gu, 0.0_r_def),                                         &
-                  setval_c(norm_xi, 0.0_r_def),                                      &
-                  dg_convert_hdiv_field_kernel_type(physical_grad_xi,                &
-                                                    grad_perp_xi, chi, panel_id),    &
-                  dg_convert_hdiv_field_kernel_type(physical_grad_div,               &
-                                                    grad_div_u, chi, panel_id),      &
-                  dot_product_of_components_kernel_type(norm_gu, physical_grad_div), &
-                  dot_product_of_components_kernel_type(norm_xi, physical_grad_xi)   )
-
+  call invoke( setval_c(norm_gu, 0.0_r_def),                                      &
+               setval_c(norm_xi, 0.0_r_def),                                      &
+               dg_convert_hdiv_field_kernel_type(physical_grad_xi,                &
+                                                 grad_perp_xi, chi, panel_id),    &
+               dg_convert_hdiv_field_kernel_type(physical_grad_div,               &
+                                                 grad_div_u, chi, panel_id),      &
+               dot_product_of_components_kernel_type(norm_gu, physical_grad_div), &
+               dot_product_of_components_kernel_type(norm_xi, physical_grad_xi),  &
   !!!!!!!!!!!!!!!!!!!!!!!!!!
   !!  5)  Scale by k_amp  !!
   !!!!!!!!!!!!!!!!!!!!!!!!!!
-  call invoke( X_plus_Y(ndisp, norm_gu, norm_xi))
+               X_plus_Y(ndisp, norm_gu, norm_xi) )
 
   ! create delta x (use get_delta in the future)
-  delta_x=planet_radius*SIN(360.0_r_def/(2*model_wavenumber_max)*degrees_to_radians)
-  k_amp=3*delta_x**4/(128.0_r_def*dt)
+  delta_x = planet_radius * &
+       SIN(360.0_r_def / (2*model_wavenumber_max) * degrees_to_radians)
+  k_amp = 3.0_r_def * delta_x**4 / (128.0_r_def*dt)
 
-  call invoke(inc_a_times_X(K_amp,ndisp))
+  call invoke(inc_a_times_X(K_amp, ndisp) )
+
+  if (write_diag .and. use_xios_io) then
+    k_amp = delta_x**4
+    if (diagnostic_to_be_sampled('stochastic__norm_div')) then
+      call invoke( inc_a_times_X(K_amp, norm_gu) )
+      call norm_gu%write_field('stochastic__norm_div')
+    end if
+    if (diagnostic_to_be_sampled('stochastic__norm_xi')) then
+      call invoke( inc_a_times_X(K_amp, norm_xi) )
+      call norm_xi%write_field('stochastic__norm_xi')
+    end if
+  end if
 
   if ( subroutine_timers ) call timer("skeb_ndisp_alg")
 

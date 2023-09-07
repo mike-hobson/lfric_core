@@ -91,30 +91,35 @@ contains
     !  Reduce wind increments to 0 at level=1 from level~2km using LOG10
     !  This avoids creating large values near the top of the boundary lyr
     ! --------------------------------------------------------------------
-    if (skeb_level_bottom<level2km) then
-      logscale = 10.0_r_def/level2km
-      do k= skeb_level_bottom, level2km
-        lev_fraction = max(0.0_r_def , log10(logscale*k))   ! log decrease to zero
-        do df=1,ndf_w2
-          field_out(map_w2(df)+k) = field_in(map_w2(df)+k)* lev_fraction
+    logscale = 10.0_r_def/level2km
+
+    do df = 1, ndf_w2
+
+      ! Zero any increments below lowest skeb level
+      do k = 1, skeb_level_bottom-1
+        field_out(map_w2(df)+k-1) =  0.0_r_def
+      end do
+
+      ! Scale levels below 2km
+      if (skeb_level_bottom < level2km) then
+        do k = skeb_level_bottom, level2km
+          lev_fraction = max(0.0_r_def , log10(logscale*k))   ! log decrease to zero
+          field_out(map_w2(df)+k-1) = field_in(map_w2(df)+k-1)* lev_fraction
         end do
-      end do
-    end if
+      end if
 
-    ! Ramp off backscatter (linear) at top 3 levels of SKEB2 range
-    do k=skeb_level_top-2, skeb_level_top
-      lev_fraction = 0.25_r_def * (skeb_level_top - k + 1)
-      do df=1,ndf_w2
-        field_out(map_w2(df)+k) =  field_in(map_w2(df)+k)* lev_fraction
+      ! Ramp off backscatter (linear) at top 3 levels of SKEB2 range
+      do k = skeb_level_top-2, skeb_level_top
+        lev_fraction = 0.25_r_def * (skeb_level_top - k + 1)
+        field_out(map_w2(df)+k-1) =  field_in(map_w2(df)+k-1)* lev_fraction
       end do
-    end do
 
-    ! Zero any increments below lowest skeb level
-    do k= 0,skeb_level_bottom-1
-      do df=1,ndf_w2
-        field_out(map_w2(df)+k) =  0.0_r_def
+      ! Zero any above top level
+      do k = skeb_level_top+1, nlayers
+        field_out(map_w2(df)+k-1) =  0.0_r_def
       end do
-    end do
+
+    end do ! loop over dofs
 
   end subroutine skeb_levels_cap_code
 

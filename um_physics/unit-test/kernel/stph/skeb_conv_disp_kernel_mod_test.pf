@@ -59,7 +59,7 @@ contains
     real(kind=r_def), parameter :: tol  = 1.0e-8_r_def
 
     ! Fields
-    real(r_def), allocatable :: cdisp(:), rho(:), diff_flux(:), cape(:), rdz_w3(:)
+    real(r_def), allocatable :: cdisp(:), rho(:), diff_flux(:), cape(:), height_wth(:)
 
     ! scalars
     integer(i_def) :: skeb_level_bottom, skeb_level_top
@@ -99,19 +99,21 @@ contains
     allocate(cdisp(undf_w3))
     allocate(rho(undf_w3))
     allocate(diff_flux(undf_wth))
-    allocate(rdz_w3(undf_w3))
+    allocate(height_wth(undf_wth))
     allocate(cape(undf_2d))
 
     ! Set up data
     cdisp = 0.0_r_def
+    diff_flux = 0.0_r_def
+    height_wth = 0.0_r_def
     do cell = 1,9
       diff_flux(map_wth(1, cell)) = 0.0_r_def
       do k = 0,2
         ! Set some arbitrarily chosen fluxes: 1,2,3
         ! (lowest level flux remains 0)
         diff_flux(map_wth(1, cell) + k + 1 ) = real(k+1, r_def)
-        ! Set 1/dz: 1/10, 1/40, 1/90
-        rdz_w3(map_w3(1, cell) + k ) = 1./((k+1)**2 * 10_r_def)
+        ! Set height: 10, 40, 90
+        height_wth(map_wth(1, cell) + k + 1 ) = ((k+1)**2 * 10_r_def)
         ! Set density to 1
         rho(map_w3(1, cell) + k ) = 1.0_r_def
       end do
@@ -129,7 +131,7 @@ contains
                                 rho,                &
                                 diff_flux,          &
                                 cape,               &
-                                rdz_w3,             &
+                                height_wth,         &
                                 skeb_level_bottom,  &
                                 skeb_level_top,     &
                                 gravity,            &
@@ -147,22 +149,22 @@ contains
 
 
     do cell = 1, 9
-      ! check lowest level unchanged
+      ! check lowest level
       k = 0
-      @assertEqual(cdisp((map_w3(1, cell) + k )), 0.0_r_def, tol )
+      @assertEqual(cdisp((map_w3(1, cell) + k )), 0.25_r_def, tol )
       ! check bottom level
       k=1
-      @assertEqual(cdisp((map_w3(1, cell) + k )), 0.5_r_def, tol )
-      ! check top level
-      k=2
       @assertEqual(cdisp((map_w3(1, cell) + k )), 0.125_r_def, tol )
+      ! check top level unchanged
+      k=2
+      @assertEqual(cdisp((map_w3(1, cell) + k )), 0.0_r_def, tol )
     end do
 
     deallocate(cdisp)
     deallocate(rho)
     deallocate(diff_flux)
     deallocate(cape)
-    deallocate(rdz_w3)
+    deallocate(height_wth)
     deallocate(map_w3)
     deallocate(map_wth)
     deallocate(map_2d)

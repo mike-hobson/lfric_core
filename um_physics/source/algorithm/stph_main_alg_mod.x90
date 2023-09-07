@@ -94,7 +94,7 @@ module stph_main_alg_mod
 
   !!!! DO SKEB
   if (use_skeb) then
-    call skeb_main_alg(du_stph, rho, u, convection_fields,clock)
+    call skeb_main_alg(du_stph, rho, u, convection_fields, derived_fields,clock)
   end if
 
   if ( subroutine_timers ) call timer("stph_main_alg")

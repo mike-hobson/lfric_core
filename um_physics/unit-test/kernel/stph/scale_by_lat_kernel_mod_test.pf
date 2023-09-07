@@ -4,9 +4,9 @@
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
 
-!> Test the scale_by_cos_lat kernel
+!> Test the scale_by_lat kernel
 !>
-module scale_by_cos_lat_kernel_mod_test
+module scale_by_lat_kernel_mod_test
 
   use constants_mod,                 only : i_def, r_def
   use pFUnit_Mod
@@ -18,13 +18,13 @@ module scale_by_cos_lat_kernel_mod_test
   public :: test_all
 
   @TestCase
-  type, extends(TestCase), public :: scale_by_cos_lat_test_type
+  type, extends(TestCase), public :: scale_by_lat_test_type
     private
   contains
     procedure setUp
     procedure tearDown
     procedure test_all
-  end type scale_by_cos_lat_test_type
+  end type scale_by_lat_test_type
 
 contains
 
@@ -33,7 +33,7 @@ contains
 
     implicit none
 
-    class(scale_by_cos_lat_test_type), intent(inout) :: this
+    class(scale_by_lat_test_type), intent(inout) :: this
 
   end subroutine setUp
 
@@ -42,7 +42,7 @@ contains
 
     implicit none
 
-    class(scale_by_cos_lat_test_type), intent(inout) :: this
+    class(scale_by_lat_test_type), intent(inout) :: this
 
   end subroutine tearDown
 
@@ -50,11 +50,11 @@ contains
   @Test
   subroutine test_all( this )
 
-    use scale_by_cos_lat_kernel_mod,   only : scale_by_cos_lat_code
+    use scale_by_lat_kernel_mod,   only : scale_by_lat_code
 
     implicit none
 
-    class(scale_by_cos_lat_test_type), intent(inout) :: this
+    class(scale_by_lat_test_type), intent(inout) :: this
 
     real(kind=r_def), parameter :: tol  = 1.0e-8_r_def
 
@@ -91,25 +91,27 @@ contains
     allocate(latitude(undf_w2_2d))
 
 
-    latitude(:)=3.14159_r_def/4
+    latitude(:)=1.0_r_def
+    latitude(2)=-1.0_r_def
     field_in(:)=1.0_r_def
 
     do cell = 1,9
-    call scale_by_cos_lat_code( nlayers,               &
-                                field_out,             &
-                                field_in,              &
-                                latitude,              &
-                                ndf_w2,                &
-                                undf_w2,               &
-                                map_w2(:, cell),       &
-                                ndf_w2_2d,             &
-                                undf_w2_2d,            &
-                                map_w2_2d(:, cell)     &
+    call scale_by_lat_code( nlayers,               &
+                            field_out,             &
+                            field_in,              &
+                            latitude,              &
+                            ndf_w2,                &
+                            undf_w2,               &
+                            map_w2(:, cell),       &
+                            ndf_w2_2d,             &
+                            undf_w2_2d,            &
+                            map_w2_2d(:, cell)     &
                                 )
     end do
 
-
-    @assertEqual(field_out(:), field_in(:)*cos(latitude(1)), tol )
+    field_in(:)=-1.0_r_def
+    field_in(4:6)=1.0_r_def
+    @assertEqual(field_out(:), field_in(:), tol )
 
     deallocate(field_in)
     deallocate(field_out)
@@ -119,4 +121,4 @@ contains
 
   end subroutine test_all
 
-end module scale_by_cos_lat_kernel_mod_test
+end module scale_by_lat_kernel_mod_test

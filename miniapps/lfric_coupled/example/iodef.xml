@@ -8,13 +8,13 @@
     <axis_definition>
       <axis id="vert_axis_half_levels" name="half_levels"/>
       <axis id="vert_axis_full_levels" name="full_levels"/>
-      <axis id="land_tiles" name="land_tiles" n_glo="9"/>
-      <axis id="surface_tiles" name="surface_tiles" n_glo="11"/>
-      <axis id="snow_layers_and_tiles" name="snow_layers_and_tiles" n_glo="27"/>
-      <axis id="soil_levels" name="soil_levels" n_glo="4"/>
-      <axis id="plant_func_types" name="plant_func_types" n_glo="5"/>
-      <axis id="monthly_climatology" name="monthly_climatology" n_glo="12"/>
-      <axis id="bl_types" name="bl_types" n_glo="7"/>
+      <axis id="land_tiles" name="land_tiles" />
+      <axis id="surface_tiles" name="surface_tiles" />
+      <axis id="snow_layers_and_tiles" name="snow_layers_and_tiles" />
+      <axis id="soil_levels" name="soil_levels" />
+      <axis id="plant_func_types" name="plant_func_types" />
+      <axis id="monthly_climatology" name="monthly_climatology" />
+      <axis id="boundary_layer_types" name="boundary_layer_types" />
     </axis_definition>
 
     <grid_definition>
@@ -352,7 +352,7 @@
 	<!-- turbulence fields -->
 	<field id="ntml" name="ntml" long_name="number_of_turbulent_mixing_levels" unit="1" domain_ref="face" />
 	<field id="cumulus" name="cumulus" long_name="cumulus_convection_indicator" unit="1" domain_ref="face" />
-	<field id="bl_type_ind" name="bl_type_ind" long_name="boundary_layer_type_indicator" unit="1" domain_ref="face" axis_ref="bl_types"/>
+	<field id="bl_type_ind" name="bl_type_ind" long_name="boundary_layer_type_indicator" unit="1" domain_ref="face" axis_ref="boundary_layer_types"/>
 	<field id="dt_bl" name="dt_bl" long_name="temperature_increment_from_bl_scheme" unit="K" grid_ref="full_level_face_grid" />
 	<field id="dmv_bl" name="dmv_bl" long_name="vapour_increment_from_bl_scheme" unit="kg kg-1" grid_ref="full_level_face_grid" />
 	<field id="du_bl1" name="du_bl1" long_name="eastward_wind_increment_from_bl_scheme" unit="m s-1" grid_ref="half_level_edge_grid" />

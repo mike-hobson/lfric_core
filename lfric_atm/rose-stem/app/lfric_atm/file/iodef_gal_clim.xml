@@ -8,9 +8,7 @@
 
     <!-- Include axis definitions -->
     <axis_definition src="./axis_def_main.xml"/>
-    <axis_definition src="./axis_def_urban1t.xml"/>
-    <axis_definition src="./axis_def_emiss_tseries.xml"/>
-
+ 
     <!-- Include grid definitions -->
     <grid_definition src="./grid_def_main.xml"/>
     <grid_definition src="./grid_def_gal.xml"/>

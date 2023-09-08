@@ -36,7 +36,11 @@ module lfric_xios_diag_mod
                                         xios_field_is_active,                 &
                                         xios_get_axis_attr,                   &
                                         xios_set_axis_attr,                   &
-                                        xios_is_valid_axis
+                                        xios_is_valid_axis,                   &
+                                        xios_zoom_axis,                       &
+                                        xios_is_valid_zoom_axis,              &
+                                        xios_get_handle,                      &
+                                        xios_set_attr
 #endif
 
   use log_mod,                         only:                                  &
@@ -62,7 +66,8 @@ module lfric_xios_diag_mod
     get_field_domain_ref,                                                      &
     get_field_axis_ref,                                                        &
     get_axis_dimension,                                                        &
-    set_axis_dimension
+    set_axis_dimension,                                                        &
+    set_zoom_axis_attr
 
 contains
 
@@ -290,5 +295,34 @@ contains
       end if
     end if
   end subroutine set_axis_dimension
+
+  !> @brief Set the dimension of an XIOS zoom_axis object.
+  !> @param[in]    unique_id    XIOS id of the zoom_axis
+  !> @param[in]    begin        Begin of zoom range
+  !> @param]in]    n            Dimension of zoom range
+  !> @param[in]    tolerant     Ignore missing axes?
+  subroutine set_zoom_axis_attr(unique_id, begin, n, tolerant)
+    implicit none
+    character(*), intent(in) :: unique_id
+    integer(i_def), intent(in) :: begin
+    integer(i_def), intent(in) :: n
+    logical(l_def), optional, intent(in) :: tolerant
+#ifndef UNIT_TEST
+    type(xios_zoom_axis) :: zoom_axis_hdl
+    logical(l_def) :: strict
+    strict = .true.
+    if (present(tolerant)) strict = .not. tolerant
+    if (xios_is_valid_zoom_axis(unique_id)) then
+      call xios_get_handle(unique_id, zoom_axis_hdl)
+      call xios_set_attr(zoom_axis_hdl, begin=begin, n=n)
+    else
+      if (strict) then
+        write(log_scratch_space, '(A, A)')                                    &
+        'Invalid XIOS zoom_axis:', unique_id
+        call log_event(log_scratch_space, LOG_LEVEL_ERROR)
+      end if
+    end if
+#endif
+  end subroutine set_zoom_axis_attr
 
 end module lfric_xios_diag_mod

@@ -1,4 +1,0 @@
-<!-- Axis definitions for CMIP6 emissions timeseries -->
-<axis_definition>
-  <axis id="emiss_axis" name="emiss_axis" n_glo="2004"/>
-</axis_definition>

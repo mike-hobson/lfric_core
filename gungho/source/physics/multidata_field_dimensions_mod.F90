@@ -11,39 +11,42 @@ module multidata_field_dimensions_mod
   use constants_mod,             only: i_def, l_def
   use io_config_mod,             only: use_xios_io
   use lfric_xios_diag_mod,       only: set_axis_dimension, &
-                                       get_axis_dimension
+                                       get_axis_dimension, &
+                                       set_zoom_axis_attr
 
   implicit none
 
   private
 
 #ifdef UM_PHYSICS
+      !                   1         2         3
+      !          123456789012345678901234567890
       character(30), parameter :: multidata_items(23) = &
             [character(30) ::                           &
-                        'plant_types',                  &
-                        'sea_ice_tiles',                &
-                        'land_tiles',                   &
-                        'surface_tiles',                &
-                        'surface_regrid_vars',          &
-                        'snow_layers_and_tiles',        &
-                        'soil_levels',                  &
-                        'soil_levels_and_tiles',        &
-                        'land_tile_rad_band',           &
-                        'monthly_climatology',          &
-                        'boundary_layer_types',         &
-                        'entrainment_levels',           &
-                        'dust_divisions',               &
-                        'radiation_levels',             &
-                        'aero_modes',                   &
-                        'sw_bands_aero_modes',          &
-                        'lw_bands_aero_modes',          &
-                        'cloud_subcols',                &
-                        'isccp_ctp_tau_bins',           &
-                        'cloudsat_levels',              &
-                        'csat_lvls_atb_bins',           &
-                        'horiz_angle',                  &
-                        'horiz_aspect'                  &
-           ]
+                'plant_func_types',                     &
+                'sea_ice_categories',                   &
+                'land_tiles',                           &
+                'surface_tiles',                        &
+                'surface_regrid_vars',                  &
+                'snow_layers_and_tiles',                &
+                'soil_levels',                          &
+                'soil_levels_and_tiles',                &
+                'land_tile_rad_band',                   &
+                'monthly_climatology',                  &
+                'boundary_layer_types',                 &
+                'entrainment_levels',                   &
+                'dust_divisions',                       &
+                'radiation_levels',                     &
+                'aero_modes',                           &
+                'sw_bands_aero_modes',                  &
+                'lw_bands_aero_modes',                  &
+                'cloud_subcols',                        &
+                'isccp_ctp_tau_bins',                   &
+                'cloudsat_levels',                      &
+                'csat_lvls_atb_bins',                   &
+                'horizon_angles',                       &
+                'horizon_aspects'                       &
+      ]
 #endif
 
   public :: get_multidata_field_dimension, sync_multidata_field_dimensions
@@ -54,8 +57,8 @@ contains
 !> dimensions sourced from configuration
 subroutine sync_multidata_field_dimensions()
       implicit none
-      logical(l_def), parameter :: tolerate_missing_axes = .true.
 #ifdef UM_PHYSICS
+      logical(l_def), parameter :: tolerate_missing_axes = .true.
       integer(i_def) :: i
       do i=1,size(multidata_items)
             call set_axis_dimension(                                          &
@@ -63,6 +66,20 @@ subroutine sync_multidata_field_dimensions()
                   get_multidata_field_dimension(multidata_items(i)),          &
                   tolerate_missing_axes)
       end do
+
+      ! The zoom filters in the urbanXt axis def files are something that
+      ! also needs to change with the size of the land_tiles array
+      ! (the begin element is n_land_tiles and n_land_tiles+1 respectively)
+      call set_zoom_axis_attr(                                                &
+            'surface_tiles_sea_zoom_axis',                                    &
+            get_multidata_field_dimension('land_tiles'),                      &
+            1,                                                                &
+            tolerate_missing_axes)
+      call set_zoom_axis_attr(                                                &
+            'surface_tiles_sea_ice_zoom_axis',                                &
+            get_multidata_field_dimension('land_tiles')+1,                    &
+            1,                                                                &
+            tolerate_missing_axes)
 #endif
 end subroutine sync_multidata_field_dimensions
 
@@ -108,9 +125,9 @@ end subroutine sync_multidata_field_dimensions
 
     select case (multidata_item)
 #ifdef UM_PHYSICS
-      case ('plant_types')
+      case ('plant_func_types')
             dim = npft
-      case ('sea_ice_tiles')
+      case ('sea_ice_categories')
             dim = n_sea_ice_tile
       case ('land_tiles')
             dim = n_land_tile
@@ -150,14 +167,14 @@ end subroutine sync_multidata_field_dimensions
             dim = n_cloudsat_levels
       case ('csat_lvls_atb_bins')
             dim = n_cloudsat_levels*n_backscatter_bins
-      case ('horiz_angle')
+      case ('horizon_angles')
             if (radiation == radiation_socrates .and. &
                   topography == topography_horizon) then
                   dim = n_horiz_layer*n_horiz_ang
             else
                   dim = 1
             end if
-      case ('horiz_aspect')
+      case ('horizon_aspects')
             if (radiation == radiation_socrates .and. &
                   topography == topography_horizon) then
                   dim = n_horiz_ang

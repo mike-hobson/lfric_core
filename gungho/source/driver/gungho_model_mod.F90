@@ -177,6 +177,7 @@ contains
   !> @param[in] clock        The clock providing access to time information
   subroutine before_context_close(clock)
     use multidata_field_dimensions_mod, only: sync_multidata_field_dimensions
+    use time_dimensions_mod, only: sync_time_dimensions
 
     implicit none
     class(clock_type), intent(in) :: clock
@@ -189,6 +190,7 @@ contains
       call enabler%init(clock)
       call process_physics_prognostics(enabler)
       call sync_multidata_field_dimensions()
+      call sync_time_dimensions()
     end if
   end subroutine before_context_close
 

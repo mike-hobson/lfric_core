@@ -254,9 +254,9 @@ contains
       ! h_asp_space => function_space_collection%get_fs(twod_mesh, 0, W3, 1)
     end if
     call processor%apply(make_spec('horizon_angle', main%radiation, W3,               &
-        mult='horiz_angle', twod=.true., ckp=checkpoint_flag))
+        mult='horizon_angles', twod=.true., ckp=checkpoint_flag))
     call processor%apply(make_spec('horizon_aspect', main%radiation, W3,              &
-        mult='horiz_aspect', twod=.true., ckp=checkpoint_flag))
+        mult='horizon_aspects', twod=.true., ckp=checkpoint_flag))
 
     ! Fields which need checkpointing for radiation timestepping
     !
@@ -724,22 +724,22 @@ contains
 
     ! Fields on plant functional types, might need checkpointing
     call processor%apply(make_spec('leaf_area_index', main%surface, W3,               &
-        mult='plant_types', twod=.true., ckp=checkpoint_flag))
+        mult='plant_func_types', twod=.true., ckp=checkpoint_flag))
     call processor%apply(make_spec('canopy_height', main%surface, W3,                 &
-        mult='plant_types', twod=.true., ckp=checkpoint_flag))
+        mult='plant_func_types', twod=.true., ckp=checkpoint_flag))
 
 
     ! Sea-ice category fields, might need checkpointing
     call processor%apply(make_spec('sea_ice_thickness', main%surface, W3,             &
-        mult='sea_ice_tiles', twod=.true., ckp=checkpoint_flag))
+        mult='sea_ice_categories', twod=.true., ckp=checkpoint_flag))
     call processor%apply(make_spec('sea_ice_temperature', main%surface, W3,           &
-        mult='sea_ice_tiles', twod=.true., ckp=checkpoint_flag))
+        mult='sea_ice_categories', twod=.true., ckp=checkpoint_flag))
     call processor%apply(make_spec('sea_ice_conductivity', main%surface, W3,          &
-        mult='sea_ice_tiles', twod=.true., ckp=.false.))
+        mult='sea_ice_categories', twod=.true., ckp=.false.))
     call processor%apply(make_spec('melt_pond_fraction', main%surface, W3,            &
-        mult='sea_ice_tiles', twod=.true., ckp=.false.))
+        mult='sea_ice_categories', twod=.true., ckp=.false.))
     call processor%apply(make_spec('melt_pond_depth', main%surface, W3,               &
-        mult='sea_ice_tiles', twod=.true., ckp=.false.))
+        mult='sea_ice_categories', twod=.true., ckp=.false.))
 
     ! Sea surface velocity vector components provided via the coupler.
     call processor%apply(make_spec('sea_u_current', main%surface, W3, twod=.true.,    &
@@ -927,7 +927,7 @@ contains
 
     ! Fields which don't need checkpointing
     call processor%apply(make_spec('snow_unload_rate', main%snow, W3,                 &
-        mult='plant_types', twod=.true.))
+        mult='plant_func_types', twod=.true.))
 
     !========================================================================
     ! Fields owned by the chemistry scheme

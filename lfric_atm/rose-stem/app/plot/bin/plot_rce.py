@@ -56,8 +56,8 @@ def do_plot(datapath, plotfield, plotpath='.', plotlevel=0):
        lfric.convert_units('mm h-1')
 
     # Get the x and y co-ordinates
-    x_coord = (np.around(lfric.coord(x_coord_name).points, decimals=5))*10.0
-    y_coord = (np.around(lfric.coord(y_coord_name).points, decimals=5))*10.0
+    x_coord = (np.around(lfric.coord(x_coord_name).points, decimals=5))/1000.0
+    y_coord = (np.around(lfric.coord(y_coord_name).points, decimals=5))/1000.0
     t_coord = (np.around(lfric.coord('time').points, decimals=2))/3600.0
 
     # Save the min and max of the data

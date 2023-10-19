@@ -492,6 +492,7 @@ contains
     class (ugrid_mesh_data_type), intent(in) :: self
     logical(l_def) :: answer
 
+    answer = .false.
     select case (self%mesh_extents)
     case( LOCAL_MESH_FLAG )
       answer = .true.

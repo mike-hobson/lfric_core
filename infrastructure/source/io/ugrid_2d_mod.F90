@@ -1198,7 +1198,7 @@ end subroutine set_dimensions
 !> @param[in] north_pole   Optional: Real world North pole  [lon,lat] coords
 !> @param[in] null_island  Optional: Real world Null island [lon,lat] coords
 !> @param[in] coord_sys    Optional: Coordinate system used by mesh
-!> @param[in] units_xy      Optional: Units in x/y-axes
+!> @param[in] units_xy     Optional: Units in x/y-axes
 !-------------------------------------------------------------------------------
 subroutine set_coords( self,                     &
                        node_coords, face_coords, &

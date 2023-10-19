@@ -1345,8 +1345,8 @@ subroutine calc_coords(self)
 
   real(r_def) :: x_coord
   real(r_def) :: y_coord
-  real(r_def) :: offset_x
-  real(r_def) :: offset_y
+  real(r_def) :: offset_x = 0.0_r_def
+  real(r_def) :: offset_y = 0.0_r_def
 
   edge_cells_x = self%edge_cells_x
   edge_cells_y = self%edge_cells_y
@@ -1796,7 +1796,7 @@ function get_number_of_panels( self ) result( answer )
 
   integer(i_def) :: answer
 
-  answer = NPANELS
+  answer = self%npanels
 
 end function get_number_of_panels
 

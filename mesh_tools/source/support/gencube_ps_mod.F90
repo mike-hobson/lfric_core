@@ -190,7 +190,8 @@ contains
 
   type( gencube_ps_type ) :: self
 
-  integer(i_def) :: i, remainder
+  integer(i_def) :: i
+  integer(i_def) :: remainder = 0
 
   character(str_long) :: target_mesh_names_str
   character(str_long) :: target_edge_cells_str
@@ -1777,7 +1778,7 @@ function get_number_of_panels( self ) result( answer )
 
   integer(i_def) :: answer
 
-  answer = NPANELS
+  answer = self%npanels
 
 end function get_number_of_panels
 

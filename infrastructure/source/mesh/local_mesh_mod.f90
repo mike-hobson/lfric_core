@@ -2114,6 +2114,7 @@ contains
 
     integer(i_def) :: cell_owner
 
+    cell_owner = self%void_cell
     if ( allocated( self%cell_owner ) )then
       cell_owner=self%cell_owner(cell_number)
     else

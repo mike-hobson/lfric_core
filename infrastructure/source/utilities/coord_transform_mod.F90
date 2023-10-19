@@ -549,23 +549,32 @@ end function identify_panel
 !! from the mesh, which is necessary for rotated and/or stretched cubed spheres.
 !-----------------------------------------------------------------------------
 function identify_longitude_sector(lon) result(panel)
+
   implicit none
+
   real(kind=r_def), intent(in) :: lon
   integer(kind=i_def)          :: panel
 
-  if (lon >= -5.0_r_def*PI/4.0_r_def .and. lon<-3.0_r_def*PI/4.0_r_def) then
+  panel = -1
+  if (lon >= -5.0_r_def*PI/4.0_r_def .and. &
+      lon <  -3.0_r_def*PI/4.0_r_def) then
     panel = 3
-  elseif (lon >= -3.0_r_def*PI/4.0_r_def .and. lon<-PI/4.0_r_def) then
+  else if (lon >= -3.0_r_def*PI/4.0_r_def .and. &
+           lon <  -PI/4.0_r_def) then
     panel = 4
-  elseif (lon >= -PI/4.0_r_def .and. lon<PI/4.0_r_def) then
+  else if (lon >= -PI/4.0_r_def .and. &
+           lon <   PI/4.0_r_def) then
     panel = 1
-  elseif (lon>=PI/4.0_r_def .and. lon<3.0_r_def*PI/4.0_r_def) then
+  else if (lon >= PI/4.0_r_def .and. &
+           lon <  3.0_r_def*PI/4.0_r_def) then
     panel = 2
-  elseif (lon>=3.0_r_def*PI/4.0_r_def .and. lon<5.0_r_def*PI/4.0_r_def) then
+  else if (lon >= 3.0_r_def*PI/4.0_r_def .and. &
+           lon <  5.0_r_def*PI/4.0_r_def) then
     panel = 3
-  elseif (lon>=5.0_r_def*PI/4.0_r_def .and. lon<7.0_r_def*PI/4.0_r_def) then
+  else if (lon >= 5.0_r_def*PI/4.0_r_def .and. &
+           lon <  7.0_r_def*PI/4.0_r_def) then
     panel = 4
-  elseif (lon>=7.0_r_def*PI/4.0_r_def) then
+  else if (lon >= 7.0_r_def*PI/4.0_r_def) then
     panel = 1
   end if
 

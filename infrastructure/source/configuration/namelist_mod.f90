@@ -468,6 +468,8 @@ contains
 
     character(:), allocatable :: key
 
+    member_index = -1
+
     if ( allocated(self%members) ) then
       do i=1, size(self%members)
         key = self%members(i)%get_key()

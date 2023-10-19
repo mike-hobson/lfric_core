@@ -739,7 +739,7 @@ function get_number_of_panels( self ) result( answer )
 
   integer(i_def) :: answer
 
-  answer = NPANELS
+  answer = self%npanels
 
 end function get_number_of_panels
 

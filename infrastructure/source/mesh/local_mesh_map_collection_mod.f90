@@ -144,6 +144,8 @@ function get_local_mesh_map( self,                  &
   ! Pointer to linked list - used for looping through the list
   type(linked_list_item_type),pointer :: loop => null()
 
+  local_mesh_map => null()
+
   local_mesh_map_id = generate_local_mesh_map_id( source_local_mesh_id, &
                                                   target_local_mesh_id )
 

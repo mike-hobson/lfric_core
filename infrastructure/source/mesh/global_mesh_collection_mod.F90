@@ -338,6 +338,7 @@ contains
     ! start at the head of the mesh collection linked list
     loop => self%global_mesh_list%get_head()
 
+    global_mesh => null()
     do
       ! If list is empty or we're at the end of list and we didn't find the
       ! mesh_id, return a null pointer

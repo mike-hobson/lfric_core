@@ -72,11 +72,11 @@ subroutine calc_global_cell_map( source_mesh,         &
   integer(i_def) :: mod_x, mod_y
   integer(i_def) :: edge_factor_x, edge_factor_y
 
-  logical(l_def) :: refining
-  logical(l_def) :: refine_x
-  logical(l_def) :: refine_y
-  logical(l_def) :: coarsen_x
-  logical(l_def) :: coarsen_y
+  logical(l_def) :: refining  = .false.
+  logical(l_def) :: refine_x  = .false.
+  logical(l_def) :: refine_y  = .false.
+  logical(l_def) :: coarsen_x = .false.
+  logical(l_def) :: coarsen_y = .false.
 
   integer(i_def), allocatable :: tmp_panel_ids(:)
   integer(i_def), allocatable :: tmp_map(:,:)

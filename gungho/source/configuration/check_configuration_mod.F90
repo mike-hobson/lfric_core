@@ -58,6 +58,9 @@ module check_configuration_mod
   public :: check_any_scheme_split
   public :: check_any_scheme_ffsl
   public :: check_any_scheme_slice
+  public :: check_any_hori_scheme_sl
+  public :: check_any_vert_scheme_sl
+  public :: check_any_reversible_sl
   public :: check_any_splitting_hvh
   public :: check_any_splitting_vhv
   public :: check_any_shifted
@@ -559,7 +562,7 @@ contains
 
   end function check_any_scheme_ffsl
 
-  !> @brief   Determine whether any of the transport schemes are SLICE
+  !> @brief   Determine whether any of the vertical transport schemes are SLICE
   !> @details Loops through the transport schemes specified for different
   !>          variables and determines whether any are using SLICE
   !> @return  any_scheme_slice
@@ -573,14 +576,86 @@ contains
     any_scheme_slice = .false.
 
     do i = 1, profile_size
-      if ( vertical_method(i) == split_method_sl .and. &
-           equation_form(i) /= equation_form_advective ) then
+      if ( scheme(i) == scheme_split .and.                       &
+           vertical_method(i) == split_method_sl .and.           &
+           (equation_form(i)  == equation_form_conservative .or. &
+            equation_form(i)  == equation_form_consistent) ) then
         any_scheme_slice = .true.
         exit
       end if
     end do
 
   end function check_any_scheme_slice
+
+  !> @brief   Determine whether any of the horizontal transport schemes are SL
+  !> @details Loops through the horizontal transport schemes specified for different
+  !>          variables and determines whether any are using the semi-Lagrangian scheme.
+  !> @return  any_hori_scheme_sl
+  function check_any_hori_scheme_sl() result(any_hori_scheme_sl)
+
+    implicit none
+
+    logical(kind=l_def) :: any_hori_scheme_sl
+    integer(kind=i_def) :: i
+
+    any_hori_scheme_sl = .false.
+
+    do i = 1, profile_size
+      if ( scheme(i) == scheme_split .and. &
+           horizontal_method(i) == split_method_sl ) then
+        any_hori_scheme_sl = .true.
+        exit
+      end if
+    end do
+
+  end function check_any_hori_scheme_sl
+
+  !> @brief   Determine whether any of the vertical transport schemes are SL
+  !> @details Loops through the vertical transport schemes specified for different
+  !>          variables and determines whether any are using the semi-Lagrangian scheme.
+  !> @return  any_vert_scheme_sl
+  function check_any_vert_scheme_sl() result(any_vert_scheme_sl)
+
+    implicit none
+
+    logical(kind=l_def) :: any_vert_scheme_sl
+    integer(kind=i_def) :: i
+
+    any_vert_scheme_sl = .false.
+
+    do i = 1, profile_size
+      if ( scheme(i) == scheme_split .and. &
+           vertical_method(i) == split_method_sl ) then
+        any_vert_scheme_sl = .true.
+        exit
+      end if
+    end do
+
+  end function check_any_vert_scheme_sl
+
+  !> @brief   Determine whether any of the vertical transport schemes are reversible SL
+  !> @details Loops through the vertical transport schemes specified for different
+  !>          variables and determines whether any are using the reversible semi-Lagrangian scheme.
+  !> @return  any_reversible_sl
+  function check_any_reversible_sl() result(any_reversible_sl)
+
+    implicit none
+
+    logical(kind=l_def) :: any_reversible_sl
+    integer(kind=i_def) :: i
+
+    any_reversible_sl = .false.
+
+    do i = 1, profile_size
+      if ( scheme(i) == scheme_split .and.             &
+           vertical_method(i) == split_method_sl .and. &
+           reversible(i) ) then
+        any_reversible_sl = .true.
+        exit
+      end if
+    end do
+
+  end function check_any_reversible_sl
 
   !> @brief   Determine whether any of the split transport schemes use
   !!          Strang HVH splitting
@@ -769,7 +844,9 @@ contains
     do i = 1, profile_size
       if ( ( scheme(i) == scheme_ffsl_3d ) .or.                     &
            ( scheme(i) == scheme_split .and.                        &
-             horizontal_method(i) == split_method_ffsl ) ) then
+             horizontal_method(i) == split_method_ffsl ) .or.       &
+           ( scheme(i) == scheme_split .and.                        &
+             horizontal_method(i) == split_method_sl ) ) then
         any_horz_dep_pts = .true.
         exit
       end if

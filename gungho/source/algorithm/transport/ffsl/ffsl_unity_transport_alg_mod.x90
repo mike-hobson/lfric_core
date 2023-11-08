@@ -17,12 +17,18 @@ module ffsl_unity_transport_alg_mod
   use check_configuration_mod,          only: check_horz_dep_pts, &
                                               check_vert_dep_pts
   use constants_mod,                    only: r_tran, i_def, l_def
+  use fem_constants_mod,                only: get_inverse_w3_mass_matrix
   use ffsl_1d_flux_alg_mod,             only: ffsl_1d_flux_vert
-  use ffsl_2d_flux_alg_mod,             only: ffsl_2d_flux_first
-  use r_tran_field_mod,                 only: r_tran_field_type
+  use ffsl_flux_first_x_kernel_mod,     only: ffsl_flux_first_x_kernel_type
+  use ffsl_flux_first_y_kernel_mod,     only: ffsl_flux_first_y_kernel_type
   use field_mod,                        only: field_type
   use flux_direction_mod,               only: x_direction, y_direction
   use function_space_mod,               only: function_space_type
+  use fv_divergence_x_kernel_mod,       only: fv_divergence_x_kernel_type
+  use fv_divergence_y_kernel_mod,       only: fv_divergence_y_kernel_type
+  use operator_mod,                     only: operator_type
+  use psykal_lite_mod,                  only: invoke_dg_matrix_vector_rtran
+  use r_tran_field_mod,                 only: r_tran_field_type
   use split_w2_field_kernel_mod,        only: split_w2_field_kernel_type
   use subgrid_config_mod,               only: outer_order
   use transport_enumerated_types_mod,   only: horizontal_monotone_none, &
@@ -32,7 +38,6 @@ module ffsl_unity_transport_alg_mod
                                               log_scratch_space, &
                                               LOG_LEVEL_ERROR,   &
                                               LOG_LEVEL_INFO
-  use geometric_constants_mod,          only: get_panel_id
 
   implicit none
 
@@ -54,6 +59,8 @@ contains
   !> @param[in]     dep_pts_y         Departure points in y
   !> @param[in]     dep_pts_z         Departure points in z
   !> @param[in]     detj_at_w2        Det(J) at W2 dofs
+  !> @param[in]     dep_stencil_x     Stencil extent due to departure points in x
+  !> @param[in]     dep_stencil_y     Stencil extent due to departure points in y
   !> @param[in]     dt                The model timestep length
   !> @param[in,out] np1_x             Conservative transport of unity in x
   !> @param[in,out] np1_y             Conservative transport of unity in y
@@ -64,16 +71,18 @@ contains
   !!                                  using half dt for Strang HVH splitting
   !> @param[in,out] np1_half_z        Conservative transport of unity in z
   !!                                  using half dt for Strang VHV splitting
-  subroutine ffsl_unity_transport_alg( dep_pts_x,  &
-                                       dep_pts_y,  &
-                                       dep_pts_z,  &
-                                       detj_at_w2, &
-                                       dt,         &
-                                       np1_x,      &
-                                       np1_y,      &
-                                       np1_z,      &
-                                       np1_half_x, &
-                                       np1_half_y, &
+  subroutine ffsl_unity_transport_alg( dep_pts_x,     &
+                                       dep_pts_y,     &
+                                       dep_pts_z,     &
+                                       detj_at_w2,    &
+                                       dep_stencil_x, &
+                                       dep_stencil_y, &
+                                       dt,            &
+                                       np1_x,         &
+                                       np1_y,         &
+                                       np1_z,         &
+                                       np1_half_x,    &
+                                       np1_half_y,    &
                                        np1_half_z )
 
     implicit none
@@ -83,6 +92,8 @@ contains
     type(r_tran_field_type), intent(in)    :: dep_pts_y
     type(r_tran_field_type), intent(in)    :: dep_pts_z
     type(r_tran_field_type), intent(in)    :: detj_at_w2
+    integer(kind=i_def),     intent(in)    :: dep_stencil_x
+    integer(kind=i_def),     intent(in)    :: dep_stencil_y
     real(r_tran),            intent(in)    :: dt
     type(r_tran_field_type), intent(inout) :: np1_x
     type(r_tran_field_type), intent(inout) :: np1_y
@@ -104,13 +115,16 @@ contains
     type(r_tran_field_type) :: flux_z
     type(r_tran_field_type) :: detj_at_w2h
     type(r_tran_field_type) :: detj_at_w2v
+    type(r_tran_field_type) :: difference
 
     ! Half time step and flags for departure points
     real(kind=r_tran)   :: half_dt
     logical(kind=l_def) :: any_horz_dep_pts, any_vert_dep_pts, reversibility
     integer(kind=i_def) :: hori_monotone, vert_monotone
+    integer(kind=i_def) :: stencil_extent_x, stencil_extent_y
+    integer(kind=i_def) :: cfl_stencil_extent_x, cfl_stencil_extent_y
 
-    type(field_type), pointer :: panel_id => null()
+    type(operator_type), pointer :: m3_inv => null()
 
     ! Check which unity transport directions are needed
     any_horz_dep_pts = check_horz_dep_pts()
@@ -121,6 +135,7 @@ contains
     call inc_one_y%initialise( vector_space=np1_y%get_function_space() )
     call inc_one_z%initialise( vector_space=np1_z%get_function_space() )
     call ini_one%initialise( vector_space=np1_x%get_function_space() )
+    call difference%initialise( vector_space=np1_x%get_function_space() )
     call flux_x%initialise( vector_space=dep_pts_x%get_function_space() )
     call flux_y%initialise( vector_space=dep_pts_y%get_function_space() )
     call flux_z%initialise( vector_space=dep_pts_z%get_function_space() )
@@ -147,20 +162,30 @@ contains
 
     ! Check if we need increment of unity in x and y directions
     if (any_horz_dep_pts) then
-      panel_id => get_panel_id( ini_one%get_mesh_id() )
-      call ffsl_2d_flux_first( ini_one,       &
-                               dep_pts_x,     &
-                               dep_pts_y,     &
-                               detj_at_w2h,   &
-                               outer_order,   &
-                               dt,            &
-                               panel_id,      &
-                               hori_monotone, &
-                               flux_x,        &
-                               inc_one_x,     &
-                               flux_y,        &
-                               inc_one_y )
-      nullify( panel_id )
+      m3_inv => get_inverse_w3_mass_matrix(ini_one%get_mesh_id())
+
+      ! The horizontal unity transport can't use ffsl_2d_flux_alg as
+      ! it will create a circular dependency with transport_runtime_alg
+      ! Hence we do the unity transport directly here
+
+      ! Set stencil extent
+      stencil_extent_x     = dep_stencil_x + 1_i_def + outer_order
+      cfl_stencil_extent_x = int(stencil_extent_x)
+      stencil_extent_y     = dep_stencil_y + 1_i_def + outer_order
+      cfl_stencil_extent_y = int(stencil_extent_y)
+      ! Flux in x-direction ------------------------------------------------------------------
+      call invoke( ffsl_flux_first_x_kernel_type( flux_x, ini_one, stencil_extent_x,         &
+                                                  dep_pts_x, detj_at_w2h, outer_order,       &
+                                                  hori_monotone, cfl_stencil_extent_x, dt ), &
+      ! Flux in y-direction ------------------------------------------------------------------
+                   ffsl_flux_first_y_kernel_type( flux_y, ini_one, stencil_extent_y,         &
+                                                  dep_pts_y, detj_at_w2h, outer_order,       &
+                                                  hori_monotone, cfl_stencil_extent_y, dt ), &
+      ! Take difference to get increment -----------------------------------------------------
+                   fv_divergence_x_kernel_type( inc_one_x, flux_x, m3_inv ),                 &
+                   fv_divergence_y_kernel_type( inc_one_y, flux_y, m3_inv ) )
+
+      nullify( m3_inv )
     end if
 
     ! Check if we need increment of unity in z directions

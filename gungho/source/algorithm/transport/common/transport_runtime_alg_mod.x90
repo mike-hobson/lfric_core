@@ -10,20 +10,25 @@
 
 module transport_runtime_alg_mod
 
-  use check_configuration_mod,        only: check_any_scheme_mol,   &
-                                            check_any_scheme_ffsl,  &
-                                            check_any_scheme_split, &
-                                            check_any_shifted,      &
-                                            check_horz_dep_pts,     &
-                                            check_vert_dep_pts
+  use check_configuration_mod,        only: check_any_scheme_mol,     &
+                                            check_any_scheme_ffsl,    &
+                                            check_any_scheme_split,   &
+                                            check_any_scheme_slice,   &
+                                            check_any_hori_scheme_sl, &
+                                            check_any_vert_scheme_sl, &
+                                            check_any_reversible_sl,  &
+                                            check_any_shifted,        &
+                                            check_horz_dep_pts,       &
+                                            check_vert_dep_pts,       &
+                                            check_any_splitting_vhv
   use constants_mod,                  only: r_def, r_second, i_def, l_def,  &
                                             str_def, tiny_eps, imdi, r_tran
-  use extrusion_mod,                  only: SHIFTED
+  use extrusion_mod,                  only: SHIFTED, TWOD
   use r_tran_field_mod,               only: r_tran_field_type
   use integer_field_mod,              only: integer_field_type
   use field_mod,                      only: field_type
   use finite_element_config_mod,      only: element_order
-  use fs_continuity_mod,              only: W2, W2h, W2v, W3
+  use fs_continuity_mod,              only: W2, W2h, W2v, W3, Wtheta
   use function_space_mod,             only: function_space_type
   use function_space_collection_mod,  only: function_space_collection
   use local_mesh_mod,                 only: local_mesh_type
@@ -55,6 +60,8 @@ module transport_runtime_alg_mod
     integer(kind=i_def)                              :: dry_step_ctr
     integer(kind=i_def)                              :: tracer_step_ctr
     integer(kind=i_def), allocatable, dimension(:)   :: mesh_ids
+    integer(kind=i_def), allocatable, dimension(:)   :: dep_stencil_extent_x
+    integer(kind=i_def), allocatable, dimension(:)   :: dep_stencil_extent_y
     type(r_tran_field_type),    allocatable, dimension(:)   :: advecting_wind
     type(r_tran_field_type),    allocatable, dimension(:)   :: horizontal_advecting_wind
     type(r_tran_field_type),    allocatable, dimension(:)   :: vertical_advecting_wind
@@ -73,9 +80,27 @@ module transport_runtime_alg_mod
     type(r_tran_field_type),    allocatable, dimension(:,:) :: rho_d_np1
     type(r_tran_field_type),    allocatable, dimension(:,:) :: flux
     type(r_tran_field_type),    allocatable, dimension(:,:) :: dry_flux
-    real(kind=r_tran),    allocatable, dimension(:)   :: horizontal_cfl_max
-    real(kind=r_tran),    allocatable, dimension(:)   :: vertical_cfl_max
-    real(kind=r_tran),    allocatable, dimension(:)   :: total_cfl_max
+    type(r_tran_field_type),    allocatable, dimension(:)   :: vert_cubic_coef_w3
+    type(integer_field_type),   allocatable, dimension(:)   :: vert_cubic_index_w3
+    type(r_tran_field_type),    allocatable, dimension(:)   :: vert_hermite_coef_w3
+    type(integer_field_type),   allocatable, dimension(:)   :: vert_hermite_index_w3
+    type(r_tran_field_type),    allocatable, dimension(:)   :: vert_quintic_coef_w3
+    type(integer_field_type),   allocatable, dimension(:)   :: vert_quintic_index_w3
+    type(r_tran_field_type),    allocatable, dimension(:)   :: vert_linear_coef_w3
+    type(r_tran_field_type),    allocatable, dimension(:)   :: vert_cubic_coef_wt
+    type(integer_field_type),   allocatable, dimension(:)   :: vert_cubic_index_wt
+    type(r_tran_field_type),    allocatable, dimension(:)   :: vert_hermite_coef_wt
+    type(integer_field_type),   allocatable, dimension(:)   :: vert_hermite_index_wt
+    type(r_tran_field_type),    allocatable, dimension(:)   :: vert_quintic_coef_wt
+    type(integer_field_type),   allocatable, dimension(:)   :: vert_quintic_index_wt
+    type(r_tran_field_type),    allocatable, dimension(:)   :: vert_linear_coef_wt
+    type(integer_field_type),   allocatable, dimension(:)   :: cosmic_istart_x
+    type(integer_field_type),   allocatable, dimension(:)   :: cosmic_iend_x
+    type(integer_field_type),   allocatable, dimension(:)   :: cosmic_istart_y
+    type(integer_field_type),   allocatable, dimension(:)   :: cosmic_iend_y
+    real(kind=r_tran),    allocatable, dimension(:)  :: horizontal_cfl_max
+    real(kind=r_tran),    allocatable, dimension(:)  :: vertical_cfl_max
+    real(kind=r_tran),    allocatable, dimension(:)  :: total_cfl_max
     class(model_clock_type), pointer                 :: model_clock
 
     contains
@@ -99,12 +124,20 @@ module transport_runtime_alg_mod
     procedure, public  :: get_departure_points_x_w2
     procedure, public  :: get_departure_points_y_w2
     procedure, public  :: get_departure_points_z_w2
+    procedure, public  :: get_dep_stencil_extent_x
+    procedure, public  :: get_dep_stencil_extent_y
     procedure, public  :: get_adv_unity_x
     procedure, public  :: get_adv_unity_y
     procedure, public  :: get_adv_unity_z
     procedure, public  :: get_adv_unity_half_x
     procedure, public  :: get_adv_unity_half_y
     procedure, public  :: get_adv_unity_half_z
+    procedure, public  :: get_vert_sl_coef
+    procedure, public  :: get_vert_sl_index
+    procedure, public  :: get_cosmic_istart_x
+    procedure, public  :: get_cosmic_iend_x
+    procedure, public  :: get_cosmic_istart_y
+    procedure, public  :: get_cosmic_iend_y
     procedure, public  :: get_field_n
     procedure, public  :: get_rho_d_n
     procedure, public  :: get_rho_d_np1
@@ -148,11 +181,19 @@ contains
     use calc_dep_pts_alg_mod,          only: calc_vert_dep_pts, &
                                              calc_hori_dep_pts, &
                                              select_detj_at_w2
+    use compute_sl_coefficients_alg_mod, &
+                                       only: compute_vert_quintic_coefficients_alg, &
+                                             compute_vert_cubic_coefficients_alg
+    use cosmic_index_alg_mod,          only: cosmic_index_alg
     use ffsl_unity_transport_alg_mod,  only: ffsl_unity_transport_alg
     use split_w2_field_kernel_mod,     only: split_w2_field_kernel_type
     use transport_config_mod,          only: max_vert_cfl_calc,           &
                                              max_vert_cfl_calc_dep_point, &
-                                             max_vert_cfl_calc_uniform
+                                             max_vert_cfl_calc_uniform,   &
+                                             vertical_sl_order,           &
+                                             vertical_sl_order_cubic,     &
+                                             vertical_sl_order_quintic,   &
+                                             vertical_sl_order_cubic_hermite
     use map_w2_to_sh_w2_alg_mod,       only: sample_w2_to_sh_w2_alg
     use calc_max_cfl_kernel_mod,       only: calc_max_cfl_kernel_type
     use dg_matrix_vector_kernel_mod,   only: dg_matrix_vector_kernel_type
@@ -186,18 +227,31 @@ contains
     type(field_type),        target  :: shifted_wind_n_rdef
     type(field_type),        target  :: shifted_wind_np1_rdef
     real(kind=r_tran)                :: cfl_min, cfl_max
+    real(kind=r_tran)                :: dep_min, dep_max
     real(kind=r_tran)                :: h_cfl_min, h_cfl_max
     real(kind=r_tran)                :: v_cfl_min, v_cfl_max
     real(r_tran)                     :: cast_dt
     logical(kind=l_def)              :: any_scheme_mol, any_scheme_split
     logical(kind=l_def)              :: any_scheme_ffsl, any_shifted
+    logical(kind=l_def)              :: any_splitting_vhv, any_scheme_slice
+    logical(kind=l_def)              :: any_hori_scheme_sl, any_vert_scheme_sl
+    logical(kind=l_def)              :: any_reversible_sl
     logical(kind=l_def)              :: any_horz_dep_pts, any_vert_dep_pts
+    logical(kind=l_def)              :: hermite_sl, vhv_split_sl
 
     type(mesh_type),           pointer :: tmp_mesh => null()
+    type(mesh_type),           pointer :: twod_mesh => null()
     type(function_space_type), pointer :: w3_fs => null()
     type(function_space_type), pointer :: w2_fs => null()
     type(function_space_type), pointer :: w2h_fs => null()
     type(function_space_type), pointer :: w2v_fs => null()
+    type(function_space_type), pointer :: w3_2d_fs => null()
+    type(function_space_type), pointer :: w3_md6_fs => null()
+    type(function_space_type), pointer :: w3_md4_fs => null()
+    type(function_space_type), pointer :: w3_md2_fs => null()
+    type(function_space_type), pointer :: wt_md6_fs => null()
+    type(function_space_type), pointer :: wt_md4_fs => null()
+    type(function_space_type), pointer :: wt_md2_fs => null()
 
     ! r_tran type fields
     type(r_tran_field_type), target :: primal_wind_n
@@ -219,8 +273,13 @@ contains
     any_scheme_mol = check_any_scheme_mol()
     any_scheme_ffsl = check_any_scheme_ffsl()
     any_scheme_split = check_any_scheme_split()
+    any_scheme_slice = check_any_scheme_slice()
     any_horz_dep_pts = check_horz_dep_pts()
     any_vert_dep_pts = check_vert_dep_pts()
+    any_splitting_vhv = check_any_splitting_vhv()
+    any_reversible_sl = check_any_reversible_sl()
+    any_hori_scheme_sl = check_any_hori_scheme_sl()
+    any_vert_scheme_sl = check_any_vert_scheme_sl()
     any_shifted = check_any_shifted()
 
     ! ======================================================================== !
@@ -258,17 +317,38 @@ contains
                 self%departure_points_x_w2(self%n_meshes),     &
                 self%departure_points_y_w2(self%n_meshes),     &
                 self%departure_points_z_w2(self%n_meshes),     &
+                self%dep_stencil_extent_x(self%n_meshes),      &
+                self%dep_stencil_extent_y(self%n_meshes),      &
                 self%adv_unity_x(self%n_meshes),               &
                 self%adv_unity_y(self%n_meshes),               &
                 self%adv_unity_z(self%n_meshes),               &
                 self%adv_unity_half_x(self%n_meshes),          &
                 self%adv_unity_half_y(self%n_meshes),          &
                 self%adv_unity_half_z(self%n_meshes),          &
+                self%vert_cubic_coef_w3(self%n_meshes),        &
+                self%vert_cubic_index_w3(self%n_meshes),       &
+                self%vert_hermite_coef_w3(self%n_meshes),      &
+                self%vert_hermite_index_w3(self%n_meshes),     &
+                self%vert_quintic_coef_w3(self%n_meshes),      &
+                self%vert_quintic_index_w3(self%n_meshes),     &
+                self%vert_linear_coef_w3(self%n_meshes),       &
+                self%vert_cubic_coef_wt(self%n_meshes),        &
+                self%vert_cubic_index_wt(self%n_meshes),       &
+                self%vert_hermite_coef_wt(self%n_meshes),      &
+                self%vert_hermite_index_wt(self%n_meshes),     &
+                self%vert_quintic_coef_wt(self%n_meshes),      &
+                self%vert_quintic_index_wt(self%n_meshes),     &
+                self%vert_linear_coef_wt(self%n_meshes),       &
+                self%cosmic_istart_x(self%n_meshes),           &
+                self%cosmic_iend_x(self%n_meshes),             &
+                self%cosmic_istart_y(self%n_meshes),           &
+                self%cosmic_iend_y(self%n_meshes),             &
                 self%horizontal_cfl_max(self%n_meshes),        &
                 self%vertical_cfl_max(self%n_meshes),          &
                 self%total_cfl_max(self%n_meshes),             &
                 self%field_n(self%n_meshes) )
     end if
+
     ! Get mesh ID and element order
     self%mesh_ids(1) = primal_wind_n_rdef%get_mesh_id()
 
@@ -310,10 +390,12 @@ contains
     ! TODO #3008: we should only initialise fields that we actually use
     do mesh_idx = 1, self%n_meshes
       tmp_mesh => mesh_collection%get_mesh(self%mesh_ids(mesh_idx))
+      twod_mesh => mesh_collection%get_mesh(tmp_mesh, TWOD)
       w2_fs => function_space_collection%get_fs(tmp_mesh, element_order, W2)
       w2h_fs => function_space_collection%get_fs(tmp_mesh, element_order, W2h)
       w2v_fs => function_space_collection%get_fs(tmp_mesh, element_order, W2v)
       w3_fs => function_space_collection%get_fs(tmp_mesh, element_order, W3)
+      w3_2d_fs => function_space_collection%get_fs(twod_mesh, element_order, W3)
 
       call self%advecting_wind(mesh_idx)%initialise( w2_fs )
       call self%horizontal_advecting_wind(mesh_idx)%initialise( w2h_fs )
@@ -328,6 +410,10 @@ contains
       call self%adv_unity_half_x(mesh_idx)%initialise( w3_fs )
       call self%adv_unity_half_y(mesh_idx)%initialise( w3_fs )
       call self%adv_unity_half_z(mesh_idx)%initialise( w3_fs )
+      call self%cosmic_istart_x(mesh_idx)%initialise( w3_2d_fs )
+      call self%cosmic_iend_x(mesh_idx)%initialise( w3_2d_fs )
+      call self%cosmic_istart_y(mesh_idx)%initialise( w3_2d_fs )
+      call self%cosmic_iend_y(mesh_idx)%initialise( w3_2d_fs )
       call self%field_n(mesh_idx)%initialise( w3_fs  )
     end do
 
@@ -414,6 +500,13 @@ contains
                                 dep_pt_wind_np1,                       &
                                 self%detj_at_w2_transport(mesh_idx),   &
                                 cast_dt )
+
+        ! Get the required stencil size from the departure points
+        call self%departure_points_x_w2(mesh_idx)%field_minmax(dep_min, dep_max)
+        self%dep_stencil_extent_x(mesh_idx) = int( max( abs(dep_max), abs(dep_min) ) )
+        call self%departure_points_y_w2(mesh_idx)%field_minmax(dep_min, dep_max)
+        self%dep_stencil_extent_y(mesh_idx) = int( max( abs(dep_max), abs(dep_min) ) )
+
       end if
 
       !=======================================================================!
@@ -487,6 +580,8 @@ contains
                                        self%departure_points_y_w2(mesh_idx), &
                                        self%departure_points_z_w2(mesh_idx), &
                                        self%detj_at_w2_transport(mesh_idx),  &
+                                       self%dep_stencil_extent_x(mesh_idx),  &
+                                       self%dep_stencil_extent_y(mesh_idx),  &
                                        cast_dt,                              &
                                        self%adv_unity_x(mesh_idx),           &
                                        self%adv_unity_y(mesh_idx),           &
@@ -496,7 +591,112 @@ contains
                                        self%adv_unity_half_z(mesh_idx) )
       end if
 
-    end do
+      !==========================================================================!
+      ! Compute vertical semi-Lagrangian interpolation coefficients
+      if (any_vert_scheme_sl) then
+        ! Initialise multi-data field function spaces and coefficient
+        ! fields for the primal mesh only unless SLICE is used
+        if ( mesh_idx == 1 .OR. any_scheme_slice ) then
+          w3_md4_fs => function_space_collection%get_fs( tmp_mesh, element_order, &
+                                                         W3, 4, ndata_first = .false. )
+          w3_md2_fs => function_space_collection%get_fs( tmp_mesh, element_order, &
+                                                         W3, 2, ndata_first = .false. )
+          wt_md4_fs => function_space_collection%get_fs( tmp_mesh, element_order, &
+                                                         Wtheta, 4, ndata_first = .false. )
+          wt_md2_fs => function_space_collection%get_fs( tmp_mesh, element_order, &
+                                                         Wtheta, 2, ndata_first = .false. )
+
+          call self%vert_linear_coef_w3(mesh_idx)%initialise( vector_space=w3_md2_fs )
+          call self%vert_linear_coef_wt(mesh_idx)%initialise( vector_space=wt_md2_fs )
+
+          ! TODO: this assumes that if any_splitting_vhv=.true. then all transport uses VHV splitting
+          if (any_splitting_vhv) then
+            vhv_split_sl = .true.
+          else
+            vhv_split_sl = .false.
+          end if
+
+          if ( any_reversible_sl .OR. vertical_sl_order == vertical_sl_order_cubic_hermite) then
+            ! Compute cubic-Hermite coefficients
+            hermite_sl = .true.
+
+            call self%vert_hermite_coef_w3(mesh_idx)%initialise(  vector_space=w3_md4_fs )
+            call self%vert_hermite_index_w3(mesh_idx)%initialise( vector_space=w3_md4_fs )
+            call self%vert_hermite_coef_wt(mesh_idx)%initialise(  vector_space=wt_md4_fs )
+            call self%vert_hermite_index_wt(mesh_idx)%initialise( vector_space=wt_md4_fs )
+
+            call compute_vert_cubic_coefficients_alg( self%vert_hermite_coef_w3(mesh_idx),  &
+                                                      self%vert_hermite_index_w3(mesh_idx), &
+                                                      self%vert_linear_coef_w3(mesh_idx),   &
+                                                      self%vert_hermite_coef_wt(mesh_idx),  &
+                                                      self%vert_hermite_index_wt(mesh_idx), &
+                                                      self%vert_linear_coef_wt(mesh_idx),   &
+                                                      self%departure_points_z_w2(mesh_idx), &
+                                                      hermite_sl, vhv_split_sl )
+
+          end if
+
+          if ( vertical_sl_order == vertical_sl_order_quintic ) then
+            ! Compute quintic coefficients
+            w3_md6_fs => function_space_collection%get_fs( tmp_mesh, element_order, &
+                                                           W3, 6, ndata_first = .false. )
+            wt_md6_fs => function_space_collection%get_fs( tmp_mesh, element_order, &
+                                                           Wtheta, 6, ndata_first = .false. )
+
+            call self%vert_quintic_coef_w3(mesh_idx)%initialise(  vector_space=w3_md6_fs )
+            call self%vert_quintic_index_w3(mesh_idx)%initialise( vector_space=w3_md6_fs )
+            call self%vert_quintic_coef_wt(mesh_idx)%initialise(  vector_space=wt_md6_fs )
+            call self%vert_quintic_index_wt(mesh_idx)%initialise( vector_space=wt_md6_fs )
+
+            call compute_vert_quintic_coefficients_alg( self%vert_quintic_coef_w3(mesh_idx),  &
+                                                        self%vert_quintic_index_w3(mesh_idx), &
+                                                        self%vert_linear_coef_w3(mesh_idx),   &
+                                                        self%vert_quintic_coef_wt(mesh_idx),  &
+                                                        self%vert_quintic_index_wt(mesh_idx), &
+                                                        self%vert_linear_coef_wt(mesh_idx),   &
+                                                        self%departure_points_z_w2(mesh_idx), &
+                                                        vhv_split_sl )
+            nullify( w3_md6_fs, wt_md6_fs )
+          else
+            ! Compute cubic coefficients
+            call self%vert_cubic_coef_w3(mesh_idx)%initialise(  vector_space=w3_md4_fs )
+            call self%vert_cubic_index_w3(mesh_idx)%initialise( vector_space=w3_md4_fs )
+            call self%vert_cubic_coef_wt(mesh_idx)%initialise(  vector_space=wt_md4_fs )
+            call self%vert_cubic_index_wt(mesh_idx)%initialise( vector_space=wt_md4_fs )
+
+            hermite_sl = .false.
+            call compute_vert_cubic_coefficients_alg( self%vert_cubic_coef_w3(mesh_idx),    &
+                                                      self%vert_cubic_index_w3(mesh_idx),   &
+                                                      self%vert_linear_coef_w3(mesh_idx),   &
+                                                      self%vert_cubic_coef_wt(mesh_idx),    &
+                                                      self%vert_cubic_index_wt(mesh_idx),   &
+                                                      self%vert_linear_coef_wt(mesh_idx),   &
+                                                      self%departure_points_z_w2(mesh_idx), &
+                                                      hermite_sl, vhv_split_sl )
+          end if
+
+          nullify( w3_md4_fs, wt_md4_fs, w3_md2_fs, wt_md2_fs )
+
+        end if
+
+      end if ! vertical SL interpolation coefficients
+
+      !==========================================================================!
+      ! Compute index for panel ID change for horizontal schemes that use
+      ! COSMIC splitting (to get the correct field_x/y at panel edge)
+      ! and the required horizontal stencil size based on the maximum CFL
+      if (any_horz_dep_pts) then
+
+        call cosmic_index_alg( self%cosmic_istart_x(mesh_idx),      &
+                               self%cosmic_iend_x(mesh_idx),        &
+                               self%cosmic_istart_y(mesh_idx),      &
+                               self%cosmic_iend_y(mesh_idx),        &
+                               self%dep_stencil_extent_x(mesh_idx), &
+                               self%dep_stencil_extent_y(mesh_idx) )
+
+      end if ! COSMIC panel ID index
+
+    end do ! loop over meshes
 
     !==========================================================================!
     ! Dry fields stored for consistent transport of scalars
@@ -535,7 +735,7 @@ contains
     self%dry_step_ctr = 1
     self%tracer_step_ctr = 1
 
-    nullify(mesh, local_mesh, w2_fs, w3_fs, tmp_mesh, w2h_fs, w2v_fs)
+    nullify(mesh, local_mesh, w2_fs, w3_fs, tmp_mesh, w2h_fs, w2v_fs, w3_2d_fs)
 
   end subroutine transport_runtime_initialiser
 
@@ -559,6 +759,24 @@ contains
     if ( allocated( self%adv_unity_half_x ) )          deallocate( self%adv_unity_half_x )
     if ( allocated( self%adv_unity_half_y ) )          deallocate( self%adv_unity_half_y )
     if ( allocated( self%adv_unity_half_z ) )          deallocate( self%adv_unity_half_z )
+    if ( allocated( self%vert_cubic_coef_w3 ) )        deallocate( self%vert_cubic_coef_w3 )
+    if ( allocated( self%vert_cubic_index_w3 ) )       deallocate( self%vert_cubic_index_w3 )
+    if ( allocated( self%vert_hermite_coef_w3 ) )      deallocate( self%vert_hermite_coef_w3 )
+    if ( allocated( self%vert_hermite_index_w3 ) )     deallocate( self%vert_hermite_index_w3 )
+    if ( allocated( self%vert_quintic_coef_w3 ) )      deallocate( self%vert_quintic_coef_w3 )
+    if ( allocated( self%vert_quintic_index_w3 ) )     deallocate( self%vert_quintic_index_w3 )
+    if ( allocated( self%vert_linear_coef_w3 ) )       deallocate( self%vert_linear_coef_w3 )
+    if ( allocated( self%vert_cubic_coef_wt ) )        deallocate( self%vert_cubic_coef_wt )
+    if ( allocated( self%vert_cubic_index_wt ) )       deallocate( self%vert_cubic_index_wt )
+    if ( allocated( self%vert_hermite_coef_wt ) )      deallocate( self%vert_hermite_coef_wt )
+    if ( allocated( self%vert_hermite_index_wt ) )     deallocate( self%vert_hermite_index_wt )
+    if ( allocated( self%vert_quintic_coef_wt ) )      deallocate( self%vert_quintic_coef_wt )
+    if ( allocated( self%vert_quintic_index_wt ) )     deallocate( self%vert_quintic_index_wt )
+    if ( allocated( self%vert_linear_coef_wt ) )       deallocate( self%vert_linear_coef_wt )
+    if ( allocated( self%cosmic_istart_x ) )           deallocate( self%cosmic_istart_x )
+    if ( allocated( self%cosmic_iend_x ) )             deallocate( self%cosmic_iend_x )
+    if ( allocated( self%cosmic_istart_y ) )           deallocate( self%cosmic_istart_y )
+    if ( allocated( self%cosmic_iend_y ) )             deallocate( self%cosmic_iend_y )
     if ( allocated( self%field_n ) )                   deallocate( self%field_n )
     if ( allocated( self%rho_d_n ) )                   deallocate( self%rho_d_n )
     if ( allocated( self%rho_d_np1 ) )                 deallocate( self%rho_d_np1 )
@@ -1148,7 +1366,7 @@ contains
 
     class(transport_runtime_type), target, intent(in) :: self
     integer(kind=i_def),                   intent(in) :: mesh_id
-    type(r_tran_field_type),                      pointer    :: adv_unity_x
+    type(r_tran_field_type),               pointer    :: adv_unity_x
     character(str_def)                                :: field_name
 
     field_name = 'adv_unity_x'
@@ -1166,7 +1384,7 @@ contains
 
     class(transport_runtime_type), target, intent(in) :: self
     integer(kind=i_def),                   intent(in) :: mesh_id
-    type(r_tran_field_type),                      pointer    :: adv_unity_y
+    type(r_tran_field_type),               pointer    :: adv_unity_y
     character(str_def)                                :: field_name
 
     field_name = 'adv_unity_y'
@@ -1184,7 +1402,7 @@ contains
 
     class(transport_runtime_type), target, intent(in) :: self
     integer(kind=i_def),                   intent(in) :: mesh_id
-    type(r_tran_field_type),                      pointer    :: adv_unity_z
+    type(r_tran_field_type),               pointer    :: adv_unity_z
     character(str_def)                                :: field_name
 
     field_name = 'adv_unity_z'
@@ -1202,7 +1420,7 @@ contains
 
     class(transport_runtime_type), target, intent(in) :: self
     integer(kind=i_def),                   intent(in) :: mesh_id
-    type(r_tran_field_type),                      pointer    :: adv_unity_half_x
+    type(r_tran_field_type),               pointer    :: adv_unity_half_x
     character(str_def)                                :: field_name
 
     field_name = 'adv_unity_half_x'
@@ -1220,7 +1438,7 @@ contains
 
     class(transport_runtime_type), target, intent(in) :: self
     integer(kind=i_def),                   intent(in) :: mesh_id
-    type(r_tran_field_type),                      pointer    :: adv_unity_half_y
+    type(r_tran_field_type),               pointer    :: adv_unity_half_y
     character(str_def)                                :: field_name
 
     field_name = 'adv_unity_half_y'
@@ -1238,7 +1456,7 @@ contains
 
     class(transport_runtime_type), target, intent(in) :: self
     integer(kind=i_def),                   intent(in) :: mesh_id
-    type(r_tran_field_type),                      pointer    :: adv_unity_half_z
+    type(r_tran_field_type),               pointer    :: adv_unity_half_z
     character(str_def)                                :: field_name
 
     field_name = 'adv_unity_half_z'
@@ -1246,6 +1464,216 @@ contains
     call check_initialised_field(adv_unity_half_z, field_name, mesh_id)
 
   end function get_adv_unity_half_z
+
+  !> @brief Returns a pointer to the vertical interpolation coefficients
+  !!        for semi-Lagrangian transport of a W3 or Wtheta field
+  !> @param[in] field   The field to apply the coefficients to
+  !> @param[in] order   The order of the coefficients
+  !> @return The SL interpolation coefficients
+  function get_vert_sl_coef(self, field, order) result(coef)
+
+    use fs_continuity_mod,             only: W3, Wtheta
+    use transport_config_mod,          only: vertical_sl_order_cubic,     &
+                                             vertical_sl_order_quintic,   &
+                                             vertical_sl_order_cubic_hermite
+
+    implicit none
+
+    class(transport_runtime_type), target, intent(in) :: self
+    type(r_tran_field_type),               intent(in) :: field
+    integer(kind=i_def),                   intent(in) :: order
+    type(r_tran_field_type),               pointer    :: coef
+
+    integer(kind=i_def) :: mesh_id
+
+    ! Get mesh ID
+    mesh_id = field%get_mesh_id()
+
+    select case ( field%which_function_space() )
+    case ( W3 )
+      if (order == vertical_sl_order_cubic) then
+        ! Cubic coefficients
+        coef => self%vert_cubic_coef_w3(self%idx_from_mesh_id(mesh_id))
+      else if (order == vertical_sl_order_cubic_hermite) then
+        ! Cubic-Hermite coefficients
+        coef => self%vert_hermite_coef_w3(self%idx_from_mesh_id(mesh_id))
+      else if (order == vertical_sl_order_quintic) then
+        ! Quintic coefficients
+        coef => self%vert_quintic_coef_w3(self%idx_from_mesh_id(mesh_id))
+      else
+        ! Linear coefficients
+        coef => self%vert_linear_coef_w3(self%idx_from_mesh_id(mesh_id))
+      end if
+    case ( Wtheta )
+      if (order == vertical_sl_order_cubic) then
+        ! Cubic coefficients
+        coef => self%vert_cubic_coef_wt(self%idx_from_mesh_id(mesh_id))
+      else if (order == vertical_sl_order_cubic_hermite) then
+        ! Cubic-Hermite coefficients
+        coef => self%vert_hermite_coef_wt(self%idx_from_mesh_id(mesh_id))
+      else if (order == vertical_sl_order_quintic) then
+        ! Quintic coefficients
+        coef => self%vert_quintic_coef_wt(self%idx_from_mesh_id(mesh_id))
+      else
+        ! Linear coefficients
+        coef => self%vert_linear_coef_wt(self%idx_from_mesh_id(mesh_id))
+      end if
+    case default
+      call log_event( "get_vert_sl_coef only valid for W3 & Wtheta spaces", LOG_LEVEL_ERROR )
+    end select
+
+  end function get_vert_sl_coef
+
+  !> @brief Returns a pointer to the vertical interpolation indices
+  !!        for semi-Lagrangian transport of a W3/Wtheta field
+  !> @param[in] field   The field to apply the coefficients to
+  !> @param[in] order   The order of the coefficients for the index
+  !> @return The SL indices
+  function get_vert_sl_index(self, field, order) result(index)
+
+    use fs_continuity_mod,             only: W3, Wtheta
+    use transport_config_mod,          only: vertical_sl_order_cubic,     &
+                                             vertical_sl_order_quintic,   &
+                                             vertical_sl_order_cubic_hermite
+
+    implicit none
+
+    class(transport_runtime_type), target, intent(in) :: self
+    type(r_tran_field_type),               intent(in) :: field
+    integer(kind=i_def),                   intent(in) :: order
+    type(integer_field_type),              pointer    :: index
+
+    integer(kind=i_def) :: mesh_id
+
+    ! Get mesh ID
+    mesh_id = field%get_mesh_id()
+
+    select case ( field%which_function_space() )
+    case ( W3 )
+      select case ( order )
+      case (vertical_sl_order_cubic)
+        ! Cubic coefficients index
+        index => self%vert_cubic_index_w3(self%idx_from_mesh_id(mesh_id))
+      case (vertical_sl_order_cubic_hermite)
+        ! Cubic-Hermite coefficients index
+        index => self%vert_hermite_index_w3(self%idx_from_mesh_id(mesh_id))
+      case (vertical_sl_order_quintic)
+        ! Quintic coefficients index
+        index => self%vert_quintic_index_w3(self%idx_from_mesh_id(mesh_id))
+      end select
+    case ( Wtheta )
+      select case ( order )
+      case (vertical_sl_order_cubic)
+        ! Cubic coefficients index
+        index => self%vert_cubic_index_wt(self%idx_from_mesh_id(mesh_id))
+      case (vertical_sl_order_cubic_hermite)
+        ! Cubic-Hermite coefficients index
+        index => self%vert_hermite_index_wt(self%idx_from_mesh_id(mesh_id))
+      case (vertical_sl_order_quintic)
+        ! Quintic coefficients index
+        index => self%vert_quintic_index_wt(self%idx_from_mesh_id(mesh_id))
+      end select
+    case default
+      call log_event( "get_vert_sl_index only valid for W3 & Wtheta spaces", LOG_LEVEL_ERROR )
+    end select
+
+  end function get_vert_sl_index
+
+  !> @brief Returns a pointer to the start index for a change in
+  !!        x orientation across a cubed sphere panel edge
+  !> @param[in] mesh_id The ID of the mesh to get the object for
+  !> @return The starting index
+  function get_cosmic_istart_x(self, mesh_id) result(index)
+
+    implicit none
+
+    class(transport_runtime_type), target, intent(in) :: self
+    integer(kind=i_def),                   intent(in) :: mesh_id
+    type(integer_field_type),              pointer    :: index
+
+    index => self%cosmic_istart_x(self%idx_from_mesh_id(mesh_id))
+
+  end function get_cosmic_istart_x
+
+  !> @brief Returns a pointer to the end index for a change in
+  !!        x orientation across a cubed sphere panel edge
+  !> @param[in] mesh_id The ID of the mesh to get the object for
+  !> @return The starting index
+  function get_cosmic_iend_x(self, mesh_id) result(index)
+
+    implicit none
+
+    class(transport_runtime_type), target, intent(in) :: self
+    integer(kind=i_def),                   intent(in) :: mesh_id
+    type(integer_field_type),              pointer    :: index
+
+    index => self%cosmic_iend_x(self%idx_from_mesh_id(mesh_id))
+
+  end function get_cosmic_iend_x
+
+  !> @brief Returns a pointer to the start index for a change in
+  !!        y orientation across a cubed sphere panel edge
+  !> @param[in] mesh_id The ID of the mesh to get the object for
+  !> @return The starting index
+  function get_cosmic_istart_y(self, mesh_id) result(index)
+
+    implicit none
+
+    class(transport_runtime_type), target, intent(in) :: self
+    integer(kind=i_def),                   intent(in) :: mesh_id
+    type(integer_field_type),              pointer    :: index
+
+    index => self%cosmic_istart_y(self%idx_from_mesh_id(mesh_id))
+
+  end function get_cosmic_istart_y
+
+  !> @brief Returns a pointer to the end index for a change in
+  !!        y orientation across a cubed sphere panel edge
+  !> @param[in] mesh_id The ID of the mesh to get the object for
+  !> @return The starting index
+  function get_cosmic_iend_y(self, mesh_id) result(index)
+
+    implicit none
+
+    class(transport_runtime_type), target, intent(in) :: self
+    integer(kind=i_def),                   intent(in) :: mesh_id
+    type(integer_field_type),              pointer    :: index
+
+    index => self%cosmic_iend_y(self%idx_from_mesh_id(mesh_id))
+
+  end function get_cosmic_iend_y
+
+  !> @brief Returns a pointer to required stencil size for FFSL transport
+  !!        based on the maximum horizontal departure point in x
+  !> @param[in] mesh_id The ID of the mesh to get the object for
+  !> @return The required stencil depth
+  function get_dep_stencil_extent_x(self, mesh_id) result(dep_stencil_extent_x)
+
+    implicit none
+
+    class(transport_runtime_type), target, intent(in) :: self
+    integer(kind=i_def),                   intent(in) :: mesh_id
+    integer(kind=i_def),                   pointer    :: dep_stencil_extent_x
+
+    dep_stencil_extent_x => self%dep_stencil_extent_x(self%idx_from_mesh_id(mesh_id))
+
+  end function get_dep_stencil_extent_x
+
+  !> @brief Returns a pointer to required stencil size for FFSL transport
+  !!        based on the maximum horizontal departure point in y
+  !> @param[in] mesh_id The ID of the mesh to get the object for
+  !> @return The required stencil depth
+  function get_dep_stencil_extent_y(self, mesh_id) result(dep_stencil_extent_y)
+
+    implicit none
+
+    class(transport_runtime_type), target, intent(in) :: self
+    integer(kind=i_def),                   intent(in) :: mesh_id
+    integer(kind=i_def),                   pointer    :: dep_stencil_extent_y
+
+    dep_stencil_extent_y => self%dep_stencil_extent_y(self%idx_from_mesh_id(mesh_id))
+
+  end function get_dep_stencil_extent_y
 
   !> @brief Returns number of split transport steps for the dry density
   !> @return The number of split transport steps for the dry density

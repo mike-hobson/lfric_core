@@ -150,6 +150,7 @@ contains
   subroutine split_transport_field(field_np1, field_n, direction, &
                                    step_dt, transport_metadata)
 
+    use horizontal_sl_advective_alg_mod,  only: horizontal_sl_advective_alg
     use vertical_sl_advective_alg_mod,    only: vertical_sl_advective_alg
     use vertical_sl_conservative_alg_mod, only: vertical_sl_conservative_alg
 
@@ -241,22 +242,26 @@ contains
     ! Semi-Lagrangian step
     ! -------------------------------------------------------------------------!
     case ( split_method_sl )
-      ! Check that our direction is vertical
-      if ( direction /= direction_v ) then
-        call log_event('Semi-Lagrangian is only possible in the vertical', LOG_LEVEL_ERROR)
-      end if
-
-      ! Choose form of transport equation
-      select case ( transport_metadata%get_equation_form() )
-      case ( equation_form_conservative )
-        call vertical_sl_conservative_alg( field_np1, field_n, transport_metadata )
-      case ( equation_form_advective )
-        call vertical_sl_advective_alg( field_np1, field_n, transport_metadata )
-      case default
-        call log_event('Trying to solve unrecognised form of transport equation', &
-                        LOG_LEVEL_ERROR)
-
+      ! Choose direction
+      select case ( direction )
+      case ( direction_h )
+        ! Horizontal SL only for advective form
+        if ( transport_metadata%get_equation_form() /= equation_form_advective ) then
+          call log_event('Horizontal semi-Lagrangian is only for advective form', LOG_LEVEL_ERROR)
+        end if
+        call horizontal_sl_advective_alg( field_np1, field_n, step_dt, transport_metadata )
+      case ( direction_v )
+        ! Choose form of transport equation for vertical
+        select case ( transport_metadata%get_equation_form() )
+        case ( equation_form_conservative )
+          call vertical_sl_conservative_alg( field_np1, field_n, transport_metadata )
+        case ( equation_form_advective )
+          call vertical_sl_advective_alg( field_np1, field_n, transport_metadata )
+        case default
+          call log_event('Trying to solve unrecognised form of transport equation', &
+                          LOG_LEVEL_ERROR)
         end select
+      end select
 
     case default
       call log_event('Trying to transport with unrecognised scheme', &

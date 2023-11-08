@@ -29,6 +29,8 @@ module ffsl_cubed_sphere_edge_mod
   ! Public subroutines
   public :: get_local_rho_x
   public :: get_local_rho_y
+  public :: get_index_rho_x
+  public :: get_index_rho_y
 
 !------------------------------------------------------------------------------
 ! Contained functions / subroutines
@@ -148,5 +150,105 @@ contains
     end do
 
   end subroutine get_local_rho_y
+
+  !----------------------------------------------------------------------------
+  !> @brief  Returns the index of the field previously advected in x relative to the
+  !!         current cubed sphere panel.
+  !!
+  !> @param[out]  i_start         The first index to take rho_y
+  !> @param[out]  i_end           The last index to take rho_y
+  !> @param[in]   ipanel          Panel ID for cells in the stencil
+  !> @param[in]   stencil_size    Size of 1D stencil being used
+  !> @param[in]   stencil_half    Index of centre cell in stencil
+  !----------------------------------------------------------------------------
+  subroutine get_index_rho_x(i_start, i_end, ipanel, stencil_size, stencil_half)
+
+    implicit none
+
+    integer(kind=i_def), intent(in)  :: stencil_size
+    integer(kind=i_def), intent(in)  :: stencil_half
+    integer(kind=i_def), intent(in)  :: ipanel(1:stencil_size)
+    integer(kind=i_def), intent(out) :: i_start
+    integer(kind=i_def), intent(out) :: i_end
+
+    integer(kind=i_def) :: ii, jj
+
+    ! Note: cells have order 1 to stencil_size, e.g.
+    !       | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | for size 9 / extent 4
+
+    ! Initially set to -1 and -2
+    i_start = -1
+    i_end = -2
+
+    ! Correct rho_out to use rho_y depending on panel ID
+    do ii = 1, stencil_half-1
+      if (  (ipanel(stencil_half) == 1_i_def .AND. ipanel(ii) == 6_i_def) .OR. &
+            (ipanel(stencil_half) == 4_i_def .AND. ipanel(ii) == 1_i_def) .OR. &
+            (ipanel(stencil_half) == 6_i_def .AND. ipanel(ii) == 4_i_def) ) then
+        i_start = 1
+        i_end = ii
+      end if
+    end do
+
+    do jj = stencil_size, stencil_half+1, -1
+      if ( (ipanel(stencil_half) == 2_i_def .AND. ipanel(jj) == 5_i_def) .OR. &
+           (ipanel(stencil_half) == 3_i_def .AND. ipanel(jj) == 2_i_def) .OR. &
+           (ipanel(stencil_half) == 5_i_def .AND. ipanel(jj) == 3_i_def) ) then
+        i_start = jj
+        i_end = stencil_size
+      end if
+    end do
+
+  end subroutine get_index_rho_x
+
+  !----------------------------------------------------------------------------
+  !> @brief  Returns the index of the field previously advected in y relative to the
+  !!         current cubed sphere panel.
+  !!
+  !> @param[out]  i_start         The first index to take rho_x
+  !> @param[out]  i_end           The last index to take rho_x
+  !> @param[in]   ipanel          Panel ID for cells in the stencil
+  !> @param[in]   stencil_size    Size of 1D stencil being used
+  !> @param[in]   stencil_half    Index of centre cell in stencil
+  !----------------------------------------------------------------------------
+  subroutine get_index_rho_y(i_start, i_end, ipanel, stencil_size, stencil_half)
+
+    implicit none
+
+    integer(kind=i_def), intent(in)  :: stencil_size
+    integer(kind=i_def), intent(in)  :: stencil_half
+    integer(kind=i_def), intent(in)  :: ipanel(1:stencil_size)
+    integer(kind=i_def), intent(out) :: i_start
+    integer(kind=i_def), intent(out) :: i_end
+
+    integer(kind=i_def) :: ii, jj
+
+    ! Note: cells have order 1 to stencil_size, e.g.
+    !       | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | for size 9 / extent 4
+
+    ! Initially set to -1 and -2
+    i_start = -1_i_def
+    i_end = -2_i_def
+
+    ! Correct rho_out to use rho_x depending on panel ID
+    do ii = 1, stencil_half-1
+      if ( (ipanel(stencil_half) == 1_i_def .AND. ipanel(ii) == 4_i_def) .OR. &
+           (ipanel(stencil_half) == 4_i_def .AND. ipanel(ii) == 6_i_def) .OR. &
+           (ipanel(stencil_half) == 6_i_def .AND. ipanel(ii) == 1_i_def) ) then
+        i_start = 1
+        i_end = ii
+      end if
+    end do
+
+    do jj = stencil_size, stencil_half+1, -1
+      if ( (ipanel(stencil_half) == 2_i_def .AND. ipanel(jj) == 3_i_def) .OR. &
+           (ipanel(stencil_half) == 3_i_def .AND. ipanel(jj) == 5_i_def) .OR. &
+           (ipanel(stencil_half) == 5_i_def .AND. ipanel(jj) == 2_i_def) ) then
+        i_start = jj
+        i_end = stencil_size
+      end if
+    end do
+
+  end subroutine get_index_rho_y
 
 end module ffsl_cubed_sphere_edge_mod

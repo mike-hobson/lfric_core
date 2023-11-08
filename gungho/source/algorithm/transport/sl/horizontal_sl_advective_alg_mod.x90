@@ -1,0 +1,237 @@
+!-----------------------------------------------------------------------------
+! (c) Crown copyright 2023 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+!> @brief An algorithm for performing 2D horizontal semi-Lagrangian advective transport.
+!> @details The algorithm performs multiple 1D horizontal semi-Lagrangian advective
+!!          transports of a field using COSMIC splitting to solve to 2D horizontal
+!!          advection problem. It computes the field at the departure point
+!!          using linear interpolation for the inner stage and a cubic interpolation
+!!          for the outer stage.
+
+module horizontal_sl_advective_alg_mod
+
+  ! Constants and types
+  use constants_mod,                    only: r_tran, i_def, l_def
+  use field_mod,                        only: field_type
+  use integer_field_mod,                only: integer_field_type
+  use io_config_mod,                    only: subroutine_timers
+  use mesh_mod,                         only: mesh_type
+  use r_tran_field_mod,                 only: r_tran_field_type
+  use timer_mod,                        only: timer
+
+  ! Transport runtime and metadata
+  use transport_enumerated_types_mod,   only: splitting_strang_hvh
+  use transport_metadata_mod,           only: transport_metadata_type
+  use transport_runtime_alg_mod,        only: transport_runtime_type
+  use transport_runtime_collection_mod, only: get_transport_runtime
+
+  ! Algorithms and Kernels
+  use end_of_transport_step_alg_mod,    only: end_of_advective_step_alg
+  use horizontal_cubic_sl_kernel_mod,   only: horizontal_cubic_sl_kernel_type
+  use horizontal_linear_sl_kernel_mod,  only: horizontal_linear_sl_kernel_type
+  use remap_on_extended_mesh_alg_mod,   only: remap_on_extended_mesh_alg
+
+  ! Configs
+  use transport_config_mod,             only: extended_mesh
+
+  implicit none
+
+  private
+
+  public :: horizontal_sl_advective_alg
+
+  contains
+
+  !-----------------------------------------------------------------------------
+  !> @brief Solves the horizontal advection equation using a semi-Lagrangian scheme.
+  !> @details The algorithm solves the horizontal advection equation by performing
+  !!          multiple 1D horizontal semi-Lagrangian advective transports and COSMIC
+  !!          splitting.
+  !!
+  !> @param[in,out]  field_np1          Field at timestep n+1
+  !> @param[in]      field_n            Field at timestep n
+  !> @param[in]      dt                 Time step (local)
+  !> @param[in]      transport_metadata Metadata for the advection of field
+  subroutine horizontal_sl_advective_alg( field_np1, field_n, dt, transport_metadata )
+
+    implicit none
+
+    ! Arguments
+    type(r_tran_field_type),         intent(inout) :: field_np1
+    type(r_tran_field_type), target, intent(in)    :: field_n
+    real(kind=r_tran),               intent(in)    :: dt
+    type(transport_metadata_type),   intent(in)    :: transport_metadata
+
+    ! Internal Variables
+    type(r_tran_field_type), target :: field_x
+    type(r_tran_field_type), target :: field_y
+    type(r_tran_field_type) :: field_xp
+    type(r_tran_field_type) :: field_yp
+    type(r_tran_field_type) :: half_increment_x
+    type(r_tran_field_type) :: half_increment_y
+    type(r_tran_field_type) :: increment_x
+    type(r_tran_field_type) :: increment_y
+    type(r_tran_field_type) :: increment
+    type(r_tran_field_type) :: dep_pts_x, &
+                               dep_pts_y
+
+    ! Fields for remapping
+    type(r_tran_field_type), target  :: remap_field
+    type(r_tran_field_type), target  :: remap_field_x
+    type(r_tran_field_type), target  :: remap_field_y
+    type(r_tran_field_type), pointer :: field_ptr => null()
+    type(r_tran_field_type), pointer :: field_x_ptr => null()
+    type(r_tran_field_type), pointer :: field_y_ptr => null()
+
+    ! Stencil sizes
+    integer(kind=i_def) :: stencil_extent, stencil_extent_x, stencil_extent_y
+    integer(kind=i_def) :: cfl_stencil_extent
+
+    ! Time step and CFL
+    real(kind=r_tran)   :: one_over_dt, half_dt
+
+    ! Mesh
+    type(mesh_type),  pointer :: mesh => null()
+    integer(kind=i_def)       :: mesh_id
+
+    ! Transport runtime and metadata
+    type(transport_runtime_type), pointer :: transport_runtime => null()
+    type(r_tran_field_type),      pointer :: dep_pts_x_get => null()
+    type(r_tran_field_type),      pointer :: dep_pts_y_get => null()
+    integer(kind=i_def),          pointer :: dep_stencil_extent_x => null()
+    integer(kind=i_def),          pointer :: dep_stencil_extent_y => null()
+    type(integer_field_type),     pointer :: cosmic_istart_x => null()
+    type(integer_field_type),     pointer :: cosmic_iend_x   => null()
+    type(integer_field_type),     pointer :: cosmic_istart_y => null()
+    type(integer_field_type),     pointer :: cosmic_iend_y   => null()
+    integer(kind=i_def) :: hori_monotone
+
+    if ( subroutine_timers ) call timer('horizontal_sl_advective_alg')
+
+    ! Get mesh ID
+    mesh_id = field_n%get_mesh_id()
+
+    ! Get transport_runtime and reversible option
+    mesh => field_n%get_mesh()
+    transport_runtime => get_transport_runtime(mesh)
+
+    ! Get departure points
+    dep_pts_x_get => transport_runtime%get_departure_points_x_w2(mesh_id)
+    dep_pts_y_get => transport_runtime%get_departure_points_y_w2(mesh_id)
+    ! Get stencil extent
+    dep_stencil_extent_x => transport_runtime%get_dep_stencil_extent_x(mesh_id)
+    dep_stencil_extent_y => transport_runtime%get_dep_stencil_extent_y(mesh_id)
+    ! Get COSMIC index for panel orientation change
+    cosmic_istart_x => transport_runtime%get_cosmic_istart_x(mesh_id)
+    cosmic_iend_x   => transport_runtime%get_cosmic_iend_x(mesh_id)
+    cosmic_istart_y => transport_runtime%get_cosmic_istart_y(mesh_id)
+    cosmic_iend_y   => transport_runtime%get_cosmic_iend_y(mesh_id)
+
+    ! Copy departure points so they can be corrected if Strang splitting is used
+    call dep_pts_x%initialise( vector_space = dep_pts_x_get%get_function_space() )
+    call dep_pts_y%initialise( vector_space = dep_pts_y_get%get_function_space() )
+    call invoke( setval_X(dep_pts_x, dep_pts_x_get), &
+                 setval_X(dep_pts_y, dep_pts_y_get) )
+    ! If using Strang splitting divide departure distance by 2
+    if ( transport_metadata%get_splitting() ==  splitting_strang_hvh ) then
+      call invoke( inc_a_times_X(0.5_r_tran, dep_pts_x), &
+                   inc_a_times_X(0.5_r_tran, dep_pts_y) )
+    end if
+
+    ! Get monotone option
+    hori_monotone = transport_metadata%get_horizontal_monotone()
+
+    ! Get stencil size
+    stencil_extent_x  = dep_stencil_extent_x
+    stencil_extent_y  = dep_stencil_extent_y
+    stencil_extent = max( stencil_extent_x, stencil_extent_y ) + 1_i_def
+    cfl_stencil_extent = int(stencil_extent)
+
+    ! Initialise fields
+    call field_x%initialise( vector_space = field_n%get_function_space() )
+    call field_y%initialise( vector_space = field_n%get_function_space() )
+    call field_xp%initialise( vector_space = field_n%get_function_space() )
+    call field_yp%initialise( vector_space = field_n%get_function_space() )
+    call increment%initialise( vector_space = field_n%get_function_space() )
+    call increment_x%initialise( vector_space = field_n%get_function_space() )
+    call increment_y%initialise( vector_space = field_n%get_function_space() )
+    call half_increment_x%initialise( vector_space = field_n%get_function_space() )
+    call half_increment_y%initialise( vector_space = field_n%get_function_space() )
+
+    ! If needed remap the field on an extended cubed sphere
+    if ( extended_mesh ) then
+      call remap_on_extended_mesh_alg(remap_field, field_n)
+      field_ptr => remap_field
+    else
+      field_ptr => field_n
+    end if
+
+    ! First advective step with linear interpolation
+    call invoke( horizontal_linear_sl_kernel_type( field_xp,       &
+                                                   field_yp,       &
+                                                   field_ptr,      &
+                                                   stencil_extent, &
+                                                   dep_pts_x,      &
+                                                   dep_pts_y,      &
+                                                   cfl_stencil_extent ) )
+
+    ! Constants to get increments
+    one_over_dt = 1.0_r_tran / dt
+    half_dt = 0.5_r_tran * dt
+
+    call invoke( X_minus_Y(half_increment_x, field_n, field_xp),          &
+                 inc_a_times_X(one_over_dt, half_increment_x),            &
+                 X_minus_bY(field_x, field_n, half_dt, half_increment_x), &
+                 X_minus_Y(half_increment_y, field_n, field_yp),          &
+                 inc_a_times_X(one_over_dt, half_increment_y),            &
+                 X_minus_bY(field_y, field_n, half_dt, half_increment_y) )
+
+    ! Final advective step with cubic interpolation
+    stencil_extent = stencil_extent + 1
+    cfl_stencil_extent = int(stencil_extent)
+
+    ! If needed remap the field on an extended cubed sphere
+    if ( extended_mesh ) then
+      call remap_on_extended_mesh_alg(remap_field_x, field_x)
+      field_x_ptr => remap_field_x
+      call remap_on_extended_mesh_alg(remap_field_y, field_y)
+      field_y_ptr => remap_field_y
+    else
+      field_x_ptr => field_x
+      field_y_ptr => field_y
+    end if
+
+    call invoke( horizontal_cubic_sl_kernel_type( increment_x,        &
+                                                  increment_y,        &
+                                                  field_x_ptr,        &
+                                                  stencil_extent,     &
+                                                  field_y_ptr,        &
+                                                  stencil_extent,     &
+                                                  cosmic_istart_x,    &
+                                                  cosmic_iend_x,      &
+                                                  cosmic_istart_y,    &
+                                                  cosmic_iend_y,      &
+                                                  dep_pts_x,          &
+                                                  dep_pts_y,          &
+                                                  hori_monotone,      &
+                                                  cfl_stencil_extent, &
+                                                  dt ) )
+
+    ! Collect the increments
+    call invoke( X_plus_Y( increment, increment_x, increment_y ), &
+                 X_minus_bY( field_np1, field_n, dt, increment ) )
+
+    ! End of step: if necessary enforce min val and overwrite in blending zone
+    call end_of_advective_step_alg(field_np1, field_n, transport_metadata)
+
+    if ( subroutine_timers ) call timer('horizontal_sl_advective_alg')
+
+    nullify( mesh, transport_runtime, dep_pts_x_get, dep_pts_y_get, field_ptr, &
+             cosmic_istart_x, cosmic_iend_x, cosmic_istart_y, cosmic_iend_y,   &
+             dep_stencil_extent_x, dep_stencil_extent_y, field_x_ptr, field_y_ptr )
+
+  end subroutine horizontal_sl_advective_alg
+
+end module horizontal_sl_advective_alg_mod

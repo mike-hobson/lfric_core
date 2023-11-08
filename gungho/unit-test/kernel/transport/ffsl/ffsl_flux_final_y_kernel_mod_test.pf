@@ -75,21 +75,25 @@ contains
     integer(kind=i_def), parameter :: nlayers = 1
     integer(kind=i_def), parameter :: ndf_w3 = 1
     integer(kind=i_def), parameter :: ndf_w2 = 4
+    integer(kind=i_def), parameter :: ndf_wp = 1
     integer(kind=i_def), parameter :: stencil_size = 9
     integer(kind=i_def), parameter :: stencil_extent = ( stencil_size - 1_i_def ) / 2_i_def
     integer(kind=i_def), parameter :: undf_w2 = ndf_w2*nlayers
     integer(kind=i_def), parameter :: undf_w3 = ndf_w3*nlayers*stencil_size
+    integer(kind=i_def), parameter :: undf_wp = ndf_wp
     integer(kind=i_def), parameter :: order = 2
 
     integer(kind=i_def), dimension(ndf_w3)              :: map_w3
     integer(kind=i_def), dimension(ndf_w2)              :: map_w2
+    integer(kind=i_def), dimension(ndf_wp)              :: map_wp
     integer(kind=i_def), dimension(ndf_w3,stencil_size) :: stencil_map
 
-    real(kind=r_tran), dimension(undf_w3) :: field_x
-    real(kind=r_tran), dimension(undf_w3) :: field_y
-    real(kind=r_def),  dimension(undf_w3) :: panel_id
-    real(kind=r_tran), dimension(undf_w2) :: dep_pts
-    real(kind=r_tran), dimension(undf_w2) :: flux
+    real(kind=r_tran),   dimension(undf_w3) :: field_x
+    real(kind=r_tran),   dimension(undf_w3) :: field_y
+    real(kind=r_tran),   dimension(undf_w2) :: dep_pts
+    real(kind=r_tran),   dimension(undf_w2) :: flux
+    integer(kind=i_def), dimension(undf_wp) :: i_start
+    integer(kind=i_def), dimension(undf_wp) :: i_end
     real(kind=r_tran), dimension(undf_w2) :: detj
 
     real(kind=r_tran)   :: dt
@@ -99,6 +103,7 @@ contains
     stencil_map(1,:) = (/ 5, 4, 3, 2, 1, 6, 7, 8, 9 /)
     map_w2(:) = (/ 1, 2, 3, 4 /)
     map_w3(1) = 1
+    map_wp(1) = 1
 
     ! Set no monotonicity
     monotone = horizontal_monotone_none
@@ -120,9 +125,8 @@ contains
     ! Test with integer departure distance on one panel
     dep_pts(:) = 1.0_r_tran
     dt = 1.0_r_tran
-    panel_id(:) = (/ 1.0_r_def, 1.0_r_def, 1.0_r_def, &
-                     1.0_r_def, 1.0_r_def, 1.0_r_def, &
-                     1.0_r_def, 1.0_r_def, 1.0_r_def /)
+    i_start = -1_i_def
+    i_end = -2_i_def
     call ffsl_flux_final_y_code( nlayers,        &
                                  flux,           &
                                  field_x,        &
@@ -131,9 +135,8 @@ contains
                                  field_y,        &
                                  stencil_size,   &
                                  stencil_map,    &
-                                 panel_id,       &
-                                 stencil_size,   &
-                                 stencil_map,    &
+                                 i_start,        &
+                                 i_end,          &
                                  dep_pts,        &
                                  detj,           &
                                  order,          &
@@ -146,9 +149,9 @@ contains
                                  ndf_w3,         &
                                  undf_w3,        &
                                  map_w3,         &
-                                 ndf_w3,         &
-                                 undf_w3,        &
-                                 map_w3 )
+                                 ndf_wp,         &
+                                 undf_wp,        &
+                                 map_wp )
     ! Get correct tolerance
     if ( r_tran == real64 ) then
       use_tol = tol
@@ -164,9 +167,8 @@ contains
     dep_pts(:) = 0.6_r_tran
     dt = 1.0_r_tran
     flux(:) = 0.0_r_def
-    panel_id(:) = (/ 1.0_r_def, 1.0_r_def, 1.0_r_def, &
-                     1.0_r_def, 1.0_r_def, 1.0_r_def, &
-                     1.0_r_def, 1.0_r_def, 1.0_r_def /)
+    i_start = -1_i_def
+    i_end = -2_i_def
     call ffsl_flux_final_y_code( nlayers,        &
                                  flux,           &
                                  field_x,        &
@@ -175,9 +177,8 @@ contains
                                  field_y,        &
                                  stencil_size,   &
                                  stencil_map,    &
-                                 panel_id,       &
-                                 stencil_size,   &
-                                 stencil_map,    &
+                                 i_start,        &
+                                 i_end,          &
                                  dep_pts,        &
                                  detj,           &
                                  order,          &
@@ -190,9 +191,9 @@ contains
                                  ndf_w3,         &
                                  undf_w3,        &
                                  map_w3,         &
-                                 ndf_w3,         &
-                                 undf_w3,        &
-                                 map_w3 )
+                                 ndf_wp,         &
+                                 undf_wp,        &
+                                 map_wp )
     answer = 1.904_r_tran
     @assertEqual(answer, flux(2), use_tol)
     answer = 1.184_r_tran
@@ -202,9 +203,8 @@ contains
     dep_pts(:) = 0.4_r_tran
     dt = 1.0_r_tran
     flux(:) = 0.0_r_def
-    panel_id(:) = (/ 6.0_r_def, 6.0_r_def, 6.0_r_def, &
-                     6.0_r_def, 1.0_r_def, 1.0_r_def, &
-                     1.0_r_def, 1.0_r_def, 1.0_r_def /)
+    i_start = 1_i_def
+    i_end = 4_i_def
     call ffsl_flux_final_y_code( nlayers,        &
                                  flux,           &
                                  field_x,        &
@@ -213,9 +213,8 @@ contains
                                  field_y,        &
                                  stencil_size,   &
                                  stencil_map,    &
-                                 panel_id,       &
-                                 stencil_size,   &
-                                 stencil_map,    &
+                                 i_start,        &
+                                 i_end,          &
                                  dep_pts,        &
                                  detj,           &
                                  order,          &
@@ -228,9 +227,9 @@ contains
                                  ndf_w3,         &
                                  undf_w3,        &
                                  map_w3,         &
-                                 ndf_w3,         &
-                                 undf_w3,        &
-                                 map_w3 )
+                                 ndf_wp,         &
+                                 undf_wp,        &
+                                 map_wp )
     answer = 0.776_r_tran
     @assertEqual(answer, flux(2), use_tol)
     answer = 0.888_r_tran
@@ -240,9 +239,8 @@ contains
     dep_pts(:) = -0.4_r_tran
     dt = 1.0_r_tran
     flux(:) = 0.0_r_def
-    panel_id(:) = (/ 3.0_r_def, 3.0_r_def, 3.0_r_def, &
-                     3.0_r_def, 3.0_r_def, 2.0_r_def, &
-                     2.0_r_def, 2.0_r_def, 2.0_r_def /)
+    i_start = 6_i_def
+    i_end = 9_i_def
     call ffsl_flux_final_y_code( nlayers,        &
                                  flux,           &
                                  field_x,        &
@@ -251,9 +249,8 @@ contains
                                  field_y,        &
                                  stencil_size,   &
                                  stencil_map,    &
-                                 panel_id,       &
-                                 stencil_size,   &
-                                 stencil_map,    &
+                                 i_start,        &
+                                 i_end,          &
                                  dep_pts,        &
                                  detj,           &
                                  order,          &
@@ -266,9 +263,9 @@ contains
                                  ndf_w3,         &
                                  undf_w3,        &
                                  map_w3,         &
-                                 ndf_w3,         &
-                                 undf_w3,        &
-                                 map_w3 )
+                                 ndf_wp,         &
+                                 undf_wp,        &
+                                 map_wp )
     answer = -0.888_r_tran
     @assertEqual(answer, flux(2), use_tol)
     answer = -0.776_r_tran

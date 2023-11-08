@@ -20,10 +20,10 @@ contains
 
     implicit none
 
-    real(kind=r_tran)    :: tol
-    real(kind=r_tran)    :: rho_out(1:5)
-    real(kind=r_tran)    :: rho_x(1:5)
-    real(kind=r_tran)    :: rho_y(1:5)
+    real(kind=r_tran)   :: tol
+    real(kind=r_tran)   :: rho_out(1:5)
+    real(kind=r_tran)   :: rho_x(1:5)
+    real(kind=r_tran)   :: rho_y(1:5)
     integer(kind=i_def) :: ipanel(1:5)
     integer(kind=i_def) :: stencil_size, stencil_half, ii
 
@@ -71,10 +71,10 @@ contains
 
     implicit none
 
-    real(kind=r_tran)    :: tol
-    real(kind=r_tran)    :: rho_out(1:5)
-    real(kind=r_tran)    :: rho_x(1:5)
-    real(kind=r_tran)    :: rho_y(1:5)
+    real(kind=r_tran)   :: tol
+    real(kind=r_tran)   :: rho_out(1:5)
+    real(kind=r_tran)   :: rho_x(1:5)
+    real(kind=r_tran)   :: rho_y(1:5)
     integer(kind=i_def) :: ipanel(1:5)
     integer(kind=i_def) :: stencil_size, stencil_half, ii
 
@@ -112,5 +112,81 @@ contains
     @assertEqual(1.0_r_tran, rho_out(5), tol)
 
   end subroutine get_local_rho_y_test
+
+  @Test
+  subroutine get_index_rho_x_test()
+
+    use pFUnit_Mod
+    use constants_mod, only: r_tran, i_def
+    use ffsl_cubed_sphere_edge_mod, only : get_index_rho_x
+
+    implicit none
+
+    real(kind=r_tran)   :: tol
+    integer(kind=i_def) :: ipanel(1:5)
+    integer(kind=i_def) :: stencil_size, stencil_half, ii
+    integer(kind=i_def) :: i_start, i_end
+
+    tol = 1.0e-6_r_tran
+    stencil_size = 5_i_def
+    stencil_half = (stencil_size+1_i_def)/2_i_def
+
+    ! If ipanel is the same then just take default values
+    ipanel = (/ 1_i_def, 1_i_def, 1_i_def, 1_i_def, 1_i_def /)
+    call get_index_rho_x(i_start, i_end, ipanel, stencil_size, stencil_half)
+    @assertEqual(-1.0_r_tran, real(i_start, r_tran), tol)
+    @assertEqual(-2.0_r_tran, real(i_end, r_tran), tol)
+
+    ! Across panels 1 and 6 the index changes
+    ipanel = (/ 6_i_def, 6_i_def, 1_i_def, 1_i_def, 1_i_def /)
+    call get_index_rho_x(i_start, i_end, ipanel, stencil_size, stencil_half)
+    @assertEqual(1.0_r_tran, real(i_start, r_tran), tol)
+    @assertEqual(2.0_r_tran, real(i_end, r_tran), tol)
+
+    ! Across panels 2 and 5 the index changes
+    ipanel = (/ 2_i_def, 2_i_def, 2_i_def, 2_i_def, 5_i_def /)
+    call get_index_rho_x(i_start, i_end, ipanel, stencil_size, stencil_half)
+    @assertEqual(5.0_r_tran, real(i_start, r_tran), tol)
+    @assertEqual(5.0_r_tran, real(i_end, r_tran), tol)
+
+  end subroutine get_index_rho_x_test
+
+  @Test
+  subroutine get_index_rho_y_test()
+
+    use pFUnit_Mod
+    use constants_mod, only: r_tran, i_def
+    use ffsl_cubed_sphere_edge_mod, only : get_index_rho_y
+
+    implicit none
+
+    real(kind=r_tran)   :: tol
+    integer(kind=i_def) :: ipanel(1:5)
+    integer(kind=i_def) :: stencil_size, stencil_half, ii
+    integer(kind=i_def) :: i_start, i_end
+
+    tol = 1.0e-6_r_tran
+    stencil_size = 5_i_def
+    stencil_half = (stencil_size+1_i_def)/2_i_def
+
+    ! If ipanel is the same then just take default values
+    ipanel = (/ 1_i_def, 1_i_def, 1_i_def, 1_i_def, 1_i_def /)
+    call get_index_rho_y(i_start, i_end, ipanel, stencil_size, stencil_half)
+    @assertEqual(-1.0_r_tran, real(i_start, r_tran), tol)
+    @assertEqual(-2.0_r_tran, real(i_end, r_tran), tol)
+
+    ! Across panels 1 and 4 the index changes
+    ipanel = (/ 4_i_def, 4_i_def, 1_i_def, 1_i_def, 1_i_def /)
+    call get_index_rho_y(i_start, i_end, ipanel, stencil_size, stencil_half)
+    @assertEqual(1.0_r_tran, real(i_start, r_tran), tol)
+    @assertEqual(2.0_r_tran, real(i_end, r_tran), tol)
+
+    ! Across panels 2 and 3 the index changes
+    ipanel = (/ 2_i_def, 2_i_def, 2_i_def, 2_i_def, 3_i_def /)
+    call get_index_rho_y(i_start, i_end, ipanel, stencil_size, stencil_half)
+    @assertEqual(5.0_r_tran, real(i_start, r_tran), tol)
+    @assertEqual(5.0_r_tran, real(i_end, r_tran), tol)
+
+  end subroutine get_index_rho_y_test
 
 end module ffsl_cubed_sphere_edge_mod_test

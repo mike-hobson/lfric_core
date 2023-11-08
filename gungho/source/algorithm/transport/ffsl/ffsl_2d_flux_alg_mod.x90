@@ -22,6 +22,7 @@ module ffsl_2d_flux_alg_mod
   use constants_mod,                  only: r_tran, i_def, l_def
   use fem_constants_mod,              only: get_inverse_w3_mass_matrix
   use field_mod,                      only: field_type
+  use integer_field_mod,              only: integer_field_type
   use r_tran_field_mod,               only: r_tran_field_type
   use operator_mod,                   only: operator_type
   use transport_enumerated_types_mod, only: horizontal_monotone_none,    &
@@ -51,6 +52,10 @@ module ffsl_2d_flux_alg_mod
   use transport_config_mod,           only: extended_mesh
   use finite_element_config_mod,      only: element_order
 
+  ! Transport Runtime
+  use transport_runtime_alg_mod,      only: transport_runtime_type
+  use transport_runtime_collection_mod, &
+                                      only: get_transport_runtime
 
   implicit none
 
@@ -109,7 +114,6 @@ contains
     type(operator_type), pointer :: m3_inv => null()
     integer(kind=i_def) :: stencil_extent
     integer(kind=i_def) :: cfl_stencil_extent
-    real(kind=r_tran)   :: cfl_min, cfl_max
 
     ! Fields for remapping
     type(r_tran_field_type), target  :: remap_field
@@ -118,12 +122,20 @@ contains
     type(r_tran_field_type) :: flux_broken
 
     ! Function spaces, mesh, and transport runtime pointers
-    type( function_space_type ),  pointer :: w2b_fs => null()
-    type( mesh_type ),            pointer :: mesh => null()
-
+    type(function_space_type),    pointer :: w2b_fs => null()
+    type(mesh_type),              pointer :: mesh => null()
+    integer(kind=i_def),          pointer :: dep_stencil_extent_x => null()
+    integer(kind=i_def),          pointer :: dep_stencil_extent_y => null()
+    type(transport_runtime_type), pointer :: transport_runtime => null()
 
     ! Get inverse mass matrix
     m3_inv => get_inverse_w3_mass_matrix(increment_x%get_mesh_id())
+
+    ! Get transport runtime and stencil size
+    mesh => field%get_mesh()
+    transport_runtime    => get_transport_runtime(mesh)
+    dep_stencil_extent_x => transport_runtime%get_dep_stencil_extent_x(field%get_mesh_id())
+    dep_stencil_extent_y => transport_runtime%get_dep_stencil_extent_y(field%get_mesh_id())
 
 
     ! If needed remap the field on an extended cubed sphere
@@ -137,18 +149,14 @@ contains
     ! Compute the mass flux,
     ! take the difference and multiply by inverse mass matrix to get increment
     ! x_direction
-    call invoke_rtran_field_min_max(cfl_min, cfl_max, dep_pts_x)
-    stencil_extent     = int( max( abs(cfl_max), abs(cfl_min) ) ) &
-                         + 1 + order
+    stencil_extent     = dep_stencil_extent_x + 1_i_def + order
     cfl_stencil_extent = int(stencil_extent)
     call invoke( setval_c(mass_flux_x, 0.0_r_tran),                                     &
                  ffsl_flux_first_x_kernel_type( mass_flux_x, field_ptr, stencil_extent, &
                                                 dep_pts_x, detj_at_w2, order, monotone, &
                                                 cfl_stencil_extent, dt ) )
     ! y_direction
-    call invoke_rtran_field_min_max(cfl_min, cfl_max, dep_pts_y)
-    stencil_extent     = int( max( abs(cfl_max), abs(cfl_min) ) ) &
-                         + 1 + order
+    stencil_extent     = dep_stencil_extent_y + 1_i_def + order
     cfl_stencil_extent = int(stencil_extent)
     call invoke( setval_c(mass_flux_y, 0.0_r_tran),                                     &
                  ffsl_flux_first_y_kernel_type( mass_flux_y, field_ptr, stencil_extent, &
@@ -167,7 +175,7 @@ contains
                  fv_divergence_y_kernel_type( increment_y, mass_flux_y, m3_inv ) )
 
 
-    nullify( m3_inv, field_ptr )
+    nullify( m3_inv, field_ptr, transport_runtime, dep_stencil_extent_x, dep_stencil_extent_y )
 
   end subroutine ffsl_2d_flux_first
 
@@ -224,7 +232,6 @@ contains
     type(operator_type), pointer :: m3_inv => null()
     integer(kind=i_def) :: stencil_extent
     integer(kind=i_def) :: cfl_stencil_extent
-    real(kind=r_tran)   :: cfl_min, cfl_max
 
     ! Fields for remapping
     type(r_tran_field_type), target  :: remap_field_x
@@ -235,8 +242,29 @@ contains
     type(r_tran_field_type) :: flux_broken
 
 
-    type( function_space_type ), pointer :: w2b_fs => null()
-    type( mesh_type ), pointer :: mesh => null()
+    ! Function spaces, mesh, and transport runtime pointers
+    type(function_space_type),    pointer :: w2b_fs => null()
+    type(mesh_type),              pointer :: mesh => null()
+    integer(kind=i_def),          pointer :: dep_stencil_extent_x => null()
+    integer(kind=i_def),          pointer :: dep_stencil_extent_y => null()
+    type(transport_runtime_type), pointer :: transport_runtime => null()
+    type(integer_field_type),     pointer :: cosmic_istart_x => null()
+    type(integer_field_type),     pointer :: cosmic_iend_x   => null()
+    type(integer_field_type),     pointer :: cosmic_istart_y => null()
+    type(integer_field_type),     pointer :: cosmic_iend_y   => null()
+
+    ! Get inverse mass matrix
+    m3_inv => get_inverse_w3_mass_matrix(increment_x%get_mesh_id())
+
+    ! Get transport runtime, and stencil size and panel ID orientation indices
+    mesh => field_x%get_mesh()
+    transport_runtime    => get_transport_runtime(mesh)
+    dep_stencil_extent_x => transport_runtime%get_dep_stencil_extent_x(field_x%get_mesh_id())
+    dep_stencil_extent_y => transport_runtime%get_dep_stencil_extent_y(field_x%get_mesh_id())
+    cosmic_istart_x      => transport_runtime%get_cosmic_istart_x(field_x%get_mesh_id())
+    cosmic_iend_x        => transport_runtime%get_cosmic_iend_x(field_x%get_mesh_id())
+    cosmic_istart_y      => transport_runtime%get_cosmic_istart_y(field_x%get_mesh_id())
+    cosmic_iend_y        => transport_runtime%get_cosmic_iend_y(field_x%get_mesh_id())
 
     ! If needed remap the field on an extended cubed sphere
     if ( extended_mesh ) then
@@ -251,25 +279,21 @@ contains
     ! Compute the mass flux,
     ! take the difference and multiply by inverse mass matrix to get increment
     ! x_direction
-    call invoke_rtran_field_min_max(cfl_min, cfl_max, dep_pts_x)
-    stencil_extent = int( max( abs(cfl_max), abs(cfl_min) ) ) &
-                     + 1 + order
+    stencil_extent     = dep_stencil_extent_x + 1_i_def + order
     cfl_stencil_extent = int(stencil_extent)
     call invoke( setval_c(mass_flux_x,  0.0_r_tran),                                      &
                  ffsl_flux_final_x_kernel_type( mass_flux_x, field_x_ptr, stencil_extent, &
                                                 field_y_ptr, stencil_extent,              &
-                                                panel_id, stencil_extent,          &
+                                                cosmic_istart_y, cosmic_iend_y,           &
                                                 dep_pts_x, detj_at_w2, order, monotone,   &
                                                 cfl_stencil_extent, dt ) )
     ! y_direction
-    call invoke_rtran_field_min_max(cfl_min, cfl_max, dep_pts_y)
-    stencil_extent = int( max( abs(cfl_max), abs(cfl_min) ) ) &
-                     + 1 + order
+    stencil_extent     = dep_stencil_extent_y + 1_i_def + order
     cfl_stencil_extent = int(stencil_extent)
     call invoke( setval_c(mass_flux_y,  0.0_r_tran),                                      &
                  ffsl_flux_final_y_kernel_type( mass_flux_y, field_x_ptr, stencil_extent, &
                                                 field_y_ptr, stencil_extent,              &
-                                                panel_id, stencil_extent,          &
+                                                cosmic_istart_x, cosmic_iend_x,           &
                                                 dep_pts_y, detj_at_w2, order, monotone,   &
                                                 cfl_stencil_extent, dt ) )
 
@@ -283,13 +307,13 @@ contains
                                                 panel_id, 1 ) )
     end if
 
-    ! Get inverse mass matrix
-    m3_inv => get_inverse_w3_mass_matrix(increment_x%get_mesh_id())
 
     call invoke( fv_divergence_x_kernel_type( increment_x, mass_flux_x, m3_inv ), &
                  fv_divergence_y_kernel_type( increment_y, mass_flux_y, m3_inv ) )
 
-    nullify( m3_inv, field_x_ptr, field_y_ptr )
+    nullify( m3_inv, field_x_ptr, field_y_ptr, transport_runtime,            &
+             cosmic_istart_x, cosmic_iend_x, cosmic_istart_y, cosmic_iend_y, &
+             dep_stencil_extent_x, dep_stencil_extent_y )
 
   end subroutine ffsl_2d_flux_final
 

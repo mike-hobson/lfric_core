@@ -1,0 +1,197 @@
+!-----------------------------------------------------------------------------
+! (c) Crown copyright 2023 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+
+!> @brief   Algorithms for computing the semi-Lagrangian interpolation coefficients.
+!> @details Contains algorithms to compute cubic and quintic interpolation coefficients
+!!          for vertical semi-Lagrangian advective transport.
+
+module compute_sl_coefficients_alg_mod
+
+  ! Constants and types
+  use constants_mod,                            only: i_def, l_def, r_tran
+  use r_tran_field_mod,                         only: r_tran_field_type
+  use field_mod,                                only: field_type
+  use integer_field_mod,                        only: integer_field_type
+  use function_space_mod,                       only: function_space_type
+  use geometric_constants_mod,                  only: get_height
+  use mesh_mod,                                 only: mesh_type
+  use fs_continuity_mod,                        only: Wtheta
+  use psykal_lite_mod,                          only: invoke_copy_to_rtran
+
+  ! Kernels
+  use compute_vertical_cubic_coef_kernel_mod,   only: compute_vertical_cubic_coef_kernel_type
+  use compute_vertical_quintic_coef_kernel_mod, only: compute_vertical_quintic_coef_kernel_type
+
+  implicit none
+
+  private
+  public :: compute_vert_quintic_coefficients_alg
+  public :: compute_vert_cubic_coefficients_alg
+
+contains
+
+
+  !===========================================================================!
+  !> @brief   Compute the quintic interpolation coefficients for vertical semi-Lagrangian
+  !!          advection.
+  !> @details Algorithm to compute the quintic interpolation coefficients, the grid point index,
+  !!          and the linear interpolation coefficients (used for monotonicity) for vertical
+  !!          semi-Lagrangian advective transport.
+  !!
+  !> @param[in,out] quintic_coefs_w3  The quintic interpolation coefficients for W3 fields
+  !> @param[in,out] quintic_index_w3  The quintic interpolation indices for W3 fields
+  !> @param[in,out] linear_coefs_w3   The linear interpolation coefficients for W3 fields
+  !> @param[in,out] quintic_coefs_wt  The quintic interpolation coefficients for Wtheta fields
+  !> @param[in,out] quintic_index_wt  The quintic interpolation indices for Wtheta fields
+  !> @param[in,out] linear_coefs_wt   The linear interpolation coefficients for Wtheta fields
+  !> @param[in]     dep_pts           The vertical departure points
+  !> @param[in]     strang            Flag to indicate VHV Strang splitting is being used and
+  !!                                  so half departure points are needed
+  subroutine compute_vert_quintic_coefficients_alg( quintic_coefs_w3, &
+                                                    quintic_index_w3, &
+                                                    linear_coefs_w3,  &
+                                                    quintic_coefs_wt, &
+                                                    quintic_index_wt, &
+                                                    linear_coefs_wt,  &
+                                                    dep_pts,          &
+                                                    strang )
+
+    implicit none
+
+    ! Arguments
+    type( r_tran_field_type ),  intent(inout) :: quintic_coefs_w3
+    type( integer_field_type ), intent(inout) :: quintic_index_w3
+    type( r_tran_field_type ),  intent(inout) :: linear_coefs_w3
+    type( r_tran_field_type ),  intent(inout) :: quintic_coefs_wt
+    type( integer_field_type ), intent(inout) :: quintic_index_wt
+    type( r_tran_field_type ),  intent(inout) :: linear_coefs_wt
+    type( r_tran_field_type ),  intent(in)    :: dep_pts
+    logical( kind=l_def ),      intent(in)    :: strang
+
+    ! Pointers
+    type(mesh_type),  pointer :: mesh => null()
+    type(field_type), pointer :: height_rdef => null()
+
+    ! Internal variables
+    type( r_tran_field_type ) :: dep_pts_z
+    type(r_tran_field_type)   :: height
+
+    ! Get mesh
+    mesh => dep_pts%get_mesh()
+
+    ! Get height
+    height_rdef => get_height( Wtheta, mesh%get_id() )
+    call height%initialise( vector_space = height_rdef%get_function_space() )
+    call invoke_copy_to_rtran( height, height_rdef )
+
+    ! If VHV Strang splitting we need half departure points
+    call dep_pts_z%initialise( vector_space = dep_pts%get_function_space() )
+    if (strang) then
+      call invoke( a_times_X(dep_pts_z, 0.5_r_tran, dep_pts) )
+    else
+      call invoke( setval_X(dep_pts_z, dep_pts) )
+    end if
+
+    ! Compute cubic coefficients for W3 and Wtheta
+    call invoke ( compute_vertical_quintic_coef_kernel_type( dep_pts_z,         &
+                                                             height,            &
+                                                             quintic_coefs_w3,  &
+                                                             quintic_index_w3,  &
+                                                             linear_coefs_w3 ), &
+                  compute_vertical_quintic_coef_kernel_type( dep_pts_z,         &
+                                                             height,            &
+                                                             quintic_coefs_wt,  &
+                                                             quintic_index_wt,  &
+                                                             linear_coefs_wt ) )
+
+    nullify( height_rdef, mesh )
+
+  end subroutine compute_vert_quintic_coefficients_alg
+
+
+  !===========================================================================!
+  !> @brief   Compute the cubic interpolation coefficients for vertical semi-Lagrangian
+  !!          advection.
+  !> @details Algorithm to compute the cubic interpolation coefficients, the grid point index,
+  !!          and the linear interpolation coefficients (used for monotonicity) for vertical
+  !!          semi-Lagrangian advective transport.
+  !!
+  !> @param[in,out] cubic_coefs_w3  The cubic interpolation coefficients for W3 fields
+  !> @param[in,out] cubic_index_w3  The cubic interpolation indices for W3 fields
+  !> @param[in,out] linear_coefs_w3 The linear interpolation coefficients for W3 fields
+  !> @param[in,out] cubic_coefs_wt  The cubic interpolation coefficients for Wtheta fields
+  !> @param[in,out] cubic_index_wt  The cubic interpolation indices for Wtheta fields
+  !> @param[in,out] linear_coefs_wt The linear interpolation coefficients for Wtheta fields
+  !> @param[in]     dep_pts         The vertical departure points
+  !> @param[in]     hermite         Flag to compute cubic Hermite coefficients
+  !> @param[in]     strang          Flag to indicate VHV Strang splitting is being used and
+  !!                                so half departure points are needed
+  subroutine compute_vert_cubic_coefficients_alg( cubic_coefs_w3,  &
+                                                  cubic_index_w3,  &
+                                                  linear_coefs_w3, &
+                                                  cubic_coefs_wt,  &
+                                                  cubic_index_wt,  &
+                                                  linear_coefs_wt, &
+                                                  dep_pts,         &
+                                                  hermite,         &
+                                                  strang )
+
+    implicit none
+
+    ! Arguments
+    type( r_tran_field_type ),  intent(inout) :: cubic_coefs_w3
+    type( integer_field_type ), intent(inout) :: cubic_index_w3
+    type( r_tran_field_type ),  intent(inout) :: linear_coefs_w3
+    type( r_tran_field_type ),  intent(inout) :: cubic_coefs_wt
+    type( integer_field_type ), intent(inout) :: cubic_index_wt
+    type( r_tran_field_type ),  intent(inout) :: linear_coefs_wt
+    type( r_tran_field_type ),  intent(in)    :: dep_pts
+    logical( kind=l_def ),      intent(in)    :: hermite
+    logical( kind=l_def ),      intent(in)    :: strang
+
+    ! Pointers
+    type(mesh_type),  pointer :: mesh => null()
+    type(field_type), pointer :: height_rdef => null()
+
+    ! Internal variables
+    type( r_tran_field_type ) :: dep_pts_z
+    type(r_tran_field_type)   :: height
+
+    ! Get mesh
+    mesh => dep_pts%get_mesh()
+
+    ! Get height
+    height_rdef => get_height( Wtheta, mesh%get_id() )
+    call height%initialise( vector_space = height_rdef%get_function_space() )
+    call invoke_copy_to_rtran( height, height_rdef )
+
+    ! If VHV Strang splitting we need half departure points
+    call dep_pts_z%initialise( vector_space = dep_pts%get_function_space() )
+    if (strang) then
+      call invoke( a_times_X(dep_pts_z, 0.5_r_tran, dep_pts) )
+    else
+      call invoke( setval_X(dep_pts_z, dep_pts) )
+    end if
+
+    ! Compute cubic coefficients for W3 and Wtheta
+    call invoke ( compute_vertical_cubic_coef_kernel_type( dep_pts_z,       &
+                                                           height,          &
+                                                           cubic_coefs_w3,  &
+                                                           cubic_index_w3,  &
+                                                           linear_coefs_w3, &
+                                                           hermite ),       &
+                  compute_vertical_cubic_coef_kernel_type( dep_pts_z,       &
+                                                           height,          &
+                                                           cubic_coefs_wt,  &
+                                                           cubic_index_wt,  &
+                                                           linear_coefs_wt, &
+                                                           hermite) )
+
+    nullify( height_rdef, mesh )
+
+  end subroutine compute_vert_cubic_coefficients_alg
+
+end module compute_sl_coefficients_alg_mod

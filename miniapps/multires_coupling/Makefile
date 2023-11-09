@@ -132,30 +132,24 @@ build: ALWAYS
 	$(call MESSAGE,Importing internal dependencies...)
 	$(call MESSAGE,========================================)
 	$(Q)for SUBPROJECT in $(INTERNAL_DEPENDENCIES) ; do \
-		$(MAKE) $(QUIET_ARG) -f $$SUBPROJECT/build/import.mk ; done
+	    $(MAKE) $(QUIET_ARG) -f $$SUBPROJECT/build/import.mk ; done
+	$(call MESSAGE,==============================)
+	$(call MESSAGE,Extracting $(PROJECT_NAME))
+	$(call MESSAGE,==============================)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+	          SOURCE_DIR=source
 	$(call MESSAGE,=========================================================)
 	$(call MESSAGE,Generating namelist loaders for $(PROJECT))
 	$(call MESSAGE,=========================================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk \
 	          SOURCE_DIR=$(ROOT_DIR)/gungho/source \
 	          META_FILE_DIR=$(META_FILE_DIR)
-	$(call MESSAGE,==============================)
-	$(call MESSAGE,Extracting $(PROJECT_NAME))
-	$(call MESSAGE,==============================)
-	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
-	          SOURCE_DIR=source
 	$(call MESSAGE,==============================)
 	$(call MESSAGE,PSycloning $(PROJECT_NAME))
 	$(call MESSAGE,==============================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone/psyclone.mk \
 	         SOURCE_DIR=source \
 	         OPTIMISATION_PATH=$(OPTIMISATION_PATH)
-	$(call MESSAGE,=========================================================)
-	$(call MESSAGE,Generating namelist loaders for $(PROJECT))
-	$(call MESSAGE,=========================================================)
-	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk \
-	          SOURCE_DIR=$(ROOT_DIR)/gungho/source \
-	          META_FILE_DIR=$(META_FILE_DIR)
 	$(call MESSAGE,=========================================================)
 	$(call MESSAGE,Analysing $(PROJECT) build dependencies)
 	$(call MESSAGE,=========================================================)
@@ -164,7 +158,7 @@ build: ALWAYS
 	$(call MESSAGE,Compiling $(PROJECT))
 	$(call MESSAGE,=========================================================)
 	$Q$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/compile.mk \
-	         BIN_DIR=$(BIN_DIR) PROGRAMS="$(PROGRAMS)"
+	          BIN_DIR=$(BIN_DIR) PROGRAMS="$(PROGRAMS)"
 
 
 ##############################################################################

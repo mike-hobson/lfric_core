@@ -190,7 +190,7 @@ build: ALWAYS
 	$(call MESSAGE,Importing internal dependencies...)
 	$(call MESSAGE,========================================)
 	$(Q)for SUBPROJECT in $(INTERNAL_DEPENDENCIES) ; do \
-		$(MAKE) $(QUIET_ARG) -f $$SUBPROJECT/build/import.mk ; done
+	    $(MAKE) $(QUIET_ARG) -f $$SUBPROJECT/build/import.mk ; done
 	$(call MESSAGE,========================================)
 	$(call MESSAGE,Extracting coupler-oasis component)
 	$(call MESSAGE,========================================)
@@ -216,7 +216,13 @@ build: ALWAYS
 	$(call MESSAGE,========================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(PROJECT_DIR)/build/extract_physics.mk
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
-                  SOURCE_DIR=source
+	          SOURCE_DIR=source
+	$(call MESSAGE,=========================================================)
+	$(call MESSAGE,Generating $(PROJECT) namelist loaders)
+	$(call MESSAGE,=========================================================)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk \
+	          SOURCE_DIR=$(ROOT_DIR)/gungho/source \
+	          META_FILE_DIR=$(META_FILE_DIR)
 	$(call MESSAGE,========================================)
 	$(call MESSAGE,PSycloning coupler-oasis component)
 	$(call MESSAGE,========================================)
@@ -240,13 +246,7 @@ build: ALWAYS
 	$(call MESSAGE,PSycloning $(PROJECT_NAME))
 	$(call MESSAGE,========================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone/psyclone.mk \
-                  SOURCE_DIR=source
-	$(call MESSAGE,=========================================================)
-	$(call MESSAGE,Generating $(PROJECT) namelist loaders)
-	$(call MESSAGE,=========================================================)
-	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk \
-                  SOURCE_DIR=$(ROOT_DIR)/gungho/source \
-                  META_FILE_DIR=$(META_FILE_DIR)
+	          SOURCE_DIR=source
 	$(call MESSAGE,=========================================================)
 	$(call MESSAGE,Analysing $(PROJECT) build dependencies)
 	$(call MESSAGE,=========================================================)
@@ -256,7 +256,6 @@ build: ALWAYS
 	$(call MESSAGE,Compiling $(PROJECT))
 	$(call MESSAGE,=========================================================)
 	$Q$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/compile.mk
-	$(call MESSAGE,Extracting,"after compile.mk")
 
 ##############################################################################
 # Unit tests

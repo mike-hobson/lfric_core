@@ -113,16 +113,16 @@ build: ALWAYS
 	$(call MESSAGE,Extracting $(PROJECT_NAME))
 	$(call MESSAGE,========================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
-                  SOURCE_DIR=source \
-                  WORKING_DIR=$(WORKING_DIR)
+	          SOURCE_DIR=source \
+	          WORKING_DIR=$(WORKING_DIR)
 	$(call MESSAGE,=========================================================)
 	$(call MESSAGE,Generating $(PROJECT) namelist loaders)
 	$(call MESSAGE,=========================================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk \
-                  PROJECT=$(PROJECT) \
-                  SOURCE_DIR=source \
-                  WORKING_DIR=$(WORKING_DIR) \
-                  META_FILE_DIR=$(META_FILE_DIR)
+	          PROJECT=$(PROJECT) \
+	          SOURCE_DIR=source \
+	          WORKING_DIR=$(WORKING_DIR) \
+	          META_FILE_DIR=$(META_FILE_DIR)
 	$(call MESSAGE,=========================================================)
 	$(call MESSAGE,Analysing $(PROJECT) build dependencies)
 	$(call MESSAGE,=========================================================)

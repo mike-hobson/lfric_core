@@ -136,27 +136,27 @@ build: ALWAYS
 	$(call MESSAGE,Importing internal dependencies...)
 	$(call MESSAGE,========================================)
 	$(Q)for SUBPROJECT in $(INTERNAL_DEPENDENCIES) ; do \
-		$(MAKE) $(QUIET_ARG) -f $$SUBPROJECT/build/import.mk ; done
+	    $(MAKE) $(QUIET_ARG) -f $$SUBPROJECT/build/import.mk ; done
 	$(call MESSAGE,========================================)
 	$(call MESSAGE,Extracting $(PROJECT_NAME))
 	$(call MESSAGE,========================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
 	              SOURCE_DIR=source \
-                  WORKING_DIR=$(WORKING_DIR)
-	$(call MESSAGE,========================================)
-	$(call MESSAGE,PSycloning $(PROJECT_NAME))
-	$(call MESSAGE,========================================)
-	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone/psyclone.mk \
-	              SOURCE_DIR=source \
-	              OPTIMISATION_PATH=$(OPTIMISATION_PATH)
+	          WORKING_DIR=$(WORKING_DIR)
 	$(call MESSAGE,=========================================================)
 	$(call MESSAGE,Generating $(PROJECT) namelist loaders)
 	$(call MESSAGE,=========================================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk \
-	              PROJECT=$(PROJECT) \
-	              SOURCE_DIR=source \
-                WORKING_DIR=$(WORKING_DIR) \
-                META_FILE_DIR=$(META_FILE_DIR)
+	          PROJECT=$(PROJECT) \
+	          SOURCE_DIR=source \
+	          WORKING_DIR=$(WORKING_DIR) \
+	          META_FILE_DIR=$(META_FILE_DIR)
+	$(call MESSAGE,========================================)
+	$(call MESSAGE,PSycloning $(PROJECT_NAME))
+	$(call MESSAGE,========================================)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone/psyclone.mk \
+	          SOURCE_DIR=source \
+	          OPTIMISATION_PATH=$(OPTIMISATION_PATH)
 	$(call MESSAGE,=========================================================)
 	$(call MESSAGE,Analysing $(PROJECT) build dependencies)
 	$(call MESSAGE,=========================================================)
@@ -179,18 +179,18 @@ build: ALWAYS
 ##############################################################################
 # Unit tests
 #
-unit-tests/%: export ADDITIONAL_EXTRACTION                          \
-	                = $(ROOT_DIR)/infrastructure/source               \
-	                  $(ROOT_DIR)/components/driver/source            \
-                    $(ROOT_DIR)/components/inventory/source         \
-	                  $(ROOT_DIR)/components/science/source/kernel    \
-	                  $(ROOT_DIR)/components/science/source/algorithm \
-	                  $(ROOT_DIR)/components/science/source/psy       \
-										$(ROOT_DIR)/components/inventory/source         \
-	                  $(ROOT_DIR)/components/jedi-lfric/source        \
-	                  $(ROOT_DIR)/components/lfric-xios/source        \
-										$(ROOT_DIR)/gungho/source                       \
-										$(ROOT_DIR)/linear/source
+unit-tests/%: export ADDITIONAL_EXTRACTION =                         \
+                     $(ROOT_DIR)/infrastructure/source               \
+                     $(ROOT_DIR)/components/driver/source            \
+                     $(ROOT_DIR)/components/inventory/source         \
+                     $(ROOT_DIR)/components/science/source/kernel    \
+                     $(ROOT_DIR)/components/science/source/algorithm \
+                     $(ROOT_DIR)/components/science/source/psy       \
+                     $(ROOT_DIR)/components/inventory/source         \
+                     $(ROOT_DIR)/components/jedi-lfric/source        \
+                     $(ROOT_DIR)/components/lfric-xios/source        \
+                     $(ROOT_DIR)/gungho/source                       \
+                     $(ROOT_DIR)/linear/source
 unit-tests/%: export BIN_DIR ?= $(PROJECT_DIR)/test
 unit-tests/%: export FFLAGS += -DUNIT_TEST
 unit-tests/%: export META_FILE_DIR = rose-meta/jedi_lfric_tests/HEAD
@@ -205,16 +205,16 @@ unit-tests: unit-tests/run
 ##############################################################################
 # Integration tests
 #
-integration-tests/%: export ADDITIONAL_EXTRACTION                  \
-                        = $(ROOT_DIR)/infrastructure/source        \
-                          $(ROOT_DIR)/components/driver/source     \
-                          $(ROOT_DIR)/components/inventory/source  \
-                          $(ROOT_DIR)/components/science/source    \
-													$(ROOT_DIR)/components/inventory/source  \
-                          $(ROOT_DIR)/components/jedi-lfric/source \
-                          $(ROOT_DIR)/components/lfric-xios/source \
-													$(ROOT_DIR)/gungho/source                \
-										      $(ROOT_DIR)/linear/source
+integration-tests/%: export ADDITIONAL_EXTRACTION =                  \
+                            $(ROOT_DIR)/infrastructure/source        \
+                            $(ROOT_DIR)/components/driver/source     \
+                            $(ROOT_DIR)/components/inventory/source  \
+                            $(ROOT_DIR)/components/science/source    \
+                            $(ROOT_DIR)/components/inventory/source  \
+                            $(ROOT_DIR)/components/jedi-lfric/source \
+                            $(ROOT_DIR)/components/lfric-xios/source \
+                            $(ROOT_DIR)/gungho/source                \
+                            $(ROOT_DIR)/linear/source
 integration-tests/%: export BIN_DIR      ?= $(PROJECT_DIR)/test
 integration-tests/%: export FFLAGS       += -DINT_TEST
 integration-tests/%: export META_FILE_DIR = rose-meta/jedi_lfric_tests/HEAD

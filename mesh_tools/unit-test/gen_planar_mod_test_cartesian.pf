@@ -46,10 +46,10 @@ module gen_planar_mod_test_cartesian
   type, public, extends(AbstractTestParameter) :: config_type
     integer,     public :: x_size
     logical,     public :: x_periodic
-    real(r_def), public :: x_domain
     integer,     public :: y_size
     logical,     public :: y_periodic
-    real(r_def), public :: y_domain
+    real(r_def), public :: domain_size(2)
+    real(r_def), public :: domain_centre(2)
 
     integer, public :: topology
     integer, public :: coord_sys
@@ -79,10 +79,10 @@ module gen_planar_mod_test_cartesian
     private
     integer     :: x_size
     logical     :: x_periodic
-    real(r_def) :: x_domain
+    real(r_def) :: domain_size(2)
+    real(r_def) :: domain_centre(2)
     integer     :: y_size
     logical     :: y_periodic
-    real(r_def) :: y_domain
 
     integer, public :: topology
     integer, public :: coord_sys
@@ -136,10 +136,11 @@ contains
 
     gen_planar_test%x_size     = testParameter%x_size
     gen_planar_test%x_periodic = testParameter%x_periodic
-    gen_planar_test%x_domain   = testParameter%x_domain
     gen_planar_test%y_size     = testParameter%y_size
     gen_planar_test%y_periodic = testParameter%y_periodic
-    gen_planar_test%y_domain   = testParameter%y_domain
+
+    gen_planar_test%domain_size   = testParameter%domain_size
+    gen_planar_test%domain_centre = testParameter%domain_centre
 
     gen_planar_test%topology = testParameter%topology
     gen_planar_test%coord_sys = testParameter%coord_sys
@@ -170,8 +171,10 @@ contains
     parameters = [                                                  &
       ! Biperiodic 2x2
       config_type(                                                  &
-        x_size=2, x_periodic=.true., x_domain=30000.0,              &
-        y_size=2, y_periodic=.true., y_domain=8000.0,               &
+        x_size=2, x_periodic=.true.,                                &
+        y_size=2, y_periodic=.true.,                                &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_periodic, coord_sys=coord_sys_xyz,        &
         topology_string='periodic', coord_sys_string='xyz',         &
         nodes=4,  edges=8,  faces=4,                                &
@@ -203,8 +206,10 @@ contains
       ),                                                            &
       ! Biperiodic 5x4
       config_type(                                                  &
-        x_size=5, x_periodic=.true., x_domain=30000.0,              &
-        y_size=4, y_periodic=.true., y_domain=8000.0,               &
+        x_size=5, x_periodic=.true.,                                &
+        y_size=4, y_periodic=.true.,                                &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_periodic, coord_sys=coord_sys_xyz,        &
         topology_string='periodic', coord_sys_string='xyz',         &
         nodes=20, edges=40, faces=20,                               &
@@ -333,8 +338,10 @@ contains
       ),                                                            &
       ! Periodic in X 5x4
       config_type(                                                  &
-        x_size=5, x_periodic=.true., x_domain=30000.0,              &
-        y_size=4, y_periodic=.false., y_domain=8000.0,              &
+        x_size=5, x_periodic=.true.,                                &
+        y_size=4, y_periodic=.false.,                               &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_channel, coord_sys=coord_sys_xyz,         &
         topology_string='channel', coord_sys_string='xyz',          &
         nodes=25, edges=45, faces=20,                               &
@@ -470,8 +477,10 @@ contains
       ),                                                            &
       ! Periodic in Y 5x4
       config_type(                                                  &
-        x_size=5, x_periodic=.false., x_domain=30000.0,             &
-        y_size=4, y_periodic=.true., y_domain=8000.0,               &
+        x_size=5, x_periodic=.false.,                               &
+        y_size=4, y_periodic=.true.,                                &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_channel, coord_sys=coord_sys_xyz,         &
         topology_string='channel', coord_sys_string='xyz',          &
         nodes=24, edges=44, faces=20,                               &
@@ -605,8 +614,10 @@ contains
       ),                                                            &
       ! Non-periodic 5x4
       config_type(                                                  &
-        x_size=5, x_periodic=.false., x_domain=30000.0,             &
-        y_size=4, y_periodic=.false., y_domain=8000.0,              &
+        x_size=5, x_periodic=.false.,                               &
+        y_size=4, y_periodic=.false.,                               &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_non_periodic, coord_sys=coord_sys_xyz,    &
         topology_string='non_periodic', coord_sys_string='xyz',     &
         nodes=30, edges=49, faces=20,                               &
@@ -749,8 +760,10 @@ contains
       ),                                                            &
       ! Non-periodic 1x1
       config_type(                                                  &
-        x_size=1, x_periodic=.false., x_domain=30000.0,             &
-        y_size=1, y_periodic=.false., y_domain=8000.0,              &
+        x_size=1, x_periodic=.false.,                               &
+        y_size=1, y_periodic=.false.,                               &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_non_periodic, coord_sys=coord_sys_xyz,    &
         topology_string='non_periodic', coord_sys_string='xyz',     &
         nodes=4,  edges=4,  faces=1,                                &
@@ -768,8 +781,10 @@ contains
       ),                                                            &
       ! Non-periodic 1x2
       config_type (                                                 &
-        x_size=1, x_periodic=.false., x_domain=30000.0,             &
-        y_size=2, y_periodic=.false., y_domain=8000.0,              &
+        x_size=1, x_periodic=.false.,                               &
+        y_size=2, y_periodic=.false.,                               &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_non_periodic, coord_sys=coord_sys_xyz,    &
         topology_string='non_periodic', coord_sys_string='xyz',     &
         nodes=6, edges=7, faces=2,                                  &
@@ -795,8 +810,10 @@ contains
       ),                                                            &
       ! Non-periodic 1x3
       config_type (                                                 &
-        x_size=1, x_periodic=.false., x_domain=30000.0,             &
-        y_size=3, y_periodic=.false., y_domain=8000.0,              &
+        x_size=1, x_periodic=.false.,                               &
+        y_size=3, y_periodic=.false.,                               &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_non_periodic, coord_sys=coord_sys_xyz,    &
         topology_string='non_periodic', coord_sys_string='xyz',     &
         nodes=8, edges=10, faces=3,                                 &
@@ -830,8 +847,10 @@ contains
       ),                                                            &
       ! Non-periodic 2x1
       config_type (                                                 &
-        x_size=2, x_periodic=.false., x_domain=30000.0,             &
-        y_size=1, y_periodic=.false., y_domain=8000.0,              &
+        x_size=2, x_periodic=.false.,                               &
+        y_size=1, y_periodic=.false.,                               &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_non_periodic, coord_sys=coord_sys_xyz,    &
         topology_string='non_periodic', coord_sys_string='xyz',     &
         nodes=6, edges=7, faces=2,                                  &
@@ -857,8 +876,10 @@ contains
       ),                                                            &
       ! Non-periodic 3x1
       config_type(                                                  &
-        x_size=3, x_periodic=.false., x_domain=30000.0,             &
-        y_size=1, y_periodic=.false., y_domain=8000.0,              &
+        x_size=3, x_periodic=.false.,                               &
+        y_size=1, y_periodic=.false.,                               &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_non_periodic, coord_sys=coord_sys_xyz,    &
         topology_string='non_periodic', coord_sys_string='xyz',     &
         nodes=8, edges=10, faces=3,                                 &
@@ -891,8 +912,10 @@ contains
       ),                                                            &
       ! 2x1 Trench in X
       config_type(                                                  &
-        x_size=2, x_periodic=.true.,  x_domain=30000.0,             &
-        y_size=1, y_periodic=.false., y_domain=8000.0,              &
+        x_size=2, x_periodic=.true.,                                &
+        y_size=1, y_periodic=.false.,                               &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_channel, coord_sys=coord_sys_xyz,         &
         topology_string='channel', coord_sys_string='xyz',          &
         nodes=4, edges=6, faces=2,                                  &
@@ -915,8 +938,10 @@ contains
       ),                                                            &
       ! 3x1 Trench in X
       config_type(                                                  &
-        x_size=3, x_periodic=.true.,  x_domain=30000.0,             &
-        y_size=1, y_periodic=.false., y_domain=8000.0,              &
+        x_size=3, x_periodic=.true.,                                &
+        y_size=1, y_periodic=.false.,                               &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_channel, coord_sys=coord_sys_xyz,         &
         topology_string='channel', coord_sys_string='xyz',          &
         nodes=6, edges=9, faces=3,                                  &
@@ -947,8 +972,10 @@ contains
       ),                                                            &
       ! 2x2 Trench in X
         config_type(                                                &
-        x_size=2, x_periodic=.true.,  x_domain=30000.0,             &
-        y_size=2, y_periodic=.false., y_domain=8000.0,              &
+        x_size=2, x_periodic=.true.,                                &
+        y_size=2, y_periodic=.false.,                               &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_channel, coord_sys=coord_sys_xyz,         &
         topology_string='channel', coord_sys_string='xyz',          &
         nodes=6, edges=10, faces=4,                                 &
@@ -983,8 +1010,10 @@ contains
       ),                                                            &
       ! 3x2 Trench in X
       config_type(                                                  &
-        x_size=3, x_periodic=.true.,  x_domain=30000.0,             &
-        y_size=2, y_periodic=.false., y_domain=8000.0,              &
+        x_size=3, x_periodic=.true.,                                &
+        y_size=2, y_periodic=.false.,                               &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_channel, coord_sys=coord_sys_xyz,         &
         topology_string='channel', coord_sys_string='xyz',          &
         nodes=9, edges=15, faces=6,                                 &
@@ -1033,8 +1062,10 @@ contains
       ),                                                            &
       ! 1x2 Trench in Y
       config_type(                                                  &
-        x_size=1, x_periodic=.false., x_domain=30000.0,             &
-        y_size=2, y_periodic=.true.,  y_domain=8000.0,              &
+        x_size=1, x_periodic=.false.,                               &
+        y_size=2, y_periodic=.true.,                                &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_channel, coord_sys=coord_sys_xyz,         &
         topology_string='channel', coord_sys_string='xyz',          &
         nodes=4, edges=6, faces=2,                                  &
@@ -1057,8 +1088,10 @@ contains
       ),                                                            &
       ! 1x3 Trench in Y
       config_type(                                                  &
-        x_size=1, x_periodic=.false., x_domain=30000.0,             &
-        y_size=3, y_periodic=.true.,  y_domain=8000.0,              &
+        x_size=1, x_periodic=.false.,                               &
+        y_size=3, y_periodic=.true.,                                &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_channel, coord_sys=coord_sys_xyz,         &
         topology_string='channel', coord_sys_string='xyz',          &
         nodes=6, edges=9, faces=3,                                  &
@@ -1089,8 +1122,10 @@ contains
       ),                                                            &
       ! 2x2 Trench in Y
       config_type(                                                  &
-        x_size=2, x_periodic=.false., x_domain=30000.0,             &
-        y_size=2, y_periodic=.true.,  y_domain=8000.0,              &
+        x_size=2, x_periodic=.false.,                               &
+        y_size=2, y_periodic=.true.,                                &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_channel, coord_sys=coord_sys_xyz,         &
         topology_string='channel', coord_sys_string='xyz',          &
         nodes=6, edges=10, faces=4,                                 &
@@ -1125,8 +1160,10 @@ contains
       ),                                                            &
       ! 2x3 Trench in Y
       config_type(                                                  &
-        x_size=2, x_periodic=.false., x_domain=30000.0,             &
-        y_size=3, y_periodic=.true.,  y_domain=8000.0,              &
+        x_size=2, x_periodic=.false.,                               &
+        y_size=3, y_periodic=.true.,                                &
+        domain_size=(/30000.0,8000.0/),                             &
+        domain_centre=(/0.0,0.0/),                                  &
         topology=topology_channel, coord_sys=coord_sys_xyz,         &
         topology_string='channel', coord_sys_string='xyz',          &
         nodes=9, edges=15, faces=6,                                 &
@@ -1208,8 +1245,10 @@ contains
     character(str_def)      :: test_str(5)
     character(str_longlong) :: big_test_str
     character(str_longlong) :: expected_test_str
-    character(str_short)    :: first_number_str
-    character(str_short)    :: second_number_str
+    character(str_short)    :: x_str
+    character(str_short)    :: y_str
+    character(str_def)      :: domain_centre_str
+    character(str_def)      :: domain_size_str
 
     character(str_def) :: test_coord_units_x, test_coord_units_y
 
@@ -1230,17 +1269,17 @@ contains
     type(reference_cube_type) :: cube_element
     cube_element = reference_cube_type()
 
-    mesh_gen = gen_planar_type( reference_element=cube_element, &
-                                mesh_name=mesh_name,            &
-                                geometry=geometry_planar,       &
-                                topology=this%topology,         &
-                                coord_sys=this%coord_sys,       &
-                                edge_cells_x=this%x_size,       &
-                                edge_cells_y=this%y_size,       &
-                                periodic_x=this%x_periodic,     &
-                                periodic_y=this%y_periodic,     &
-                                domain_x=this%x_domain,         &
-                                domain_y=this%y_domain )
+    mesh_gen = gen_planar_type( reference_element=cube_element,   &
+                                mesh_name=mesh_name,              &
+                                geometry=geometry_planar,         &
+                                topology=this%topology,           &
+                                coord_sys=this%coord_sys,         &
+                                edge_cells_x=this%x_size,         &
+                                edge_cells_y=this%y_size,         &
+                                periodic_x=this%x_periodic,       &
+                                periodic_y=this%y_periodic,       &
+                                domain_size=this%domain_size,     &
+                                domain_centre=this%domain_centre )
 
     ! Test metadata retrieval
     call mesh_gen%get_metadata( mesh_name          = test_str(1),            &
@@ -1264,14 +1303,24 @@ contains
     @assertEqual( this%y_size, test_edge_cells_y )
     @assertEqual( this%number_of_maps, test_nmaps )
 
-    write(first_number_str, '(F10.2)') this%x_domain
-    write(second_number_str, '(F10.2)') this%y_domain
+    write(x_str, '(F10.2)') this%domain_size(1)
+    write(y_str, '(F10.2)') this%domain_size(2)
+    write(domain_size_str, '(A)') ';domain_size=['//          &
+                                  trim(adjustl(x_str))//','// &
+                                  trim(adjustl(y_str))//']'
+
+    write(x_str, '(F10.2)') this%domain_centre(1)
+    write(y_str, '(F10.2)') this%domain_centre(2)
+    write(domain_centre_str, '(A)') ';domain_centre=['//        &
+                                    trim(adjustl(x_str))//','// &
+                                    trim(adjustl(y_str))//']'
+
     write(                                                               &
       expected_test_str,                                                 &
-      '("geometry=planar;topology=", A, ";coord_sys=", A, ";edge_cells_x=", I0, ";edge_cells_y=", I0, ";periodic_x=", L1, ";periodic_y=", L1, ";domain_x=", A, ";domain_y=", A)' &
+      '("geometry=planar;topology=", A, ";coord_sys=", A, ";edge_cells_x=", I0, ";edge_cells_y=", I0, ";periodic_x=", L1, ";periodic_y=", L1, 2A)' &
     ) this%topology_string, this%coord_sys_string,                       &
       this%x_size, this%y_size, this%x_periodic, this%y_periodic,        &
-      trim(adjustl(first_number_str)), adjustl(trim(second_number_str))
+      trim(domain_size_str), trim(domain_centre_str)
     @assertEqual( trim(expected_test_str), trim(big_test_str) )
 
     test_npanels = mesh_gen%get_number_of_panels()

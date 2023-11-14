@@ -44,12 +44,12 @@ module gen_planar_mod_test_spherical
   type, public, extends(AbstractTestParameter) :: config_type
     integer,     public :: x_size
     logical,     public :: x_periodic
-    real(r_def), public :: x_domain
     integer,     public :: y_size
     logical,     public :: y_periodic
-    real(r_def), public :: y_domain
 
-    real(r_def), public :: first_node(2)
+    real(r_def), public :: domain_size(2)
+    real(r_def), public :: domain_centre(2)
+
     logical, public :: rotate_mesh
     real(r_def), public :: target_north_pole(2)
     real(r_def), public :: target_null_island(2)
@@ -83,12 +83,12 @@ module gen_planar_mod_test_spherical
     private
     integer     :: x_size
     logical     :: x_periodic
-    real(r_def) :: x_domain
     integer     :: y_size
     logical     :: y_periodic
-    real(r_def) :: y_domain
 
-    real(r_def), public :: first_node(2)
+    real(r_def) :: domain_size(2)
+    real(r_def) :: domain_centre(2)
+
     logical, public :: rotate_mesh
     real(r_def), public :: target_north_pole(2)
     real(r_def), public :: target_null_island(2)
@@ -149,12 +149,12 @@ contains
 
     gen_planar_test%x_size     = testParameter%x_size
     gen_planar_test%x_periodic = testParameter%x_periodic
-    gen_planar_test%x_domain   = testParameter%x_domain
     gen_planar_test%y_size     = testParameter%y_size
     gen_planar_test%y_periodic = testParameter%y_periodic
-    gen_planar_test%y_domain   = testParameter%y_domain
 
-    gen_planar_test%first_node = testParameter%first_node
+    gen_planar_test%domain_size   = testParameter%domain_size
+    gen_planar_test%domain_centre = testParameter%domain_centre
+
     gen_planar_test%rotate_mesh = testParameter%rotate_mesh
     gen_planar_test%target_north_pole = testParameter%target_north_pole
     gen_planar_test%target_null_island = testParameter%target_null_island
@@ -188,9 +188,10 @@ contains
     parameters = [                                                 &
       ! 1x1
       config_type(                                                 &
-        x_size=1, x_periodic=.false., x_domain=50.0,               &
-        y_size=1, y_periodic=.false., y_domain=10.0,               &
-        first_node=(/-25.0_r_def, -5.0_r_def/),                    &
+        x_size=1, x_periodic=.false.,                              &
+        y_size=1, y_periodic=.false.,                              &
+        domain_size=(/50.0, 10.0/),                                &
+        domain_centre=(/0.0, 0.0/),                                &
         rotate_mesh=.false.,                                       &
         target_north_pole=(/0.0_r_def, 0.0_r_def/),                &
         target_null_island=(/0.0_r_def, 0.0_r_def/),               &
@@ -211,9 +212,10 @@ contains
       ),                                                           &
       ! 1x1 rotated south
       config_type(                                                 &
-        x_size=1, x_periodic=.false., x_domain=180.0,              &
-        y_size=1, y_periodic=.false., y_domain=10.0,               &
-        first_node=(/0.0_r_def, -5.0_r_def/),                      &
+        x_size=1, x_periodic=.false.,                              &
+        y_size=1, y_periodic=.false.,                              &
+        domain_size=(/180.0, 10.0/),                               &
+        domain_centre=(/90.0, 0.0/),                               &
         rotate_mesh=.true.,                                        &
         target_north_pole=(/0.0_r_def, 85.0_r_def/),               &
         target_null_island=(/180.0_r_def, 5.0_r_def/),             &
@@ -234,9 +236,10 @@ contains
       ),                                                           &
       ! 1x1 rotated north
       config_type(                                                 &
-        x_size=1, x_periodic=.false., x_domain=180.0,              &
-        y_size=1, y_periodic=.false., y_domain=10.0,               &
-        first_node=(/0.0_r_def, -5.0_r_def/),                      &
+        x_size=1, x_periodic=.false.,                              &
+        y_size=1, y_periodic=.false.,                              &
+        domain_size=(/180.0, 10.0/),                               &
+        domain_centre=(/90.0, 0.0/),                               &
         rotate_mesh=.true.,                                        &
         target_north_pole=(/180.0_r_def, 85.0_r_def/),             &
         target_null_island=(/0.0_r_def, 5.0_r_def/),               &
@@ -288,10 +291,10 @@ contains
     character(str_def)      :: test_str(5)
     character(str_longlong) :: big_test_str
     character(str_longlong) :: expected_test_str
-    character(str_short)    :: lon_domain_str, lat_domain_str
-    character(str_short)    :: lon_first_node_str, lat_first_node_str
-    character(str_short)    :: lon_north_str, lat_north_str
-    character(str_short)    :: lon_null_str, lat_null_str
+    character(str_def)      :: domain_size_str
+    character(str_def)      :: domain_centre_str
+    character(str_def)      :: north_pole_str, null_island_str
+    character(str_short)    :: x_str, y_str
 
     character(str_def) :: test_coord_units_x
     character(str_def) :: test_coord_units_y
@@ -321,9 +324,8 @@ contains
                                 edge_cells_y=this%y_size,                 &
                                 periodic_x=this%x_periodic,               &
                                 periodic_y=this%y_periodic,               &
-                                domain_x=this%x_domain,                   &
-                                domain_y=this%y_domain,                   &
-                                first_node=this%first_node,               &
+                                domain_size=this%domain_size,             &
+                                domain_centre=this%domain_centre,         &
                                 rotate_mesh=this%rotate_mesh,             &
                                 target_north_pole=this%target_north_pole, &
                                 target_null_island=this%target_null_island )
@@ -350,34 +352,48 @@ contains
     @assertEqual( this%y_size, test_edge_cells_y )
     @assertEqual( this%number_of_maps, test_nmaps )
 
-    write(lon_domain_str, '(F10.2)') this%x_domain
-    write(lat_domain_str, '(F10.2)') this%y_domain
-    write(lon_first_node_str, '(F10.2)') this%first_node(1)
-    write(lat_first_node_str, '(F10.2)') this%first_node(2)
+
+    write(x_str, '(F10.2)') this%domain_size(1)
+    write(y_str, '(F10.2)') this%domain_size(2)
+    write(domain_size_str, '(A)') ';domain_size=['//          &
+                                  trim(adjustl(x_str))//','// &
+                                  trim(adjustl(y_str))//']'
+
+    write(x_str, '(F10.2)') this%domain_centre(1)
+    write(y_str, '(F10.2)') this%domain_centre(2)
+    write(domain_centre_str, '(A)') ';domain_centre=['//        &
+                                    trim(adjustl(x_str))//','// &
+                                    trim(adjustl(y_str))//']'
+
     if (this%rotate_mesh) then
-      write(lon_north_str, '(F10.2)') this%target_north_pole(1)
-      write(lat_north_str, '(F10.2)') this%target_north_pole(2)
-      write(lon_null_str, '(F10.2)') this%target_null_island(1)
-      write(lat_null_str, '(F10.2)') this%target_null_island(2)
+      write(x_str, '(F10.2)') this%target_north_pole(1)
+      write(y_str, '(F10.2)') this%target_north_pole(2)
+      write(north_pole_str, '(A)') ';north_pole=['//            &
+                                    trim(adjustl(x_str))//','// &
+                                    trim(adjustl(y_str))//']'
+
+      write(x_str, '(F10.2)') this%target_null_island(1)
+      write(y_str, '(F10.2)') this%target_null_island(2)
+      write(null_island_str, '(A)') ';null_island=['//           &
+                                     trim(adjustl(x_str))//','// &
+                                     trim(adjustl(y_str))//']'
+
       write(                                                               &
         expected_test_str,                                                 &
-        '("geometry=spherical;topology=", A, ";coord_sys=", A, ";edge_cells_x=", I0, ";edge_cells_y=", I0, ";periodic_x=", L1, ";periodic_y=", L1, ";domain_x=", A, ";domain_y=", A, ";rotate_mesh=", L1, ";north_pole=[", A, ",", A, "];null_island=[", A, ",", A, "];first_node=[", A, ",", A, "]")'           &
+        '("geometry=spherical;topology=", A, ";coord_sys=", A, ";edge_cells_x=", I0, ";edge_cells_y=", I0, ";periodic_x=", L1, ";periodic_y=", L1, 2A, ";rotate_mesh=", L1, 2A)' &
       ) this%topology_string, this%coord_sys_string,                       &
         this%x_size, this%y_size, this%x_periodic, this%y_periodic,        &
-        trim(adjustl(lon_domain_str)), trim(adjustl(lat_domain_str)),      &
-        this%rotate_mesh,                                                  &
-        trim(adjustl(lon_north_str)), trim(adjustl(lat_north_str)),        &
-        trim(adjustl(lon_null_str)), trim(adjustl(lat_null_str)),          &
-        trim(adjustl(lon_first_node_str)), trim(adjustl(lat_first_node_str))
+        trim(domain_size_str), trim(domain_centre_str), this%rotate_mesh,  &
+        trim(north_pole_str), trim(null_island_str)
     else
       write(                                                               &
         expected_test_str,                                                 &
-        '("geometry=spherical;topology=", A, ";coord_sys=", A, ";edge_cells_x=", I0, ";edge_cells_y=", I0, ";periodic_x=", L1, ";periodic_y=", L1, ";domain_x=", A, ";domain_y=", A, ";rotate_mesh=", L1)'                                  &
+        '("geometry=spherical;topology=", A, ";coord_sys=", A, ";edge_cells_x=", I0, ";edge_cells_y=", I0, ";periodic_x=", L1, ";periodic_y=", L1, 2A, ";rotate_mesh=", L1)'                             &
       ) this%topology_string, this%coord_sys_string,                       &
         this%x_size, this%y_size, this%x_periodic, this%y_periodic,        &
-        trim(adjustl(lon_domain_str)), trim(adjustl(lat_domain_str)),      &
-        this%rotate_mesh
+        trim(domain_size_str), trim(domain_centre_str), this%rotate_mesh
     end if
+
     @assertEqual( trim(expected_test_str), trim(big_test_str) )
 
     test_npanels = mesh_gen%get_number_of_panels()
@@ -404,8 +420,6 @@ contains
     @assertEqual(4, max_faces_per_node, "Max number of faces around a node does not correspond to quad mesh")
 
     ! Retrieve mesh connectivity
-!    call mesh_gen%get_connectivity( nodes_on_face, nodes_on_edge, &
-!                                    edges_on_face, faces_on_face )
     call mesh_gen%get_connectivity( nodes_on_face, edges_on_face, &
                                     faces_on_face, nodes_on_edge )
 
@@ -440,7 +454,7 @@ contains
       nullify(global_mesh_maps)
       global_mesh_maps => mesh_gen%get_global_mesh_maps()
       @assertAssociated(global_mesh_maps)
-;
+
       ! Although no actual global mesh maps have written to file maps have been
       ! created for global meshes in the order they are virtually listed,
       ! i.e. mesh "unit_test", id=1

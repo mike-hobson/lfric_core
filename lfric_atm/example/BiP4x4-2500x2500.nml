@@ -52,12 +52,11 @@
 &planar_mesh
   edge_cells_x    = 4
   edge_cells_y    = 4
-  domain_x        = 10000.0
-  domain_y        = 10000.0
+  domain_size     = 10000.0, 10000.0
+  domain_centre   = 0.0, 0.0
   periodic_x      = .true.
   periodic_y      = .true.
   create_lbc_mesh = .false.
   lbc_rim_depth   = 1
   lbc_parent_mesh = '<lam mesh name>'
-  first_node      = -4, -4
 /

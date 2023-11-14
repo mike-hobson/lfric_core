@@ -118,8 +118,8 @@ program planar_mesh_generator
   integer(i_def)     :: second_mesh_edge_cells_x, second_mesh_edge_cells_y
   real(r_def)        :: set_north_pole(2)
   real(r_def)        :: set_null_island(2)
-  character(str_def) :: lon_str
-  character(str_def) :: lat_str
+  character(str_def) :: lon_str, lat_str
+  character(str_def) :: x_str, y_str
   integer(i_def)     :: log_level
 
   character(str_max_filename) :: output_basename
@@ -149,6 +149,8 @@ program planar_mesh_generator
   integer(i_def) :: max_stencil_depth
   integer(i_def) :: n_partitions
   integer(i_def), allocatable :: partition_range(:)
+  real(r_def),    allocatable :: domain_size(:)
+  real(r_def),    allocatable :: domain_centre(:)
 
   integer(i_def) :: rotation_target
   real(r_def), allocatable :: target_north_pole(:)
@@ -157,15 +159,12 @@ program planar_mesh_generator
   integer(i_def), allocatable :: edge_cells_x(:)
   integer(i_def), allocatable :: edge_cells_y(:)
 
-  logical     :: periodic_x
-  logical     :: periodic_y
-  logical     :: create_lbc_mesh
-  real(r_def) :: domain_x
-  real(r_def) :: domain_y
+  logical :: periodic_x
+  logical :: periodic_y
+  logical :: create_lbc_mesh
   integer(i_def) :: lbc_rim_depth
 
   character(str_def) :: lbc_parent_mesh
-  real(r_def), allocatable :: first_node(:)
 
   !===================================================================
   ! 1.0 Set the logging level for the run, should really be able
@@ -230,9 +229,8 @@ program planar_mesh_generator
     call nml_obj%get_value( 'edge_cells_y', edge_cells_y )
     call nml_obj%get_value( 'periodic_x', periodic_x )
     call nml_obj%get_value( 'periodic_y', periodic_y )
-    call nml_obj%get_value( 'domain_x', domain_x )
-    call nml_obj%get_value( 'domain_y', domain_y )
-    call nml_obj%get_value( 'first_node', first_node )
+    call nml_obj%get_value( 'domain_size', domain_size )
+    call nml_obj%get_value( 'domain_centre', domain_centre )
     call nml_obj%get_value( 'create_lbc_mesh', create_lbc_mesh )
     call nml_obj%get_value( 'lbc_rim_depth', lbc_rim_depth )
     call nml_obj%get_value( 'lbc_parent_mesh', lbc_parent_mesh )
@@ -558,6 +556,33 @@ program planar_mesh_generator
       'Periodic in y-axis: ', periodic_y
   call log_event( log_scratch_space, log_level )
 
+  if (coord_sys == coord_sys_ll) then
+    write( log_scratch_space,'(A)') &
+        'Domain centre [lon,lat]: ['
+  else
+    write( log_scratch_space,'(A)') &
+        'Domain centre [x,y]: ['
+  end if
+  write( x_str,'(F10.2)' ) domain_centre(1)
+  write( y_str,'(F10.2)' ) domain_centre(2)
+
+  write( log_scratch_space, '(A)' ) trim(log_scratch_space) // &
+      trim(adjustl(x_str)) // ',' // trim(adjustl(y_str)) // ']'
+  call log_event( log_scratch_space, LOG_LEVEL_INFO )
+
+  if (coord_sys == coord_sys_ll) then
+    write( log_scratch_space,'(A)') &
+        'Domain size [degrees]: ['
+  else
+    write( log_scratch_space,'(A)') &
+        'Domain size [m]: ['
+  end if
+  write( x_str,'(F10.2)' ) domain_size(1)
+  write( y_str,'(F10.2)' ) domain_size(2)
+
+  write( log_scratch_space, '(A)' ) trim(log_scratch_space) // &
+      trim(adjustl(x_str)) // ',' // trim(adjustl(y_str)) // ']'
+  call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
   write( log_scratch_space,'(A)' )    &
       '===================================================================='
@@ -619,13 +644,7 @@ program planar_mesh_generator
          trim(adjustl(lon_str)) // ',' //  &
          trim(adjustl(lat_str)) // ']'
       call log_event( log_scratch_space, LOG_LEVEL_INFO )
-      write( lon_str,'(F10.2)' ) first_node(1)
-      write( lat_str,'(F10.2)' ) first_node(2)
-      write( log_scratch_space,'(A)')      &
-         '    First node  [lon,lat]: [' // &
-         trim(adjustl(lon_str)) // ',' //  &
-         trim(adjustl(lat_str)) // ']'
-      call log_event( log_scratch_space, LOG_LEVEL_INFO )
+
     end if
   end if
 
@@ -676,12 +695,11 @@ program planar_mesh_generator
                         edge_cells_y       = edge_cells_y(i), &
                         periodic_x         = periodic_x,      &
                         periodic_y         = periodic_y,      &
-                        domain_x           = domain_x,        &
-                        domain_y           = domain_y,        &
+                        domain_size        = domain_size,     &
+                        domain_centre      = domain_centre,   &
                         rotate_mesh        = rotate_mesh,     &
                         target_north_pole  = set_north_pole,  &
-                        target_null_island = set_null_island, &
-                        first_node         = first_node )
+                        target_null_island = set_null_island )
 
     else if (n_meshes > 1) then
 
@@ -712,14 +730,13 @@ program planar_mesh_generator
                         geometry, topology, coord_sys,             &
                         edge_cells_x(i), edge_cells_y(i),          &
                         periodic_x, periodic_y,                    &
-                        domain_x, domain_y,                        &
+                        domain_size, domain_centre,                &
                         target_mesh_names   = target_mesh_names,   &
                         target_edge_cells_x = target_edge_cells_x, &
                         target_edge_cells_y = target_edge_cells_y, &
                         rotate_mesh         = rotate_mesh,         &
                         target_north_pole   = set_north_pole,      &
-                        target_null_island  = set_null_island,     &
-                        first_node          = first_node )
+                        target_null_island  = set_null_island )
 
     else
       write( log_scratch_space,'(A,I0,A)' ) &
@@ -889,7 +906,8 @@ program planar_mesh_generator
   if ( allocated( target_null_island ) ) deallocate(target_null_island)
   if ( allocated( edge_cells_x       ) ) deallocate(edge_cells_x)
   if ( allocated( edge_cells_y       ) ) deallocate(edge_cells_y)
-  if ( allocated( first_node         ) ) deallocate(first_node)
+  if ( allocated( domain_size        ) ) deallocate(domain_size)
+  if ( allocated( domain_centre      ) ) deallocate(domain_centre)
 
   call finalise_halo_comms()
 

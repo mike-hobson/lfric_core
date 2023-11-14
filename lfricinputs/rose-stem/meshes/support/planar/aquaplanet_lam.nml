@@ -10,13 +10,12 @@ topology       = 'non_periodic',
 /
 &planar_mesh
 create_lbc_mesh = .false.,
-domain_x     = 84.84375,
-domain_y     = 65.9375,
+domain_size     = 84.84375, 65.9375,
+domain_centre   = -161.484375, 0.0
 edge_cells_x = 362,
 edge_cells_y = 422,
 periodic_x   = .false.,
 periodic_y   = .false.,
-first_node   = 156.093750,-32.96875
 /
 &rotation
 rotation_target    = 'north_pole'

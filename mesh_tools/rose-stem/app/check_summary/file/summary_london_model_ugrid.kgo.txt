@@ -4,7 +4,7 @@
   Co-ordinate system:  ll
   Periodic X:          F
   Periodic Y:          F
-  Constructor inputs:  geometry=spherical;topology=non_periodic;coord_sys=ll;edge_cells_x=4;edge_cells_y=4;periodic_x=F;periodic_y=F;domain_x=1.14;domain_y=1.26;rotate_mesh=T;north_pole=[177.50,37.50];null_island=[-2.50,52.50];first_node=[0.85,-1.49]
+  Constructor inputs:  geometry=spherical;topology=non_periodic;coord_sys=ll;edge_cells_x=4;edge_cells_y=4;periodic_x=F;periodic_y=F;domain_size=[1.14,1.26];domain_centre=[1.42,-0.86];rotate_mesh=T;north_pole=[177.50,37.50];null_island=[-2.50,52.50]
   Nodes:               25
   Edges:               40
   Faces:               16

@@ -34,8 +34,8 @@ module write_local_meshes_mod
   use mesh_config_mod,        only: coord_sys, coord_sys_ll, n_meshes,   &
                                     mesh_names
   use partitions_config_mod,  only: n_partitions, partition_range
-  use planar_mesh_config_mod, only: edge_cells_x, edge_cells_y,          &
-                                    domain_x, domain_y, create_lbc_mesh, &
+  use planar_mesh_config_mod, only: edge_cells_x, edge_cells_y,   &
+                                    domain_size, create_lbc_mesh, &
                                     lbc_parent_mesh
 
   implicit none
@@ -164,8 +164,8 @@ subroutine write_local_meshes( global_mesh_bank, &
         ! planar meshes. In future cell centres should be calculated
         ! using the nodes around the cell. Then numbers of edges cells
         ! will not be needed.
-        dx = domain_x / edge_cells_x(i)
-        dy = domain_y / edge_cells_y(i)
+        dx = domain_size(1) / edge_cells_x(i)
+        dy = domain_size(2) / edge_cells_y(i)
 
         if ( (coord_sys == coord_sys_ll)      .and. &
              (trim(units_xy(1)) == 'radians') .and. &

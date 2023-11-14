@@ -53,14 +53,13 @@
 &planar_mesh
   edge_cells_x    = 20,10
   edge_cells_y    = 20,10
-  domain_x        = 20.0
-  domain_y        = 20.0
+  domain_size     = 20.0, 20.0
+  domain_centre   = 6.0, 6.0
   periodic_x      = .false.
   periodic_y      = .false.
   create_lbc_mesh = .true.
   lbc_rim_depth   = 5
   lbc_parent_mesh = 'SQ20'
-  first_node      = -4, -4
 /
 
 &partitions

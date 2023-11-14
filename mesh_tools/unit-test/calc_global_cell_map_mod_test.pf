@@ -43,15 +43,15 @@ module calc_global_cell_map_mod_test
   type, extends( TestCase ) :: calc_global_cell_map_test_type
     private
 
-    integer(i_def) :: nsmooth         = 0
-    integer(i_def) :: coarse_ncells   = 4
-    integer(i_def) :: fine_ncells     = 8
-    integer(i_def) :: coarse_ncells_x = 2
-    integer(i_def) :: coarse_ncells_y = 2
-    integer(i_def) :: fine_ncells_x   = 4
-    integer(i_def) :: fine_ncells_y   = 6
-    real(r_def)    :: domain_x        = 10.0
-    real(r_def)    :: domain_y        = 10.0
+    integer(i_def) :: nsmooth          = 0
+    integer(i_def) :: coarse_ncells    = 4
+    integer(i_def) :: fine_ncells      = 8
+    integer(i_def) :: coarse_ncells_x  = 2
+    integer(i_def) :: coarse_ncells_y  = 2
+    integer(i_def) :: fine_ncells_x    = 4
+    integer(i_def) :: fine_ncells_y    = 6
+    real(r_def)    :: domain_size(2)   = [10.0, 10.0]
+    real(r_def)    :: domain_centre(2) = [0.0, 0.0]
 
     integer(i_def), allocatable ::  cell_map(:,:,:)
 
@@ -201,8 +201,8 @@ contains
                              edge_cells_y = this%coarse_ncells_y,   &
                              periodic_x   = .true.,                 &
                              periodic_y   = .true.,                 &
-                             domain_x     = this%domain_x,          &
-                             domain_y     = this%domain_y,          &
+                             domain_size  = this%domain_size,       &
+                             domain_centre= this%domain_centre,     &
                              coord_sys    = coord_sys_xyz )
 
     mesh_name = 'fine_plane_bi'
@@ -215,8 +215,8 @@ contains
                              edge_cells_y = this%fine_ncells_y,     &
                              periodic_x   = .true.,                 &
                              periodic_y   = .true.,                 &
-                             domain_x     = this%domain_x,          &
-                             domain_y     = this%domain_y,          &
+                             domain_size  = this%domain_size,       &
+                             domain_centre= this%domain_centre,     &
                              coord_sys    = coord_sys_xyz )
 
 
@@ -231,8 +231,8 @@ contains
                              edge_cells_y = this%coarse_ncells_y, &
                              periodic_x   = .true.,               &
                              periodic_y   = .false.,              &
-                             domain_x     = this%domain_x,        &
-                             domain_y     = this%domain_y,        &
+                             domain_size  = this%domain_size,     &
+                             domain_centre= this%domain_centre,   &
                              coord_sys    = coord_sys_xyz )
 
 
@@ -246,8 +246,8 @@ contains
                              edge_cells_y = this%fine_ncells_y, &
                              periodic_x   = .true.,             &
                              periodic_y   = .false.,            &
-                             domain_x     = this%domain_x,      &
-                             domain_y     = this%domain_y,      &
+                             domain_size  = this%domain_size,   &
+                             domain_centre= this%domain_centre, &
                              coord_sys    = coord_sys_xyz )
 
     mesh_name = 'coarse_plane_periodic_y'
@@ -260,8 +260,8 @@ contains
                              edge_cells_y = this%coarse_ncells_y, &
                              periodic_x   = .false.,              &
                              periodic_y   = .true.,               &
-                             domain_x     = this%domain_x,        &
-                             domain_y     = this%domain_y,        &
+                             domain_size  = this%domain_size,     &
+                             domain_centre= this%domain_centre,   &
                              coord_sys    = coord_sys_xyz )
 
 
@@ -275,8 +275,8 @@ contains
                              edge_cells_y = this%fine_ncells_y, &
                              periodic_x   = .false.,            &
                              periodic_y   = .true.,             &
-                             domain_x     = this%domain_x,      &
-                             domain_y     = this%domain_y,      &
+                             domain_size  = this%domain_size,   &
+                             domain_centre= this%domain_centre, &
                              coord_sys    = coord_sys_xyz )
 
     return

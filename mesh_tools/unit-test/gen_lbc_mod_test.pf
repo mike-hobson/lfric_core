@@ -220,13 +220,13 @@ contains
    integer(i_def), pointer :: kgo_lbc_lam_map(:,:,:) => null()
 
    character(str_def) :: name = 'rim3_9x8'
-   logical(l_def)     :: periodic_x   = .false.
-   logical(l_def)     :: periodic_y   = .false.
-   integer(i_def)     :: edge_cells_x = 9
-   integer(i_def)     :: edge_cells_y = 8
-   real(r_def)        :: domain_x     = 9.0
-   real(r_def)        :: domain_y     = 8.0
-   integer(i_def)     :: rim_depth    = 3
+   logical(l_def)     :: periodic_x       = .false.
+   logical(l_def)     :: periodic_y       = .false.
+   integer(i_def)     :: edge_cells_x     = 9
+   integer(i_def)     :: edge_cells_y     = 8
+   real(r_def)        :: domain_size(2)   = [9.0, 8.0]
+   real(r_def)        :: domain_centre(2) = [0.0, 0.0]
+   integer(i_def)     :: rim_depth        = 3
 
    character(str_def) :: test_str(5)
    integer(i_def)     :: test_int(5)
@@ -249,10 +249,11 @@ contains
                                       coord_sys=coord_sys_xyz,        &
                                       edge_cells_x=edge_cells_x,      &
                                       edge_cells_y=edge_cells_y,      &
+                                      domain_size=domain_size,        &
+                                      domain_centre=domain_centre,    &
                                       periodic_x=periodic_x,          &
-                                      periodic_y=periodic_y,          &
-                                      domain_x=domain_x,              &
-                                      domain_y=domain_y )
+                                      periodic_y=periodic_y )
+
 
    lbc_strategy = gen_lbc_type(planar_strategy, rim_depth )
 
@@ -386,13 +387,13 @@ contains
    integer(i_def), pointer :: kgo_lbc_lam_map(:,:,:) => null()
 
    character(str_def) :: name = 'rim2_6x5'
-   logical(l_def)     :: periodic_x   = .false.
-   logical(l_def)     :: periodic_y   = .false.
-   integer(i_def)     :: edge_cells_x = 6
-   integer(i_def)     :: edge_cells_y = 5
-   real(r_def)        :: domain_x     = 6.0
-   real(r_def)        :: domain_y     = 5.0
-   integer(i_def)     :: rim_depth    = 2
+   logical(l_def)     :: periodic_x       = .false.
+   logical(l_def)     :: periodic_y       = .false.
+   integer(i_def)     :: edge_cells_x     = 6
+   integer(i_def)     :: edge_cells_y     = 5
+   real(r_def)        :: domain_size(2)   = [6.0, 5.0]
+   real(r_def)        :: domain_centre(2) = [0.0, 0.0]
+   integer(i_def)     :: rim_depth        = 2
 
    ! Setup
 
@@ -411,8 +412,8 @@ contains
                                       coord_sys=coord_sys_xyz,        &
                                       periodic_x=periodic_x,          &
                                       periodic_y=periodic_y,          &
-                                      domain_x=domain_x,              &
-                                      domain_y=domain_y,              &
+                                      domain_size=domain_size,        &
+                                      domain_centre=domain_centre,    &
                                       edge_cells_x=edge_cells_x,      &
                                       edge_cells_y=edge_cells_y  )
 
@@ -523,13 +524,13 @@ contains
    integer(i_def), pointer :: kgo_lbc_lam_map(:,:,:) => null()
 
    character(str_def) :: name = 'rim1_3x4'
-   logical(l_def)     :: periodic_x   = .false.
-   logical(l_def)     :: periodic_y   = .false.
-   integer(i_def)     :: edge_cells_x = 3
-   integer(i_def)     :: edge_cells_y = 4
-   real(r_def)        :: domain_x     = 3.0
-   real(r_def)        :: domain_y     = 4.0
-   integer(i_def)     :: rim_depth    = 1
+   logical(l_def)     :: periodic_x       = .false.
+   logical(l_def)     :: periodic_y       = .false.
+   integer(i_def)     :: edge_cells_x     = 3
+   integer(i_def)     :: edge_cells_y     = 4
+   real(r_def)        :: domain_size(2)   = [3.0, 4.0]
+   real(r_def)        :: domain_centre(2) = [0.0, 0.0]
+   integer(i_def)     :: rim_depth        = 1
 
    ! Set cells for kgos
    cells           => rim1_3x4_cells
@@ -546,10 +547,10 @@ contains
                                       coord_sys=coord_sys_xyz,        &
                                       edge_cells_x=edge_cells_x,      &
                                       edge_cells_y=edge_cells_y,      &
+                                      domain_size=domain_size,        &
+                                      domain_centre=domain_centre,    &
                                       periodic_x=periodic_x,          &
-                                      periodic_y=periodic_y,          &
-                                      domain_x=domain_x,              &
-                                      domain_y=domain_y )
+                                      periodic_y=periodic_y )
 
    lbc_strategy = gen_lbc_type(planar_strategy, rim_depth )
 

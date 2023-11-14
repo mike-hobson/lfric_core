@@ -86,6 +86,7 @@ module gen_planar_mod
     integer(i_def)     :: edge_cells_y
     integer(i_def)     :: npanels = NPANELS
     real(r_def)        :: domain_size(2)
+    real(r_def)        :: domain_centre(2) = [0.0_r_def,0.0_r_def]
     real(r_def)        :: domain_extents(2,4)
     real(r_def)        :: north_pole(2)  = TRUE_NORTH_POLE_LL
     real(r_def)        :: null_island(2) = TRUE_NULL_ISLAND_LL
@@ -94,7 +95,6 @@ module gen_planar_mod
 
     real(r_def)    :: dx, dy
     logical(l_def) :: periodic_xy(2)
-    real(r_def)    :: first_node(2) = rmdi
     logical(l_def) :: rotate_mesh   = .false.
 
     ! Unique element types.
@@ -173,8 +173,8 @@ contains
 !> @param[in] edge_cells_y    Number of cells in planar mesh y-axis.
 !> @param[in] periodic_x      Logical for specifying periodicity in x-axis.
 !> @param[in] periodic_y      Logical for specifying periodicity in y-axis.
-!> @param[in] domain_x        Domain size in x-axis.
-!> @param[in] domain_y        Domain size in y-axis.
+!> @param[in] domain_size     Size of domain in x/y axes
+!> @param[in] domain_centre   Co-ordinates of domain centre
 !> @param[in] coord_sys       Coordinate system used to position nodes.
 !> @param[in, optional] target_mesh_names
 !>                            Names of mesh(es) to map to.
@@ -192,10 +192,6 @@ contains
 !> @param[in, optional] target_null_island
 !>                            The [longitude,latitude] co-ords for the new
 !>                            null island location.
-!> @param[in, optional] first_node
-!>                            The x/y co-ords of node at the
-!>                            bottom left corner of the domain. Units as
-!>                            specified by the coord_sys argument.
 !-------------------------------------------------------------------------------
 function gen_planar_constructor( reference_element,          &
                                  mesh_name,                  &
@@ -204,14 +200,13 @@ function gen_planar_constructor( reference_element,          &
                                  coord_sys,                  &
                                  edge_cells_x, edge_cells_y, &
                                  periodic_x, periodic_y,     &
-                                 domain_x, domain_y,         &
+                                 domain_size, domain_centre, &
                                  target_mesh_names,          &
                                  target_edge_cells_x,        &
                                  target_edge_cells_y,        &
                                  rotate_mesh,                &
                                  target_north_pole,          &
-                                 target_null_island,         &
-                                 first_node )                &
+                                 target_null_island )        &
                                  result( self )
 
   implicit none
@@ -224,12 +219,12 @@ function gen_planar_constructor( reference_element,          &
   integer(i_def),     intent(in) :: coord_sys
   integer(i_def),     intent(in) :: edge_cells_x, edge_cells_y
   logical(l_def),     intent(in) :: periodic_x, periodic_y
-  real(r_def),        intent(in) :: domain_x, domain_y
+  real(r_def),        intent(in) :: domain_size(2)
+  real(r_def),        intent(in) :: domain_centre(2)
 
   logical,            optional, intent(in) :: rotate_mesh
   real(r_def),        optional, intent(in) :: target_north_pole(2)
   real(r_def),        optional, intent(in) :: target_null_island(2)
-  real(r_def),        optional, intent(in) :: first_node(2)
 
   character(str_def), optional, intent(in) :: target_mesh_names(:)
   integer(i_def),     optional, intent(in) :: target_edge_cells_x(:)
@@ -240,8 +235,8 @@ function gen_planar_constructor( reference_element,          &
   character(str_long) :: target_mesh_names_str
   character(str_long) :: target_edge_cells_x_str
   character(str_long) :: target_edge_cells_y_str
-  character(str_def)  :: rchar_domain_x
-  character(str_def)  :: rchar_domain_y
+  character(str_def)  :: rchar_x
+  character(str_def)  :: rchar_y
   character(str_def)  :: lchar_periodic_x
   character(str_def)  :: lchar_periodic_y
   character(str_def)  :: lchar_coord_sys
@@ -252,6 +247,9 @@ function gen_planar_constructor( reference_element,          &
   character(str_def)  :: lat_str
   character(str_def)  :: logic_str
   character(str_def)  :: temp_str
+
+  character(str_def)  :: domain_size_str
+  character(str_def)  :: domain_centre_str
 
   integer(i_def)      :: nodes_x
   integer(i_def)      :: nodes_y
@@ -304,17 +302,14 @@ function gen_planar_constructor( reference_element,          &
   self%periodic_xy(1) = periodic_x
   self%periodic_xy(2) = periodic_y
   self%coord_sys      = coord_sys
-
-  if (domain_x <= 0.0_r_def)                                       &
-      call log_event( PREFIX//" x-domain argument must be > 0.0",  &
-                      LOG_LEVEL_ERROR )
-
-  if (domain_y <= 0.0_r_def)                                       &
-      call log_event( PREFIX//" y-domain argument must be > 0.0.", &
-                      LOG_LEVEL_ERROR )
-
-  self%domain_size         = [ domain_x, domain_y ]
+  self%domain_size    = domain_size
+  self%domain_centre  = domain_centre
   self%domain_extents(:,:) = rmdi
+
+  if ( ANY(self%domain_size(:) <= 0.0_r_def) ) then
+    call log_event( PREFIX//" domain size values must be > 0.0", &
+                    LOG_LEVEL_ERROR )
+  end if
 
   if (present(rotate_mesh)) then
     self%rotate_mesh = rotate_mesh
@@ -342,12 +337,12 @@ function gen_planar_constructor( reference_element,          &
   case(coord_sys_ll)
     ! The namelist inputs were in degrees, so convert
     ! and store them as radians.
-    self%domain_size    = degrees_to_radians * self%domain_size
+    self%domain_size   = degrees_to_radians * self%domain_size
+    self%domain_centre = degrees_to_radians * self%domain_centre
 
     self%dx = self%domain_size(1) / self%edge_cells_x
     self%dy = self%domain_size(2) / self%edge_cells_y
 
-    self%first_node    = first_node * degrees_to_radians
     self%rotate_mesh   = rotate_mesh
     self%coord_units_x = 'radians'
     self%coord_units_y = 'radians'
@@ -375,8 +370,17 @@ function gen_planar_constructor( reference_element,          &
   write(lchar_coord_sys, '(A)')     trim(key_from_coord_sys(self%coord_sys))
   write(lchar_geometry,  '(A)')     trim(key_from_geometry(self%geometry))
   write(lchar_topology,  '(A)')     trim(key_from_topology(self%topology))
-  write(rchar_domain_x,  '(F10.2)') domain_x
-  write(rchar_domain_y,  '(F10.2)') domain_y
+
+
+  write(rchar_x, '(F10.2)') domain_size(1)
+  write(rchar_y, '(F10.2)') domain_size(2)
+  write(domain_size_str, '(A)') '['//trim(adjustl(rchar_x))// &
+                                ','//trim(adjustl(rchar_y))//']'
+  write(rchar_x, '(F10.2)') domain_centre(1)
+  write(rchar_y, '(F10.2)') domain_centre(2)
+  write(domain_centre_str, '(A)') '['//trim(adjustl(rchar_x))// &
+                                  ','//trim(adjustl(rchar_y))//']'
+
 
   write(self%constructor_inputs,'(A,2(A,I0),(A))')         &
     'geometry='  // trim(adjustl(lchar_geometry))//  ';'// &
@@ -386,8 +390,10 @@ function gen_planar_constructor( reference_element,          &
     'edge_cells_y=', self%edge_cells_y,              ';'// &
     'periodic_x='//trim(adjustl(lchar_periodic_x))// ';'// &
     'periodic_y='//trim(adjustl(lchar_periodic_y))// ';'// &
-    'domain_x='//trim(adjustl(rchar_domain_x))//     ';'// &
-    'domain_y='//trim(adjustl(rchar_domain_y))
+    'domain_size='//trim(domain_size_str)//          ';'// &
+    'domain_centre='//trim(domain_centre_str)
+
+
 
   if (self%coord_sys == coord_sys_ll) then
 
@@ -415,16 +421,6 @@ function gen_planar_constructor( reference_element,          &
       write(lat_str,'(F10.2)') target_null_island(2)
       write(temp_str,'(A)')                &
           'null_island=[' //               &
-          trim(adjustl(lon_str)) // ',' // &
-          trim(adjustl(lat_str)) // ']'
-      write(self%constructor_inputs,'(A)') &
-          trim(self%constructor_inputs) // ';' // trim(temp_str)
-
-      ! Append first node coordinates.
-      write(lon_str,'(F10.2)') first_node(1)
-      write(lat_str,'(F10.2)') first_node(2)
-      write(temp_str,'(A)')                &
-          'first_node=[' //                &
           trim(adjustl(lon_str)) // ',' // &
           trim(adjustl(lat_str)) // ']'
       write(self%constructor_inputs,'(A)') &
@@ -1327,9 +1323,6 @@ end subroutine calc_edges
 !> @brief   Calculates the coordinates of vertices in the mesh.(private subroutine)
 !> @details Assigns an (x,y) coordinate in units of dx and dy to each mesh
 !>          vertex according to its Cartesian position in the mesh.
-!>          Note: The origin of the mesh is constrained to always be located
-!>                on a node. In cases were the centre of the domain would fall
-!>                inside a cell, the nearest node S/W would be used.
 !>
 !-------------------------------------------------------------------------------
 subroutine calc_coords(self)
@@ -1345,8 +1338,7 @@ subroutine calc_coords(self)
 
   real(r_def) :: x_coord
   real(r_def) :: y_coord
-  real(r_def) :: offset_x = 0.0_r_def
-  real(r_def) :: offset_y = 0.0_r_def
+  real(r_def) :: offset(2)
 
   edge_cells_x = self%edge_cells_x
   edge_cells_y = self%edge_cells_y
@@ -1358,34 +1350,29 @@ subroutine calc_coords(self)
                     LOG_LEVEL_ERROR )
   end if
 
+!==========================================================
+! Domain coordinates initial layout
+! After which an offset is applied to place the
+! target domain translated on an unrotated frame
+! of reference
+!
+!     |
+!   4 |                 3
+! ----+---------------+---
+!     |               |
+!     |               |
+!   1 |               | 2
+!     +---------------+
+!
+!==========================================================
+
   self%domain_extents(:,1) = [           0.0_r_def, -1.0_r_def*self%domain_size(2) ]
   self%domain_extents(:,2) = [ self%domain_size(1), -1.0_r_def*self%domain_size(2) ]
   self%domain_extents(:,3) = [ self%domain_size(1),            0.0_r_def ]
   self%domain_extents(:,4) = [           0.0_r_def,            0.0_r_def ]
 
-  select case (self%coord_sys)
-
-  case(coord_sys_xyz)
-
-    ! Origin (0,0) is centre of mesh. Cell 1 is in top left of mesh panel.
-    ! Top NW node will be present in both periodic and non-periodic meshes.
-    offset_x = (-1.0_r_def*self%dx*self%edge_cells_x)/2_r_def
-    offset_y = (self%dy*self%edge_cells_y)/2_r_def
-
-  case(coord_sys_ll)
-
-    ! Use first_lat and first_lon to determine the offset, to be consistent
-    ! with ENDGame. Move the NW node from (0,0) to (offset_x, offset_y) to give
-    ! the SW node at (first_lon, first_lat).
-    offset_x = self%first_node(1)
-    offset_y = self%first_node(2) + (self%dy*self%edge_cells_y)
-
-  case default
-    write(log_scratch_space,'(A,I0)') &
-        'Unset coordinate system enumeration: ', self%coord_sys
-    call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-
-  end select
+  offset(1) = self%domain_centre(1) - (self%domain_size(1)*0.5_r_def)
+  offset(2) = self%domain_centre(2) + (self%domain_size(2)*0.5_r_def)
 
   ! The cells begin numbering in rows from NW corner of panel.
   cell=1
@@ -1425,11 +1412,11 @@ subroutine calc_coords(self)
     vert_coords(2, self%verts_on_cell(SE, cell)) = self%dy * self%edge_cells_y * (-1.0_r_def)
   end if
 
-  vert_coords(1,:)    = vert_coords(1,:) + offset_x
-  vert_coords(2,:)    = vert_coords(2,:) + offset_y
+  vert_coords(1,:)    = vert_coords(1,:) + offset(1)
+  vert_coords(2,:)    = vert_coords(2,:) + offset(2)
 
-  self%domain_extents(1,:) = self%domain_extents(1,:) + offset_x
-  self%domain_extents(2,:) = self%domain_extents(2,:) + offset_y
+  self%domain_extents(1,:) = self%domain_extents(1,:) + offset(1)
+  self%domain_extents(2,:) = self%domain_extents(2,:) + offset(2)
 
   select case (self%coord_sys)
 

@@ -33,3 +33,9 @@
 
 # Sphinx
 documentation/build
+
+# Jetbrains
+.idea
+
+# vscode
+.vscode

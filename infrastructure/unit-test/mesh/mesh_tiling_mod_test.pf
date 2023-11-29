@@ -1,0 +1,751 @@
+!-----------------------------------------------------------------------------
+! (C) Crown copyright 2023 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+!> @brief Test suite to verify computation of tiles.
+!>
+!-------------------------------------------------------------------------------
+module mesh_tiling_mod_test
+!-------------------------------------------------------------------------------
+
+  use constants_mod, only: r_def, i_def, str_max_filename, str_def
+  use global_mesh_collection_mod, only: global_mesh_collection_type, &
+                                        global_mesh_collection
+  use mesh_mod, only : mesh_type
+  use halo_comms_mod, only: initialise_halo_comms, &
+                            finalise_halo_comms
+  use mpi_mod, only: global_mpi
+
+  use pFUnit_Mod
+
+  implicit none
+
+  private
+  public setUp, tearDown, test_colouring_fallback,    &
+         test_partitioned_planar_mesh_separated_halo, &
+         test_partitioned_planar_mesh_combined
+
+  @testCase
+  type, public, extends(MPITestCase) :: compute_tiling_test_type
+    integer :: total_ranks
+    integer :: local_rank
+    integer :: num_layers
+  contains
+    procedure :: setUp
+    procedure :: tearDown
+    procedure :: test_colouring_fallback
+    procedure :: test_partitioned_planar_mesh_separated_halo
+    procedure :: test_partitioned_planar_mesh_combined
+  end type compute_tiling_test_type
+
+!-------------------------------------------------------------------------------
+contains
+!-------------------------------------------------------------------------------
+  subroutine setUp(this)
+
+    implicit none
+
+    class(compute_tiling_test_type), intent(inout)  :: this
+
+    global_mesh_collection = global_mesh_collection_type()
+
+    ! Store the MPI communicator for later use
+    call global_mpi%initialise( this%getMpiCommunicator() )
+
+    ! Initialise halo functionality
+    call initialise_halo_comms( this%getMpiCommunicator() )
+
+    this%total_ranks = global_mpi%get_comm_size()
+    this%local_rank  = global_mpi%get_comm_rank()
+    this%num_layers  = 5
+
+  end subroutine setUp
+
+!-------------------------------------------------------------------------------
+
+  subroutine tearDown(this)
+
+    implicit none
+
+    class(compute_tiling_test_type), intent(inout) :: this
+
+    call global_mesh_collection%clear()
+
+    ! Finalise halo functionality
+    call finalise_halo_comms()
+
+    ! Clear the stored MPI communicator
+    call global_mpi%finalise()
+
+  end subroutine tearDown
+
+!-------------------------------------------------------------------------------
+
+  function get_mesh( filename, xyprocs, max_stencil_depth, local_rank,      &
+                     total_ranks, num_layers, tile_size, inner_halo_tiles ) &
+                     result ( mesh )
+
+    use ugrid_mesh_data_mod, only : ugrid_mesh_data_type
+    use global_mesh_mod, only : global_mesh_type
+    use local_mesh_mod, only : local_mesh_type
+    use extrusion_mod, only : uniform_extrusion_type, PRIME_EXTRUSION
+    use partition_mod, only : partition_type, &
+                              partitioner_interface, &
+                              partitioner_planar
+
+    implicit none
+
+    character(len = str_max_filename), intent(in) :: filename
+    integer(i_def), intent(in)                    :: xyprocs(2)
+    integer(i_def), intent(in)                    :: max_stencil_depth
+    integer(i_def), intent(in)                    :: local_rank
+    integer(i_def), intent(in)                    :: total_ranks
+    integer(i_def), intent(in)                    :: num_layers
+    integer(i_def), intent(in)                    :: tile_size(2)
+    logical(i_def), intent(in)                    :: inner_halo_tiles
+    type(mesh_type)                               :: mesh
+
+    character(str_def), parameter             :: mesh_name ='unit_test'
+    integer(i_def)                            :: global_mesh_id
+    type(ugrid_mesh_data_type)                :: ugrid_mesh_data
+    type(global_mesh_type), target            :: global_mesh
+    type(global_mesh_type), pointer           :: global_mesh_ptr => null()
+    type(local_mesh_type), target             :: local_mesh
+    type(local_mesh_type), pointer            :: local_mesh_ptr => null()
+    type(partition_type)                      :: partition
+    type(uniform_extrusion_type)              :: extrusion
+    procedure(partitioner_interface), pointer :: partitioner_ptr => null()
+
+    ! Run through mesh construction process to initialise tiling via
+    ! the mesh_type API
+    call ugrid_mesh_data%read_from_file( trim(filename), mesh_name )
+    global_mesh = global_mesh_type( ugrid_mesh_data )
+    call ugrid_mesh_data%clear()
+    global_mesh_id = global_mesh%get_id()
+    call global_mesh_collection%add_new_global_mesh( global_mesh )
+    global_mesh_ptr => global_mesh_collection%get_global_mesh( global_mesh_id )
+
+    partitioner_ptr => partitioner_planar
+    partition = partition_type( global_mesh_ptr,   &
+                                partitioner_ptr,   &
+                                xyprocs(1),        &
+                                xyprocs(2),        &
+                                max_stencil_depth, &
+                                local_rank,        &
+                                total_ranks )
+
+    call local_mesh%initialise( global_mesh_ptr, partition )
+    call local_mesh%init_cell_owner()
+    local_mesh_ptr => local_mesh
+
+    extrusion = uniform_extrusion_type( 100.0_r_def,     &
+                                        10000.0_r_def,   &
+                                        num_layers,      &
+                                        PRIME_EXTRUSION )
+
+    mesh = mesh_type( local_mesh_ptr, extrusion, &
+                      tile_size=tile_size,       &
+                      inner_halo_tiles=inner_halo_tiles )
+
+  end function get_mesh
+
+!-------------------------------------------------------------------------------
+
+  @Test( npes=[1, 4] )
+  subroutine test_colouring_fallback(this)
+
+    implicit none
+
+    class(compute_tiling_test_type), intent(inout) :: this
+
+    integer(i_def)                    :: xyprocs(2)
+    integer(i_def)                    :: max_stencil_depth
+    character(len = str_max_filename) :: filename
+    type(mesh_type)                   :: mesh
+    integer(i_def), parameter         :: tile_size(2) = 1
+
+    integer(i_def)                    :: colour
+    integer(i_def)                    :: tile
+    integer(i_def)                    :: depth
+    integer(i_def)                    :: ncolours
+    integer(i_def)                    :: ntiles
+    integer(i_def)                    :: inner_depth
+    integer(i_def)                    :: halo_depth
+    integer(i_def)                    :: ncells
+    integer(i_def), allocatable       :: last_inner_tiles(:,:)
+    integer(i_def), allocatable       :: last_edge_tiles(:)
+    integer(i_def), allocatable       :: last_halo_tiles(:,:)
+    integer(i_def), allocatable       :: last_inner_cells(:,:,:)
+    integer(i_def), allocatable       :: last_edge_cells(:,:)
+    integer(i_def), allocatable       :: last_halo_cells(:,:,:)
+
+    select case ( this%total_ranks )
+      case (1)
+        xyprocs = 1
+      case (4)
+        xyprocs = 2
+    end select
+    max_stencil_depth = 1
+    filename = 'data/mesh_BiP8x8-750x250.nc'
+
+    ! Initialise mesh, this also initialises tiling
+    mesh = get_mesh( filename , xyprocs, max_stencil_depth, this%local_rank, &
+                     this%total_ranks, this%num_layers, tile_size, .false. )
+
+    ! Retrieve colouring data through mesh_type API and fill comparison arrays
+    ncolours = mesh%get_ncolours()
+    inner_depth = mesh%get_inner_depth()
+    halo_depth = mesh%get_halo_depth()
+    ncells = 1
+
+    ! Cells become 1x1 tiles
+    last_inner_tiles = mesh%get_last_inner_cell_all_colours()
+    last_edge_tiles = mesh%get_last_edge_cell_all_colours()
+    last_halo_tiles = mesh%get_last_halo_cell_all_colours()
+
+    ! Determine upper limit of tile counts
+    ntiles = maxval(last_halo_tiles)
+
+    ! Each tile has only 1 cell
+    allocate( last_inner_cells( ncolours, ntiles, inner_depth ), &
+              source=0_i_def )
+    do depth = 1, inner_depth
+      do colour = 1, ncolours
+        do tile = 1, last_inner_tiles( colour, depth )
+          last_inner_cells( colour, tile, depth ) = 1_i_def
+        end do
+      end do
+    end do
+
+    allocate( last_edge_cells( ncolours, ntiles ), source=0_i_def )
+    do colour = 1, ncolours
+      do tile = 1, last_edge_tiles( colour )
+        last_edge_cells( colour, tile ) = 1_i_def
+      end do
+    end do
+
+    allocate( last_halo_cells( ncolours, ntiles, halo_depth ), &
+              source=0_i_def )
+    do depth = 1, halo_depth
+      do colour = 1, ncolours
+        do tile = 1, last_halo_tiles( colour, depth )
+          last_halo_cells( colour, tile, depth ) = 1_i_def
+        end do
+      end do
+    end do
+
+    call check_tiling_results( mesh, ncolours, ntiles, inner_depth,  &
+                               halo_depth, ncells, last_inner_tiles, &
+                               last_inner_cells, last_edge_tiles,    &
+                               last_edge_cells, last_halo_tiles,     &
+                               last_halo_cells )
+
+    if ( allocated(last_inner_tiles) ) deallocate( last_inner_tiles )
+    if ( allocated(last_edge_tiles) ) deallocate( last_edge_tiles )
+    if ( allocated(last_halo_tiles) ) deallocate( last_halo_tiles )
+    if ( allocated(last_inner_cells) ) deallocate( last_inner_cells )
+    if ( allocated(last_edge_cells) ) deallocate( last_edge_cells )
+    if ( allocated(last_halo_cells) ) deallocate( last_halo_cells )
+
+  end subroutine test_colouring_fallback
+
+!-------------------------------------------------------------------------------
+
+  @Test( npes=[4] )
+  subroutine test_partitioned_planar_mesh_separated_halo(this)
+
+    implicit none
+
+    class(compute_tiling_test_type), intent(inout) :: this
+
+    integer(i_def)                    :: xyprocs(2)
+    integer(i_def)                    :: max_stencil_depth
+    character(len = str_max_filename) :: filename
+    integer(i_def)                    :: depth
+    type(mesh_type)                   :: mesh
+    integer(i_def), parameter         :: ncolours = 4
+    integer(i_def), parameter         :: ntiles = 9
+    integer(i_def), parameter         :: ndepths = 4
+    integer(i_def), parameter         :: ncells = 20
+    integer(i_def), parameter         :: tile_size(2) = (/ 3, 5 /)
+    integer(i_def)                    :: last_inner_tiles( ncolours, ndepths )
+    integer(i_def)                    :: last_halo_tiles( ncolours, ndepths )
+    integer(i_def)                    :: &
+         last_inner_cells( ncolours, ntiles, ndepths )
+    integer(i_def)                    :: last_edge_cells( ncolours, ntiles )
+    integer(i_def)                    :: &
+         last_halo_cells( ncolours, ntiles, ndepths )
+
+    xyprocs = 2
+    max_stencil_depth = 3
+    filename = 'data/mesh_planar-32x32.nc'
+
+    ! The global mesh will be partitioned into 2x2 rectangular local meshes
+    ! with 16x16 cells each, and outer halos along two of the 4 partition
+    ! edges, depending on location in the global domain. The tiling module
+    ! computes 3x5 tiling for this test, with separately tiled outer and
+    ! inner halos.
+    ! Tiles use four different colours (numbers prefixed with "C" in each
+    ! tile in the diagram), their sizes are adjusted to fit into interior
+    ! (dots), inner halo (double lines mark the partition edge), and outer
+    ! halos. Halos are 4 cells deep. This leads to the following tiling
+    ! layout for the top-left partition (MPI rank 2), with outer halos
+    ! along the eastern and southern edges:
+    ! ______________________________________
+    ! | C4  | C3  | C4  | C3  | C4  || C3  |
+    ! | 4x4 | 3x4 | 3x4 | 2x4 | 4x4 || 4x4 |
+    ! |_____|.....|.....|.....|_____||_____|
+    ! | C2  : C1  | C2  | C1  : C2  || C1  |
+    ! | 4x5 : 3x5 | 3x5 | 2x5 : 4x5 || 4x5 |
+    ! |_____:_____|_____|_____:_____||_____|
+    ! | C4  : C3  | C4  | C3  : C4  || C3  |
+    ! | 4x3 : 3x3 | 3x3 | 2x3 : 4x3 || 4x3 |
+    ! |_____:.....|.....|.....:_____||_____|
+    ! | C2  | C1  | C2  | C1  | C2  || C1  |
+    ! | 4x4 | 3x4 | 3x4 | 2x4 | 4x4 || 4x4 |
+    ! |     |     |     |     |     ||     |
+    ! |=====|=====|=====|=====|=====||_____|
+    ! | C4  | C3  | C4  | C3  | C4  |  C3  |
+    ! | 4x4 | 3x4 | 3x4 | 2x4 | 4x4 |  4x4 |
+    ! |_____|_____|_____|_____|_____|______|
+
+    ! Set expected tile counts for each colour (see tiling layout above)
+    ! Interior tiles (6 tiles in total within dotted boundary)
+    last_inner_tiles(:,ndepths) = (/2,1,2,1/)
+    ! Interior and inner halo tiles (6 + 14 tiles within double lines)
+    do depth = 1, ndepths - 1
+      last_inner_tiles(:,depth) = (/4,6,4,6/)
+    end do
+    ! All tiles including outer halo (6 + 14 + 10 tiles), distribution over
+    ! colours depends on the location of the partition in the global domain;
+    ! the tiling layout above shows rank 2
+    do depth = 1, ndepths
+      if ( this%local_rank < 2 ) then
+        ! Bottom right, bottom left partitions
+        last_halo_tiles(:,depth) = (/9,9,6,6/)
+      else
+        ! Top left, top right partitions
+        last_halo_tiles(:,depth) = (/6,6,9,9/)
+      end if
+    end do
+
+    ! Set expected cell counts - these accumulate in each tile towards the
+    ! outermost halo, except for interior tiles where all cells are always
+    ! included in loops. Cell counts in corner tiles grow quadratically.
+    ! Example for colour 1 (see tiling layout above for reference):
+    ! - There are 4 tiles of colour 1 inside the partition (without outer halos)
+    ! - All loops over inner cells will include the two interior tiles with
+    !   3x5 (=15) and 2x5 (=10) cells
+    ! - Rows of cells in the two remaining 3x4 and 2x4 tiles will be included up
+    !   to cells depth*3 and depth*2, respectively, where depth ranges between 0
+    !   and 3 (inner halo tiles also include edge cells, but these are not
+    !   included here)
+    last_inner_cells = 0_i_def
+    do depth = ndepths - 1, 0, -1
+      last_inner_cells(1,1:4,4-depth) = (/ 15, 10, depth * (/3,2/) /)
+      last_inner_cells(2,1:6,4-depth) = (/ 15, depth * (/5,5,depth,3,depth/) /)
+      last_inner_cells(3,1:4,4-depth) = (/ 9, 6, depth * (/3,2/) /)
+      last_inner_cells(4,1:6,4-depth) = (/ 9, depth * (/depth,3,depth,3,3/) /)
+    end do
+
+    ! Reuse data from the last_inner_cells array, and add on edge cells for
+    ! inner halo tiles. Continuing the above example of colour 1, only tiles
+    ! 3 and 4 are in the inner halo and include edge cells, so extend loop
+    ! limits with one row of length 3 or 2, respectively.
+    last_edge_cells = 0_i_def
+    last_edge_cells(1,1:4) = last_inner_cells(1,1:4,1) + (/0,0,3,2/)
+    last_edge_cells(2,1:6) = last_inner_cells(2,1:6,1) + (/0,5,5,7,3,7/)
+    last_edge_cells(3,1:4) = last_inner_cells(3,1:4,1) + (/0,0,3,2/)
+    last_edge_cells(4,1:6) = last_inner_cells(4,1:6,1) + (/0,7,3,7,3,3/)
+
+    ! Loops that reach halo tiles include all interior and inner tiles, so
+    ! copy loop limits as a starting point
+    last_halo_cells = 0_i_def
+    do depth = 1, ndepths
+      last_halo_cells(:,:,depth) = last_edge_cells
+    end do
+    ! Loops that reach the outer halo include all cells on interior and
+    ! inner halo tiles, so only the loop limits for outer halo tiles need
+    ! to be set.
+    ! Continuing the above example for colour 1 in the top-left partition
+    ! of the domain (MPI rank 2), there are 2 more tiles of that colour in
+    ! the outer halo with sizes 4x5 and 4x4, respectively. Similar to the
+    ! case of edge cells on inner halo tiles, loop limits are extended
+    ! column-wise as a function of halo depth, with column lenghts of 5
+    ! and 4, respectively.
+    select case (this%local_rank)
+    case(0,1)
+      do depth = 1, ndepths
+        if ( this%local_rank == 0 ) then
+          last_halo_cells(1,5:9,depth) = depth * (/3,2,depth,5,4/)
+        else
+          last_halo_cells(1,5:9,depth) = depth * (/depth,3,2,5,4/)
+        end if
+        last_halo_cells(2,7:9,depth) = depth * (/4,3,4/)
+        last_halo_cells(3,5:6,depth) = depth * (/4,3/)
+      end do
+    case(2,3)
+      do depth = 1, ndepths
+        last_halo_cells(1,5:6,depth) = depth * (/5,4/)
+        ! Corner tile in outer halo is in different positions
+        if ( this%local_rank == 2 ) then
+          last_halo_cells(3,5:9,depth) = depth * (/4,3,3,2,depth/)
+        else
+          last_halo_cells(3,5:9,depth) = depth * (/4,3,depth,3,2/)
+        end if
+        last_halo_cells(4,7:9,depth) = depth * (/4,3,4/)
+      end do
+    end select
+
+    ! Initialise mesh, this also initialises tiling
+    mesh = get_mesh( filename , xyprocs, max_stencil_depth, this%local_rank, &
+                     this%total_ranks, this%num_layers, tile_size, .true. )
+
+    ! Edge and inner tiles are the same when inner halos are tiled separately
+    call check_tiling_results( mesh, ncolours, ntiles, ndepths, ndepths,   &
+                               ncells, last_inner_tiles, last_inner_cells, &
+                               last_inner_tiles(:,1), last_edge_cells,     &
+                               last_halo_tiles, last_halo_cells )
+
+  end subroutine test_partitioned_planar_mesh_separated_halo
+
+!-------------------------------------------------------------------------------
+
+  @Test( npes=[4] )
+  subroutine test_partitioned_planar_mesh_combined(this)
+
+    implicit none
+
+    class(compute_tiling_test_type), intent(inout) :: this
+
+    integer(i_def)                    :: xyprocs(2)
+    integer(i_def)                    :: max_stencil_depth
+    character(len = str_max_filename) :: filename
+    integer(i_def)                    :: depth
+    type(mesh_type)                   :: mesh
+    integer(i_def), parameter         :: ncolours = 4
+    integer(i_def), parameter         :: ntiles = 12
+    integer(i_def), parameter         :: ndepths = 4
+    integer(i_def), parameter         :: ncells = 20
+    integer(i_def), parameter         :: tile_size(2) = (/ 3, 5 /)
+    integer(i_def)                    :: last_inner_tiles( ncolours, ndepths )
+    integer(i_def)                    :: last_edge_tiles( ncolours )
+    integer(i_def)                    :: last_halo_tiles( ncolours, ndepths )
+    integer(i_def)                    :: &
+         last_inner_cells( ncolours, ntiles, ndepths )
+    integer(i_def)                    :: last_edge_cells( ncolours, ntiles )
+    integer(i_def)                    :: &
+         last_halo_cells( ncolours, ntiles, ndepths )
+
+    xyprocs = 2
+    max_stencil_depth = 3
+    filename = 'data/mesh_planar-32x32.nc'
+
+    ! Same test as "test_partitioned_planar_mesh_separated_halo", but without
+    ! separating inner halo and partition interior. This leads to the
+    ! following tiling layout for the top-left partition (MPI rank 2):
+    ! ____________________________________________
+    ! | C4  | C3  | C4  | C3  | C4  | C3  || C4  |
+    ! | 3x5 | 3x5 | 3x5 | 3x5 | 3x5 | 1x5 || 4x5 |
+    ! |_____|_____|_____|_____|_____|_____||_____|
+    ! | C2  | C1  | C2  | C1  | C2  | C1  || C2  |
+    ! | 3x5 | 3x5 | 3x5 | 3x5 | 3x5 | 1x5 || 4x5 |
+    ! |_____|_____|_____|_____|_____|_____||_____|
+    ! | C4  | C3  | C4  | C3  | C4  | C3  || C4  |
+    ! | 3x5 | 3x5 | 3x5 | 3x5 | 3x5 | 1x5 || 4x5 |
+    ! |_____|_____|_____|_____|_____|_____||_____|
+    ! | C2  | C1  | C2  | C1  | C2  | C1  || C2  |
+    ! | 3x1 | 3x1 | 3x1 | 3x1 | 3x1 | 1x1 || 4x1 |
+    ! |     |     |     |     |     |     ||     |
+    ! |=====|=====|=====|=====|=====|=====||_____|
+    ! | C4  | C3  | C4  | C3  | C4  | C3  |  C4  |
+    ! | 3x4 | 3x4 | 3x4 | 3x4 | 3x4 | 1x4 |  4x4 |
+    ! |_____|_____|_____|_____|_____|_____|______|
+
+    ! Set expected tile counts for each colour (see tiling layout above)
+    ! from the interior up to the partition edge, up to 24 tiles in total
+    ! (double lines in the diagram). Tiles can cross the boundary between
+    ! interior, inner halo and edge, leading to a more complex situation
+    ! compared to the case of separated tiling in the inner halo.
+    last_inner_tiles(:,ndepths) = (/2,1,4,2/)
+    last_inner_tiles(:,ndepths-1) = (/2,2,4,4/)
+    last_inner_tiles(:,ndepths-2) = (/2,3,4,6/)
+    last_inner_tiles(:,ndepths-3) = (/2,3,4,6/)
+    last_edge_tiles(:) = 6
+
+    ! All tiles including outer halo (24 interior + 11 halo tiles), distribution
+    ! over colours depends on the location of the partition in the global
+    ! domain; the tiling layout above shows rank 2
+    do depth = 1, ndepths
+      select case ( this%local_rank )
+      case(0)
+        ! Bottom left
+        last_halo_tiles(:,depth) = (/9,12,6,8/)
+      case(1)
+        ! Bottom right
+        last_halo_tiles(:,depth) = (/12,9,8,6/)
+      case(2)
+        ! Top left
+        last_halo_tiles(:,depth) = (/6,8,9,12/)
+      case(3)
+        ! Top right
+        last_halo_tiles(:,depth) = (/8,6,12,9/)
+      end select
+    end do
+
+    ! Set expected cell counts in each tile - similar to separated tiling
+    ! in the inner halo, counts accumulate in each tile towards the outermost
+    ! halo, but with more complex behaviour as tiles can cross the boundary
+    ! between partition interior and inner halo.
+    last_inner_cells = 0_i_def
+
+    last_inner_cells(1,1:2,4) = (/10,15/)
+    last_inner_cells(2,1,4) = 15
+    last_inner_cells(3,1:4,4) = (/2,3,4,6/)
+    last_inner_cells(4,1:2,4) = (/3,6/)
+
+    last_inner_cells(1,1:2,3) = 15
+    last_inner_cells(2,1:2,3) = (/15,5/)
+    last_inner_cells(3,1:4,3) = (/6,6,9,9/)
+    last_inner_cells(4,1:4,3) = (/6,9,2,3/)
+
+    last_inner_cells(1,1:2,2) = 15
+    last_inner_cells(2,1:3,2) = (/15,10,5/)
+    last_inner_cells(3,1:4,2) = (/9,9,12,12/)
+    last_inner_cells(4,1:6,2) = (/9,12,6,8,3,4/)
+
+    last_inner_cells(1,1:2,1) = 15
+    last_inner_cells(2,1:3,1) = (/15,15,10/)
+    last_inner_cells(3,1:4,1) = (/12,12,15,15/)
+    last_inner_cells(4,1:6,1) = (/12,15,12,15,8,10/)
+
+    last_edge_cells = 0_i_def
+
+    last_edge_cells(1,1:6) = (/15,15,5,3,3,1/)
+    last_edge_cells(2,1:6) = (/15,15,15,3,3,3/)
+    last_edge_cells(3,1:6) = (/15,15,15,15,5,5/)
+    last_edge_cells(4,1:6) = 15
+
+    ! Loops that reach halo tiles include all interior and inner tiles, so
+    ! copy loop limits as a starting point
+    last_halo_cells = 0_i_def
+    do depth = 1, ndepths
+      last_halo_cells(:,:,depth) = last_edge_cells
+    end do
+
+    ! Add on outer halo tiles - their existence depends on the where
+    ! a partition is located in the global domain. Cell count in corner
+    ! tiles increases quadratically with halo depth, and linearly in
+    ! non-corner tiles.
+    select case (this%local_rank)
+    case(0)
+      do depth = 1, ndepths
+        last_halo_cells(1,7:9,depth) = depth * (/3,3,1/)
+        last_halo_cells(2,7:12,depth) = depth * (/3,3,3,depth,5,1/)
+        last_halo_cells(4,7:8,depth) = depth * 5
+      end do
+    case(1)
+      do depth = 1, ndepths
+        last_halo_cells(1,7:12,depth) = depth * (/depth,3,3,1,5,1/)
+        last_halo_cells(2,7:9,depth) = depth * 3
+        last_halo_cells(3,7:8,depth) = depth * 5
+      end do
+    case(2)
+      do depth = 1, ndepths
+        last_halo_cells(2,7:8,depth) = depth * (/5,1/)
+        last_halo_cells(3,7:9,depth) = depth * (/3,3,1/)
+        last_halo_cells(4,7:12,depth) = depth * (/5,5,3,3,3,depth/)
+      end do
+    case(3)
+      do depth = 1, ndepths
+        last_halo_cells(1,7:8,depth) = depth * (/5,1/)
+        last_halo_cells(3,7:12,depth) = depth * (/5,5,depth,3,3,1/)
+        last_halo_cells(4,7:9,depth) = depth * 3
+      end do
+    end select
+
+    ! Initialise mesh, this also initialises tiling
+    mesh = get_mesh( filename , xyprocs, max_stencil_depth, this%local_rank, &
+                     this%total_ranks, this%num_layers, tile_size, .false. )
+
+    call check_tiling_results( mesh, ncolours, ntiles, ndepths, ndepths,   &
+                               ncells, last_inner_tiles, last_inner_cells, &
+                               last_edge_tiles, last_edge_cells,           &
+                               last_halo_tiles, last_halo_cells )
+
+  end subroutine test_partitioned_planar_mesh_combined
+
+!-------------------------------------------------------------------------------
+
+  subroutine check_tiling_results( mesh, ncolours, ntiles, inner_depth,  &
+                                   halo_depth, ncells, last_inner_tiles, &
+                                   last_inner_cells, last_edge_tiles,    &
+                                   last_edge_cells, last_halo_tiles,     &
+                                   last_halo_cells )
+
+    use remove_duplicates_mod, only: remove_duplicates
+    use sort_mod,              only: bubble_sort
+
+    implicit none
+
+    type(mesh_type), intent(in) :: mesh
+    integer(i_def), intent(in)  :: ncolours
+    integer(i_def), intent(in)  :: ntiles
+    integer(i_def), intent(in)  :: inner_depth
+    integer(i_def), intent(in)  :: halo_depth
+    integer(i_def), intent(in)  :: ncells
+    integer(i_def), intent(in)  :: last_inner_tiles( ncolours, inner_depth )
+    integer(i_def), intent(in)  :: &
+         last_inner_cells( ncolours, ntiles, inner_depth )
+    integer(i_def), intent(in)  :: last_edge_tiles( ncolours )
+    integer(i_def), intent(in)  :: last_edge_cells( ncolours, ntiles )
+    integer(i_def), intent(in)  :: last_halo_tiles( ncolours, halo_depth )
+    integer(i_def), intent(in)  :: &
+         last_halo_cells( ncolours, ntiles, halo_depth )
+
+    integer(i_def)              :: colour
+    integer(i_def)              :: depth
+    integer(i_def)              :: tile
+    integer(i_def)              :: cell
+    integer(i_def)              :: ntilecolours
+    integer(i_def), pointer     :: ntiles_per_colour(:) => null()
+    integer(i_def), pointer     :: ncells_per_coloured_tile(:,:) => null()
+    integer(i_def), pointer     :: coloured_tiling_map(:,:,:) => null()
+    integer(i_def), allocatable :: result_1d(:)
+    integer(i_def), allocatable :: result_2d(:,:)
+    integer(i_def), allocatable :: result_3d(:,:,:)
+    integer(i_def), allocatable :: tmap(:)
+
+    @assertEqual( mesh%get_ntilecolours(), ncolours )
+
+    do colour = 1, ncolours
+      do depth = 1, inner_depth
+        tile = mesh%get_last_inner_tile_per_colour( colour, depth )
+        @assertEqual( tile, last_inner_tiles( colour, depth ) )
+      end do
+    end do
+    result_2d = mesh%get_last_inner_tile_all_colours()
+    @assertTrue( allocated(result_2d) )
+    @assertTrue( all( ubound(result_2d) == ubound(last_inner_tiles) ) )
+    @assertTrue( all( result_2d == last_inner_tiles ) )
+    deallocate(result_2d)
+
+    do colour = 1, ncolours
+      do tile = 1, ntiles
+        do depth = 1, inner_depth
+          cell = mesh%get_last_inner_cell_per_colour_and_tile( colour, tile, &
+                                                               depth )
+          @assertEqual( cell, last_inner_cells( colour, tile, depth ) )
+        end do
+      end do
+    end do
+    result_3d = mesh%get_last_inner_cell_all_colours_all_tiles()
+    @assertTrue( allocated( result_3d ) )
+    @assertTrue( all( ubound(result_3d) == ubound(last_inner_cells) ) )
+    @assertTrue( all( result_3d == last_inner_cells ) )
+    deallocate(result_3d)
+
+    do colour = 1, ncolours
+      tile = mesh%get_last_edge_tile_per_colour( colour )
+      @assertEqual( tile, last_edge_tiles( colour ) )
+    end do
+    result_1d = mesh%get_last_edge_tile_all_colours()
+    @assertTrue( allocated( result_1d ) )
+    @assertTrue( ubound(result_1d) == ubound( last_edge_tiles ) )
+    @assertTrue( all( result_1d == last_edge_tiles ) )
+    deallocate(result_1d)
+
+    do colour = 1, ncolours
+      do tile = 1, ntiles
+        cell = mesh%get_last_edge_cell_per_colour_and_tile( colour, tile )
+        @assertEqual( cell, last_edge_cells( colour, tile ) )
+      end do
+    end do
+    result_2d = mesh%get_last_edge_cell_all_colours_all_tiles()
+    @assertTrue( allocated( result_2d ) )
+    @assertTrue( all( ubound(result_2d) == ubound(last_edge_cells) ) )
+    @assertTrue( all( result_2d == last_edge_cells ) )
+    deallocate(result_2d)
+
+    do colour = 1, ncolours
+      do depth = 1, halo_depth
+        tile = mesh%get_last_halo_tile_per_colour_any( colour, depth )
+        @assertEqual( tile , last_halo_tiles( colour, depth ) )
+      end do
+      tile = mesh%get_last_halo_tile_per_colour_deepest(colour)
+      @assertEqual( tile , last_halo_tiles( colour, halo_depth ) )
+    end do
+    result_2d = mesh%get_last_halo_tile_all_colours()
+    @assertTrue( allocated( result_2d ) )
+    @assertTrue( all( ubound(result_2d) == ubound(last_halo_tiles) ) )
+    @assertTrue( all( result_2d == last_halo_tiles ) )
+    deallocate(result_2d)
+    result_1d = mesh%get_last_halo_tile_all_colours_deepest()
+    @assertTrue( allocated( result_1d ) )
+    @assertTrue( all( ubound(result_1d) == ubound(last_halo_tiles, 1) ) )
+    @assertTrue( all( result_1d == last_halo_tiles(:, halo_depth) ) )
+    deallocate(result_1d)
+
+    do colour = 1, ncolours
+      do tile = 1, ntiles
+        do depth = 1, halo_depth
+          cell = mesh%get_last_halo_cell_per_colour_and_tile_any( colour, tile,&
+                                                                  depth )
+          @assertEqual( cell, last_halo_cells( colour, tile, depth ) )
+        end do
+        cell = mesh%get_last_halo_cell_per_colour_and_tile_deepest( colour, &
+                                                                    tile )
+          @assertEqual( cell, last_halo_cells( colour, tile, halo_depth ) )
+      end do
+    end do
+
+    result_3d = mesh%get_last_halo_cell_all_colours_all_tiles()
+    @assertTrue( allocated( result_3d ) )
+    @assertTrue( all( ubound(result_3d) == ubound(last_halo_cells) ) )
+    @assertTrue( all( result_3d == last_halo_cells ) )
+    deallocate(result_3d)
+
+    result_2d = mesh%get_last_halo_cell_all_colours_all_tiles_deepest()
+    @assertTrue( allocated( result_2d ) )
+    @assertTrue( all( ubound(result_2d) == ubound(last_halo_cells(:,:,halo_depth)) ) )
+    @assertTrue( all( result_2d == last_halo_cells( :, :, halo_depth ) ) )
+    deallocate(result_2d)
+
+    ! Only check if all cells are accounted for, neighbourhood relations between
+    ! tiles of the same colour are checked in the tiling module self-test
+    coloured_tiling_map => mesh%get_coloured_tiling_map()
+    @assertTrue( associated(coloured_tiling_map) )
+    @assertTrue( all( ubound(coloured_tiling_map) == (/ncolours,ntiles,ncells/) ) )
+    tmap = remove_duplicates( reshape( coloured_tiling_map, &
+                                       (/ size(coloured_tiling_map) /) ) )
+    call bubble_sort( size(tmap), tmap )
+    ! Tiling map can contain zeroes as fill values if there are different
+    ! tile counts for different colours, or if tile sizes are different
+    if ( tmap(1) == 0 ) then
+      @assertTrue( size(tmap) == mesh%get_ncells_2d() + 1 )
+      @assertTrue( all( tmap == (/ ( cell, cell = 0, size(tmap) ) /) ) )
+    else
+      @assertTrue( size(tmap) == mesh%get_ncells_2d() )
+      @assertTrue( all( tmap == (/ ( cell, cell = 1, size(tmap) ) /) ) )
+    end if
+    deallocate(tmap)
+    nullify(coloured_tiling_map)
+
+    call mesh%get_tiling( ntilecolours, ntiles_per_colour, &
+                          ncells_per_coloured_tile, coloured_tiling_map )
+    @assertEqual( ntilecolours, ncolours )
+    @assertTrue( associated( ntiles_per_colour ) )
+    @assertTrue( all( ntiles_per_colour == last_halo_tiles( :, halo_depth ) ) )
+    @assertTrue( associated( ncells_per_coloured_tile ) )
+    @assertTrue( all( ncells_per_coloured_tile == last_halo_cells(:,:,halo_depth) ) )
+    @assertTrue( associated( coloured_tiling_map ) )
+    @assertTrue( all( ubound(coloured_tiling_map) == (/ncolours,ntiles,ncells/) ) )
+    @assertTrue( all( coloured_tiling_map == mesh%get_coloured_tiling_map() ) )
+    nullify(ntiles_per_colour)
+    nullify(ncells_per_coloured_tile)
+    nullify(coloured_tiling_map)
+
+  end subroutine check_tiling_results
+
+end module mesh_tiling_mod_test

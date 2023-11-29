@@ -27,6 +27,7 @@ module mesh_mod
                                     LOG_LEVEL_ERROR, LOG_LEVEL_TRACE, &
                                     LOG_LEVEL_INFO, LOG_LEVEL_DEBUG
   use mesh_colouring_mod,    only : set_colours
+  use mesh_tiling_mod,       only : set_tiling
   use mesh_constructor_helper_functions_mod,                 &
                              only : mesh_extruder,           &
                                     mesh_connectivity,       &
@@ -181,6 +182,26 @@ module mesh_mod
     !
     type(mesh_map_collection_type), allocatable :: mesh_maps
 
+    !==========================================================================
+    ! Tiling storage
+    !==========================================================================
+    !> The number of colours used for tiling
+    integer(i_def)              :: ntilecolours
+    !> The number of tiles that belong to each colour
+    integer(i_def), allocatable :: ntiles_per_colour(:)
+    !> The number of cells that belong to each coloured tile
+    integer(i_def), allocatable :: ncells_per_coloured_tile(:,:)
+    !> Which cells belong to which coloured tile
+    integer(i_def), allocatable :: cells_in_coloured_tile(:,:,:)
+    !> How many tiles include cells up to a given halo or partition edge
+    integer(i_def), allocatable :: last_inner_tile_per_colour(:,:)
+    integer(i_def), allocatable :: last_edge_tile_per_colour(:)
+    integer(i_def), allocatable :: last_halo_tile_per_colour(:,:)
+    !> How many cells in a tile are inside a given halo or partition edge
+    integer(i_def), allocatable :: last_inner_cell_per_coloured_tile(:,:,:)
+    integer(i_def), allocatable :: last_halo_cell_per_coloured_tile(:,:,:)
+    integer(i_def), allocatable :: last_edge_cell_per_coloured_tile(:,:)
+
   contains
 
     procedure, public :: get_reference_element
@@ -237,12 +258,20 @@ module mesh_mod
     procedure, public :: get_last_inner_cell
     procedure, public :: get_last_inner_cell_per_colour
     procedure, public :: get_last_inner_cell_all_colours
+    procedure, public :: get_last_inner_tile_per_colour
+    procedure, public :: get_last_inner_tile_all_colours
+    procedure, public :: get_last_inner_cell_per_colour_and_tile
+    procedure, public :: get_last_inner_cell_all_colours_all_tiles
 
     procedure, public :: get_num_cells_edge
 
     procedure, public :: get_last_edge_cell
     procedure, public :: get_last_edge_cell_per_colour
     procedure, public :: get_last_edge_cell_all_colours
+    procedure, public :: get_last_edge_tile_per_colour
+    procedure, public :: get_last_edge_tile_all_colours
+    procedure, public :: get_last_edge_cell_per_colour_and_tile
+    procedure, public :: get_last_edge_cell_all_colours_all_tiles
 
     procedure, public :: get_halo_depth
     procedure, public :: get_num_cells_halo
@@ -262,6 +291,24 @@ module mesh_mod
     procedure, public :: get_last_halo_cell_all_colours
     procedure, public :: get_last_halo_cell_all_colours_deepest
 
+    procedure, public :: get_last_halo_tile_per_colour_any
+    procedure, public :: get_last_halo_tile_per_colour_deepest
+    generic           :: get_last_halo_tile_per_colour => &
+                           get_last_halo_tile_per_colour_any, &
+                           get_last_halo_tile_per_colour_deepest
+
+    procedure, public :: get_last_halo_tile_all_colours
+    procedure, public :: get_last_halo_tile_all_colours_deepest
+
+    procedure, public :: get_last_halo_cell_per_colour_and_tile_any
+    procedure, public :: get_last_halo_cell_per_colour_and_tile_deepest
+    generic           :: get_last_halo_cell_per_colour_and_tile => &
+                           get_last_halo_cell_per_colour_and_tile_any, &
+                           get_last_halo_cell_per_colour_and_tile_deepest
+
+    procedure, public :: get_last_halo_cell_all_colours_all_tiles
+    procedure, public :: get_last_halo_cell_all_colours_all_tiles_deepest
+
     procedure, public :: get_num_cells_ghost
     procedure, public :: get_gid_from_lid
     procedure, public :: get_mesh_map
@@ -274,6 +321,11 @@ module mesh_mod
     procedure, public :: get_colours
     procedure, public :: get_colour_map
     procedure, public :: is_coloured
+
+    ! Get information about mesh tiling
+    procedure, public :: get_ntilecolours
+    procedure, public :: get_tiling
+    procedure, public :: get_coloured_tiling_map
 
     procedure, public :: clear
 
@@ -317,12 +369,19 @@ contains
   !> @param [in, optional]
   !>             mesh_name     Mesh tag name to use for this mesh. If omitted,
   !>                           the mesh name from the local mesh will be used.
+  !> @param [in, optional]
+  !>             tile_size     Sets tile size to (mxn) cells, activates tiling
+  !> @param [in, optional]
+  !>      inner_halo_tiles     Tile inner halos separately for overlapping
+  !                            computation and communication
   !> @return                   3D-Mesh object based on the list of partitioned
   !>                           cells on the given local mesh
   !============================================================================
-  function mesh_constructor ( local_mesh,    &
-                              extrusion,     &
-                              mesh_name )    &
+  function mesh_constructor ( local_mesh,         &
+                              extrusion,          &
+                              mesh_name,          &
+                              tile_size,          &
+                              inner_halo_tiles )  &
                               result( self )
 
     implicit none
@@ -330,6 +389,8 @@ contains
     type(local_mesh_type),  intent(in), pointer  :: local_mesh
     class(extrusion_type),  intent(in)           :: extrusion
     character(str_def),     intent(in), optional :: mesh_name
+    integer(i_def),         intent(in), optional :: tile_size(2)
+    logical(l_def),         intent(in), optional :: inner_halo_tiles
 
     type(mesh_type) :: self
 
@@ -356,6 +417,10 @@ contains
     logical(l_def) :: ll_coords
 
     character(str_def):: name
+
+    ! Mesh tiling parameters - these assume defaults if not set
+    integer(i_def) :: tile_size_xy(2)
+    logical(l_def) :: sep_inner_halo_tiles
 
     ! Get unique id for the mesh
     mesh_id_counter = mesh_id_counter+1
@@ -431,8 +496,8 @@ contains
       call local_mesh%get_cell_next(i,cell_next_2d(:,i))
     end do
 
-    ! Mesh colouring is written such that it is expecting 0_i_def for connectivity
-    ! outside the local parition. So need to replace cell_next_2d void values with 0_i_def
+    ! Mesh colouring/tiling is written such that it is expecting 0_i_def for connectivity
+    ! outside the local partition. So need to replace cell_next_2d void values with 0_i_def
     where ( cell_next_2d == local_mesh%get_void_cell() ) cell_next_2d = 0_i_def
 
     allocate( vert_on_cell_2d ( self%nverts_per_2d_cell, &
@@ -593,6 +658,39 @@ contains
                       self%local_mesh )
 
     call init_last_cell_per_colour(self)
+
+    ! Set tiling to 1x1 tile size (equivalent to colouring) by default
+    if ( present(tile_size) ) then
+      tile_size_xy = tile_size
+    else
+      tile_size_xy = 1
+    end if
+
+    ! Tile partition as a whole by default (outer halos are always separated)
+    if ( present(inner_halo_tiles) ) then
+      sep_inner_halo_tiles = inner_halo_tiles
+    else
+      sep_inner_halo_tiles = .false.
+    end if
+
+    call set_tiling( self%get_ncells_2d(),                                  &
+                     self%cell_next,                                        &
+                     self%local_mesh,                                       &
+                     self%ncolours,                                         &
+                     self%ncells_per_colour,                                &
+                     self%cells_in_colour,                                  &
+                     tile_size_xy,                                          &
+                     sep_inner_halo_tiles,                                  &
+                     self%ntilecolours,                                     &
+                     self%ntiles_per_colour,                                &
+                     self%ncells_per_coloured_tile,                         &
+                     self%cells_in_coloured_tile,                           &
+                     self%last_inner_tile_per_colour,                       &
+                     self%last_inner_cell_per_coloured_tile,                &
+                     self%last_edge_tile_per_colour,                        &
+                     self%last_edge_cell_per_coloured_tile,                 &
+                     self%last_halo_tile_per_colour,                        &
+                     self%last_halo_cell_per_coloured_tile )
 
   end function mesh_constructor
 
@@ -1475,6 +1573,75 @@ contains
 
   end function get_last_inner_cell_all_colours
 
+  !> @brief  Gets the number of tiles of a given colour up to the specified
+  !>         inner halo
+  !> @param[in] colour Colour of tiles to return number of
+  !> @param[in] depth  Depth of the inner halo being queried
+  !> @return last_inner_tile The number of tiles of the requested colour
+  !>                         in the partition, up to the specified inner halo
+  function get_last_inner_tile_per_colour( self, colour, depth ) &
+                                          result ( last_inner_tile )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), intent(in)   :: colour
+    integer(i_def), intent(in)   :: depth
+    integer(i_def)               :: last_inner_tile
+
+    last_inner_tile = self%last_inner_tile_per_colour( colour, depth )
+
+  end function get_last_inner_tile_per_colour
+
+  !> @brief  Gets the number of tiles for all colours and halo depths
+  !> @return last_inner_tiles The number of tiles of all colours in the
+  !>                          partition for all inner halos
+  function get_last_inner_tile_all_colours( self ) &
+                                           result ( last_inner_tiles )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), allocatable  :: last_inner_tiles(:,:)
+
+    allocate( last_inner_tiles, source=self%last_inner_tile_per_colour )
+
+  end function get_last_inner_tile_all_colours
+
+  !> @brief  Gets the number of cells in a given coloured tile up to the
+  !>         specified inner halo
+  !> @param[in] colour Colour of tiles to return cell number of
+  !> @param[in] tile   Tile to return cell number of
+  !> @param[in] depth  Depth of the inner halo being queried
+  !> @return last_inner_cell The number of cells in the requested coloured tile
+  !>                         in the partition, up to the specified inner halo
+  function get_last_inner_cell_per_colour_and_tile( self, colour, tile, depth ) &
+                                                   result ( last_inner_cell )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), intent(in)   :: colour
+    integer(i_def), intent(in)   :: tile
+    integer(i_def), intent(in)   :: depth
+    integer(i_def)               :: last_inner_cell
+
+    last_inner_cell = self%last_inner_cell_per_coloured_tile( colour, tile, &
+                                                              depth )
+
+  end function get_last_inner_cell_per_colour_and_tile
+
+  !> @brief  Gets the number of cells for all colours, tiles, and inner halos
+  !> @return last_inner_tiles The number of cells for all colours, tiles, and
+  !>                          inner halos
+  function get_last_inner_cell_all_colours_all_tiles( self ) &
+                                                     result ( last_inner_cells )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), allocatable  :: last_inner_cells(:,:,:)
+
+    allocate( last_inner_cells, source=self%last_inner_cell_per_coloured_tile )
+
+  end function get_last_inner_cell_all_colours_all_tiles
+
   !> Get the number of edge cells in the local partition
   !> @return edge_cells The total number of edge cells on the
   !> local partition
@@ -1548,6 +1715,72 @@ contains
     all_last_edge_cells = self%last_edge_cell_per_colour
 
   end function get_last_edge_cell_all_colours
+
+  !> @brief  Gets the number of tiles of a given colour in the partition,
+  !>         excluding halos
+  !> @param[in] colour Colour of tiles to return number of
+  !> @return last_edge_tile The number of tiles of a given colour in the
+  !>                        partition up to the last edge cell
+  !============================================================================
+  function get_last_edge_tile_per_colour( self, colour ) &
+                                         result ( last_edge_tile )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), intent(in)   :: colour
+    integer(i_def)               :: last_edge_tile
+
+    ! Edge cells and inner halo cells are parts of the same tiles
+    last_edge_tile = self%last_edge_tile_per_colour( colour )
+
+  end function get_last_edge_tile_per_colour
+
+  !> @brief  Gets the number of tiles for all colours in the partition,
+  !>         excluding halos
+  !> @return last_edge_tiles The number of edge tiles for all colours
+  function get_last_edge_tile_all_colours( self ) &
+                                          result ( last_edge_tiles )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), allocatable  :: last_edge_tiles(:)
+
+    allocate( last_edge_tiles, source=self%last_edge_tile_per_colour )
+
+  end function get_last_edge_tile_all_colours
+
+  !> @brief  Gets the number of cells in a given coloured tile in the partition
+  !>         excluding halos
+  !> @param[in] colour Colour of tiles to return cell number of
+  !> @param[in] tile   Tile to return cell number of
+  !> @return last_edge_cell The number of cells in a given coloured tile in
+  !>                        the partition up to the last edge cell
+  !============================================================================
+  function get_last_edge_cell_per_colour_and_tile( self, colour, tile ) &
+                                                  result ( last_edge_cell )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), intent(in)   :: colour
+    integer(i_def), intent(in)   :: tile
+    integer(i_def)               :: last_edge_cell
+
+    last_edge_cell = self%last_edge_cell_per_coloured_tile( colour, tile )
+
+  end function get_last_edge_cell_per_colour_and_tile
+
+  !> @brief  Gets the number of edge cells for all colours and tiles
+  !> @return last_inner_tiles The number of edge cells for all colours and tiles
+  function get_last_edge_cell_all_colours_all_tiles( self ) &
+                                                    result ( last_edge_cells )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), allocatable  :: last_edge_cells(:,:)
+
+    allocate( last_edge_cells, source=self%last_edge_cell_per_coloured_tile )
+
+  end function get_last_edge_cell_all_colours_all_tiles
 
   !> @details Returns the maximum depth of the halo on the local partition
   !> @return  The maximum depth of halo cells
@@ -1704,6 +1937,146 @@ contains
     ncells_colour = self%ncells_per_colour
 
   end function get_last_halo_cell_all_colours_deepest
+
+  !> @brief  Gets the number of tiles of a given colour up to the specified
+  !>         outer halo
+  !> @param[in] colour Colour of tiles to return number of
+  !> @param[in] depth  Depth of the outer halo being queried
+  !> @return ntiles_colour The number of coloured tiles in the partition up
+  !>                       to the specified outer halo
+  !============================================================================
+  function get_last_halo_tile_per_colour_any( self, colour, depth ) &
+                                             result ( ntiles_colour )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), intent(in)   :: colour
+    integer(i_def), intent(in)   :: depth
+    integer(i_def)               :: ntiles_colour
+
+    ntiles_colour = self%last_halo_tile_per_colour( colour, depth )
+
+  end function get_last_halo_tile_per_colour_any
+
+  !> @brief  Gets the number of tiles of a given colour in the partition
+  !> @param[in] colour Colour of tiles to return number of
+  !> @return ntiles_colour The number of coloured tiles in the partition
+  !============================================================================
+  function get_last_halo_tile_per_colour_deepest( self, colour ) &
+                                                 result ( ntiles_colour )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), intent(in)   :: colour
+    integer(i_def)               :: ntiles_colour
+
+    ntiles_colour = self%ntiles_per_colour(colour)
+
+  end function get_last_halo_tile_per_colour_deepest
+
+
+  !> @brief  Gets the number of tiles of each colour for all outer halos
+  !> @return ntiles_colour The number tiles in the partition up to each halo
+  !>                       depth for all colours
+  !============================================================================
+  function get_last_halo_tile_all_colours( self ) &
+                                          result ( ntiles )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), allocatable  :: ntiles(:,:)
+
+    allocate( ntiles, source=self%last_halo_tile_per_colour )
+
+  end function get_last_halo_tile_all_colours
+
+  !> @brief  Gets the number of tiles in the partition for all colours
+  !> @return ntiles The number tiles in the partition for all colours
+  !============================================================================
+  function get_last_halo_tile_all_colours_deepest( self ) &
+                                                  result ( ntiles )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), allocatable  :: ntiles(:)
+
+    allocate( ntiles, source=self%ntiles_per_colour )
+
+  end function get_last_halo_tile_all_colours_deepest
+
+  !> @brief  Gets the number of cells in a given coloured tile up to the
+  !>         specified outer halo
+  !> @param[in] colour Colour of tiles to return cell number of
+  !> @param[in] tile   Tile being queried
+  !> @param[in] depth  Depth of the outer halo being queried
+  !> @return ncells_coloured_tile The number of cells in a coloured tile in the
+  !>                              partition up to the specified outer halo
+  !============================================================================
+  function get_last_halo_cell_per_colour_and_tile_any( self, colour, tile, &
+                                                       depth )             &
+                                          result ( ncells_coloured_tile )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), intent(in)   :: colour
+    integer(i_def), intent(in)   :: tile
+    integer(i_def), intent(in)   :: depth
+    integer(i_def)               :: ncells_coloured_tile
+
+    ncells_coloured_tile = self%last_halo_cell_per_coloured_tile( colour, &
+                                                                  tile,   &
+                                                                  depth )
+
+  end function get_last_halo_cell_per_colour_and_tile_any
+
+  !> @brief  Gets the number of cells in a given coloured tile in the partition
+  !> @param[in] colour Colour of tiles to return cell number of
+  !> @param[in] tile   Tile being queried
+  !> @return ncells_coloured_tile The number of cells in a coloured tile in the
+  !>                              partition
+  !============================================================================
+  function get_last_halo_cell_per_colour_and_tile_deepest( self, colour, tile ) &
+                                                result ( ncells_coloured_tile )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def), intent(in)   :: colour
+    integer(i_def), intent(in)   :: tile
+    integer(i_def)               :: ncells_coloured_tile
+
+    ncells_coloured_tile = self%ncells_per_coloured_tile( colour, tile )
+
+  end function get_last_halo_cell_per_colour_and_tile_deepest
+
+  !> @brief  Gets the number of cells in all coloured tiles for all halos
+  !> @return ncells_coloured_tile The number cells in all coloured tiles for
+  !>                              all halos
+  !============================================================================
+  function get_last_halo_cell_all_colours_all_tiles( self ) &
+                                                    result ( ncells )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def),allocatable   :: ncells(:,:,:)
+
+    allocate( ncells, source= self%last_halo_cell_per_coloured_tile )
+
+  end function get_last_halo_cell_all_colours_all_tiles
+
+  !> @brief  Gets the number of cells in all coloured tiles in the partition
+  !> @return ncells The number cells in all coloured tiles in the partition
+  !============================================================================
+  function get_last_halo_cell_all_colours_all_tiles_deepest( self ) &
+                                                            result ( ncells )
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+    integer(i_def),allocatable   :: ncells(:,:)
+
+    allocate( ncells, source=self%ncells_per_coloured_tile )
+
+  end function get_last_halo_cell_all_colours_all_tiles_deepest
+
 
   !> @brief  Initialises the index of the last cell in various specified regions
   !>         for each colour
@@ -1909,6 +2282,54 @@ contains
     end if
 
   end function is_coloured
+
+  !> @details Returns count of colours used in mesh tiles.
+  !> @return          Number of colours used in mesh tiles
+  !============================================================================
+  function get_ntilecolours(self) result(ntilecolours)
+    implicit none
+    class(mesh_type), intent(in) :: self
+    integer(i_def)               :: ntilecolours
+
+    ntilecolours = self%ntilecolours
+
+  end function get_ntilecolours
+
+  !============================================================================
+  !> @brief Get the colour tiling map
+  !> @param[out] coloured_tiling_map    Indices of cells in each coloured tile.
+  !============================================================================
+  function get_coloured_tiling_map(self) result (coloured_tiling_map)
+    implicit none
+    class(mesh_type), intent(in), target :: self
+    integer(i_def), pointer              :: coloured_tiling_map(:,:,:)
+
+    coloured_tiling_map => self%cells_in_coloured_tile
+
+  end function get_coloured_tiling_map
+
+  !============================================================================
+  !> @brief Populates args with coloured tiling info.
+  !> @param[out] ncolours  Number of colours used for mesh tiles.
+  !> @param[out] ntiles_per_colour Count of tiles in each colour.
+  !> @param[out] ncells_per_coloured_tile Count of cells in each coloured tile.
+  !> @param[out] coloured_tiling_map      Cells in each coloured tile.
+  !============================================================================
+  subroutine get_tiling(self, ntilecolours, ntiles_per_colour, &
+                        ncells_per_coloured_tile, coloured_tiling_map)
+    implicit none
+    class(mesh_type), intent(in), target :: self
+    integer(i_def), intent(out)          :: ntilecolours
+    integer(i_def), pointer, intent(out) :: ntiles_per_colour(:)
+    integer(i_def), pointer, intent(out) :: ncells_per_coloured_tile(:,:)
+    integer(i_def), pointer, intent(out) :: coloured_tiling_map(:,:,:)
+
+    ntilecolours = self%ntilecolours
+    ntiles_per_colour => self%ntiles_per_colour
+    ncells_per_coloured_tile => self%ncells_per_coloured_tile
+    coloured_tiling_map => self%cells_in_coloured_tile
+
+  end subroutine get_tiling
 
   !============================================================================
   !> @brief  Add a mesh map to this objects mesh map collection. The
@@ -2304,6 +2725,23 @@ contains
     if (allocated(self%face_id_in_adjacent_cell))   &
                                   deallocate( self%face_id_in_adjacent_cell )
 
+    if (allocated(self%ntiles_per_colour)) deallocate(self%ntiles_per_colour)
+    if (allocated(self%ncells_per_coloured_tile))          &
+                              deallocate(self%ncells_per_coloured_tile)
+    if (allocated(self%cells_in_coloured_tile))            &
+                              deallocate(self%cells_in_coloured_tile)
+    if (allocated(self%last_inner_tile_per_colour))   &
+                              deallocate(self%last_inner_tile_per_colour)
+    if (allocated(self%last_edge_tile_per_colour))   &
+                              deallocate(self%last_edge_tile_per_colour)
+    if (allocated(self%last_halo_tile_per_colour))         &
+                              deallocate(self%last_halo_tile_per_colour)
+    if (allocated(self%last_inner_cell_per_coloured_tile)) &
+                              deallocate(self%last_inner_cell_per_coloured_tile)
+    if (allocated(self%last_halo_cell_per_coloured_tile))  &
+                              deallocate(self%last_halo_cell_per_coloured_tile)
+    if (allocated(self%last_edge_cell_per_coloured_tile))  &
+                              deallocate(self%last_edge_cell_per_coloured_tile)
 
     return
   end subroutine clear

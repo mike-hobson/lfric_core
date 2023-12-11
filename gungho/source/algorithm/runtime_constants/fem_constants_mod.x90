@@ -775,8 +775,7 @@ contains
         call nodal_multiplicity_w2%initialise( vector_space = w2_fs )
 
         if ( label_list(i) == shifted_mesh_label .or. &
-             (label_list(i) == multigrid_mesh_label .and. .not. limited_area) .or. &
-             (label_list(i) == extra_mesh_label .and. .not. limited_area) ) then
+             (label_list(i) == multigrid_mesh_label .and. .not. limited_area) ) then
           ! Don't need to store nodal_rmultiplicity
           call invoke( setval_c(nodal_multiplicity_w2, 0.0_r_def),     &
                        multiplicity_kernel_type(nodal_multiplicity_w2) )

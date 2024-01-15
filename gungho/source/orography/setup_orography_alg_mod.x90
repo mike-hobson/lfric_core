@@ -146,9 +146,11 @@ contains
 
       ! We use a simple mapping from source to target meshes
       if (w0_orography_mapping) then
+
         call map_w0_intermesh(surface_altitude_list(i+1), &
                               source_surface_altitude)
       else
+
         call map_scalar_intermesh(surface_altitude_list(i+1), &
                                   source_surface_altitude)
       end if

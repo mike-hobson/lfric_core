@@ -9,28 +9,42 @@
 !>
 module skeleton_driver_mod
 
-  use base_mesh_config_mod,       only : prime_mesh_name
+  use add_mesh_map_mod,           only : assign_mesh_maps
   use calendar_mod,               only : calendar_type
   use checksum_alg_mod,           only : checksum_alg
   use constants_mod,              only : i_def, str_def, &
                                          r_def, r_second
   use convert_to_upper_mod,       only : convert_to_upper
+  use create_mesh_mod,            only : create_extrusion, create_mesh
   use driver_mesh_mod,            only : init_mesh
   use driver_modeldb_mod,         only : modeldb_type
   use driver_fem_mod,             only : init_fem, final_fem
   use driver_io_mod,              only : init_io, final_io
+  use extrusion_mod,              only : extrusion_type,         &
+                                         uniform_extrusion_type, &
+                                         PRIME_EXTRUSION, TWOD
   use field_collection_mod,       only : field_collection_type
   use field_mod,                  only : field_type
   use init_skeleton_mod,          only : init_skeleton
   use inventory_by_mesh_mod,      only : inventory_by_mesh_type
-  use io_config_mod,              only : write_diag
   use log_mod,                    only : log_event, log_scratch_space, &
-                                         LOG_LEVEL_ALWAYS, LOG_LEVEL_INFO
+                                         LOG_LEVEL_ALWAYS,             &
+                                         LOG_LEVEL_ERROR,              &
+                                         LOG_LEVEL_INFO
   use mesh_mod,                   only : mesh_type
   use mesh_collection_mod,        only : mesh_collection
   use model_clock_mod,            only : model_clock_type
   use mpi_mod,                    only : mpi_type
+  use namelist_mod,               only : namelist_type
+
   use skeleton_alg_mod,           only : skeleton_alg
+
+  !------------------------------------
+  ! Configuration modules
+  !------------------------------------
+  use base_mesh_config_mod, only: GEOMETRY_SPHERICAL, &
+                                  GEOMETRY_PLANAR
+  use io_config_mod,        only: write_diag
 
   implicit none
 
@@ -41,10 +55,10 @@ contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> Sets up required state in preparation for run.
-  !> @param [in]     program_name An identifier given to the model being run
+  !> @param [in]     program_name Identifier given to the model being run
   !> @param [in,out] modeldb      The structure that holds model state
   !> @param [in]     calendar     The model calendar
-    subroutine initialise( program_name, modeldb, calendar )
+  subroutine initialise( program_name, modeldb, calendar )
 
     implicit none
 
@@ -58,27 +72,115 @@ contains
     type(mesh_type),              pointer :: mesh => null()
     type(inventory_by_mesh_type)          :: chi_inventory
     type(inventory_by_mesh_type)          :: panel_id_inventory
-    character(str_def),       allocatable :: base_mesh_names(:)
 
-    !-------------------------------------------------------------------------
-    ! Model init
-    !-------------------------------------------------------------------------
+    character(str_def),    allocatable :: base_mesh_names(:)
+    character(str_def),    allocatable :: twod_names(:)
 
-    ! Create the mesh
+    class(extrusion_type),        allocatable :: extrusion
+    type(uniform_extrusion_type), allocatable :: extrusion_2d
+
+    type(namelist_type), pointer :: base_mesh_nml => null()
+    type(namelist_type), pointer :: planet_nml    => null()
+    type(namelist_type), pointer :: extrusion_nml => null()
+
+    character(str_def) :: prime_mesh_name
+
+    integer(i_def) :: stencil_depth
+    integer(i_def) :: geometry
+    integer(i_def) :: method
+    integer(i_def) :: number_of_layers
+    real(r_def)    :: domain_bottom
+    real(r_def)    :: domain_top
+    real(r_def)    :: scaled_radius
+    logical        :: apply_partition_check
+
+    integer(i_def) :: i
+    integer(i_def), parameter :: one_layer = 1_i_def
+
+    ! -------------------------------
+    ! 0.0 Extract namelist variables
+    ! -------------------------------
+    base_mesh_nml => modeldb%configuration%get_namelist('base_mesh')
+    planet_nml    => modeldb%configuration%get_namelist('planet')
+    extrusion_nml => modeldb%configuration%get_namelist('extrusion')
+    call base_mesh_nml%get_value( 'prime_mesh_name', prime_mesh_name )
+    call base_mesh_nml%get_value( 'geometry', geometry )
+    call extrusion_nml%get_value( 'method', method )
+    call extrusion_nml%get_value( 'domain_top', domain_top )
+    call extrusion_nml%get_value( 'number_of_layers', number_of_layers )
+    call planet_nml%get_value( 'scaled_radius', scaled_radius )
+    base_mesh_nml => null()
+    planet_nml    => null()
+    extrusion_nml => null()
+
+    !=======================================================================
+    ! 1.0 Mesh
+    !=======================================================================
+
+    !-----------------------------------------------------------------------
+    ! 1.1 Determine the required meshes
+    !-----------------------------------------------------------------------
     allocate(base_mesh_names(1))
     base_mesh_names(1) = prime_mesh_name
-    call init_mesh( modeldb%mpi%get_comm_rank(), &
-                    modeldb%mpi%get_comm_size(), &
-                    base_mesh_names )
 
+    !-----------------------------------------------------------------------
+    ! 1.2 Create the required extrusions
+    !-----------------------------------------------------------------------
+    select case (geometry)
+    case (GEOMETRY_PLANAR)
+      domain_bottom = 0.0_r_def
+    case (GEOMETRY_SPHERICAL)
+      domain_bottom = scaled_radius
+    case default
+      call log_event("Invalid geometry for mesh initialisation", &
+                      LOG_LEVEL_ERROR)
+    end select
+    allocate( extrusion, source=create_extrusion( method,           &
+                                                  domain_top,       &
+                                                  domain_bottom,    &
+                                                  number_of_layers, &
+                                                  PRIME_EXTRUSION ) )
+
+    extrusion_2d = uniform_extrusion_type( domain_bottom, &
+                                           domain_bottom, &
+                                           one_layer, TWOD )
+
+    !-----------------------------------------------------------------------
+    ! 1.3 Create the required meshes
+    !-----------------------------------------------------------------------
+    stencil_depth = 1
+    apply_partition_check = .false.
+    call init_mesh( modeldb%configuration,       &
+                    modeldb%mpi%get_comm_rank(), &
+                    modeldb%mpi%get_comm_size(), &
+                    base_mesh_names, extrusion,  &
+                    stencil_depth, apply_partition_check )
+
+    allocate( twod_names, source=base_mesh_names )
+    do i=1, size(twod_names)
+      twod_names(i) = trim(twod_names(i))//'_2d'
+    end do
+    call create_mesh( base_mesh_names, extrusion_2d, &
+                      alt_name=twod_names )
+    call assign_mesh_maps( twod_names )
+
+
+    !=======================================================================
+    ! 2.0 Build the FEM function spaces and coordinate fields
+    !=======================================================================
     ! Create FEM specifics (function spaces and chi field)
     call init_fem( mesh_collection, chi_inventory, panel_id_inventory )
 
+    !=======================================================================
+    ! 3.0 Setup I/O system.
+    !=======================================================================
     ! Initialise I/O context
     call init_io( program_name, modeldb%mpi%get_comm(), chi_inventory, &
                   panel_id_inventory, modeldb%clock, calendar )
 
-    ! Create and initialise prognostic fields
+    !=======================================================================
+    ! 4.0 Create and initialise prognostic fields
+    !=======================================================================
     mesh => mesh_collection%get_mesh(prime_mesh_name)
     call chi_inventory%get_field_array(mesh, chi)
     call panel_id_inventory%get_field(mesh, panel_id)

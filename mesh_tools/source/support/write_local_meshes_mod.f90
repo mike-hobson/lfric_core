@@ -12,12 +12,13 @@ module write_local_meshes_mod
   use calc_cell_centres_mod, only: calc_cell_centres_global_model, &
                                    calc_cell_centres_regional_model
 
-  use constants_mod,         only: i_def, r_def, str_def, &
-                                   str_max_filename,      &
-                                   radians_to_degrees,    &
-                                   degrees_to_radians
-  use log_mod,               only: log_event, log_scratch_space, &
-                                   LOG_LEVEL_INFO
+  use constants_mod, only: i_def, r_def, str_def, &
+                           str_max_filename,      &
+                           radians_to_degrees,    &
+                           degrees_to_radians
+  use log_mod,       only: log_event, log_scratch_space, &
+                           LOG_LEVEL_INFO
+  use query_mod,     only: valid_for_global_model
 
   ! Derived types
   use global_mesh_mod,                only: global_mesh_type
@@ -157,7 +158,7 @@ subroutine write_local_meshes( global_mesh_bank, &
       if (allocated(global_cell_coords)) deallocate(global_cell_coords)
       allocate(global_cell_coords(2,size(verts_on_cells,2)))
 
-      if ( .not. global_mesh_ptr%is_model_global() ) then
+      if ( .not. valid_for_global_model(global_mesh_ptr) ) then
         units_xy = global_mesh_ptr%get_coord_units()
 
         ! This is only required to calculated the cell centres for

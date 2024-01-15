@@ -7,37 +7,38 @@
 !!        and the shallow_water model simulation.
 module shallow_water_model_mod
 
+  use add_mesh_map_mod,               only: assign_mesh_maps
   use assign_orography_field_mod,     only: assign_orography_field
-  use base_mesh_config_mod,           only: prime_mesh_name
   use calendar_mod,                   only: calendar_type
   use check_configuration_mod,        only: get_required_stencil_depth
   use checksum_alg_mod,               only: checksum_alg
   use conservation_algorithm_mod,     only: conservation_algorithm
-  use constants_mod,                  only: i_def, str_def, &
+  use constants_mod,                  only: i_def, str_def, r_def, &
                                             PRECISION_REAL, l_def
   use convert_to_upper_mod,           only: convert_to_upper
+  use create_mesh_mod,                only: create_mesh, create_extrusion
   use derived_config_mod,             only: set_derived_config
   use driver_fem_mod,                 only: init_fem, final_fem
   use driver_io_mod,                  only: init_io, final_io, &
                                             filelist_populator
   use driver_modeldb_mod,             only: modeldb_type
   use driver_mesh_mod,                only: init_mesh
+  use extrusion_mod,                  only: extrusion_type,         &
+                                            uniform_extrusion_type, &
+                                            PRIME_EXTRUSION, TWOD
   use field_mod,                      only: field_type
   use field_parent_mod,               only: write_interface
   use field_collection_mod,           only: field_collection_type
   use geometric_constants_mod,        only: get_chi_inventory, &
                                             get_panel_id_inventory
   use inventory_by_mesh_mod,          only: inventory_by_mesh_type
-  use io_config_mod,                  only: use_xios_io,             &
-                                            write_conservation_diag, &
-                                            write_dump,              &
-                                            write_minmax_tseries
   use lfric_xios_file_mod,            only: lfric_xios_file_type
   use linked_list_mod,                only: linked_list_type
-  use log_mod,                        only: log_event,          &
-                                            log_set_level,      &
-                                            log_scratch_space,  &
-                                            LOG_LEVEL_INFO
+  use log_mod,                        only: log_event,         &
+                                            log_set_level,     &
+                                            log_scratch_space, &
+                                            LOG_LEVEL_INFO,    &
+                                            LOG_LEVEL_ERROR
   use mesh_collection_mod,            only: mesh_collection
   use mesh_mod,                       only: mesh_type
   use minmax_tseries_mod,             only: minmax_tseries,      &
@@ -45,11 +46,15 @@ module shallow_water_model_mod
                                             minmax_tseries_final
   use model_clock_mod,                only: model_clock_type
   use mpi_mod,                        only: mpi_type
+  use namelist_collection_mod,        only: namelist_collection_type
+  use namelist_mod,                   only: namelist_type
   use runtime_constants_mod,          only: create_runtime_constants
   use shallow_water_setup_io_mod,     only: init_shallow_water_files
-  use timestepping_config_mod,        only: dt, &
-                                            spinup_period
   use xios,                           only: xios_update_calendar
+
+  ! Configuration modules
+  use base_mesh_config_mod, only: GEOMETRY_PLANAR, &
+                                  GEOMETRY_SPHERICAL
 
   implicit none
 
@@ -62,34 +67,79 @@ module shallow_water_model_mod
   contains
 
   !=============================================================================
-  !> @brief Initialises the infrastructure and sets up constants used by the model.
-  !> @param[in]     program_name An identifier given to the model begin run
-  !> @param [out]   model_clock  Time within the model
-  !> @param [in]    mpi          Communication object
-  subroutine initialise_infrastructure(program_name, &
-                                       model_clock,  &
-                                       calendar,     &
-                                       mpi )
+  !> @brief Initialises the infrastructure and sets up constants used
+  !!        by the model.
+  !> @param[in]     configuration  Configuration object.
+  !> @param[in]     program_name   Identifier given to the model being run
+  !> @param[in,out] model_clock    Time within the model
+  !> @param[in]     mpi            Communication object
+  subroutine initialise_infrastructure( configuration, &
+                                        program_name,  &
+                                        model_clock,   &
+                                        calendar,      &
+                                        mpi )
 
     implicit none
+
+    type(namelist_collection_type), intent(in) :: configuration
 
     character(*),           intent(in)    :: program_name
     type(model_clock_type), intent(inout) :: model_clock
     class(calendar_type),   intent(in)    :: calendar
     class(mpi_type),        intent(inout) :: mpi
 
-    type(inventory_by_mesh_type),  pointer :: chi_inventory => null()
+    type(inventory_by_mesh_type),  pointer :: chi_inventory      => null()
     type(inventory_by_mesh_type),  pointer :: panel_id_inventory => null()
-    procedure(filelist_populator), pointer :: files_init_ptr => null()
+    procedure(filelist_populator), pointer :: files_init_ptr     => null()
 
     character(len=*),   parameter   :: io_context_name = "shallow_water"
-    character(str_def), allocatable :: base_mesh_names(:)
     logical(l_def)                  :: create_rdef_div_operators
+
+    character(str_def), allocatable :: base_mesh_names(:)
+    character(str_def), allocatable :: twod_names(:)
+
+    class(extrusion_type),        allocatable :: extrusion
+    type(uniform_extrusion_type), allocatable :: extrusion_2d
+
+    type(namelist_type), pointer :: base_mesh_nml => null()
+    type(namelist_type), pointer :: planet_nml    => null()
+    type(namelist_type), pointer :: extrusion_nml => null()
+
+    character(str_def) :: prime_mesh_name
+
+    integer(i_def) :: stencil_depth
+    integer(i_def) :: geometry
+    integer(i_def) :: method
+    integer(i_def) :: number_of_layers
+    real(r_def)    :: domain_bottom
+    real(r_def)    :: domain_top
+    real(r_def)    :: scaled_radius
+    logical        :: check_partitions
+
+    integer(i_def), parameter :: one_layer = 1_i_def
+    integer(i_def) :: i
+
+    !=======================================================================
+    ! 0.0 Extract configuration variables
+    !=======================================================================
+    base_mesh_nml => configuration%get_namelist('base_mesh')
+    planet_nml    => configuration%get_namelist('planet')
+    extrusion_nml => configuration%get_namelist('extrusion')
+
+    call base_mesh_nml%get_value( 'prime_mesh_name', prime_mesh_name )
+    call base_mesh_nml%get_value( 'geometry', geometry )
+    call extrusion_nml%get_value( 'method', method )
+    call extrusion_nml%get_value( 'domain_top', domain_top )
+    call extrusion_nml%get_value( 'number_of_layers', number_of_layers )
+    call planet_nml%get_value( 'scaled_radius', scaled_radius )
+
+    base_mesh_nml => null()
+    planet_nml    => null()
+    extrusion_nml => null()
 
     !-------------------------------------------------------------------------
     ! Initialise aspects of the infrastructure
     !-------------------------------------------------------------------------
-
     write(log_scratch_space,'(A)')                        &
         'Application built with '//trim(PRECISION_REAL)// &
         '-bit real numbers'
@@ -99,24 +149,70 @@ module shallow_water_model_mod
 
 
     !-------------------------------------------------------------------------
-    ! Work out which meshes are required
+    ! 1.0 Mesh
     !-------------------------------------------------------------------------
 
-    ! Always have just one base mesh with shifted version
+    !=======================================================================
+    ! 1.1 Determine the required meshes
+    !=======================================================================
+
+    ! Meshes that require a prime/2d extrusion
+    ! ---------------------------------------------------------
     allocate(base_mesh_names(1))
     base_mesh_names(1) = prime_mesh_name
 
-    !-------------------------------------------------------------------------
-    ! Initialise aspects of the grid
-    !-------------------------------------------------------------------------
+    !=======================================================================
+    ! 1.2 Generate required extrusions
+    !=======================================================================
 
-    ! TODO Stencil depth needs to be taken from configuration options
-    ! Create the mesh
-    call init_mesh( mpi%get_comm_rank(),  mpi%get_comm_size(), &
-                    base_mesh_names,                                         &
-                    required_stencil_depth = get_required_stencil_depth() )
+    ! Extrusions for prime/2d meshes
+    ! ---------------------------------------------------------
+    select case (geometry)
+    case (GEOMETRY_PLANAR)
+      domain_bottom = 0.0_r_def
+    case (GEOMETRY_SPHERICAL)
+      domain_bottom = scaled_radius
+    case default
+      call log_event("Invalid geometry for mesh initialisation", LOG_LEVEL_ERROR)
+    end select
 
-    ! Create FEM specifics (function spaces and chi field)
+    allocate( extrusion, source=create_extrusion( method,           &
+                                                  domain_top,       &
+                                                  domain_bottom,    &
+                                                  number_of_layers, &
+                                                  PRIME_EXTRUSION ) )
+
+    extrusion_2d = uniform_extrusion_type( domain_bottom, &
+                                           domain_bottom, &
+                                           one_layer, TWOD )
+
+
+    !=======================================================================
+    ! 1.3 Initialise mesh objects and assign InterGrid maps
+    !=======================================================================
+
+    ! Initialise prime/2d meshes
+    ! ---------------------------------------------------------
+    check_partitions = .false.
+    stencil_depth = get_required_stencil_depth()
+    call init_mesh( configuration,                &
+                    mpi%get_comm_rank(),          &
+                    mpi%get_comm_size(),          &
+                    base_mesh_names, extrusion,   &
+                    stencil_depth, check_partitions )
+
+
+    allocate( twod_names, source=base_mesh_names )
+    do i=1, size(twod_names)
+      twod_names(i) = trim(twod_names(i))//'_2d'
+    end do
+    call create_mesh( base_mesh_names, extrusion_2d, &
+                      alt_name=twod_names )
+    call assign_mesh_maps(twod_names)
+
+    !-------------------------------------------------------------------------
+    ! 2.0 Build the FEM function spaces and coordinate fields
+    !-------------------------------------------------------------------------
     chi_inventory => get_chi_inventory()
     panel_id_inventory => get_panel_id_inventory()
     call init_fem(mesh_collection, chi_inventory, panel_id_inventory)

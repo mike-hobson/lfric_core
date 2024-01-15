@@ -7,9 +7,10 @@
 !>
 module jedi_lfric_fake_nl_driver_mod
 
-  use base_mesh_config_mod,     only: prime_mesh_name
+  use add_mesh_map_mod,         only: assign_mesh_maps
   use checksum_alg_mod,         only: checksum_alg
-  use constants_mod,            only: str_def
+  use constants_mod,            only: str_def, i_def, l_def, r_def
+  use create_mesh_mod,          only: create_mesh
   use driver_model_data_mod,    only: model_data_type
   use driver_time_mod,          only: init_time, get_calendar
   use driver_mesh_mod,          only: init_mesh
@@ -22,13 +23,17 @@ module jedi_lfric_fake_nl_driver_mod
                                       initialise_da_model_data
   use log_mod,                  only: log_event,          &
                                       log_scratch_space,  &
-                                      LOG_LEVEL_ALWAYS,   &
-                                      LOG_LEVEL_INFO
+                                      LOG_LEVEL_ERROR
   use mesh_mod,                 only: mesh_type
   use mesh_collection_mod,      only: mesh_collection
-  use extrusion_mod,            only: extrusion_type, TWOD
+  use extrusion_mod,            only: extrusion_type,         &
+                                      uniform_extrusion_type, &
+                                      TWOD
   use model_clock_mod,          only: model_clock_type
   use mpi_mod,                  only: mpi_type
+  use namelist_collection_mod,  only: namelist_collection_type
+  use namelist_mod,             only: namelist_type
+
   use jedi_lfric_increment_alg_mod, &
                                 only: jedi_lfric_increment_alg
   !> @todo: Test code should not appear in the component
@@ -49,6 +54,12 @@ module jedi_lfric_fake_nl_driver_mod
   use lfric_xios_context_mod,   only: lfric_xios_context_type, advance
   use lfric_xios_write_mod,     only: write_state
 #endif
+
+  !------------------------------------
+  ! Configuration modules
+  !------------------------------------
+  use base_mesh_config_mod, only: GEOMETRY_SPHERICAL, &
+                                  GEOMETRY_PLANAR
 
   implicit none
 
@@ -72,23 +83,101 @@ contains
 
   !> @brief Initialise the model mesh, fem, clock, and IO
   !>
-  !> @param [inout] program_name The program name
-  !> @param [inout] mpi          The mpi communicator
-  subroutine initialise( program_name, mpi )
+  !> @param [in]    configuration Application configuration object
+  !> @param [inout] program_name  The program name
+  !> @param [inout] mpi           The mpi communicator
+  subroutine initialise( configuration, program_name, mpi )
 
     implicit none
+
+    type(namelist_collection_type) :: configuration
 
     character(len=*), intent(inout) :: program_name
     class(mpi_type),  intent(inout) :: mpi
 
-    class(extrusion_type), allocatable :: extrusion
-    character(str_def)                 :: base_mesh_names(1)
+    class(extrusion_type),        allocatable :: extrusion
+    type(uniform_extrusion_type), allocatable :: extrusion_2d
 
-    ! Create the mesh
-    allocate( extrusion, source=create_extrusion() )
+    character(str_def)              :: base_mesh_names(1)
+    character(str_def), allocatable :: twod_names(:)
+
+    character(str_def) :: prime_mesh_name
+
+    logical(l_def) :: apply_partition_check
+
+    integer(i_def) :: geometry
+    integer(i_def) :: stencil_depth
+    real(r_def)    :: domain_bottom
+    real(r_def)    :: domain_top
+    real(r_def)    :: scaled_radius
+
+    type(namelist_type), pointer :: base_mesh_nml => null()
+    type(namelist_type), pointer :: extrusion_nml => null()
+    type(namelist_type), pointer :: planet_nml    => null()
+
+    integer(i_def) :: i
+    integer(i_def), parameter :: one_layer = 1_i_def
+
+    !--------------------------------------
+    ! 0.0 Extract namelist variables
+    !--------------------------------------
+    base_mesh_nml => configuration%get_namelist('base_mesh')
+    planet_nml    => configuration%get_namelist('planet')
+    extrusion_nml => configuration%get_namelist('extrusion')
+
+    call base_mesh_nml%get_value( 'prime_mesh_name', prime_mesh_name )
+    call base_mesh_nml%get_value( 'geometry', geometry )
+    call extrusion_nml%get_value( 'domain_top', domain_top )
+    call planet_nml%get_value( 'scaled_radius', scaled_radius )
+
+    base_mesh_nml => null()
+    planet_nml    => null()
+    extrusion_nml => null()
+
+    !--------------------------------------
+    ! 1.0 Create the meshes
+    !--------------------------------------
     base_mesh_names(1) = prime_mesh_name
-    call init_mesh( mpi%get_comm_rank(), mpi%get_comm_size(), &
-                    base_mesh_names, input_extrusion = extrusion )
+
+    !--------------------------------------
+    ! 1.1 Create the required extrusions
+    !--------------------------------------
+    select case (geometry)
+    case (geometry_planar)
+      domain_bottom = 0.0_r_def
+    case (geometry_spherical)
+      domain_bottom = scaled_radius
+    case default
+      call log_event("Invalid geometry for mesh initialisation", LOG_LEVEL_ERROR)
+    end select
+
+    allocate( extrusion, source=create_extrusion() )
+    extrusion_2d = uniform_extrusion_type( domain_top,    &
+                                           domain_bottom, &
+                                           one_layer, TWOD )
+
+
+    !-------------------------------------------------------------------------
+    ! 1.2 Create the required meshes
+    !-------------------------------------------------------------------------
+    stencil_depth = 1
+    apply_partition_check = .false.
+    call init_mesh( configuration,       &
+                    mpi%get_comm_rank(), &
+                    mpi%get_comm_size(), &
+                    base_mesh_names,     &
+                    extrusion,           &
+                    stencil_depth,       &
+                    apply_partition_check )
+
+    allocate( twod_names, source=base_mesh_names )
+    do i=1, size(twod_names)
+      twod_names(i) = trim(twod_names(i))//'_2d'
+    end do
+    call create_mesh( base_mesh_names, extrusion_2d, &
+                      alt_name=twod_names )
+    call assign_mesh_maps(twod_names)
+
 
     ! Create FEM specifics (function spaces and chi field)
     call init_fem( mesh_collection, chi_inventory, panel_id_inventory )

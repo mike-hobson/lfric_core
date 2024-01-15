@@ -44,7 +44,7 @@ export MESH_PSYCLONE_TRANSFORMATION ?= none
 export PROJECT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 export ROOT_DIR    ?= ..
 
-export INTERNAL_DEPENDENCIES = $(ROOT_DIR)/infrastructure
+export INTERNAL_DEPENDENCIES = $(ROOT_DIR)/infrastructure $(ROOT_DIR)/components/science
 
 export SUITE_GROUP ?= developer
 export SUITE_GROUP_NAME ?= $(notdir $(realpath $(shell pwd)/$(ROOT_DIR)))-$(PROJECT_NAME)-.*
@@ -137,7 +137,7 @@ build: ALWAYS
 ##############################################################################
 # Unit tests
 #
-unit-tests/%: export ADDITIONAL_EXTRACTION = $(ROOT_DIR)/infrastructure/source
+unit-tests/%: export ADDITIONAL_EXTRACTION = $(ROOT_DIR)/infrastructure/source $(ROOT_DIR)/components/science
 unit-tests/%: export BIN_DIR       ?= $(PROJECT_DIR)/test
 unit-tests/%: export META_FILE_DIR  = rose-meta/lfric-mesh_tools/HEAD
 unit-tests/%: export PROGRAMS       = mesh_tools_unit_tests

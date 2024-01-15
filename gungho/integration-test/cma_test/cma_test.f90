@@ -29,9 +29,10 @@ program cma_test
                                              test_cma_add,                   &
                                              test_cma_apply_inv,             &
                                              test_cma_diag_DhMDhT
-  use constants_mod,                  only : i_def, r_def, i_def, &
+  use constants_mod,                  only : i_def, r_def, i_def, l_def, &
                                              r_solver, pi, str_def
   use derived_config_mod,             only : set_derived_config
+  use extrusion_mod,                  only : extrusion_type
   use mpi_mod,                        only : global_mpi, &
                                              create_comm, destroy_comm
   use field_mod,                      only : field_type
@@ -43,11 +44,12 @@ program cma_test
                                              ensure_configuration
   use driver_collections_mod,         only : init_collections, final_collections
   use driver_mesh_mod,                only : init_mesh
-  use log_mod,                        only : log_event,         &
-                                             log_scratch_space, &
+  use gungho_extrusion_mod,           only : create_extrusion
+  use log_mod,                        only : log_event,          &
+                                             log_scratch_space,  &
                                              initialise_logging, &
-                                             finalise_logging, &
-                                             LOG_LEVEL_ERROR,   &
+                                             finalise_logging,   &
+                                             LOG_LEVEL_ERROR,    &
                                              LOG_LEVEL_INFO
   use mesh_mod,                       only : mesh_type
   use mesh_collection_mod,            only : mesh_collection
@@ -99,6 +101,8 @@ program cma_test
   logical, allocatable :: success_map(:)
   integer :: i
 
+  class(extrusion_type), allocatable :: extrusion
+
   ! Flags which determine the tests that will be carried out
   logical :: do_test_apply_mass_p = .false.
   logical :: do_test_apply_mass_v = .false.
@@ -113,9 +117,13 @@ program cma_test
   type(namelist_collection_type), save :: configuration
   type(namelist_type), pointer         :: nml_obj => null()
 
+  integer(i_def)     :: stencil_depth
+  character(str_def) :: file_prefix
   character(str_def) :: prime_mesh_name
   real(r_def)        :: radius
   integer(i_def)     :: geometry
+  logical(l_def)     :: prepartitioned
+  logical            :: check_partitions = .false.
 
   ! Error tolerance for tests
   ! Note: tolerance is for r_solver = real64
@@ -245,6 +253,8 @@ program cma_test
 
   if (configuration%namelist_exists('base_mesh')) then
     nml_obj => configuration%get_namelist('base_mesh')
+    call nml_obj%get_value( 'file_prefix', file_prefix )
+    call nml_obj%get_value( 'prepartitioned', prepartitioned )
     call nml_obj%get_value( 'geometry', geometry )
     call nml_obj%get_value( 'prime_mesh_name', prime_mesh_name )
   end if
@@ -256,8 +266,14 @@ program cma_test
   call log_event( 'Initialising harness', LOG_LEVEL_INFO )
 
   base_mesh_names(1) = prime_mesh_name
-  call init_mesh( local_rank, total_ranks, base_mesh_names, &
-                  required_stencil_depth=get_required_stencil_depth() )
+  allocate( extrusion, source=create_extrusion() )
+
+  stencil_depth = get_required_stencil_depth()
+  check_partitions = .false.
+  call init_mesh( configuration,              &
+                  local_rank, total_ranks,    &
+                  base_mesh_names, extrusion, &
+                  stencil_depth, check_partitions )
 
   ! Work out grid spacing, which should be of order 1
   mesh => mesh_collection%get_mesh(prime_mesh_name)

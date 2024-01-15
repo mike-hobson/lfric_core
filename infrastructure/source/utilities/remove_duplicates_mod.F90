@@ -54,7 +54,7 @@ function get_unique_int_array(array_in) result(array_out)
   do i=1, n_entries
     if (array_in(i) == imdi) exit
     do j=1, n_uniques
-      if (array_in(i) == unique_list(j)) then
+      if ( array_in(i) == unique_list(j) ) then
         exit
       else
         if (j == n_uniques) then
@@ -69,6 +69,10 @@ function get_unique_int_array(array_in) result(array_out)
   allocate(array_out(n_uniques))
   array_out(:) = unique_list(1:n_uniques)
 
+  ! Check that if there is only 1 unique item, it isn't imdi
+  if ( size(array_out) == 1 ) then
+    if (array_out(1) == imdi) deallocate(array_out)
+  end if
   if (allocated(unique_list)) deallocate (unique_list)
   return
 end function get_unique_int_array
@@ -97,7 +101,9 @@ function get_unique_char_array(array_in) result(array_out)
   do i=1, n_entries
     if (array_in(i) == '') exit
     do j=1, n_uniques
-      if (array_in(i) == unique_list(j)) then
+      if ( array_in(i) == unique_list(j) .or. &
+           array_in(i) == '' .or.             &
+           trim(array_in(i)) == trim(cmdi) ) then
         exit
       else
         if (j == n_uniques) then
@@ -111,6 +117,15 @@ function get_unique_char_array(array_in) result(array_out)
   if (allocated(array_out)) deallocate(array_out)
   allocate(array_out(n_uniques))
   array_out(:) = unique_list(1:n_uniques)
+
+  ! Check that if there is only 1 unique item
+  ! it isn't cmdi or empty
+  if ( size(array_out) == 1 ) then
+    if ( array_out(1) == cmdi .or. &
+         array_out(1) == '' ) then
+       deallocate(array_out)
+    end if
+  end if
 
   if (allocated(unique_list)) deallocate (unique_list)
   return

@@ -66,8 +66,8 @@ contains
     class(calendar_type), intent(in)    :: calendar
 
     ! Initialise infrastructure (from shallow_water_model_mod.F90) and setup constants
-    call initialise_infrastructure( program_name, modeldb%clock, &
-                                    calendar, modeldb%mpi )
+    call initialise_infrastructure( modeldb%configuration, program_name, &
+                                    modeldb%clock, calendar, modeldb%mpi )
 
     !-------------------------------------------------------------------------
     ! Setup constants

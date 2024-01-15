@@ -5,19 +5,22 @@
 ! *****************************COPYRIGHT*******************************
 MODULE lfricinp_lfric_driver_mod
 
-USE constants_mod,              ONLY: i_def, imdi, r_second, str_def
+USE constants_mod,              ONLY: i_def, r_def, l_def, r_second, str_def
 USE log_mod,                    ONLY: log_event, log_scratch_space,            &
                                       LOG_LEVEL_INFO, LOG_LEVEL_ERROR,         &
                                       LOG_LEVEL_ALWAYS
 
 ! LFRic Modules
-USE base_mesh_config_mod,       ONLY: prime_mesh_name
+USE add_mesh_map_mod,           ONLY: assign_mesh_maps
+USE create_mesh_mod,            ONLY: create_mesh
 USE driver_collections_mod,     ONLY: init_collections, final_collections
 USE driver_mesh_mod,            ONLY: init_mesh
 USE driver_fem_mod,             ONLY: init_fem
 USE driver_log_mod,             ONLY: init_logger, final_logger
 USE derived_config_mod,         ONLY: set_derived_config
-USE extrusion_mod,              ONLY: extrusion_type, TWOD
+USE extrusion_mod,              ONLY: extrusion_type,         &
+                                      uniform_extrusion_type, &
+                                      TWOD
 USE field_collection_mod,       ONLY: field_collection_type
 USE field_mod,                  ONLY: field_type
 USE geometric_constants_mod,    ONLY: get_chi_inventory, get_panel_id_inventory
@@ -34,16 +37,19 @@ USE linked_list_mod,            ONLY: linked_list_type
 USE mesh_mod,                   ONLY: mesh_type
 USE mesh_collection_mod,        ONLY: mesh_collection
 USE namelist_collection_mod,    ONLY: namelist_collection_type
+USE namelist_mod,               ONLY: namelist_type
 USE lfricinp_runtime_constants_mod, ONLY: lfricinp_create_runtime_constants
 USE step_calendar_mod,          ONLY: step_calendar_type
 
 ! Interface to mpi
 USE mpi_mod,                    ONLY: global_mpi, create_comm, destroy_comm
 
+! Configuration modules
+USE base_mesh_config_mod,       ONLY: geometry_spherical, &
+                                      geometry_planar
+
 ! lfricinp modules
 USE lfricinp_um_parameters_mod, ONLY: fnamelen
-
-USE namelist_collection_mod,    ONLY: namelist_collection_type
 
 IMPLICIT NONE
 
@@ -94,18 +100,38 @@ INTEGER(KIND=i_def), INTENT(IN) :: first_step, last_step
 REAL(r_second),      INTENT(IN) :: spinup_period
 REAL(r_second),      INTENT(IN) :: seconds_per_step
 
-CHARACTER(len=str_def),   ALLOCATABLE :: base_mesh_names(:)
-CLASS(extrusion_type),    ALLOCATABLE :: extrusion
 TYPE(step_calendar_type), ALLOCATABLE :: model_calendar
 TYPE(linked_list_type),   POINTER     :: file_list => null()
-
-TYPE(namelist_collection_type), SAVE :: configuration
 
 TYPE(field_type), POINTER :: chi(:) => null()
 TYPE(field_type), POINTER :: panel_id => null()
 TYPE(inventory_by_mesh_type), POINTER :: chi_inventory => null()
 TYPE(inventory_by_mesh_type), POINTER :: panel_id_inventory => null()
 PROCEDURE(callback_clock_arg), POINTER :: before_close => null()
+
+
+TYPE(namelist_collection_type), SAVE :: configuration
+
+TYPE(namelist_type), POINTER :: base_mesh_nml => null()
+TYPE(namelist_type), POINTER :: planet_nml    => null()
+
+CLASS(extrusion_type),        ALLOCATABLE :: extrusion
+TYPE(uniform_extrusion_type), ALLOCATABLE :: extrusion_2d
+CHARACTER(str_def),           ALLOCATABLE :: base_mesh_names(:)
+CHARACTER(str_def),           ALLOCATABLE :: twod_names(:)
+
+INTEGER(i_def), PARAMETER :: one_layer = 1_i_def
+INTEGER(i_def) :: i
+
+CHARACTER(str_def) :: prime_mesh_name
+
+INTEGER(i_def) :: stencil_depth
+INTEGER(i_def) :: geometry
+REAL(r_def)    :: domain_bottom
+REAL(r_def)    :: scaled_radius
+LOGICAL(l_def) :: check_partitions
+
+!=====================================================================
 
 ! Set module variables
 program_name = program_name_arg
@@ -136,8 +162,8 @@ CALL init_logger( comm, program_name )
 
 CALL init_collections()
 
-WRITE(log_scratch_space, '(2(A,I0))') 'total ranks = ', total_ranks,           &
-                            ', local_rank = ', local_rank
+WRITE(log_scratch_space, '(2(A,I0))') 'total ranks = ', total_ranks, &
+                         ', local_rank = ', local_rank
 CALL log_event(log_scratch_space, LOG_LEVEL_INFO)
 
 ! Sets variables used interally by the LFRic infrastructure.
@@ -145,15 +171,63 @@ CALL set_derived_config( .TRUE. )
 
 CALL log_event('Initialising mesh', LOG_LEVEL_INFO)
 
-! Generate prime mesh extrusion
-ALLOCATE(extrusion, source=create_extrusion())
+! -------------------------------
+! 0.0 Extract namelist variables
+! -------------------------------
+base_mesh_nml => configuration%get_namelist('base_mesh')
+planet_nml    => configuration%get_namelist('planet')
+CALL base_mesh_nml%get_value( 'prime_mesh_name', prime_mesh_name )
+CALL base_mesh_nml%get_value( 'geometry', geometry )
+CALL planet_nml%get_value( 'scaled_radius', scaled_radius )
+base_mesh_nml => null()
+planet_nml    => null()
+
+!-------------------------------------------------------------------------
+! 1.0 Create the meshes
+!-------------------------------------------------------------------------
 ALLOCATE(base_mesh_names(1))
-
 base_mesh_names(1) = prime_mesh_name
-CALL init_mesh(local_rank, total_ranks, base_mesh_names, &
-               input_extrusion=extrusion)
 
-! Create FEM specifics (function spaces and chi field)
+!-------------------------------------------------------------------------
+! 1.1 Create the required extrusions
+!-------------------------------------------------------------------------
+SELECT CASE ( geometry )
+CASE ( GEOMETRY_PLANAR )
+  domain_bottom = 0.0_r_def
+CASE ( GEOMETRY_SPHERICAL )
+  domain_bottom = scaled_radius
+CASE default
+  CALL log_event( "Invalid geometry for mesh initialisation", &
+                  LOG_LEVEL_ERROR )
+END SELECT
+
+ALLOCATE( extrusion, source=create_extrusion() )
+extrusion_2d = uniform_extrusion_type( domain_bottom, &
+                                       domain_bottom, &
+                                       one_layer, TWOD )
+
+ALLOCATE( twod_names, source=base_mesh_names )
+do i=1, size(twod_names)
+  twod_names(i) = TRIM(twod_names(i))//'_2d'
+end do
+
+!-------------------------------------------------------------------------
+! 1.2 Create the required meshes
+!-------------------------------------------------------------------------
+stencil_depth = 1_i_def
+check_partitions = .false.
+CALL init_mesh( configuration,              &
+                local_rank, total_ranks,    &
+                base_mesh_names, extrusion, &
+                stencil_depth, check_partitions )
+
+CALL create_mesh( base_mesh_names, extrusion_2d, &
+                  alt_name=twod_names )
+CALL assign_mesh_maps( twod_names )
+
+!-------------------------------------------------------------------------
+! 2.0 Create FEM specifics (function spaces and chi field)
+!-------------------------------------------------------------------------
 CALL log_event('Creating function spaces and chi', LOG_LEVEL_INFO)
 chi_inventory => get_chi_inventory()
 panel_id_inventory => get_panel_id_inventory()

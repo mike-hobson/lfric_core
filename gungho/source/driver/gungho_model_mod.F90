@@ -8,7 +8,7 @@
 !>
 module gungho_model_mod
 
-  use base_mesh_config_mod,       only : prime_mesh_name
+  use add_mesh_map_mod,           only : assign_mesh_maps
   use calendar_mod,               only : calendar_type
   use checksum_alg_mod,           only : checksum_alg
   use driver_fem_mod,             only : init_fem, final_fem, &
@@ -23,30 +23,25 @@ module gungho_model_mod
   use constants_mod,              only : i_def, r_def, l_def, &
                                          PRECISION_REAL, r_second, str_def
   use convert_to_upper_mod,       only : convert_to_upper
-  use derived_config_mod,         only : set_derived_config
-  use extrusion_mod,              only : extrusion_type, TWOD, &
-                                         SHIFTED, DOUBLE_LEVEL
+  use create_gungho_prognostics_mod, only : &
+                                         enable_gungho_prognostics
+  use create_lbcs_mod,            only : enable_lbc_fields
+  use create_mesh_mod,            only : create_mesh
+  use create_physics_prognostics_mod, only : &
+                                         process_physics_prognostics
+  use derived_config_mod,         only : set_derived_config, l_esm_couple
+  use extrusion_mod,              only : extrusion_type,              &
+                                         uniform_extrusion_type,      &
+                                         shifted_extrusion_type,      &
+                                         double_level_extrusion_type, &
+                                         TWOD, SHIFTED, DOUBLE_LEVEL
   use field_array_mod,            only : field_array_type
   use field_mod,                  only : field_type
+  use field_spec_mod,             only : field_spec_type, processor_type
   use field_parent_mod,           only : write_interface
   use field_collection_mod,       only : field_collection_type
-  use field_spec_mod,             only : field_spec_type, processor_type
+
   use lfric_xios_diag_mod,        only : set_variable
-  use create_gungho_prognostics_mod, &
-                                  only : enable_gungho_prognostics
-  use boundaries_config_mod,      only : limited_area
-  use create_lbcs_mod,            only : enable_lbc_fields
-  use create_physics_prognostics_mod, &
-                                  only : process_physics_prognostics
-  use multigrid_config_mod,       only : chain_mesh_tags
-  use multires_coupling_config_mod, &
-                                  only : multires_coupling_mesh_tags, &
-                                         orography_mesh_name
-  use formulation_config_mod,     only : l_multigrid,              &
-                                         moisture_formulation,     &
-                                         moisture_formulation_dry, &
-                                         use_physics,              &
-                                         use_multires_coupling
   use geometric_constants_mod,    only : get_chi_inventory, get_panel_id_inventory
   use gungho_extrusion_mod,       only : create_extrusion
   use gungho_modeldb_mod,         only : modeldb_type
@@ -55,14 +50,6 @@ module gungho_model_mod
                                   only : gungho_transport_control_alg_final
   use init_altitude_mod,          only : init_altitude
   use inventory_by_mesh_mod,      only : inventory_by_mesh_type
-  use io_config_mod,              only : use_xios_io,             &
-                                         write_conservation_diag, &
-                                         write_dump,              &
-                                         write_minmax_tseries,    &
-                                         checkpoint_read,         &
-                                         checkpoint_write
-  use initialization_config_mod,  only : init_option,             &
-                                         init_option_checkpoint_dump
   use lfric_xios_context_mod,     only : lfric_xios_context_type
   use lfric_xios_metafile_mod,    only : metafile_type, add_field
   use linked_list_mod,            only : linked_list_type
@@ -82,7 +69,9 @@ module gungho_model_mod
   use moisture_conservation_alg_mod, &
                                   only : moisture_conservation_alg
   use namelist_collection_mod,    only : namelist_collection_type
+  use namelist_mod,               only : namelist_type
   use mr_indices_mod,             only : nummr
+  use remove_duplicates_mod,      only : remove_duplicates
   use rk_alg_timestep_mod,        only : rk_alg_init, &
                                          rk_alg_final
   use runtime_constants_mod,      only : create_runtime_constants, &
@@ -90,19 +79,7 @@ module gungho_model_mod
   use semi_implicit_timestep_alg_mod, &
                                   only : semi_implicit_alg_init, &
                                          semi_implicit_alg_final
-  use section_choice_config_mod,  only : radiation,              &
-                                         radiation_socrates,     &
-                                         surface, surface_jules, &
-                                         stochastic_physics,     &
-                                         stochastic_physics_none
   use setup_orography_alg_mod,    only : setup_orography_alg
-  use time_config_mod,            only : timestep_end, timestep_start
-  use timestepping_config_mod,    only : dt,                     &
-                                         method,                 &
-                                         method_semi_implicit,   &
-                                         method_rk,              &
-                                         method_no_timestepping, &
-                                         spinup_period
   use derived_config_mod,         only : l_esm_couple
 #ifdef COUPLED
   use coupler_mod,                only : cpl_define, cpl_fields
@@ -158,7 +135,14 @@ contains
   !> @param[in]   self      Persistor object
   !> @param[in]   clock     Model clock
   subroutine persistor_init(self, clock)
+
+    use initialization_config_mod, only: init_option, &
+                                         init_option_checkpoint_dump
+    use io_config_mod,             only: checkpoint_read, &
+                                         checkpoint_write
+
     implicit none
+
     class(persistor_type),       intent(inout) :: self
     class(clock_type), target,   intent(in)    :: clock
 
@@ -178,7 +162,14 @@ contains
   !> @param[in]   self      Persistor object
   !> @param[in]   spec      Field specifier
   subroutine persistor_apply(self, spec)
+
+    use initialization_config_mod, only: init_option, &
+                                         init_option_checkpoint_dump
+    use io_config_mod,             only: checkpoint_read, &
+                                         checkpoint_write
+
     implicit none
+
     class(persistor_type), intent(in) :: self
     type(field_spec_type), intent(in) :: spec
 
@@ -208,8 +199,11 @@ contains
   !>        set up scaled diagnostics fields
   !> @param[in] clock        The clock providing access to time information
   subroutine before_context_close(clock)
+
     use multidata_field_dimensions_mod, only: sync_multidata_field_dimensions
-    use time_dimensions_mod, only: sync_time_dimensions
+    use time_dimensions_mod,            only: sync_time_dimensions
+    use boundaries_config_mod,          only: limited_area
+    use formulation_config_mod,         only: use_physics
 
     implicit none
     class(clock_type), intent(in) :: clock
@@ -236,6 +230,15 @@ contains
   !> axis dimensions are being synched.
   !> @param[in] model_clock     The clock providing access to time information
   subroutine basic_initialisations(model_clock)
+
+#ifdef UM_PHYSICS
+    use formulation_config_mod,     only: use_physics
+    use section_choice_config_mod,  only: radiation,          &
+                                          radiation_socrates, &
+                                          surface,            &
+                                          surface_jules
+#endif
+
     implicit none
 
     class(model_clock_type), intent(inout) :: model_clock
@@ -284,15 +287,19 @@ contains
   !> @param [in,out] modeldb   The working data set for the model run
   !> @param [in]     calendar  Calendar object
   !>
-  subroutine initialise_infrastructure( modeldb,  &
+  subroutine initialise_infrastructure( modeldb, &
                                         calendar )
 
-    use logging_config_mod, only: key_from_run_log_level, &
-                                  RUN_LOG_LEVEL_ERROR,    &
-                                  RUN_LOG_LEVEL_INFO,     &
-                                  RUN_LOG_LEVEL_DEBUG,    &
-                                  RUN_LOG_LEVEL_TRACE,    &
-                                  RUN_LOG_LEVEL_WARNING
+    use base_mesh_config_mod, only: GEOMETRY_PLANAR, &
+                                    GEOMETRY_SPHERICAL
+
+    use section_choice_config_mod, only: stochastic_physics, &
+                                         stochastic_physics_none
+#ifdef UM_PHYSICS
+    use formulation_config_mod,    only: use_physics
+    use section_choice_config_mod, only: radiation, &
+                                         radiation_socrates
+#endif
 
     implicit none
 
@@ -301,45 +308,118 @@ contains
 
     character(len=*), parameter :: io_context_name = "gungho_atm"
 
-    type(mesh_type), pointer :: mesh => null()
-    type(mesh_type), pointer :: shifted_mesh => null()
-    type(mesh_type), pointer :: double_level_mesh => null()
-    type(mesh_type), pointer :: twod_mesh => null()
+    type(mesh_type), pointer :: mesh                => null()
+    type(mesh_type), pointer :: shifted_mesh        => null()
+    type(mesh_type), pointer :: double_level_mesh   => null()
+    type(mesh_type), pointer :: twod_mesh           => null()
     type(mesh_type), pointer :: orography_twod_mesh => null()
-    type(mesh_type), pointer :: orography_mesh => null()
+    type(mesh_type), pointer :: orography_mesh      => null()
 
     procedure(filelist_populator), pointer :: files_init_ptr => null()
 
     type(field_type) :: surface_altitude
 
-    class(extrusion_type), allocatable :: extrusion
+    class(extrusion_type),        allocatable :: extrusion
+    type(uniform_extrusion_type), allocatable :: extrusion_2d
 
-    type(field_type),     pointer :: chi(:) => null()
+    type(shifted_extrusion_type),      allocatable :: extrusion_shifted
+    type(double_level_extrusion_type), allocatable :: extrusion_double
+
+    type(field_type), pointer :: chi(:) => null()
 
 #ifdef COUPLED
-    type( field_collection_type ), pointer :: depository => null()
+    type(field_collection_type),  pointer :: depository         => null()
 #endif
-
-    type(inventory_by_mesh_type), pointer :: chi_inventory => null()
+    type(inventory_by_mesh_type), pointer :: chi_inventory      => null()
     type(inventory_by_mesh_type), pointer :: panel_id_inventory => null()
 
     logical(l_def)                  :: mesh_already_exists
-    integer(i_def)                  :: i, j, mesh_ctr, max_num_meshes
+    integer(i_def)                  :: i, j, mesh_ctr
     character(str_def), allocatable :: base_mesh_names(:)
-    character(str_def), allocatable :: shifted_mesh_names(:)
-    character(str_def), allocatable :: double_level_mesh_names(:)
+    character(str_def), allocatable :: meshes_to_shift(:)
+    character(str_def), allocatable :: meshes_to_double(:)
     character(str_def), allocatable :: tmp_mesh_names(:)
     character(str_def), allocatable :: extra_io_mesh_names(:)
     logical(l_def)                  :: create_rdef_div_operators
+
+    character(str_def), allocatable :: chain_mesh_tags(:)
+    character(str_def), allocatable :: multires_coupling_mesh_tags(:)
+    character(str_def), allocatable :: twod_names(:)
+    character(str_def), allocatable :: shifted_names(:)
+    character(str_def), allocatable :: double_names(:)
+
+    character(str_def), allocatable :: meshes_to_check(:)
 
 #ifdef UM_PHYSICS
     integer(i_def) :: ncells
 #endif
 
-    !-------------------------------------------------------------------------
-    ! Initialise aspects of the infrastructure
-    !-------------------------------------------------------------------------
+    integer :: start_index, end_index
 
+    character(str_def) :: prime_mesh_name
+    character(str_def) :: orography_mesh_name
+
+    logical(l_def) :: use_multires_coupling
+    logical(l_def) :: l_multigrid
+    logical(l_def) :: prepartitioned
+    logical(l_def) :: apply_partition_check
+
+    integer(i_def) :: geometry
+    integer(i_def) :: stencil_depth
+    real(r_def)    :: domain_bottom
+    real(r_def)    :: domain_top
+    real(r_def)    :: scaled_radius
+
+    type(namelist_type), pointer :: base_mesh_nml   => null()
+    type(namelist_type), pointer :: formulation_nml => null()
+    type(namelist_type), pointer :: extrusion_nml   => null()
+    type(namelist_type), pointer :: planet_nml      => null()
+    type(namelist_type), pointer :: multigrid_nml   => null()
+    type(namelist_type), pointer :: multires_coupling_nml => null()
+
+    integer(i_def), parameter :: one_layer = 1_i_def
+
+    !=======================================================================
+    ! 0.0 Extract configuration variables
+    !=======================================================================
+    base_mesh_nml   => modeldb%configuration%get_namelist('base_mesh')
+    formulation_nml => modeldb%configuration%get_namelist('formulation')
+    extrusion_nml   => modeldb%configuration%get_namelist('extrusion')
+    planet_nml      => modeldb%configuration%get_namelist('planet')
+
+    call formulation_nml%get_value( 'l_multigrid', l_multigrid )
+    call formulation_nml%get_value( 'use_multires_coupling', &
+                                    use_multires_coupling )
+
+    if ( use_multires_coupling ) then
+      multires_coupling_nml => modeldb%configuration%get_namelist('multires_coupling')
+      call multires_coupling_nml%get_value( 'multires_coupling_mesh_tags', &
+                                            multires_coupling_mesh_tags )
+      call multires_coupling_nml%get_value( 'orography_mesh_name', &
+                                            orography_mesh_name )
+      multires_coupling_nml => null()
+    end if
+
+    if ( l_multigrid ) then
+      multigrid_nml => modeldb%configuration%get_namelist('multigrid')
+      call multigrid_nml%get_value( 'chain_mesh_tags', chain_mesh_tags )
+      multigrid_nml => null()
+    end if
+
+    call base_mesh_nml%get_value( 'prime_mesh_name', prime_mesh_name )
+    call base_mesh_nml%get_value( 'geometry', geometry )
+    call base_mesh_nml%get_value( 'prepartitioned', prepartitioned )
+    call extrusion_nml%get_value( 'domain_top', domain_top )
+    call planet_nml%get_value( 'scaled_radius', scaled_radius )
+
+    base_mesh_nml   => null()
+    extrusion_nml   => null()
+    formulation_nml => null()
+    planet_nml      => null()
+
+    !-------------------------------------------------------------------------
+    ! Initialise infrastructure
+    !-------------------------------------------------------------------------
     write(log_scratch_space,'(A)')                        &
         'Application built with '//trim(PRECISION_REAL)// &
         '-bit real numbers'
@@ -347,72 +427,49 @@ contains
 
     call set_derived_config( .true. )
 
-    !-------------------------------------------------------------------------
-    ! Work out which meshes are required
-    !-------------------------------------------------------------------------
+    !=======================================================================
+    ! 1.1 Determine the required meshes
+    !=======================================================================
 
-    ! Gather together names of meshes
-    max_num_meshes = 1
-    if ( l_multigrid ) max_num_meshes = max_num_meshes + SIZE(chain_mesh_tags)
-    if ( use_multires_coupling ) max_num_meshes = max_num_meshes + SIZE(multires_coupling_mesh_tags)
-    ! Don't know the full number of meshes, so allocate maximum for now
-    allocate(tmp_mesh_names(max_num_meshes))
+    ! 1.1a Meshes that require a prime/2d extrusion
+    ! ---------------------------------------------------------
+    if ( allocated(tmp_mesh_names) ) deallocate(tmp_mesh_names)
 
-    ! Prime extrusions -------------------------------------------------------
-    ! Always have the prime mesh
-    mesh_ctr = 1
+    allocate( tmp_mesh_names(100) )
+    tmp_mesh_names(:) = ''
     tmp_mesh_names(1) = prime_mesh_name
-    ! Multigrid meshes
+    start_index = 2
+
     if ( l_multigrid ) then
-      do i = 1, SIZE(chain_mesh_tags)
-        ! Only add mesh if it has not already been added
-        mesh_already_exists = .false.
-        do j = 1, mesh_ctr
-          if ( tmp_mesh_names(j) == chain_mesh_tags(i) ) then
-            mesh_already_exists = .true.
-            exit
-          end if
-        end do
-        if ( .not. mesh_already_exists ) then
-          mesh_ctr = mesh_ctr + 1
-          tmp_mesh_names(mesh_ctr) = chain_mesh_tags(i)
-        end if
-      end do
-    end if
-    ! Multires coupling meshes
-    if ( use_multires_coupling ) then
-      do i = 1, SIZE(multires_coupling_mesh_tags)
-        ! Only add mesh if it has not already been added
-        mesh_already_exists = .false.
-        do j = 1, mesh_ctr
-          if ( tmp_mesh_names(j) == multires_coupling_mesh_tags(i) ) then
-            mesh_already_exists = .true.
-            exit
-          end if
-        end do
-        if ( .not. mesh_already_exists ) then
-          mesh_ctr = mesh_ctr + 1
-          tmp_mesh_names(mesh_ctr) = multires_coupling_mesh_tags(i)
-        end if
-      end do
+      end_index = start_index + size(chain_mesh_tags) - 1
+      tmp_mesh_names(start_index:end_index) = chain_mesh_tags
+      start_index = end_index + 1
     end if
 
-    ! Transfer mesh names from temporary array to an array of appropriate size
-    allocate(base_mesh_names(mesh_ctr))
-    do i = 1, mesh_ctr
-      base_mesh_names(i) = tmp_mesh_names(i)
-    end do
+    if ( use_multires_coupling ) then
+      end_index = start_index + size(multires_coupling_mesh_tags) - 1
+      tmp_mesh_names(start_index:end_index) = multires_coupling_mesh_tags
+      start_index = end_index + 1
+    end if
+
+    base_mesh_names = remove_duplicates( tmp_mesh_names(:)  )
+
+    if ( l_multigrid .or. use_multires_coupling ) then
+      meshes_to_check = remove_duplicates( tmp_mesh_names(2:) )
+    end if
     deallocate(tmp_mesh_names)
 
-    ! Shifted meshes ---------------------------------------------------------
+
+    ! 1.1b Meshes the require a shifted extrusion
+    ! ---------------------------------------------------------
     if ( check_any_shifted() ) then
-      allocate(tmp_mesh_names(SIZE(base_mesh_names)))
+      allocate(tmp_mesh_names(size(base_mesh_names)))
 
       mesh_ctr = 1
       tmp_mesh_names(1) = prime_mesh_name
 
       if ( use_multires_coupling ) then
-        do i = 1, SIZE(multires_coupling_mesh_tags)
+        do i=1, size(multires_coupling_mesh_tags)
           ! Only add mesh if it has not already been added
           mesh_already_exists = .false.
           do j = 1, mesh_ctr
@@ -429,25 +486,27 @@ contains
       end if
 
       ! Transfer mesh names from temporary array to an array of appropriate size
-      allocate(shifted_mesh_names(mesh_ctr))
-      do i = 1, mesh_ctr
-        shifted_mesh_names(i) = tmp_mesh_names(i)
+      allocate(meshes_to_shift(mesh_ctr))
+      do i=1, mesh_ctr
+        meshes_to_shift(i) = tmp_mesh_names(i)
       end do
       deallocate(tmp_mesh_names)
     end if
 
-    ! Double level meshes ------------------------------------------------------
+
+    ! 1.1c Meshes that require a double-level extrusion
+    ! ---------------------------------------------------------
     if ( check_any_shifted() ) then
-      allocate(tmp_mesh_names(SIZE(base_mesh_names)))
+      allocate(tmp_mesh_names(size(base_mesh_names)))
 
       mesh_ctr = 1
       tmp_mesh_names(1) = prime_mesh_name
 
       if ( use_multires_coupling ) then
-        do i = 1, SIZE(multires_coupling_mesh_tags)
+        do i=1, size(multires_coupling_mesh_tags)
           ! Only add mesh if it has not already been added
           mesh_already_exists = .false.
-          do j = 1, mesh_ctr
+          do j=1, mesh_ctr
             if ( tmp_mesh_names(j) == multires_coupling_mesh_tags(i) ) then
               mesh_already_exists = .true.
               exit
@@ -462,29 +521,122 @@ contains
 
       ! Transfer mesh names from temporary array to an array of appropriate size
       if ( check_any_wt_eqn_conservative() ) then
-        allocate(double_level_mesh_names(mesh_ctr))
-        do i = 1, mesh_ctr
-          double_level_mesh_names(i) = tmp_mesh_names(i)
+        allocate(meshes_to_double(mesh_ctr))
+        do i=1, mesh_ctr
+          meshes_to_double(i) = tmp_mesh_names(i)
         end do
         deallocate(tmp_mesh_names)
       end if
     end if
 
-    !-------------------------------------------------------------------------
-    ! Initialise aspects of the grid
-    !-------------------------------------------------------------------------
 
-    ! Generate prime mesh extrusion
+    !=======================================================================
+    ! 1.2 Generate required extrusions
+    !=======================================================================
+
+    ! 1.2a Extrusions for prime/2d meshes
+    ! ---------------------------------------------------------
+    select case (geometry)
+    case (geometry_planar)
+      domain_bottom = 0.0_r_def
+    case (geometry_spherical)
+      domain_bottom = scaled_radius
+    case default
+      call log_event("Invalid geometry for mesh initialisation", LOG_LEVEL_ERROR)
+    end select
+
     allocate( extrusion, source=create_extrusion() )
 
-    ! Create the mesh
-    call init_mesh( modeldb%mpi%get_comm_rank(), modeldb%mpi%get_comm_size(), &
-                    base_mesh_names,                                          &
-                    shifted_mesh_names      = shifted_mesh_names,             &
-                    double_level_mesh_names = double_level_mesh_names,        &
-                    required_stencil_depth  = get_required_stencil_depth(),   &
-                    input_extrusion         = extrusion )
+    extrusion_2d = uniform_extrusion_type( domain_bottom, &
+                                           domain_bottom, &
+                                           one_layer, TWOD )
 
+    ! 1.2b Extrusions for shifted meshes
+    ! ---------------------------------------------------------
+    if ( allocated(meshes_to_shift) ) then
+      if ( size(meshes_to_shift) > 0 ) then
+        extrusion_shifted = shifted_extrusion_type(extrusion)
+      end if
+    end if
+
+    ! 1.2c Extrusions for double-level meshes
+    ! ---------------------------------------------------------
+    if ( allocated(meshes_to_double) ) then
+      if ( size(meshes_to_double) > 0 ) then
+        extrusion_double = double_level_extrusion_type(extrusion)
+      end if
+    end if
+
+
+    !=======================================================================
+    ! 1.3 Initialise mesh objects and assign InterGrid maps
+    !=======================================================================
+
+    ! 1.3a Initialise prime/2d meshes
+    ! ---------------------------------------------------------
+    apply_partition_check = .false.
+    if ( .not. prepartitioned .and. &
+         ( l_multigrid .or. use_multires_coupling ) ) then
+      apply_partition_check = .true.
+    end if
+
+    stencil_depth = get_required_stencil_depth()
+    call init_mesh( modeldb%configuration,        &
+                    modeldb%mpi%get_comm_rank(),  &
+                    modeldb%mpi%get_comm_size(),  &
+                    base_mesh_names,              &
+                    extrusion,                    &
+                    get_required_stencil_depth(), &
+                    apply_partition_check )
+
+
+    allocate( twod_names, source=base_mesh_names )
+    do i=1, size(twod_names)
+      twod_names(i) = trim(twod_names(i))//'_2d'
+    end do
+    call create_mesh( base_mesh_names, extrusion_2d, &
+                      alt_name=twod_names )
+    call assign_mesh_maps(twod_names)
+
+
+    ! 1.3b Initialise shifted meshes
+    ! ---------------------------------------------------------
+    if (allocated(meshes_to_shift)) then
+      if (size(meshes_to_shift) > 0) then
+
+        allocate( shifted_names, source=meshes_to_shift )
+        do i=1, size(shifted_names)
+          shifted_names(i) = trim(shifted_names(i))//'_shifted'
+        end do
+        call create_mesh( meshes_to_shift,   &
+                          extrusion_shifted, &
+                          alt_name=shifted_names )
+        call assign_mesh_maps(shifted_names)
+
+      end if
+    end if
+
+    ! 1.3c Initialise double-level meshes
+    ! ---------------------------------------------------------
+    if (allocated(meshes_to_double)) then
+      if (size(meshes_to_double) > 0) then
+
+        allocate( double_names, source=meshes_to_double )
+        do i=1, size(double_names)
+          double_names(i) = trim(double_names(i))//'_double'
+        end do
+        call create_mesh( meshes_to_double, &
+                          extrusion_double, &
+                          alt_name=double_names )
+        call assign_mesh_maps(double_names)
+
+      end if
+    end if
+
+
+    !=======================================================================
+    ! 2.0 Initialise FEM / Coordinates
+    !=======================================================================
     chi_inventory => get_chi_inventory()
     panel_id_inventory => get_panel_id_inventory()
 
@@ -493,13 +645,15 @@ contains
       call init_function_space_chains( mesh_collection, chain_mesh_tags )
     end if
 
-    mesh => mesh_collection%get_mesh(prime_mesh_name)
+
+    mesh      => mesh_collection%get_mesh(prime_mesh_name)
     twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
     call chi_inventory%get_field_array(mesh, chi)
 
-    !-------------------------------------------------------------------------
-    ! initialize coupling
-    !-------------------------------------------------------------------------
+
+    !=======================================================================
+    ! 3.0 Initialise coupling
+    !=======================================================================
 !> @todo this must be done in infrastructure for now (before XIOS context
 !>       initialization). With XIOS 3 it will be possible to move it outside
 !>       infrastructure and remove change in gungho_prognostics_mod.f90
@@ -519,10 +673,10 @@ contains
     endif
 #endif
 
-    !-------------------------------------------------------------------------
-    ! Initialise aspects of output
-    !-------------------------------------------------------------------------
 
+    !=======================================================================
+    ! 4.0 Initialise output
+    !=======================================================================
     call basic_initialisations( modeldb%clock )
 
     call log_event("Initialising I/O context", LOG_LEVEL_INFO)
@@ -532,9 +686,9 @@ contains
     if ( use_multires_coupling ) then
       ! Compose list of meshes for I/O
       ! This is list of namelist mesh names minus the prime mesh name
-      allocate(extra_io_mesh_names(SIZE(multires_coupling_mesh_tags)-1))
+      allocate(extra_io_mesh_names(size(multires_coupling_mesh_tags)-1))
       mesh_ctr = 1
-      do i = 1, SIZE(multires_coupling_mesh_tags)
+      do i=1, size(multires_coupling_mesh_tags)
         if (multires_coupling_mesh_tags(i) /= prime_mesh_name) then
           extra_io_mesh_names(mesh_ctr) = multires_coupling_mesh_tags(i)
           mesh_ctr = mesh_ctr + 1
@@ -556,6 +710,10 @@ contains
                     before_close=before_context_close )
     end if
 
+
+    !=======================================================================
+    ! 5.0 Initialise orography
+    !=======================================================================
     if ( use_multires_coupling ) then
       orography_mesh => mesh_collection%get_mesh(trim(orography_mesh_name))
       orography_twod_mesh => mesh_collection%get_mesh(orography_mesh, TWOD)
@@ -572,12 +730,12 @@ contains
                               orography_mesh%get_mesh_name(), &
                               chi_inventory,                  &
                               panel_id_inventory,             &
-                              surface_altitude        )
+                              surface_altitude )
 
-    !-------------------------------------------------------------------------
-    ! Setup constants
-    !-------------------------------------------------------------------------
 
+    !=======================================================================
+    ! 6.0 Initialise runtime constants
+    !=======================================================================
     ! Create runtime_constants object. This in turn creates various things
     ! needed by the timestepping algorithms such as mass matrix operators, mass
     ! matrix diagonal fields and the geopotential field
@@ -591,6 +749,7 @@ contains
                                    panel_id_inventory, &
                                    modeldb%clock,      &
                                    create_rdef_div_operators )
+
 #ifdef UM_PHYSICS
     if ( use_physics ) then
 
@@ -613,12 +772,16 @@ contains
 
     end if
 #endif
+
+    !=======================================================================
+    ! Housekeeping
+    !=======================================================================
     nullify(mesh, twod_mesh, shifted_mesh, double_level_mesh, chi, &
             chi_inventory, panel_id_inventory, files_init_ptr,     &
             orography_mesh, orography_twod_mesh)
     deallocate(base_mesh_names)
-    if (allocated(shifted_mesh_names)) deallocate(shifted_mesh_names)
-    if (allocated(double_level_mesh_names)) deallocate(double_level_mesh_names)
+    if (allocated(meshes_to_shift))  deallocate(meshes_to_shift)
+    if (allocated(meshes_to_double)) deallocate(meshes_to_double)
 
   end subroutine initialise_infrastructure
 
@@ -629,6 +792,16 @@ contains
   !> @param[in,out] modeldb The working data set for the model run
   !>
   subroutine initialise_model( mesh, modeldb )
+
+    use timestepping_config_mod, only: method,                 &
+                                       method_semi_implicit,   &
+                                       method_rk,              &
+                                       method_no_timestepping
+
+    use io_config_mod,          only: write_conservation_diag, &
+                                      write_minmax_tseries
+    use formulation_config_mod, only: moisture_formulation, &
+                                      moisture_formulation_dry
     implicit none
 
     type( mesh_type ),    intent(in),    pointer :: mesh
@@ -744,6 +917,11 @@ contains
   subroutine finalise_model( modeldb,       &
                              configuration, &
                              program_name )
+
+    use timestepping_config_mod, only: method,                 &
+                                       method_semi_implicit,   &
+                                       method_rk
+    use io_config_mod, only: write_minmax_tseries
 
     implicit none
 

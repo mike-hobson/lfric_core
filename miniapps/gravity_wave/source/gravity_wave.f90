@@ -48,7 +48,7 @@ program gravity_wave
   deallocate( filename )
 
   call log_event( 'Initialising '//program_name//' ...', log_level_trace )
-  call initialise( global_mpi, model_clock, get_calendar() )
+  call initialise( configuration, global_mpi, model_clock, get_calendar() )
 
   write(log_scratch_space,'("Running ",A, " ...")') program_name
   call log_event( log_scratch_space, log_level_trace )

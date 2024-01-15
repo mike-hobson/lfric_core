@@ -56,7 +56,7 @@ program transport
   deallocate( filename )
 
   call log_event( 'Initialising ' // program_name // ' ...', log_level_trace )
-  call initialise_transport( global_mpi, model_clock, &
+  call initialise_transport( configuration, global_mpi, model_clock, &
                              program_name, get_calendar() )
 
   call log_event( 'Running ' // program_name // ' ...', log_level_trace )

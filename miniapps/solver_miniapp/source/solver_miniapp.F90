@@ -11,19 +11,25 @@
 
 program solver_miniapp
 
-  use constants_mod,           only: i_def, PRECISION_REAL, str_def
+  use add_mesh_map_mod,        only: assign_mesh_maps
+  use constants_mod,           only: i_def, r_def, PRECISION_REAL, str_def
   use convert_to_upper_mod,    only: convert_to_upper
   use cli_mod,                 only: get_initial_filename
+  use create_mesh_mod,         only: create_mesh, create_extrusion
   use driver_collections_mod,  only: init_collections, final_collections
   use driver_config_mod,       only: init_config, final_config
   use driver_mesh_mod,         only: init_mesh
   use driver_fem_mod,          only: init_fem
   use driver_log_mod,          only: init_logger, final_logger
+  use extrusion_mod,           only: extrusion_type,         &
+                                     uniform_extrusion_type, &
+                                     PRIME_EXTRUSION, TWOD
   use halo_comms_mod,          only: initialise_halo_comms, &
                                      finalise_halo_comms
   use init_solver_miniapp_mod, only: init_solver_miniapp
   use inventory_by_mesh_mod,   only: inventory_by_mesh_type
-  use mpi_mod,                 only: global_mpi, create_comm, destroy_comm
+  use mpi_mod,                 only: global_mpi, &
+                                     create_comm, destroy_comm
   use field_mod,               only: field_type
   use field_vector_mod,        only: field_vector_type
   use solver_miniapp_alg_mod,  only: solver_miniapp_alg
@@ -32,13 +38,20 @@ program solver_miniapp
   use log_mod,                 only: log_event,            &
                                      log_scratch_space,    &
                                      LOG_LEVEL_ALWAYS,     &
+                                     LOG_LEVEL_ERROR,      &
                                      LOG_LEVEL_INFO
   use mesh_mod,                only: mesh_type
   use mesh_collection_mod,     only: mesh_collection
   use namelist_collection_mod, only: namelist_collection_type
+  use namelist_mod,            only: namelist_type
   use checksum_alg_mod,        only: checksum_alg
 
-  use base_mesh_config_mod,    only: prime_mesh_name
+
+  !------------------------------------
+  ! Configuration modules
+  !------------------------------------
+  use base_mesh_config_mod, only: GEOMETRY_SPHERICAL, &
+                                  GEOMETRY_PLANAR
 
   implicit none
 
@@ -60,8 +73,29 @@ program solver_miniapp
   type(inventory_by_mesh_type) :: chi_inventory
   type(inventory_by_mesh_type) :: panel_id_inventory
 
-  character(str_def)           :: base_mesh_names(1)
+  character(str_def)              :: base_mesh_names(1)
+  character(str_def), allocatable :: twod_names(:)
 
+  class(extrusion_type),        allocatable :: extrusion
+  type(uniform_extrusion_type), allocatable :: extrusion_2d
+
+  type(namelist_type), pointer :: base_mesh_nml => null()
+  type(namelist_type), pointer :: planet_nml    => null()
+  type(namelist_type), pointer :: extrusion_nml => null()
+
+  character(str_def) :: prime_mesh_name
+
+  integer(i_def) :: stencil_depth
+  integer(i_def) :: geometry
+  integer(i_def) :: method
+  integer(i_def) :: number_of_layers
+  real(r_def)    :: domain_bottom
+  real(r_def)    :: domain_top
+  real(r_def)    :: scaled_radius
+  logical        :: check_partitions
+
+  integer(i_def) :: i
+  integer(i_def), parameter :: one_layer = 1_i_def
 
   !-----------------------------------------------------------------------------
   ! Driver layer init
@@ -93,14 +127,80 @@ program solver_miniapp
       '-bit real numbers'
   call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
 
-  !-----------------------------------------------------------------------------
-  ! model init
-  !-----------------------------------------------------------------------------
+  !--------------------------------------
+  ! 0.0 Extract namelist variables
+  !--------------------------------------
+  base_mesh_nml => configuration%get_namelist('base_mesh')
+  planet_nml    => configuration%get_namelist('planet')
+  extrusion_nml => configuration%get_namelist('extrusion')
+
+  call base_mesh_nml%get_value( 'prime_mesh_name', prime_mesh_name )
+  call base_mesh_nml%get_value( 'geometry', geometry )
+  call extrusion_nml%get_value( 'method', method )
+  call extrusion_nml%get_value( 'domain_top', domain_top )
+  call extrusion_nml%get_value( 'number_of_layers', number_of_layers )
+  call planet_nml%get_value( 'scaled_radius', scaled_radius )
+
+  base_mesh_nml => null()
+  planet_nml    => null()
+  extrusion_nml => null()
+
   call log_event( 'Initialising '//program_name//' ...', LOG_LEVEL_ALWAYS )
 
-  base_mesh_names(1) = prime_mesh_name
-  call init_mesh( local_rank, total_ranks, base_mesh_names )
 
+  !=======================================================================
+  ! 1.0 Mesh
+  !=======================================================================
+
+  !-----------------------------------------------------------------------
+  ! 1.1 Determine the required meshes
+  !-----------------------------------------------------------------------
+  base_mesh_names(1) = prime_mesh_name
+
+  !-----------------------------------------------------------------------
+  ! 1.2 Create the required extrusions
+  !-----------------------------------------------------------------------
+  select case (geometry)
+  case (geometry_planar)
+    domain_bottom = 0.0_r_def
+  case (geometry_spherical)
+    domain_bottom = scaled_radius
+  case default
+    call log_event("Invalid geometry for mesh initialisation", LOG_LEVEL_ERROR)
+  end select
+  allocate( extrusion, source=create_extrusion( method,           &
+                                                domain_top,       &
+                                                domain_bottom,    &
+                                                number_of_layers, &
+                                                PRIME_EXTRUSION ) )
+
+  extrusion_2d = uniform_extrusion_type( domain_bottom, &
+                                         domain_bottom, &
+                                         one_layer, TWOD )
+
+  !-----------------------------------------------------------------------
+  ! 1.2 Create the required meshes
+  !-----------------------------------------------------------------------
+  stencil_depth = 1
+  check_partitions = .false.
+  call init_mesh( configuration,              &
+                  local_rank, total_ranks,    &
+                  base_mesh_names, extrusion, &
+                  stencil_depth, check_partitions )
+
+  allocate( twod_names, source=base_mesh_names )
+  do i=1, size(twod_names)
+    twod_names(i) = trim(twod_names(i))//'_2d'
+  end do
+  call create_mesh( base_mesh_names, extrusion_2d, &
+                    alt_name=twod_names )
+  call assign_mesh_maps(twod_names)
+
+
+  !=======================================================================
+  ! 2.0 Build the FEM function spaces and coordinate fields
+  !=======================================================================
+  ! Create FEM specifics (function spaces and chi field)
   call init_fem( mesh_collection, chi_inventory, panel_id_inventory )
 
   ! Create and initialise prognostic fields

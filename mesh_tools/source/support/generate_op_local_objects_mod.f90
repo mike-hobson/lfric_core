@@ -19,6 +19,7 @@ module generate_op_local_objects_mod
   use global_mesh_map_collection_mod, only: global_mesh_map_collection_type
   use global_mesh_map_mod,            only: global_mesh_map_type
   use partition_mod,                  only: partition_type, partitioner_interface
+  use query_mod,                      only: check_uniform_partitions
 
   implicit none
 
@@ -99,6 +100,7 @@ subroutine generate_op_local_objects( local_mesh_bank,               &
   integer(i_def) :: start_partition, end_partition
   integer(i_def) :: n_meshes, n_maps, map_xcells, map_ycells, local_id
   integer(i_def) :: i, j, p, q, target, local_cell
+  logical        :: source_good, target_good
 
   ! Local variables for LBC meshes
   type(local_mesh_type)       :: local_lbc_mesh
@@ -232,6 +234,24 @@ subroutine generate_op_local_objects( local_mesh_bank,               &
 
         target_global_mesh_ptr => global_mesh_bank%get_global_mesh(target_names(target))
         global_mesh_map_ptr    => global_mesh_maps_ptr%get_global_mesh_map(1,target+1)
+
+        ! For pre-partitioned meshes which  are connected by an intergrid map, the
+        ! partitions must lie over the same geographical regions.
+        source_good = check_uniform_partitions( source_global_mesh_ptr, &
+                                                xproc, yproc )
+        target_good = check_uniform_partitions( target_global_mesh_ptr, &
+                                                xproc, yproc )
+
+        if ( .not. (source_good .and. target_good) ) then
+          ! This requested mesh mapping and prtitioning strategy will produce
+          ! mismatched partition locations.
+          write(log_scratch_space,'(A)')                                        &
+              'Number of partitions across a panel (xproc, yproc) must be ' //  &
+              'a factor of the number cells on the panel edge for both the ' // &
+              'source and target meshes, [' // trim(source_name) // ':' //      &
+              trim(target_global_mesh_ptr%get_mesh_name()) // ']'
+          call log_event(log_scratch_space, LOG_LEVEL_ERROR)
+        end if
 
         map_xcells = global_mesh_map_ptr%get_ntarget_cells_per_source_x()
         map_ycells = global_mesh_map_ptr%get_ntarget_cells_per_source_y()

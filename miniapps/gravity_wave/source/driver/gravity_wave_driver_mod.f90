@@ -71,16 +71,18 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> Sets up required state in preparation for run.
   !>
-  subroutine initialise( mpi, model_clock, calendar )
+  subroutine initialise( configuration, mpi, model_clock, calendar )
 
   implicit none
+
+  type(namelist_collection_type), intent(inout) :: configuration
 
   class(mpi_type),         intent(inout) :: mpi
   class(model_clock_type), intent(inout) :: model_clock
   class(calendar_type),    intent(in)    :: calendar
 
   ! Initialise aspects of the infrastructure
-  call initialise_infrastructure( model_clock, mpi, calendar )
+  call initialise_infrastructure( configuration, model_clock, mpi, calendar )
 
   ! The limited area version is unable to work with buoyancy in W0 when using
   ! a biperiodic mesh. However, this could be solved by breaking the continuity

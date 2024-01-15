@@ -100,7 +100,7 @@ subroutine initialise_infrastructure( self, filename, model_communicator )
   call init_config( filename, jedi_lfric_tests_required_namelists, &
                     self%configuration )
   call init_collections()
-  call initialise_toy_model( self%jedi_run_name, global_mpi )
+  call initialise_toy_model( self%configuration, self%jedi_run_name, global_mpi )
 
 end subroutine initialise_infrastructure
 

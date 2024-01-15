@@ -52,7 +52,9 @@ module gungho_extrusion_mod
   implicit none
 
   private
-  public create_extrusion, create_shifted_extrusion, create_double_level_extrusion
+  public create_extrusion
+  public create_shifted_extrusion
+  public create_double_level_extrusion
 
   character(*), parameter :: module_name = 'gungho_extrusion_mod'
 

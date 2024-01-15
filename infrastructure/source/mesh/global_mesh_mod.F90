@@ -203,7 +203,6 @@ module global_mesh_mod
     procedure, public :: get_nmaps
     procedure, public :: get_mesh_maps
 
-    procedure, public :: is_model_global
     procedure, public :: is_geometry_spherical
     procedure, public :: is_geometry_planar
     procedure, public :: is_topology_non_periodic
@@ -339,18 +338,6 @@ contains
 
     end select
 
-    ! Is the domain for a global or regional "model".
-    ! Periodic spherical regional models are not
-    ! supported, so by elimination it would
-    ! be a global model, not ideal.
-    self%global_model = .false.
-    if ( self%topology  == periodic_domain .and. &
-         self%coord_sys == lon_lat_coords  .and. &
-         self%geometry  == spherical_domain ) then
-
-      self%global_model = .true.
-
-    end if
 
     ! CF Standard for longitude/latitude is in degrees
     ! though many functions assume radians. Convert
@@ -1648,33 +1635,6 @@ contains
     coord_units_xy(:) = self%coord_units_xy(:)
 
   end function get_coord_units
-
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> @brief   Function to query if the global mesh coverage is
-  !>          over a global model.
-  !> @details A mesh over a global model is determined if the following
-  !>          conditions are met:
-  !>
-  !>            * Domain boundaries are periodic.
-  !>            * Co-ordinate system is spherical (i.e. [lon,lat])
-  !>
-  !>          This premise is only valid as the above configurations are
-  !>          not supported for regional models.
-  !>
-  !> @return answer .true. for a global model
-  !>
-  function is_model_global( self ) result ( answer )
-
-    implicit none
-
-    class(global_mesh_type), intent(in) :: self
-
-    logical (l_def) :: answer
-
-    answer = self%global_model
-
-  end function is_model_global
 
 
   !---------------------------------------------------------------------------

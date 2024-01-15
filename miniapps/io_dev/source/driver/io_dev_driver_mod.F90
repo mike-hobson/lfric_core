@@ -10,28 +10,30 @@
 !>
 module io_dev_driver_mod
 
-  use base_mesh_config_mod,       only: prime_mesh_name
+  use add_mesh_map_mod,           only : assign_mesh_maps
   use calendar_mod,               only: calendar_type
   use checksum_alg_mod,           only: checksum_alg
   use clock_mod,                  only: clock_type
   use constants_mod,              only: i_def, str_def, &
                                         PRECISION_REAL, r_def, r_second
   use convert_to_upper_mod,       only: convert_to_upper
+  use create_mesh_mod,            only: create_extrusion, create_mesh
   use driver_mesh_mod,            only: init_mesh
   use driver_fem_mod,             only: init_fem, final_fem
   use driver_io_mod,              only: init_io, final_io, &
                                         filelist_populator, &
                                         get_io_context
-  use extrusion_mod,              only: TWOD
+  use extrusion_mod,              only: extrusion_type,         &
+                                        uniform_extrusion_type, &
+                                        PRIME_EXTRUSION, TWOD
   use field_mod,                  only: field_type
   use inventory_by_mesh_mod,      only: inventory_by_mesh_type
-  use io_dev_config_mod,          only: multi_mesh, alt_mesh_name
-  use io_config_mod,              only: write_diag, diagnostic_frequency
   use local_mesh_collection_mod,  only: local_mesh_collection, &
                                         local_mesh_collection_type
   use log_mod,                    only: log_event,          &
                                         log_scratch_space,  &
                                         LOG_LEVEL_ALWAYS,   &
+                                        LOG_LEVEL_ERROR,    &
                                         LOG_LEVEL_INFO
   use mesh_collection_mod,        only: mesh_collection, &
                                         mesh_collection_type
@@ -45,8 +47,18 @@ module io_dev_driver_mod
                                         output_model_data,         &
                                         finalise_model_data
 
-  use io_context_mod, only: io_context_type
+  use io_context_mod,         only: io_context_type
   use lfric_xios_context_mod, only: lfric_xios_context_type, advance
+
+  use namelist_collection_mod, only: namelist_collection_type
+  use namelist_mod,            only: namelist_type
+
+  ! Configuration modules
+  use base_mesh_config_mod, only: geometry_spherical, &
+                                  geometry_planar
+
+  use io_config_mod,              only: write_diag, diagnostic_frequency
+  use io_dev_config_mod,          only: multi_mesh, alt_mesh_name
 
   implicit none
 
@@ -79,16 +91,58 @@ module io_dev_driver_mod
     type(inventory_by_mesh_type)    :: panel_id_inventory
     character(str_def), allocatable :: base_mesh_names(:)
     character(str_def), allocatable :: alt_mesh_names(:)
+    character(str_def), allocatable :: twod_names(:)
 
     class(io_context_type), pointer :: io_context
 
     procedure(filelist_populator), pointer :: files_init_ptr => null()
 
-    !-------------------------------------------------------------------------
-    ! Model init
-    !-------------------------------------------------------------------------
+    class(extrusion_type),        allocatable :: extrusion
+    type(uniform_extrusion_type), allocatable :: extrusion_2d
 
-    ! Create the meshes used to test multi-mesh output
+    character(str_def) :: prime_mesh_name
+
+    integer(i_def) :: stencil_depth
+    integer(i_def) :: geometry
+    integer(i_def) :: method
+    integer(i_def) :: number_of_layers
+    real(r_def)    :: domain_bottom
+    real(r_def)    :: domain_top
+    real(r_def)    :: scaled_radius
+    logical        :: apply_partition_check
+
+    type(namelist_type), pointer :: base_mesh_nml => null()
+    type(namelist_type), pointer :: planet_nml    => null()
+    type(namelist_type), pointer :: extrusion_nml => null()
+
+    integer(i_def) :: i
+    integer(i_def), parameter :: one_layer = 1_i_def
+
+    ! -------------------------------
+    ! 0.0 Extract namelist variables
+    ! -------------------------------
+    base_mesh_nml => modeldb%configuration%get_namelist('base_mesh')
+    planet_nml    => modeldb%configuration%get_namelist('planet')
+    extrusion_nml => modeldb%configuration%get_namelist('extrusion')
+
+    call base_mesh_nml%get_value( 'prime_mesh_name', prime_mesh_name )
+    call base_mesh_nml%get_value( 'geometry', geometry )
+    call extrusion_nml%get_value( 'method', method )
+    call extrusion_nml%get_value( 'domain_top', domain_top )
+    call extrusion_nml%get_value( 'number_of_layers', number_of_layers )
+    call planet_nml%get_value( 'scaled_radius', scaled_radius )
+
+    base_mesh_nml => null()
+    planet_nml    => null()
+    extrusion_nml => null()
+
+    !=======================================================================
+    ! 1.0 Mesh
+    !=======================================================================
+
+    !-----------------------------------------------------------------------
+    ! 1.1 Determine the required meshes
+    !-----------------------------------------------------------------------
     if (multi_mesh) then
       allocate(base_mesh_names(2))
       base_mesh_names(2) = alt_mesh_name
@@ -98,10 +152,50 @@ module io_dev_driver_mod
 
     base_mesh_names(1) = prime_mesh_name
 
-    call init_mesh( modeldb%mpi%get_comm_rank(), &
-                    modeldb%mpi%get_comm_size(), &
-                    base_mesh_names )
+    !-------------------------------------------------------------------------
+    ! 1.2 Create the required extrusions
+    !-------------------------------------------------------------------------
+    select case (geometry)
+    case (geometry_planar)
+      domain_bottom = 0.0_r_def
+    case (geometry_spherical)
+      domain_bottom = scaled_radius
+    case default
+      call log_event("Invalid geometry for mesh initialisation", LOG_LEVEL_ERROR)
+    end select
+    allocate( extrusion, source=create_extrusion( method,           &
+                                                  domain_top,       &
+                                                  domain_bottom,    &
+                                                  number_of_layers, &
+                                                  PRIME_EXTRUSION ) )
 
+    extrusion_2d = uniform_extrusion_type( domain_bottom, &
+                                           domain_bottom, &
+                                           one_layer, TWOD )
+
+    !-------------------------------------------------------------------------
+    ! 1.3 Create the required meshes
+    !-------------------------------------------------------------------------
+    stencil_depth = 1
+    apply_partition_check = .false.
+    call init_mesh( modeldb%configuration,       &
+                    modeldb%mpi%get_comm_rank(), &
+                    modeldb%mpi%get_comm_size(), &
+                    base_mesh_names, extrusion,  &
+                    stencil_depth, apply_partition_check )
+
+    allocate( twod_names, source=base_mesh_names )
+    do i=1, size(twod_names)
+      twod_names(i) = trim(twod_names(i))//'_2d'
+    end do
+    call create_mesh( base_mesh_names, extrusion_2d, &
+                      alt_name=twod_names )
+    call assign_mesh_maps( twod_names )
+
+
+    !=======================================================================
+    ! 2.0 Build the FEM function spaces and coordinate fields
+    !=======================================================================
     ! Create FEM specifics (function spaces and chi fields)
     call init_fem( mesh_collection, chi_inventory, panel_id_inventory )
 

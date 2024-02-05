@@ -173,7 +173,6 @@ program cubedsphere_mesh_generator
   total_ranks = global_mpi%get_comm_size()
   local_rank  = global_mpi%get_comm_rank()
   call initialise_logging( communicator, 'CubeGen' )
-  call configuration%initialise( 'CubeGen', table_len=10 )
 
   !===================================================================
   ! 3.0 Read in the control namelists from file.

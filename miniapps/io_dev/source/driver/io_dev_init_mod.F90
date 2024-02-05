@@ -68,12 +68,12 @@ module io_dev_init_mod
     implicit none
 
     ! Arguments
-    type(mesh_type), pointer,    intent(in)    :: mesh
-    type(mesh_type), pointer,    intent(in)    :: twod_mesh
-    type(field_collection_type), intent(out)   :: depository
-    type(field_collection_type), intent(out)   :: dump_fields
-    type(field_collection_type), intent(out)   :: alg_fields
-    type(linked_list_type),      intent(inout) :: variable_times_list
+    type(mesh_type), pointer,    intent(in)        :: mesh
+    type(mesh_type), pointer,    intent(in)        :: twod_mesh
+    type(field_collection_type), intent(inout)     :: depository
+    type(field_collection_type), intent(inout)     :: dump_fields
+    type(field_collection_type), intent(inout)     :: alg_fields
+    type(linked_list_type),      intent(inout)     :: variable_times_list
     type(mesh_type), pointer, optional, intent(in) :: alt_mesh
 
     ! Local variables
@@ -91,11 +91,6 @@ module io_dev_init_mod
     !----------------------------------------------------------------------------
     ! Create core fields to send/recieve data from file and set I/O behaviours
     !----------------------------------------------------------------------------
-    ! Create the core and dump field collections.
-    call depository%initialise( name='depository', table_len=1 )
-    call dump_fields%initialise( name='dump_fields', table_len=1 )
-    call alg_fields%initialise( name='alg_fields', table_len=1 )
-
     if ( field_kind == field_kind_real ) then
       ! W0 (node) field
       call create_real_field( depository, "W0_field", mesh, twod_mesh, W0 )

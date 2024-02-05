@@ -49,6 +49,9 @@ module namelist_collection_mod
     !> The size of the hash table to use
     integer(i_def) :: table_len
 
+    !> Whether object has been initialised or not
+    logical :: isinitialised = .false.
+
   contains
 
     procedure, public :: initialise
@@ -88,6 +91,15 @@ subroutine initialise( self, name, table_len )
 
   integer(i_def) :: i
 
+  if ( present(name) ) self%name = trim(name)
+
+  if (self%isinitialised) then
+    write(log_scratch_space, '(3A)') &
+    'Namelist collection [', trim(self%name),'] has already been '// &
+    'initiaised and should not be initialised for a second time'
+    call log_event(log_scratch_space, LOG_LEVEL_ERROR)
+  end if
+
   if ( present(table_len) ) then
     self%table_len = table_len
   else
@@ -103,7 +115,7 @@ subroutine initialise( self, name, table_len )
     self%namelist_list(i) = linked_list_type()
   end do
 
-  if ( present(name) ) self%name = trim(name)
+  self%isinitialised = .true.
 
   return
 end subroutine initialise
@@ -618,6 +630,8 @@ subroutine clear(self)
     end do
     deallocate(self%namelist_list)
   end if
+
+  self%isinitialised = .false.
 
   return
 end subroutine clear

@@ -50,6 +50,8 @@ module field_collection_mod
     type(linked_list_type), allocatable :: field_list(:)
     !> The size of the hash table to use
     integer(i_def) :: table_len
+    !> Whether object has been initialised or not
+    logical :: isinitialised = .false.
   contains
     procedure, public :: initialise
     procedure, public :: copy_collection
@@ -91,6 +93,15 @@ subroutine initialise(self, name, table_len)
 
   integer(i_def) :: i
 
+  if(present(name))self%name = trim(name)
+
+  if (self%isinitialised) then
+    write(log_scratch_space, '(3A)') &
+    'Field collection [', trim(self%name),'] has already been '// &
+    'initiaised and should not be initialised for a second time'
+    call log_event(log_scratch_space, LOG_LEVEL_ERROR)
+  end if
+
   if(present(table_len))then
     self%table_len = table_len
   else
@@ -103,7 +114,7 @@ subroutine initialise(self, name, table_len)
     self%field_list(i) = linked_list_type()
   end do
 
-  if(present(name))self%name = trim(name)
+  self%isinitialised = .true.
 
 end subroutine initialise
 
@@ -649,6 +660,8 @@ subroutine clear(self)
     end do
     deallocate(self%field_list)
   end if
+
+  self%isinitialised = .false.
 
   return
 end subroutine clear

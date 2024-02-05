@@ -41,9 +41,9 @@ program io_dev
 
   call modeldb%configuration%initialise( program_name, table_len=10 )
 
-  call modeldb%fields%add_empty_field_collection("depository", table_len=100)
-  call modeldb%fields%add_empty_field_collection("dump_fields", table_len=100)
-  call modeldb%fields%add_empty_field_collection("alg_fields", table_len=100)
+  call modeldb%fields%add_empty_field_collection("depository", table_len=1)
+  call modeldb%fields%add_empty_field_collection("dump_fields", table_len=1)
+  call modeldb%fields%add_empty_field_collection("alg_fields", table_len=1)
 
   write( log_scratch_space,'(A)' )                         &
       'Application built with ' // trim(precision_real) // &

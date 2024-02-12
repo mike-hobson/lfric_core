@@ -18,6 +18,7 @@ use fs_continuity_mod,       only: WTHETA, W3
 use kernel_mod,              only: kernel_type
 use empty_data_mod,          only: empty_real_data
 use microphysics_config_mod, only: prog_tnuc
+use aerosol_config_mod,      only: murk_prognostic
 
 implicit none
 
@@ -31,7 +32,7 @@ private
 
 type, public, extends(kernel_type) :: mphys_kernel_type
   private
-  type(arg_type) :: meta_args(46) = (/                                      &
+  type(arg_type) :: meta_args(47) = (/                                      &
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! mv_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! ml_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! mi_wth
@@ -49,6 +50,7 @@ type, public, extends(kernel_type) :: mphys_kernel_type
        arg_type(GH_FIELD, GH_REAL, GH_READ,  W3),                           & ! height_w3
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! height_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! cloud_drop_no_conc
+       arg_type(GH_FIELD, GH_REAL, GH_READWRITE,  WTHETA),                  & ! murk
        arg_type(GH_FIELD, GH_REAL, GH_READ,  ANY_DISCONTINUOUS_SPACE_1),    & ! sd_orog
        arg_type(GH_FIELD, GH_REAL, GH_READWRITE, WTHETA),                   & ! dmv_wth
        arg_type(GH_FIELD, GH_REAL, GH_READWRITE, WTHETA),                   & ! dml_wth
@@ -167,7 +169,7 @@ subroutine mphys_code( nlayers, seg_len,            &
                        exner_in_wth, wetrho_in_w3,  &
                        dry_rho_in_w3,               &
                        height_w3, height_wth,       &
-                       cloud_drop_no_conc,          &
+                       cloud_drop_no_conc, murk,    &
                        sd_orog,                     &
                        dmv_wth,  dml_wth,  dmi_wth, &
                        dmr_wth,  dmg_wth,           &
@@ -258,6 +260,7 @@ subroutine mphys_code( nlayers, seg_len,            &
     real(kind=r_def), intent(in),  dimension(undf_w3)  :: height_w3
     real(kind=r_def), intent(in),  dimension(undf_wth) :: height_wth
     real(kind=r_def), intent(in),  dimension(undf_wth) :: cloud_drop_no_conc
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: murk
     real(kind=r_def), intent(in),  dimension(undf_2d)  :: sd_orog
     real(kind=r_def), intent(in),  dimension(undf_farr):: f_arr_wth
     real(kind=r_def), intent(in),  dimension(undf_wth) :: tnuc
@@ -398,7 +401,15 @@ subroutine mphys_code( nlayers, seg_len,            &
     cloud_ocff_work  = 0.0_r_um
     nitr_acc_work    = 0.0_r_um
     nitr_diss_work   = 0.0_r_um
-    aerosol_work     = 0.0_r_um
+
+    if (murk_prognostic) then
+      j = 1
+      do i = 1, seg_len
+        do k = 1, nlayers
+          aerosol_work(i,j,k) = murk(map_wth(1,i) + k)
+        end do
+      end do
+    end if
 
     land_sea_mask = .false.
 
@@ -780,6 +791,18 @@ subroutine mphys_code( nlayers, seg_len,            &
       end do
       ! Update level 0 to be the same as level 1 (as per UM)
       dmg_wth(map_wth(1,i) + 0) = qgraup_work(i,j,1) - mg_wth(map_wth(1,i) + 0)
+    end do
+  end if
+
+  if (murk_prognostic) then
+    j = 1
+    do k = 1, nlayers
+      do i = 1, seg_len
+        murk(map_wth(1,i) + k) = aerosol_work(i,j,k)
+      end do
+    end do
+    do i = 1, seg_len
+      murk(map_wth(1,i) + 0) = murk(map_wth(1,i) + 1)
     end do
   end if
 

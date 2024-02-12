@@ -17,6 +17,7 @@ use argument_mod,      only: arg_type,                  &
 use fs_continuity_mod, only: WTHETA, W3
 use kernel_mod,        only: kernel_type
 use empty_data_mod,    only: empty_real_data
+use aerosol_config_mod, only: murk_prognostic
 
 implicit none
 
@@ -30,7 +31,7 @@ private
 
 type, public, extends(kernel_type) :: casim_kernel_type
   private
-  type(arg_type) :: meta_args(39) = (/                                      &
+  type(arg_type) :: meta_args(40) = (/                                      &
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! mv_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! ml_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! mi_wth
@@ -66,6 +67,7 @@ type, public, extends(kernel_type) :: casim_kernel_type
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                       & ! ls_graup_3d
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                       & ! theta_inc
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                       & ! cloud_drop_no_conc
+       arg_type(GH_FIELD, GH_REAL, GH_READWRITE,  WTHETA),                  & ! murk
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                       & ! refl_tot
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),    & ! refl_1km
        arg_type(GH_FIELD, GH_REAL, GH_WRITE, WTHETA),                       & ! superc_liq
@@ -167,7 +169,7 @@ subroutine casim_code( nlayers,                     &
                        ls_rain_3d, ls_snow_3d,      &
                        ls_graup_3d,                 &
                        theta_inc,                   &
-                       cloud_drop_no_conc,          &
+                       cloud_drop_no_conc, murk,    &
                        refl_tot, refl_1km,          &
                        superc_liq, superc_rain,     &
                        ndf_wth, undf_wth, map_wth,  &
@@ -239,6 +241,7 @@ subroutine casim_code( nlayers,                     &
     real(kind=r_def), intent(inout), dimension(undf_2d)  :: lsca_2d
     real(kind=r_def), intent(inout), dimension(undf_wth) :: theta_inc
     real(kind=r_def), intent(inout), dimension(undf_wth) :: cloud_drop_no_conc
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: murk
 
     real(kind=r_def), intent(inout), dimension(undf_wth) :: ls_rain_3d
     real(kind=r_def), intent(inout), dimension(undf_wth) :: ls_snow_3d
@@ -291,6 +294,9 @@ subroutine casim_code( nlayers,                     &
     real(r_um), parameter :: alt_1km = 1000.0 ! metres
 
     real(r_um) :: t_work ! Local working temperature
+    real(r_um) :: rrain, rsnow
+    ! Scavenging rates, given in units of hr/mm
+    real(r_um), parameter :: krain=2.0e-5_r_um, ksnow=2.0e-5_r_um
 
     logical :: l_refl_tot, l_refl_1km
 
@@ -445,6 +451,7 @@ subroutine casim_code( nlayers,                     &
     l_refl_1km = .not. associated(refl_1km, empty_real_data)
 
     if (l_refl_tot .or. l_refl_1km) casdiags % l_radar = .true.
+    if (murk_prognostic) casdiags % l_snowfall_3d = .true.
 
     call allocate_diagnostic_space(its, ite, jts, jte, kts, kte)
 
@@ -490,6 +497,20 @@ subroutine casim_code( nlayers,                     &
                             dact_insol_number_casim,                          &
                             ils, ile,  jls, jle )
 
+    ! Update murk for scavenging washout
+    if (murk_prognostic) then
+      ! Calculate scavenging rate in units of s/mm, to multiply by
+      ! precip rate (mm/s)
+      rrain = krain * timestep * 3600.0_r_um
+      rsnow = ksnow * timestep * 3600.0_r_um
+      do k = 1, nlayers
+        murk(map_wth(1)+k) = murk(map_wth(1)+k) / &
+             (1.0_r_um + rrain * casdiags%rainfall_3d(1,1,k) + &
+                         rsnow * casdiags%snowfall_3d(1,1,k) )
+      end do
+      murk(map_wth(1)) = murk(map_wth(1)+1)
+    end if
+
     ! CASIM Update theta and compulsory prognostic variables
     do k = 1, nlayers
       theta_inc(map_wth(1) + k) = dth_casim(k,1,1)
@@ -528,10 +549,10 @@ subroutine casim_code( nlayers,                     &
 
     ! Copy 3D precipitation rate quantities
     do k = 1, nlayers
-      ls_rain_3d(map_wth(1) + k)  = casdiags % rainfall_3d(k,1,1)
-      ls_snow_3d(map_wth(1) + k)  = casdiags % snowonly_3d(k,1,1)
+      ls_rain_3d(map_wth(1) + k)  = casdiags % rainfall_3d(1,1,k)
+      ls_snow_3d(map_wth(1) + k)  = casdiags % snowonly_3d(1,1,k)
       if (ls_graup_3d_flag) then
-        ls_graup_3d(map_wth(1) + k) = casdiags % graupfall_3d(k,1,1)
+        ls_graup_3d(map_wth(1) + k) = casdiags % graupfall_3d(1,1,k)
       end if
     end do
 

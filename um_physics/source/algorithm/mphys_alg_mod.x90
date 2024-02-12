@@ -114,6 +114,7 @@ contains
     type( field_type ), pointer :: cloud_drop_no_conc  => null()
     type( field_type ), pointer :: n_acc_ins           => null()
     type( field_type ), pointer :: n_cor_ins           => null()
+    type( field_type ), pointer :: murk                => null()
 
     type( field_type ), pointer :: wvar   => null()
 
@@ -178,6 +179,7 @@ contains
     call aerosol_fields%get_field('cloud_drop_no_conc', cloud_drop_no_conc)
     call aerosol_fields%get_field('n_acc_ins', n_acc_ins)
     call aerosol_fields%get_field('n_cor_ins', n_cor_ins)
+    call aerosol_fields%get_field('murk', murk)
 
     call turbulence_fields%get_field('wvar', wvar)
 
@@ -213,7 +215,7 @@ contains
                                      theta, exner_in_wth,                      &
                                      wetrho_in_w3, dry_rho_in_w3,              &
                                      height_w3, height_wth,                    &
-                                     cloud_drop_no_conc,                       &
+                                     cloud_drop_no_conc, murk,                 &
                                      sd_orog,                                  &
                                      dmr_mphys(imr_v),  dmr_mphys(imr_cl),     &
                                      dmr_mphys(imr_ci), dmr_mphys(imr_r),      &

@@ -26,7 +26,8 @@ module um_physics_init_mod
                                         prec_file,                             &
                                         l_radaer,                              &
                                         easyaerosol_sw,                        &
-                                        easyaerosol_lw
+                                        easyaerosol_lw,                        &
+                                        murk, murk_prognostic
 
   use blayer_config_mod,         only : a_ent_shr, a_ent_2_in => a_ent_2,      &
                                         cbl_opt, cbl_opt_conventional,         &
@@ -315,6 +316,7 @@ contains
         iopt_inuc, iopt_act, process_level, l_separate_rain, &
         l_ukca_casim, l_abelshipway, l_warm,                 &
         l_cfrac_casim_diag_scheme, l_prf_cfrac
+    use murk_inputs_mod, only: l_murk_advect
     use casim_switches, only: its, ite, jts, jte, kts, kte,              &
                               ils, ile, jls, jle, kls, kle,              &
                               irs, ire, jrs, jre, krs, kre,              &
@@ -430,6 +432,10 @@ contains
         n_radaer_mode = 6_i_def
       else
         n_radaer_mode = 0_i_def
+      end if
+
+      if ( murk ) then
+        l_murk_advect = murk_prognostic
       end if
 
     else ! if ( aerosol == aerosol_um ) then

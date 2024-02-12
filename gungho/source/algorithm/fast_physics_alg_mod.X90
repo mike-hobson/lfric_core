@@ -228,7 +228,7 @@ contains
                       derived_fields, radiation_fields, orography_fields, &
                       turbulence_fields, convection_fields, cloud_fields, &
                       surface_fields, soil_fields, snow_fields,           &
-                      microphysics_fields, outer, clock)
+                      microphysics_fields, aerosol_fields, outer, clock)
       boundary_layer_done=.true. ! Collect this increment later on
 
     !--------------------------------------------------------------------

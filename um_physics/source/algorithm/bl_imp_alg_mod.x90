@@ -80,7 +80,7 @@ contains
                         orography_fields, turbulence_fields,             &
                         convection_fields, cloud_fields, surface_fields, &
                         soil_fields, snow_fields, microphysics_fields,   &
-                        outer, clock)
+                        aerosol_fields, outer, clock)
 
     use bl_imp_kernel_mod, only: bl_imp_kernel_type
     use bl_imp2_kernel_mod, only: bl_imp2_kernel_type
@@ -104,6 +104,7 @@ contains
     type( field_collection_type ), intent(in)    :: soil_fields
     type( field_collection_type ), intent(in)    :: snow_fields
     type( field_collection_type ), intent(in)    :: microphysics_fields
+    type( field_collection_type ), intent(in)    :: aerosol_fields
     integer(kind=i_def), intent(in) :: outer
     class(clock_type),   intent(in) :: clock
 
@@ -148,6 +149,8 @@ contains
 
     type( field_type ), pointer :: nr_mphys => null()
     type( field_type ), pointer :: ns_mphys => null()
+
+    type( field_type ), pointer :: murk => null()
 
     type( field_type ), pointer :: cf_area    => null()
     type( field_type ), pointer :: cf_fro     => null()
@@ -311,6 +314,8 @@ contains
     call microphysics_fields%get_field('lsca_2d', lsca_2d)
     call microphysics_fields%get_field('nr_mphys', nr_mphys)
     call microphysics_fields%get_field('ns_mphys', ns_mphys)
+
+    call aerosol_fields%get_field('murk', murk)
 
     ! Unpack the convection
     call convection_fields%get_field('dt_conv', dt_conv)
@@ -611,7 +616,7 @@ contains
                                    z0m_eff, rho, wetrho_in_w3, tile_fraction,  &
                                    mr(imr_v), mr(imr_cl), mr(imr_ci),          &
                                    mr(imr_r),                                  &
-                                   nr_mphys, ns_mphys,                         &
+                                   nr_mphys, ns_mphys, murk,                   &
                                    cf_bulk, cf_area, cf_liq, cf_fro,           &
                                    dtheta_bl, exner_in_wth, dt_conv,           &
                                    t1p5m_surft, q1p5m_surft,                   &

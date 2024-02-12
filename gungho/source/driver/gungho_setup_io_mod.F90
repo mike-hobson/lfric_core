@@ -74,6 +74,7 @@ module gungho_setup_io_mod
                                        sea_ice_ancil_path,        &
                                        soil_ancil_path,           &
                                        soil_dust_ancil_path,      &
+                                       emiss_murk_ancil_path,     &
                                        soil_rough_ancil_path,     &
                                        sst_ancil_path,            &
                                        surface_frac_ancil_path,   &
@@ -128,7 +129,8 @@ module gungho_setup_io_mod
                                        emissions_GC5,             &
                                        easyaerosol_cdnc,          &
                                        easyaerosol_sw,            &
-                                       easyaerosol_lw
+                                       easyaerosol_lw,            &
+                                       murk_prognostic
   use chemistry_config_mod,      only: chem_scheme,               &
                                        chem_scheme_strattrop,     &
                                        chem_scheme_strat_test,    &
@@ -291,6 +293,15 @@ module gungho_setup_io_mod
                                    trim(soil_dust_ancil_path)
           call files_list%insert_item( lfric_xios_file_type( ancil_fname,      &
                                                          xios_id="soil_dust_ancil", &
+                                                         io_mode=FILE_MODE_READ ) )
+        end if
+
+        if (murk_prognostic) then
+          ! Set aerosol emission ancil filenames from namelist
+          write(ancil_fname,'(A)') trim(ancil_directory)//'/'//                &
+                                   trim(emiss_murk_ancil_path)
+          call files_list%insert_item( lfric_xios_file_type( ancil_fname,      &
+                                                         xios_id="emiss_murk_ancil", &
                                                          io_mode=FILE_MODE_READ ) )
         end if
 

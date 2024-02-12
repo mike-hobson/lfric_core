@@ -96,6 +96,7 @@ contains
 
     ! In cloud value passed to radiation
     type( field_type ), pointer :: cloud_drop_no_conc  => null()
+    type( field_type ), pointer :: murk                => null()
 
     type( field_type ), pointer :: height_w3 => null()
     type( field_type ), pointer :: height_wth => null()
@@ -147,6 +148,7 @@ contains
     call microphysics_fields%get_field('ng_mphys',ng_mphys)
 
     call aerosol_fields%get_field('cloud_drop_no_conc',cloud_drop_no_conc)
+    call aerosol_fields%get_field('murk', murk)
 
     height_w3 => get_height(W3, mesh_id)
     height_wth => get_height(Wtheta, mesh_id)
@@ -168,7 +170,7 @@ contains
                                      dmr_mphys(imr_g), dmr_mphys(imr_s),       &
                                      ls_rain, ls_snow, ls_graup, lsca_2d,      &
                                      ls_rain_3d, ls_snow_3d, ls_graup_3d,      &
-                                     theta_inc, cloud_drop_no_conc,            &
+                                     theta_inc, cloud_drop_no_conc, murk,      &
                                      refl_tot, refl_1km,                       &
                                      superc_liq, superc_rain ) )
 

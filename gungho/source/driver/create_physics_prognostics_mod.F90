@@ -48,7 +48,8 @@ module create_physics_prognostics_mod
                                              glomap_mode_ukca, n_radaer_step,   &
                                              l_radaer, emissions,               &
                                              emissions_GC3, emissions_GC5,      &
-                                             easyaerosol_sw, easyaerosol_lw
+                                             easyaerosol_sw, easyaerosol_lw,    &
+                                             murk_prognostic
   use section_choice_config_mod,      only : cloud, cloud_um,                   &
                                              aerosol, aerosol_um,               &
                                              radiation, radiation_socrates,     &
@@ -1533,6 +1534,12 @@ contains
     ! 3D fields, don't need checkpointing
     ! Sulphuric Acid aerosol MMR
     call processor%apply(make_spec('sulphuric', main%aerosol, Wtheta))
+
+    ! Murk field
+    call processor%apply(make_spec('murk', main%aerosol, &
+                   adv_coll=if_adv(murk_prognostic, adv%last_con), &
+                   ckp=murk_prognostic ))
+    call processor%apply(make_spec('murk_source', main%aerosol, Wtheta))
 
     ! EasyAerosol fields, might need checkpointing
     if ( easyaerosol_sw ) then

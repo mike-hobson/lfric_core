@@ -25,7 +25,7 @@ module bl_extra_diags_kernel_mod
   !>
   type, public, extends(kernel_type) :: bl_extra_diags_kernel_type
     private
-    type(arg_type) :: meta_args(32) = (/                                  &
+    type(arg_type) :: meta_args(33) = (/                                  &
          arg_type(GH_FIELD, GH_REAL, GH_READ, W3),                        & ! rho_in_w3
          arg_type(GH_FIELD, GH_REAL, GH_READ, W3),                        & ! wetrho_in_w3
          arg_type(GH_FIELD, GH_REAL, GH_READ, W3),                        & ! heat_flux_bl
@@ -37,6 +37,7 @@ module bl_extra_diags_kernel_mod
          arg_type(GH_FIELD, GH_REAL, GH_READ, WTHETA),                    & ! mr
          arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                   & ! nr_mphys
          arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                   & ! ns_mphys
+         arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                   & ! murk
          arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_1), & ! zh
          arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_1), & ! t1p5m
          arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_1), & ! q1p5m
@@ -122,7 +123,7 @@ contains
                                   taux, tauy,               &
                                   exner_in_wth,             &
                                   mci, mr,                  &
-                                  nr_mphys, ns_mphys,       &
+                                  nr_mphys, ns_mphys, murk, &
                                   zh,                       &
                                   t1p5m, q1p5m, qcl1p5m,    &
                                   wspd10m,                  &
@@ -147,6 +148,7 @@ contains
                                   undf_2d,                  &
                                   map_2d                  )
 
+    use aerosol_config_mod,   only : murk_visibility
     use beta_precip_mod,      only : beta_precip
     use cloud_inputs_mod,     only : rhcrit
     use dewpnt_mod,           only : dewpnt
@@ -185,6 +187,7 @@ contains
     real(kind=r_def), intent(in), dimension(undf_wth)   :: mr
     real(kind=r_def), intent(in), dimension(undf_wth)   :: nr_mphys
     real(kind=r_def), intent(in), dimension(undf_wth)   :: ns_mphys
+    real(kind=r_def), intent(in), dimension(undf_wth)   :: murk
     real(kind=r_def), intent(in), dimension(undf_2d)    :: zh
     real(kind=r_def), intent(in), dimension(undf_2d)    :: bl_weight_1dbl
     real(kind=r_def), intent(in), dimension(undf_2d)    :: ls_rain_2d
@@ -211,8 +214,6 @@ contains
     real(kind=r_def), parameter :: gust_const  = 2.29_r_def
 
     ! Switches needed for visibility calculations
-    logical(l_def),      parameter :: l_murk_vis_dummy = .FALSE.
-                                                     ! Awaiting coding of murk
     logical(l_def),      parameter :: pct = .false.  ! Cloud amounts are in %
     logical(l_def),      parameter :: avg = .true.   ! Precip=local*prob
     integer(kind=i_def), parameter :: fog_thres=1
@@ -292,7 +293,7 @@ contains
       ! surface pressure
       p_star(1,1)    = p_zero*(exner_in_wth(map_wth(1) + 0))**(1.0_r_def/kappa)
       ! level 1 of aerosol (using the standard default of 10 for now)
-      aerosol1(1,1)  = 10.0_r_def
+      aerosol1(1,1)  = murk(map_wth(1)+0)
       ! copy of screen variables
       t1p5m_loc(1,1)   = t1p5m(map_2d(1))
       q1p5m_loc(1,1)   = q1p5m(map_2d(1))
@@ -305,7 +306,7 @@ contains
       call visbty(                                                           &
                   ! inputs
                   p_star, t1p5m_loc, q1p5m_loc, qcl1p5m_loc, aerosol1,       &
-                  calc_prob_of_vis, rhcrit(1), l_murk_vis_dummy, 1,          &
+                  calc_prob_of_vis, rhcrit(1), murk_visibility, 1,           &
                   ! output
                   vis_no_precip )
       visibility_no_precip(map_2d(1)) = vis_no_precip(1,1)
@@ -360,7 +361,7 @@ contains
         vis_threshold(1,1,1,k)=vis_thresh(k)
       end do
       call fog_fr( p_star, rhcrit, 1, 1,                                       &
-                   t1p5m_loc, aerosol1, l_murk_vis_dummy,                      &
+                   t1p5m_loc, aerosol1, murk_visibility,                       &
                    q1p5m_loc, qcl1p5m_loc,                                     &
                    vis_threshold, pvis, n_vis_thresh )
       if ( .not. associated(fog_fraction, empty_real_data) )                   &

@@ -185,6 +185,7 @@
   <field id="pvol_om_ait_ins" name="pvol_om_ait_ins" long_name="partial_volume_of_organic_matter_in_aitken_insoluble_mode" unit="m3" grid_ref="full_level_face_grid" />
   <field id="pvol_du_acc_ins" name="pvol_du_acc_ins" long_name="partial_volume_of_dust_in_accumulation_insoluble_mode" unit="m3" grid_ref="full_level_face_grid" />
   <field id="pvol_du_cor_ins" name="pvol_du_cor_ins" long_name="partial_volume_of_dust_in_coarse_insoluble_mode" unit="m3" grid_ref="full_level_face_grid" />
+  <field id="murk" name="murk" long_name="simple_single_species_aerosol_murk" unit="microg kg-1" grid_ref="full_level_face_grid" />
   <!-- Easy Aerosol fields -->
   <field id="easy_asymmetry_sw" name="easy_asymmetry_sw" long_name="asymmetry parameter of EasyAerosol" unit="1" grid_ref="full_level_face_grid_sw_bands" />
   <field id="easy_asymmetry_lw" name="easy_asymmetry_lw" long_name="asymmetry parameter of EasyAerosol" unit="1" grid_ref="full_level_face_grid_lw_bands" />

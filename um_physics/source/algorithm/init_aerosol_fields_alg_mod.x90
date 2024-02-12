@@ -132,6 +132,9 @@ contains
     type( field_type ), pointer :: pvol_du_acc_ins => null()
     type( field_type ), pointer :: pvol_du_cor_ins => null()
 
+    type( field_type ), pointer :: murk => null()
+    type( field_type ), pointer :: murk_source => null()
+
     call aerosol_fields%get_field('n_nuc_sol', n_nuc_sol)
     call aerosol_fields%get_field('nuc_sol_su', nuc_sol_su)
     call aerosol_fields%get_field('nuc_sol_om', nuc_sol_om)
@@ -202,6 +205,9 @@ contains
       call aerosol_fields%get_field('pvol_om_ait_ins', pvol_om_ait_ins)
       call aerosol_fields%get_field('pvol_du_acc_ins', pvol_du_acc_ins)
       call aerosol_fields%get_field('pvol_du_cor_ins', pvol_du_cor_ins)
+
+      call aerosol_fields%get_field('murk', murk)
+      call aerosol_fields%get_field('murk_source', murk_source)
     end if
 
     if ( aerosol == aerosol_um .and.            &
@@ -325,7 +331,9 @@ contains
                    setval_c(pvol_bc_ait_ins,       0.0_r_def), &
                    setval_c(pvol_om_ait_ins,       0.0_r_def), &
                    setval_c(pvol_du_acc_ins,       0.0_r_def), &
-                   setval_c(pvol_du_cor_ins,       0.0_r_def) )
+                   setval_c(pvol_du_cor_ins,       0.0_r_def), &
+                   setval_c(murk,                 20.0_r_def), &
+                   setval_c(murk_source,        2.0e-4_r_def) )
 
     else if (aerosol == aerosol_um .and. &
              glomap_mode == glomap_mode_climatology) then
@@ -407,7 +415,9 @@ contains
                    setval_c(pvol_bc_ait_ins,       0.0_r_def), &
                    setval_c(pvol_om_ait_ins,       0.0_r_def), &
                    setval_c(pvol_du_acc_ins,       0.0_r_def), &
-                   setval_c(pvol_du_cor_ins,       0.0_r_def) )
+                   setval_c(pvol_du_cor_ins,       0.0_r_def), &
+                   setval_c(murk,                 20.0_r_def), &
+                   setval_c(murk_source,        2.0e-4_r_def) )
 
     else if (aerosol == aerosol_um .and. l_radaer) then
 
@@ -490,7 +500,9 @@ contains
                    setval_c(pvol_bc_ait_ins,   1.0e-22_r_def), &
                    setval_c(pvol_om_ait_ins,   1.0e-22_r_def), &
                    setval_c(pvol_du_acc_ins,   1.0e-21_r_def), &
-                   setval_c(pvol_du_cor_ins,   1.0e-18_r_def) )
+                   setval_c(pvol_du_cor_ins,   1.0e-18_r_def), &
+                   setval_c(murk,                 20.0_r_def), &
+                   setval_c(murk_source,        2.0e-4_r_def) )
 
     else
 
@@ -564,7 +576,9 @@ contains
                     setval_c(pvol_bc_ait_ins,       0.0_r_def), &
                     setval_c(pvol_om_ait_ins,       0.0_r_def), &
                     setval_c(pvol_du_acc_ins,       0.0_r_def), &
-                    setval_c(pvol_du_cor_ins,       0.0_r_def) )
+                    setval_c(pvol_du_cor_ins,       0.0_r_def), &
+                    setval_c(murk,                 20.0_r_def), &
+                    setval_c(murk_source,        2.0e-4_r_def) )
       end if
 
     end if

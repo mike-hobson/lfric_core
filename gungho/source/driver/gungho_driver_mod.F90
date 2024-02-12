@@ -67,6 +67,12 @@ module gungho_driver_mod
                                          iau_mode_instantaneous, &
                                          iau_mode_time_window, &
                                          iau_ts_start
+  use section_choice_config_mod,  only: stochastic_physics, &
+                                        stochastic_physics_um
+  use stochastic_physics_config_mod, &
+                                  only: use_random_parameters
+  use stph_rp_main_alg_mod,       only: stph_rp_main_alg, &
+                                        stph_rp_init_alg
 #endif
 #ifdef COUPLED
   use esm_couple_config_mod,      only : l_esm_couple_test
@@ -187,6 +193,12 @@ contains
       call field_collection_ptr%clear()
 
     end if
+
+    ! Initialise RP scheme (stochastic perturbed parameters)
+    if ( stochastic_physics == stochastic_physics_um .and. &
+         use_random_parameters ) then
+      call stph_rp_init_alg( modeldb )
+    end if
 #endif
 
     nullify(mesh, twod_mesh, aerosol_mesh, aerosol_twod_mesh)
@@ -276,6 +288,12 @@ contains
 
       end if
 
+    end if
+
+    ! Apply RP scheme (stochastic perturbed parameters)
+    if ( stochastic_physics == stochastic_physics_um .and. &
+         use_random_parameters ) then
+      call stph_rp_main_alg( modeldb )
     end if
 #endif
 

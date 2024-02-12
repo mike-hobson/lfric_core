@@ -28,6 +28,7 @@ module random_seed_gen_alg_mod
     use xios, only: xios_date, xios_get_current_date, &
                     xios_date_get_day_of_year, xios_date_get_second_of_day
     use log_mod, only: log_event, log_scratch_space, LOG_LEVEL_DEBUG
+    use stochastic_physics_config_mod, only: ens_memb
 
     implicit none
 
@@ -49,7 +50,7 @@ module random_seed_gen_alg_mod
     day = int(datetime%day, i_def)
     hour = int(datetime%hour, i_def) + 1
     minute = int(datetime%minute, i_def)
-    ensemble_number = 0
+    ensemble_number = ens_memb
     milli_ensemble_number = ensemble_number + 100
 
     ! Fetch random seed array size from intrinsic and allocate arrays.

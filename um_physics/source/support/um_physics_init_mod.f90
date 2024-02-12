@@ -130,6 +130,8 @@ module um_physics_init_mod
                                         radiation_socrates,&
                                         spectral_gwd,      &
                                         spectral_gwd_um,   &
+                                        stochastic_physics,&
+                                        stochastic_physics_um, &
                                         surface,           &
                                         surface_jules
 
@@ -142,10 +144,37 @@ module um_physics_init_mod
   use socrates_init_mod, only: n_sw_band,                                      &
                                n_lw_band
 
+  use stochastic_physics_config_mod, only: use_random_parameters,              &
+                                           rp_bl_a_ent_1,                      &
+                                           rp_bl_a_ent_shr_max,                &
+                                           rp_bl_a_ent_shr,                    &
+                                           rp_bl_cbl_mix_fac,                  &
+                                           rp_bl_cld_top_diffusion,            &
+                                           rp_bl_stable_ri_coef,               &
+                                           rp_bl_min_mix_length,               &
+                                           rp_bl_neutral_mix_length,           &
+                                           rp_bl_ricrit,                       &
+                                           rp_bl_smag_coef,                    &
+                                           rp_callfreq,                        &
+                                           rp_cycle_in,                        &
+                                           rp_cycle_out,                       &
+                                           rp_cycle_tm,                        &
+                                           rp_decorr_ts,                       &
+                                           rp_lsfc_lai_mult_max,               &
+                                           rp_lsfc_lai_mult_min,               &
+                                           rp_lsfc_lai_mult,                   &
+                                           rp_lsfc_z0hm_pft_max,               &
+                                           rp_lsfc_z0hm_pft_min,               &
+                                           rp_lsfc_z0hm_pft,                   &
+                                           rp_mp_ndrop_surf,                   &
+                                           rp_ran_max
+
   use orographic_drag_config_mod, only:  include_moisture,          &
                                          include_moisture_lowmoist, &
                                          include_moisture_moist,    &
                                          include_moisture_dry
+
+  use jules_surface_types_mod, only: npft
 
   ! Other LFRic modules used
   use constants_mod,        only : i_def, l_def, r_um, i_um, rmdi, r_def, r_bl
@@ -311,6 +340,13 @@ contains
          l_fix_mcr_frac_ice, l_fix_gr_autoc, l_improve_cv_cons,             &
          l_pc2_checks_sdfix
     use solinc_data, only: l_skyview
+    use stochastic_physics_run_mod, only: a_ent_1_rp, a_ent_shr_rp,         &
+         a_ent_shr_rp_max, cbl_mix_fac_rp, cs_rp, g0_rp, g1_rp,             &
+         i_rp_scheme, l_rp2, l_rp2_cycle_in, l_rp2_cycle_out,               &
+         lai_mult_rp_max, lai_mult_rp_min, lambda_min_rp, ndrop_surf_rp,    &
+         lai_mult_rp, par_mezcla_rp, ran_max, ricrit_rp, rp2_callfreq,      &
+         rp2_cycle_tm, rp2_decorr_ts, rp_max_idx, rp_min_idx,               &
+         z0hm_pft_rp, z0hm_pft_rp_max, z0hm_pft_rp_min
     use turb_diff_mod, only: l_subfilter_horiz, l_subfilter_vert,        &
          mix_factor, turb_startlev_vert, turb_endlev_vert, l_leonard_term
     use ukca_mode_setup, only: ukca_mode_sussbcocdu_7mode, i_ukca_bc_tuned
@@ -323,6 +359,7 @@ contains
 
     implicit none
 
+    integer(i_def) :: k, n, n_pft
     logical(l_def) :: l_fix_nacl_density
     logical(l_def) :: l_fix_ukca_hygroscopicities
     logical(l_def) :: dust_loaded = .false.
@@ -1204,6 +1241,45 @@ contains
     ! Leonard terms on or off
     !-----------------------------------------------------------------------
     l_leonard_term = leonard_term
+
+    !-----------------------------------------------------------------------
+    ! UM Random Parameter scheme settings
+    !-----------------------------------------------------------------------
+    if ( stochastic_physics == stochastic_physics_um ) then
+
+      ! Switches for the RP scheme
+      l_rp2 = use_random_parameters
+      i_rp_scheme = 1_i_def ! Use RP2b scheme
+      l_rp2_cycle_in = rp_cycle_in
+      l_rp2_cycle_out = rp_cycle_out
+      rp2_cycle_tm = rp_cycle_tm
+
+      ! Settings for RP algorithm
+      rp2_callfreq = rp_callfreq
+      rp2_decorr_ts = rp_decorr_ts
+      ran_max = rp_ran_max
+
+      ! Parameters
+      a_ent_1_rp = rp_bl_a_ent_1
+      a_ent_shr_rp = rp_bl_a_ent_shr
+      a_ent_shr_rp_max = rp_bl_a_ent_shr_max
+      cbl_mix_fac_rp = rp_bl_cbl_mix_fac
+      cs_rp = rp_bl_smag_coef
+      g0_rp = rp_bl_stable_ri_coef
+      g1_rp = rp_bl_cld_top_diffusion
+      lambda_min_rp = rp_bl_min_mix_length
+      ndrop_surf_rp = rp_mp_ndrop_surf
+      par_mezcla_rp = rp_bl_neutral_mix_length
+      ricrit_rp = rp_bl_ricrit
+
+      n_pft = size(rp_lsfc_z0hm_pft)
+      do n = 1, n_pft
+        lai_mult_rp(n) = rp_lsfc_lai_mult(n)
+        z0hm_pft_rp(n) = rp_lsfc_z0hm_pft(n)
+      end do
+
+    end if ! if ( stochastic_physics == stochastic_physics_um ) then
+
 
   end subroutine um_physics_init
 

@@ -191,7 +191,8 @@ contains
     do df = 1,4
 
       ! Only calculate face if it's not already been done
-      if (du_bl(map_w2(df)) == 0.0_r_def) then
+      if (du_bl(map_w2(df)) == 0.0_r_def .and. &
+          du_bl(map_w2(df)+1) == 0.0_r_def) then
 
         fland   = surf_interp(map_w2_surf(df) + 0)
         fb_surf = surf_interp(map_w2_surf(df) + 6)

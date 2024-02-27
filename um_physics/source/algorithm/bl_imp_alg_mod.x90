@@ -38,6 +38,9 @@ module bl_imp_alg_mod
   use blayer_config_mod,             only: fric_heating
   use derived_config_mod,            only: l_esm_couple
   use esm_couple_config_mod,         only: l_esm_couple_test
+  use aerosol_config_mod,            only: glomap_mode,               &
+                                           glomap_mode_dust_and_clim, &
+                                           glomap_mode_ukca
 
   implicit none
 
@@ -235,7 +238,7 @@ contains
     type( field_type ) :: t1p5m_surft, q1p5m_surft
     type( field_type ) :: wind10m_w2, u10m, v10m, w10m, u10m2, v10m2
     type( field_type ) :: wind10m_neut_w2, pseudotau_w2
-    type( field_type ) :: wspd10m_neut, u10m_neut, v10m_neut, w10m_neut
+    type( field_type ) :: wspd10m_neut, u10m_neut, v10m_neut
     type( field_type ) :: taux, tauy, tauz_ssi, ustar_implicit
     type( field_type ) :: wind_gust, scale_dep_wind_gust
     type( field_type ) :: visibility_with_precip, visibility_no_precip
@@ -564,8 +567,7 @@ contains
 
     if ( subroutine_timers ) call timer("bl_imp_alg")
 
-    ! Output diagnostics and/or calculate taux_ssi and tauy_ssi
-    !on last iteration only
+    ! Calculate and output fields on last iteration only
     if (use_xios_io .and. outer == outer_iterations) then
 
       ! Calculate zonal and meridional wind stresses.
@@ -577,11 +579,11 @@ contains
         call map_physics_winds(taux_ssi, tauy_ssi, tauz_ssi, tau_ssi_w2)
       end if
 
-      ! Output diagnostics on last iteration only
-      if (write_diag) then
-
-        ! Calculate zonal and meridional wind speeds - done here as it's
-        ! needed for coupling
+      ! Calculate zonal and meridional wind speeds - done here as it's
+      ! needed for coupling and ukca
+      if (write_diag .or. l_esm_couple .or. l_esm_couple_test .or. &
+           glomap_mode == glomap_mode_ukca .or. &
+           glomap_mode == glomap_mode_dust_and_clim ) then
         call zh%copy_field_properties(w10m)
         call map_physics_winds(u10m, v10m, w10m, wind10m_w2)
         ! Calculate the 10m windspeed
@@ -593,19 +595,10 @@ contains
                     inc_X_powint_n(v10m2, 2_i_def),                            &
                     X_plus_Y(wspd10m,u10m2,v10m2),                             &
                     inc_X_powreal_a(wspd10m, 0.5_r_def) )
-        call zh%copy_field_properties(w10m_neut)
-        call map_physics_winds(u10m_neut, v10m_neut, w10m_neut, wind10m_neut_w2)
-      ! Calculate the neutral 10m windspeed
-        call u10m_neut%copy_field_properties(u10m2)
-        call v10m_neut%copy_field_properties(v10m2)
-        call invoke(setval_X(u10m2, u10m_neut),                                &
-                    setval_X(v10m2, v10m_neut),                                &
-                    inc_X_powint_n(u10m2, 2_i_def),                            &
-                    inc_X_powint_n(v10m2, 2_i_def),                            &
-                    X_plus_Y(wspd10m_neut,u10m2,v10m2),                        &
-                    inc_X_powreal_a(wspd10m_neut, 0.5_r_def) )
+      end if
 
-        ! Output the BL diagnostics
+      ! Output the BL diagnostics
+      if (write_diag) then
         if (mod(clock%get_step(),diagnostic_frequency) == 0) then
           call output_diags_for_bl_imp(zh, du_bl, tile_heat_flux,              &
                                    tile_moisture_flux, tile_temperature,       &
@@ -613,6 +606,7 @@ contains
                                    snowice_sublimation, canopy_evap,           &
                                    wspd10m, u10m, v10m, ustar_implicit,        &
                                    wind_gust, scale_dep_wind_gust,             &
+                                   wind10m_neut_w2,                            &
                                    wspd10m_neut, u10m_neut, v10m_neut,         &
                                    taux, tauy, tau_w2, taux_ssi, tauy_ssi,     &
                                    pseudotaux, pseudotauy, pseudotau_w2,       &

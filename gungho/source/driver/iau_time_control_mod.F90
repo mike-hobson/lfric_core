@@ -17,7 +17,9 @@ module iau_time_control_mod
                                               log_level_error
 #ifdef UM_PHYSICS
   use iau_config_mod,                   only: iau_ts_start, &
-                                              iau_window_length
+                                              iau_window_length, &
+                                              iau_mode, &
+                                              iau_mode_instantaneous
 #endif
 
   implicit none
@@ -95,8 +97,12 @@ module iau_time_control_mod
     iau_ts_num = 0.0_i_def
     iau_weight = 0.0_r_def
 #ifdef UM_PHYSICS
-    iau_ts_num = calc_iau_ts_num( model_clock )
-    iau_weight = 1.0_r_def / real( iau_ts_num, r_def )
+    if (iau_mode == iau_mode_instantaneous) then
+      iau_weight = 1.0_r_def
+    else
+      iau_ts_num = calc_iau_ts_num( model_clock )
+      iau_weight = 1.0_r_def / real( iau_ts_num, r_def )
+    end if
 #endif
 
   end function calc_iau_weight

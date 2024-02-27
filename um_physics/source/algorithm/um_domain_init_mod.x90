@@ -88,10 +88,10 @@ contains
     if ( microphysics == microphysics_um                                    &
          .or. radiation == radiation_socrates ) then
       if (use_fsd_eff_res) then
-        ! In UM GA8, the fixed effective resolution was N96: 1.875 x 1.25 degrees
-        ! here use 1.875 degrees in both directions.
-        fsd_eff_lam    = 1.875_r_um * pi_over_180
-        fsd_eff_phi    = 1.875_r_um * pi_over_180
+        ! In UM GA9, the fixed effective resolution was N96: 1.875 x 1.25 degrees
+        ! here use 1.25 degrees in both directions.
+        fsd_eff_lam    = 1.25_r_um * pi_over_180
+        fsd_eff_phi    = 1.25_r_um * pi_over_180
       else
         fsd_eff_lam    = delta_lambda
         fsd_eff_phi    = delta_phi

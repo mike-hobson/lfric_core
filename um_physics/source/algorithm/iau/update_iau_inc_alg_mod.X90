@@ -122,6 +122,9 @@ module update_iau_inc_alg_mod
 
     iau_weight = calc_iau_weight( model_clock )
 
+    write(log_scratch_space,'(A,F16.8)') 'IAU: weight used = ', iau_weight
+    call log_event( log_scratch_space, log_level_info )
+
     ! Prognostic fields
     call prognostic_fields % get_field( 'u', u )
     call prognostic_fields % get_field( 'theta', theta )

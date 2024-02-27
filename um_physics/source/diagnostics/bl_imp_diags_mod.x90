@@ -231,9 +231,9 @@ contains
     ustar_implicit_flag = init_diag(ustar_implicit, 'surface__ustar_implicit')
     wind_gust_flag = init_diag(wind_gust, 'surface__wind_gust')
     scale_dep_wind_gust_flag = init_diag(scale_dep_wind_gust, 'surface__scale_dep_wind_gust')
-    wspd10m_neut_flag = init_diag(wspd10m_neut, 'surface__wspd10m_neut', activate=.true.)
-    u10m_neut_flag = init_diag(u10m_neut, 'surface__u10m_neut', activate=.true.)
-    v10m_neut_flag = init_diag(v10m_neut, 'surface__v10m_neut', activate=.true.)
+    wspd10m_neut_flag = init_diag(wspd10m_neut, 'surface__wspd10m_neut')
+    u10m_neut_flag = init_diag(u10m_neut, 'surface__u10m_neut')
+    v10m_neut_flag = init_diag(v10m_neut, 'surface__v10m_neut')
     pseudotaux_flag = init_diag(pseudotaux, 'surface__pseudotaux')
     pseudotauy_flag = init_diag(pseudotauy, 'surface__pseudotauy')
     latent_heat_flag = init_diag(latent_heat, 'surface__latent_heat')
@@ -307,6 +307,7 @@ contains
   !> @param[in]     ustar_implicit           implicit friction velocity
   !> @param[in]     wind_gust                gust wind speed at 10m
   !> @param[in]     scale_dep_wind_gust      scale-dependent gust wind speed at 10m
+  !> @param[in]     wind10m_neut_w2          neutral 10m wind at w2 dofs
   !> @param[in]     wspd10m_neut             neutral wind speed at 10m
   !> @param[in]     u10m_neut                Zonal 10m neutral wind speed
   !> @param[in]     v10m_neut                Meridional 10m neutral wind speed
@@ -381,6 +382,7 @@ contains
                                      snowice_sublimation, canopy_evap,         &
                                      wspd10m, u10m, v10m, ustar_implicit,      &
                                      wind_gust, scale_dep_wind_gust,           &
+                                     wind10m_neut_w2,                          &
                                      wspd10m_neut, u10m_neut, v10m_neut,       &
                                      taux, tauy, tau_w2, taux_ssi, tauy_ssi,   &
                                      pseudotaux, pseudotauy, pseudotau_w2,     &
@@ -433,7 +435,8 @@ contains
     type( field_type ), intent(in)    :: t1p5m_surft, q1p5m_surft
     type( field_type ), intent(in)    :: t1p5m, q1p5m, qcl1p5m, rh1p5m
     type( field_type ), intent(in)    :: u10m, v10m
-    type( field_type ), intent(in)    :: u10m_neut, v10m_neut, wspd10m_neut
+    type( field_type ), intent(inout) :: u10m_neut, v10m_neut, wspd10m_neut
+    type( field_type ), intent(in)    :: wind10m_neut_w2
     type( field_type ), intent(inout) :: taux, tauy, pseudotaux, pseudotauy
     type( field_type ), intent(in)    :: latent_heat, snomlt_surf_htf
     type( field_type ), intent(in)    :: soil_evap, grid_canopy_evap
@@ -462,7 +465,8 @@ contains
     type( field_type ), intent(inout) :: dew_point
 
     ! Local variables
-    type( field_type ) :: dt_bl, tauz, pseudotauz, du_bl, dv_bl, dw_bl
+    type( field_type ) :: dt_bl, tauz, pseudotauz, du_bl, dv_bl, dw_bl, &
+         w10m_neut, u10m2, v10m2
     logical( l_def ) :: ignore
 
     if ( subroutine_timers ) call timer("bl_imp_diags")
@@ -573,7 +577,25 @@ contains
     if (rh1p5m_flag) call rh1p5m%write_field()
     if (u10m_flag) call u10m%write_field()
     if (v10m_flag) call v10m%write_field()
-    if (wspd10m_neut_flag) call wspd10m_neut%write_field()
+
+    if (wspd10m_neut_flag .or. u10m_neut_flag .or. v10m_neut_flag) then
+      if (.not. u10m_neut_flag) ignore = init_diag(u10m_neut, 'surface__u10m_neut', activate=.true.)
+      if (.not. v10m_neut_flag) ignore = init_diag(v10m_neut, 'surface__v10m_neut', activate=.true.)
+      call zh%copy_field_properties(w10m_neut)
+      call map_physics_winds(u10m_neut, v10m_neut, w10m_neut, wind10m_neut_w2)
+    end if
+    if (wspd10m_neut_flag) then
+      ! Calculate the neutral 10m windspeed
+      call u10m_neut%copy_field_properties(u10m2)
+      call v10m_neut%copy_field_properties(v10m2)
+      call invoke(setval_X(u10m2, u10m_neut),                                &
+                  setval_X(v10m2, v10m_neut),                                &
+                  inc_X_powint_n(u10m2, 2_i_def),                            &
+                  inc_X_powint_n(v10m2, 2_i_def),                            &
+                  X_plus_Y(wspd10m_neut,u10m2,v10m2),                        &
+                  inc_X_powreal_a(wspd10m_neut, 0.5_r_def) )
+      call wspd10m_neut%write_field()
+    end if
     if (u10m_neut_flag) call u10m_neut%write_field()
     if (v10m_neut_flag) call v10m_neut%write_field()
     if (pseudotaux_flag) call pseudotaux%write_field()

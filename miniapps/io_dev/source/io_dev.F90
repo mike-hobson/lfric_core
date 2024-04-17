@@ -21,7 +21,7 @@ program io_dev
   use driver_timer_mod,       only: init_timers, final_timers
   use io_dev_mod,             only: io_dev_required_namelists
   use io_dev_driver_mod,      only: initialise, step, finalise
-  use io_dev_modeldb_mod,     only: modeldb_type
+  use driver_modeldb_mod,     only: modeldb_type
   use log_mod,                only: log_event,       &
                                     log_level_trace, &
                                     log_scratch_space
@@ -40,6 +40,8 @@ program io_dev
   modeldb%mpi => global_mpi
 
   call modeldb%configuration%initialise( program_name, table_len=10 )
+
+  call modeldb%values%initialise( 'values', 5 )
 
   call modeldb%fields%add_empty_field_collection("depository", table_len=1)
   call modeldb%fields%add_empty_field_collection("dump_fields", table_len=1)

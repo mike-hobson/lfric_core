@@ -38,7 +38,7 @@ module io_dev_driver_mod
   use mesh_mod,                   only: mesh_type
   use mpi_mod,                    only: mpi_type
   use io_dev_init_files_mod,      only: init_io_dev_files
-  use io_dev_modeldb_mod,         only: modeldb_type
+  use driver_modeldb_mod,         only: modeldb_type
   use io_dev_data_mod,            only: create_model_data,         &
                                         initialise_model_data,     &
                                         update_model_data,         &

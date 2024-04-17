@@ -15,7 +15,9 @@ module io_dev_data_mod
 
   ! Infrastructure
   use constants_mod,                    only : i_def
-  use io_dev_modeldb_mod,               only : modeldb_type
+  use driver_modeldb_mod,               only : modeldb_type
+  use io_dev_time_axes_mod,             only : io_dev_time_axes_type, &
+                                               get_time_axes_from_collection
   use field_mod,                        only : field_type
   use field_collection_mod,             only : field_collection_type
   use log_mod,                          only : log_event,      &
@@ -84,17 +86,22 @@ contains
     type( field_collection_type ), pointer              :: dump_fields
     ! Field collection holding fields which can be processed by PSyClone
     type( field_collection_type ), pointer              :: alg_fields
+    type( io_dev_time_axes_type )         :: io_dev_time_axes
+    type( io_dev_time_axes_type ), pointer              :: time_axes
     depository  => modeldb%fields%get_field_collection("depository")
     dump_fields => modeldb%fields%get_field_collection("dump_fields")
     alg_fields  => modeldb%fields%get_field_collection("alg_fields")
+    ! Add the place to store time axes in modeldb before pointing to it
+    call modeldb%values%add_key_value("model_time_axes", io_dev_time_axes)
+    time_axes => get_time_axes_from_collection(modeldb%values, "model_time_axes")
 
     ! Create model data fields
     call setup_io_dev_fields( mesh,                           &
                               twod_mesh,                      &
-                              depository,                    &
+                              depository,                     &
                               dump_fields,                    &
                               alg_fields,                     &
-                              modeldb%variable_field_times,   &
+                              time_axes%variable_field_times, &
                               alt_mesh )
 
     ! Initialise data before I/O is called
@@ -117,13 +124,15 @@ contains
     type( field_type ),   intent(in)    :: panel_id
 
     type( field_collection_type ), pointer :: depository
+    type( io_dev_time_axes_type ), pointer :: time_axes
     depository => modeldb%fields%get_field_collection("depository")
+    time_axes  => get_time_axes_from_collection(modeldb%values, "model_time_axes")
 
     ! Time varying init
     if (time_variation == time_variation_ancil) then
       call log_event( "IO_Dev: Initialising fields from time_varying ancillary", LOG_LEVEL_INFO )
       if ( subroutine_timers ) call timer('init_variable_fields')
-      call init_variable_fields( modeldb%variable_field_times, &
+      call init_variable_fields( time_axes%variable_field_times, &
                                    modeldb%clock, depository )
       if ( subroutine_timers ) call timer('init_variable_fields')
     end if
@@ -140,8 +149,10 @@ contains
 
     type( field_collection_type ), pointer :: depository
     type( field_collection_type ), pointer :: alg_fields
+    type( io_dev_time_axes_type ), pointer :: time_axes
     depository => modeldb%fields%get_field_collection("depository")
     alg_fields => modeldb%fields%get_field_collection("alg_fields")
+    time_axes  => get_time_axes_from_collection(modeldb%values, "model_time_axes")
 
     !---------------------------------------------------------------
     ! Separate update calls are made based on model configuration
@@ -157,7 +168,7 @@ contains
     case ( time_variation_ancil )
       call log_event( "IO_Dev: Updating fields from time_varying ancillary", LOG_LEVEL_INFO )
       if ( subroutine_timers ) call timer('update_variable_fields')
-      call update_variable_fields( modeldb%variable_field_times, &
+      call update_variable_fields( time_axes%variable_field_times, &
                                    modeldb%clock, depository )
       if ( subroutine_timers ) call timer('update_variable_fields')
 

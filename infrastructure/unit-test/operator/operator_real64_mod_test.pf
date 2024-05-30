@@ -1,5 +1,5 @@
 !-----------------------------------------------------------------------------
-! Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
+! Copyright (c) 2024,  Met Office, on behalf of HMSO and Queen's Printer
 ! For further details please refer to the file LICENCE.original which you
 ! should have received as part of this distribution.
 !-----------------------------------------------------------------------------
@@ -7,7 +7,7 @@
 !> Test the Operator representation
 !>
 
-module operator_r64_mod_test
+module operator_real64_mod_test
 
   use constants_mod,                 only : i_def, r_def
   use function_space_collection_mod, only : function_space_collection_type, &
@@ -26,13 +26,13 @@ module operator_r64_mod_test
   public :: test_all
 
   @TestCase
-  type, extends(MPITestCase), public :: operator_r64_test_type
+  type, extends(MPITestCase), public :: operator_real64_test_type
     private
   contains
     procedure setUp
     procedure tearDown
     procedure test_all
-  end type operator_r64_test_type
+  end type operator_real64_test_type
 
   integer(i_def), parameter :: element_order = 0
 contains
@@ -42,7 +42,7 @@ contains
 
     implicit none
 
-    class(operator_r64_test_type), intent(inout) :: this
+    class(operator_real64_test_type), intent(inout) :: this
 
     !Store the MPI communicator for later use
      call global_mpi%initialise(this%getMpiCommunicator())
@@ -59,7 +59,7 @@ contains
 
     implicit none
 
-    class(operator_r64_test_type), intent(inout) :: this
+    class(operator_real64_test_type), intent(inout) :: this
 
     call function_space_collection%clear()
     call mesh_collection%clear()
@@ -73,17 +73,18 @@ contains
   @Test( npes=[1] )
   subroutine test_all( this )
 
-    use operator_r64_mod,   only: operator_r64_type, operator_r64_proxy_type
-    use mesh_mod,           only: mesh_type, PLANE_BI_PERIODIC
-    use function_space_mod, only: function_space_type
-    use fs_continuity_mod,  only: W1, W2
+    use operator_real64_mod, only: operator_real64_type, &
+                                   operator_real64_proxy_type
+    use mesh_mod,            only: mesh_type, PLANE_BI_PERIODIC
+    use function_space_mod,  only: function_space_type
+    use fs_continuity_mod,   only: W1, W2
 
     implicit none
 
-    class(operator_r64_test_type), intent(inout) :: this
+    class(operator_real64_test_type), intent(inout) :: this
 
-    type( operator_r64_type )       :: Op
-    type( operator_r64_proxy_type ) :: Op_p
+    type( operator_real64_type )       :: Op
+    type( operator_real64_proxy_type ) :: Op_p
 
     type(local_mesh_type), target  :: unit_test_local_mesh
     type(local_mesh_type), pointer :: unit_test_local_mesh_ptr
@@ -174,4 +175,4 @@ contains
 
   end  subroutine test_all
 
-end module operator_r64_mod_test
+end module operator_real64_mod_test

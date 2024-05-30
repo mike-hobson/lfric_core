@@ -118,16 +118,16 @@ module halo_comms_mod
 
   ! Generic interface for specific synchronous halo exchange functions
   interface perform_halo_exchange
-   module procedure perform_halo_exchange_r32, &
-                    perform_halo_exchange_r64, &
-                    perform_halo_exchange_i32
+   module procedure perform_halo_exchange_real32, &
+                    perform_halo_exchange_real64, &
+                    perform_halo_exchange_int32
   end interface
 
   ! Generic interface for specific asynchronous halo exchange start functions
   interface perform_halo_exchange_start
-   module procedure perform_halo_exchange_start_r32, &
-                    perform_halo_exchange_start_r64, &
-                    perform_halo_exchange_start_i32
+   module procedure perform_halo_exchange_start_real32, &
+                    perform_halo_exchange_start_real64, &
+                    perform_halo_exchange_start_int32
   end interface
 contains
 
@@ -344,9 +344,9 @@ end subroutine finalise_halo_comms
 !> @param [in] halo_routing The pre-generated routing table.
 !> @param [in] depth The depth to which the halo exchange should be performed.
 !!
-subroutine perform_halo_exchange_r32( data_with_halos, &
-                                      halo_routing, &
-                                      depth )
+subroutine perform_halo_exchange_real32( data_with_halos, &
+                                         halo_routing, &
+                                         depth )
 
   implicit none
 
@@ -364,7 +364,7 @@ subroutine perform_halo_exchange_r32( data_with_halos, &
   call xt_redist_s_exchange(redist, data_with_halos, data_with_halos)
 #endif
 
-end subroutine perform_halo_exchange_r32
+end subroutine perform_halo_exchange_real32
 
 !! Perform a blocking halo exchange on 64-bit data
 !> @param [inout] data_with_halos The data on which to peform the halo exchange.
@@ -372,9 +372,9 @@ end subroutine perform_halo_exchange_r32
 !> @param [in] halo_routing The pre-generated routing table.
 !> @param [in] depth The depth to which the halo exchange should be performed.
 !!
-subroutine perform_halo_exchange_r64( data_with_halos, &
-                                      halo_routing, &
-                                      depth )
+subroutine perform_halo_exchange_real64( data_with_halos, &
+                                         halo_routing, &
+                                         depth )
   implicit none
 
   real(kind=real64),       intent(inout), pointer :: data_with_halos( : )
@@ -391,7 +391,7 @@ subroutine perform_halo_exchange_r64( data_with_halos, &
   call xt_redist_s_exchange(redist, data_with_halos, data_with_halos)
 #endif
 
-end subroutine perform_halo_exchange_r64
+end subroutine perform_halo_exchange_real64
 
 !! Perform a blocking halo exchange on 32-bit integer data
 !!
@@ -399,9 +399,9 @@ end subroutine perform_halo_exchange_r64
 !>                                Includes both owned and halo data.
 !> @param [in] halo_routing The pre-generated routing table.
 !> @param [in] depth The depth to which the halo exchange should be performed.
-subroutine perform_halo_exchange_i32( data_with_halos, &
-                                      halo_routing, &
-                                      depth )
+subroutine perform_halo_exchange_int32( data_with_halos, &
+                                        halo_routing, &
+                                        depth )
 
   implicit none
 
@@ -419,7 +419,7 @@ subroutine perform_halo_exchange_i32( data_with_halos, &
   call xt_redist_s_exchange(redist, data_with_halos, data_with_halos)
 #endif
 
-end subroutine perform_halo_exchange_i32
+end subroutine perform_halo_exchange_int32
 
 !! Start an asynchronous halo exchange on 32-bit data
 !> @param [inout] data_with_halos The data on which to peform the halo exchange.
@@ -429,10 +429,10 @@ end subroutine perform_halo_exchange_i32
 !> @param [out] halo_id Identifier to use when checking this asynchronous
 !>                      halo exchange has completed
 !!
-subroutine perform_halo_exchange_start_r32( data_with_halos, &
-                                            halo_routing, &
-                                            depth, &
-                                            halo_id )
+subroutine perform_halo_exchange_start_real32( data_with_halos, &
+                                               halo_routing, &
+                                               depth, &
+                                               halo_id )
   implicit none
 
   real(kind=real32),       intent(inout), pointer :: data_with_halos( : )
@@ -455,7 +455,7 @@ subroutine perform_halo_exchange_start_r32( data_with_halos, &
                             halo_id%halo_request)
 #endif
 
-end subroutine perform_halo_exchange_start_r32
+end subroutine perform_halo_exchange_start_real32
 
 !! Start an asynchronous halo exchange on 64-bit data
 !> @param [inout] data_with_halos The data on which to peform the halo exchange.
@@ -465,10 +465,10 @@ end subroutine perform_halo_exchange_start_r32
 !> @param [out] halo_id Identifier to use when checking this asynchronous
 !>                      halo exchange has completed
 !!
-subroutine perform_halo_exchange_start_r64( data_with_halos, &
-                                            halo_routing, &
-                                            depth, &
-                                            halo_id )
+subroutine perform_halo_exchange_start_real64( data_with_halos, &
+                                               halo_routing, &
+                                               depth, &
+                                               halo_id )
   implicit none
 
   real(kind=real64),       intent(inout), pointer :: data_with_halos( : )
@@ -491,7 +491,7 @@ subroutine perform_halo_exchange_start_r64( data_with_halos, &
                             halo_id%halo_request)
 #endif
 
-end subroutine perform_halo_exchange_start_r64
+end subroutine perform_halo_exchange_start_real64
 
 !! Start an asynchronous halo exchange on 32-bit integer data
 !> @param [inout] data_with_halos The data on which to peform the halo exchange.
@@ -501,10 +501,10 @@ end subroutine perform_halo_exchange_start_r64
 !> @param [out] halo_id Identifier to use when checking this asynchronous
 !>                      halo exchange has completed
 !!
-subroutine perform_halo_exchange_start_i32( data_with_halos, &
-                                            halo_routing, &
-                                            depth, &
-                                            halo_id )
+subroutine perform_halo_exchange_start_int32( data_with_halos, &
+                                              halo_routing, &
+                                              depth, &
+                                              halo_id )
   implicit none
 
   integer(kind=int32),     intent(inout), pointer :: data_with_halos( : )
@@ -527,7 +527,7 @@ subroutine perform_halo_exchange_start_i32( data_with_halos, &
                             halo_id%halo_request)
 #endif
 
-end subroutine perform_halo_exchange_start_i32
+end subroutine perform_halo_exchange_start_int32
 
 !! Wait for an asynchronous halo exchange to complete
 !> @param [inout] halo_id Id to indentify which asynchronous halo exchange

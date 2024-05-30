@@ -9,13 +9,13 @@ module key_value_mod_test
 
   use, intrinsic :: iso_fortran_env, only: int32, int64, real32, real64
 
-  use key_value_mod, only: key_value_type,                                     &
-                           i32_key_value_type,         i64_key_value_type,     &
-                           i32_arr_key_value_type,     i64_arr_key_value_type, &
-                           r32_key_value_type,         r64_key_value_type,     &
-                           r32_arr_key_value_type,     r64_arr_key_value_type, &
-                           logical_key_value_type,     str_key_value_type,     &
-                           logical_arr_key_value_type, str_arr_key_value_type, &
+  use key_value_mod, only: key_value_type,                                        &
+                           int32_key_value_type,       int64_key_value_type,      &
+                           int32_arr_key_value_type,   int64_arr_key_value_type,  &
+                           real32_key_value_type,      real64_key_value_type,     &
+                           real32_arr_key_value_type,  real64_arr_key_value_type, &
+                           logical_key_value_type,     str_key_value_type,        &
+                           logical_arr_key_value_type, str_arr_key_value_type,    &
                            abstract_key_value_type,    abstract_value_type
 
   use pFUnit_mod
@@ -39,10 +39,10 @@ contains
 
     implicit none
 
-    type(i32_key_value_type)     :: test_unit_i32
-    type(i64_key_value_type)     :: test_unit_i64
-    type(i32_arr_key_value_type) :: test_unit_i32_arr
-    type(i64_arr_key_value_type) :: test_unit_i64_arr
+    type(int32_key_value_type)     :: test_unit_int32
+    type(int64_key_value_type)     :: test_unit_int64
+    type(int32_arr_key_value_type) :: test_unit_int32_arr
+    type(int64_arr_key_value_type) :: test_unit_int64_arr
 
     character(*),   parameter :: key           = 'fish'
     character(*),   parameter :: big_key       = 'big_fish'
@@ -57,36 +57,36 @@ contains
     integer(int64), parameter :: big_shoal(2) = [big_turbot, big_plaice]
 
 
-    call test_unit_i32%initialise( key, turbot )
-    call test_unit_i64%initialise( big_key, big_turbot )
+    call test_unit_int32%initialise( key, turbot )
+    call test_unit_int64%initialise( big_key, big_turbot )
 
-    call test_unit_i32_arr%initialise( shoal_key, shoal )
-    call test_unit_i64_arr%initialise( big_shoal_key, big_shoal )
+    call test_unit_int32_arr%initialise( shoal_key, shoal )
+    call test_unit_int64_arr%initialise( big_shoal_key, big_shoal )
 
-    @assertEqual( key,        test_unit_i32%get_key() )
-    @assertEqual( turbot,     test_unit_i32%value  )
-    @assertEqual( big_key,    test_unit_i64%get_key() )
-    @assertEqual( big_turbot, test_unit_i64%value  )
+    @assertEqual( key,        test_unit_int32%get_key() )
+    @assertEqual( turbot,     test_unit_int32%value  )
+    @assertEqual( big_key,    test_unit_int64%get_key() )
+    @assertEqual( big_turbot, test_unit_int64%value  )
 
-    @assertEqual( shoal_key,     test_unit_i32_arr%get_key() )
-    @assertEqual( big_shoal_key, test_unit_i64_arr%get_key() )
-    @assertEqual( shoal,         test_unit_i32_arr%value )
-    @assertEqual( big_shoal,     test_unit_i64_arr%value )
+    @assertEqual( shoal_key,     test_unit_int32_arr%get_key() )
+    @assertEqual( big_shoal_key, test_unit_int64_arr%get_key() )
+    @assertEqual( shoal,         test_unit_int32_arr%value )
+    @assertEqual( big_shoal,     test_unit_int64_arr%value )
 
     ! Test that you can directly alter the values
-    test_unit_i32%value = plaice
-    test_unit_i64%value = big_plaice
+    test_unit_int32%value = plaice
+    test_unit_int64%value = big_plaice
 
-    @assertEqual( plaice,     test_unit_i32%value )
-    @assertEqual( big_plaice, test_unit_i64%value )
+    @assertEqual( plaice,     test_unit_int32%value )
+    @assertEqual( big_plaice, test_unit_int64%value )
 
-    deallocate( test_unit_i32_arr%value )
-    deallocate( test_unit_i64_arr%value )
-    allocate( test_unit_i32_arr%value, source=[plaice] )
-    allocate( test_unit_i64_arr%value, source=[big_plaice] )
+    deallocate( test_unit_int32_arr%value )
+    deallocate( test_unit_int64_arr%value )
+    allocate( test_unit_int32_arr%value, source=[plaice] )
+    allocate( test_unit_int64_arr%value, source=[big_plaice] )
 
-    @assertEqual( [plaice],     test_unit_i32_arr%value  )
-    @assertEqual( [big_plaice], test_unit_i64_arr%value  )
+    @assertEqual( [plaice],     test_unit_int32_arr%value  )
+    @assertEqual( [big_plaice], test_unit_int64_arr%value  )
 
   end subroutine test_integer
 
@@ -95,10 +95,10 @@ contains
 
     implicit none
 
-    type(r32_key_value_type)     :: test_unit_r32
-    type(r64_key_value_type)     :: test_unit_r64
-    type(r32_arr_key_value_type) :: test_unit_r32_arr
-    type(r64_arr_key_value_type) :: test_unit_r64_arr
+    type(real32_key_value_type)     :: test_unit_real32
+    type(real64_key_value_type)     :: test_unit_real64
+    type(real32_arr_key_value_type) :: test_unit_real32_arr
+    type(real64_arr_key_value_type) :: test_unit_real64_arr
 
     character(*), parameter :: key           = 'fish'
     character(*), parameter :: big_key       = 'big_fish'
@@ -113,35 +113,35 @@ contains
     real(real32), parameter :: shoal(2)     = [turbot, plaice]
     real(real64), parameter :: big_shoal(2) = [big_turbot, big_plaice]
 
-    call test_unit_r32%initialise( key, turbot )
-    call test_unit_r64%initialise( big_key, big_turbot )
-    call test_unit_r32_arr%initialise( shoal_key, shoal )
-    call test_unit_r64_arr%initialise( big_shoal_key, big_shoal )
+    call test_unit_real32%initialise( key, turbot )
+    call test_unit_real64%initialise( big_key, big_turbot )
+    call test_unit_real32_arr%initialise( shoal_key, shoal )
+    call test_unit_real64_arr%initialise( big_shoal_key, big_shoal )
 
-    @assertEqual( key,        test_unit_r32%get_key() )
-    @assertEqual( turbot,     test_unit_r32%value  )
-    @assertEqual( big_key,    test_unit_r64%get_key() )
-    @assertEqual( big_turbot, test_unit_r64%value  )
+    @assertEqual( key,        test_unit_real32%get_key() )
+    @assertEqual( turbot,     test_unit_real32%value  )
+    @assertEqual( big_key,    test_unit_real64%get_key() )
+    @assertEqual( big_turbot, test_unit_real64%value  )
 
-    @assertEqual( shoal_key,     test_unit_r32_arr%get_key() )
-    @assertEqual( big_shoal_key, test_unit_r64_arr%get_key() )
-    @assertEqual( shoal,         test_unit_r32_arr%value )
-    @assertEqual( big_shoal,     test_unit_r64_arr%value )
+    @assertEqual( shoal_key,     test_unit_real32_arr%get_key() )
+    @assertEqual( big_shoal_key, test_unit_real64_arr%get_key() )
+    @assertEqual( shoal,         test_unit_real32_arr%value )
+    @assertEqual( big_shoal,     test_unit_real64_arr%value )
 
     ! Test that you can directly alter the values
-    test_unit_r32%value = plaice
-    test_unit_r64%value = big_plaice
+    test_unit_real32%value = plaice
+    test_unit_real64%value = big_plaice
 
-    @assertEqual( plaice,     test_unit_r32%value  )
-    @assertEqual( big_plaice, test_unit_r64%value  )
+    @assertEqual( plaice,     test_unit_real32%value  )
+    @assertEqual( big_plaice, test_unit_real64%value  )
 
-    deallocate( test_unit_r32_arr%value )
-    deallocate( test_unit_r64_arr%value )
-    allocate( test_unit_r32_arr%value, source=[plaice] )
-    allocate( test_unit_r64_arr%value, source=[big_plaice] )
+    deallocate( test_unit_real32_arr%value )
+    deallocate( test_unit_real64_arr%value )
+    allocate( test_unit_real32_arr%value, source=[plaice] )
+    allocate( test_unit_real64_arr%value, source=[big_plaice] )
 
-    @assertEqual( [plaice],     test_unit_r32_arr%value  )
-    @assertEqual( [big_plaice], test_unit_r64_arr%value  )
+    @assertEqual( [plaice],     test_unit_real32_arr%value  )
+    @assertEqual( [big_plaice], test_unit_real64_arr%value  )
 
   end subroutine test_real
 

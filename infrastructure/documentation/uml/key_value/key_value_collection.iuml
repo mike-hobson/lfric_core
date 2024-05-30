@@ -11,7 +11,7 @@ class key_value_collection_mod::key_value_collection_type {
   +add_key_value( <<in>>key_value: key_value_type ) :
   +key_value_exists( <<in>>key: string ) :
   +remove_key_value( <<in>>key: string ) :
-  +generic :: get_value() => \n\tget_i32_value, get_i64_value, \n\tget_r32_value, get_r64_value, \n\tget_logical_value, get_string_value, \n\tget_i32_arr_value, get_i64_arr_value, \n\tget_r32_arr_value, get_r64_arr_value, \n\tget_logical_arr_value, get_string_arr_value
+  +generic :: get_value() => \n\tget_int32_value, get_int64_value, \n\tget_real32_value, get_real64_value, \n\tget_logical_value, get_string_value, \n\tget_int32_arr_value, get_int64_arr_value, \n\tget_real32_arr_value, get_real64_arr_value, \n\tget_logical_arr_value, get_string_arr_value
   +get_length(): integer
   +get_name() : string
   +get_table_length(): integer
@@ -19,16 +19,16 @@ class key_value_collection_mod::key_value_collection_type {
   +clear() :
   <<destroy>>+key_value_collection_destructor()
 
-  -get_i32_value(   <<in>>key:string<<len=*>>, <<out>>value:integer <<kind=int32, pointer>> )
-  -get_i64_value(   <<in>>key:string<<len=*>>, <<out>>value:integer <<kind=int64, pointer>> )
-  -get_r32_value(   <<in>>key:string<<len=*>>, <<out>>value:real    <<kind=real32, pointer>> )
-  -get_r64_value(   <<in>>key:string<<len=*>>, <<out>>value:real    <<kind=real64, pointer>> )
+  -get_int32_value(   <<in>>key:string<<len=*>>, <<out>>value:integer <<kind=int32, pointer>> )
+  -get_int64_value(   <<in>>key:string<<len=*>>, <<out>>value:integer <<kind=int64, pointer>> )
+  -get_real32_value(   <<in>>key:string<<len=*>>, <<out>>value:real    <<kind=real32, pointer>> )
+  -get_real64_value(   <<in>>key:string<<len=*>>, <<out>>value:real    <<kind=real64, pointer>> )
   -get_str_value(   <<in>>key:string<<len=*>>, <<out>>value:string  <<len=*, pointer>> )
   -get_logical_value( <<in>>key:string<<len=*>>, <<out>>value:logical <<pointer>> )
-  -get_i32_arr_value(   <<in>>key:string<<len=*>>, <<out>>value:integer[:] <<kind=int32, pointer>>)
-  -get_i64_arr_value(   <<in>>key:string<<len=*>>, <<out>>value:integer[:] <<kind=int64, pointer>> )
-  -get_r32_arr_value(   <<in>>key:string<<len=*>>, <<out>>value:real[:]    <<kind=real32, pointer>> )
-  -get_r64_arr_value(   <<in>>key:string<<len=*>>, <<out>>value:real[:]    <<kind=real64, pointer>> )
+  -get_int32_arr_value(   <<in>>key:string<<len=*>>, <<out>>value:integer[:] <<kind=int32, pointer>>)
+  -get_int64_arr_value(   <<in>>key:string<<len=*>>, <<out>>value:integer[:] <<kind=int64, pointer>> )
+  -get_real32_arr_value(   <<in>>key:string<<len=*>>, <<out>>value:real[:]    <<kind=real32, pointer>> )
+  -get_real64_arr_value(   <<in>>key:string<<len=*>>, <<out>>value:real[:]    <<kind=real64, pointer>> )
   -get_str_arr_value(   <<in>>key:string<<len=*>>, <<out>>value:string[:]  <<len=*, pointer>> )
   -get_logical_arr_value( <<in>>key:string<<len=*>>, <<out>>value:logical[:] <<pointer>> )
   -get_abstract_value(   <<in>>key:string<<len=*>>, <<out>>value:abstract_value_type <<abstract, pointer>> )

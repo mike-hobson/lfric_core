@@ -9,7 +9,7 @@ module id_r64_operator_pair_mod
 
   use constants_mod,         only: i_def
   use function_space_mod,    only: function_space_type
-  use operator_r64_mod,      only: operator_r64_type
+  use operator_real64_mod,   only: operator_real64_type
   use id_abstract_pair_mod,  only: id_abstract_pair_type
 
   implicit none
@@ -26,7 +26,7 @@ module id_r64_operator_pair_mod
 
     private
 
-    type(operator_r64_type) :: operator_
+    type(operator_real64_type) :: operator_
 
   contains
 
@@ -64,7 +64,7 @@ contains
     implicit none
 
     class(id_r64_operator_pair_type), intent(inout) :: self
-    type(operator_r64_type),          intent(in)    :: operator_in
+    type(operator_real64_type),       intent(in)    :: operator_in
     integer(kind=i_def),              intent(in)    :: id
 
     self%operator_ = operator_in%deep_copy()
@@ -80,7 +80,7 @@ contains
     implicit none
 
     class(id_r64_operator_pair_type), target, intent(in) :: self
-    type(operator_r64_type),                  pointer    :: operator_out
+    type(operator_real64_type),               pointer    :: operator_out
 
     operator_out => self%operator_
 

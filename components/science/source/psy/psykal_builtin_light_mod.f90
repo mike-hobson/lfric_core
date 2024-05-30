@@ -87,9 +87,9 @@ contains
 
   ! This is a PSyKAl-lite implementation of a built-in that will be implemented
   ! under PSYclone issue #489. See that issue for further details.
-  subroutine invoke_r32_field_min_max(field_min_norm, &
-                                      field_max_norm, &
-                                      r32_field)
+  subroutine invoke_real32_field_min_max(field_min_norm, &
+                                         field_max_norm, &
+                                         real32_field)
 
     use scalar_real32_mod,  only: scalar_real32_type
     use omp_lib,            only: omp_get_thread_num
@@ -100,7 +100,7 @@ contains
 
     real(kind=real32),              intent(out)  :: field_min_norm
     real(kind=real32),              intent(out)  :: field_max_norm
-    type(field_real32_type),         intent(in)  :: r32_field
+    type(field_real32_type),         intent(in)  :: real32_field
     type(scalar_real32_type)                     :: global_min, global_max
     integer(kind=i_def)                          :: df
     real(kind=real32), allocatable, dimension(:) :: l_field_min_norm
@@ -117,7 +117,7 @@ contains
     !
     ! Initialise field and/or operator proxies
     !
-    field_proxy = r32_field%get_proxy()
+    field_proxy = real32_field%get_proxy()
     maxv = huge(maxv)
     minv = -huge(minv)
     !
@@ -160,15 +160,15 @@ contains
     field_min_norm = global_min%get_min()
     field_max_norm = global_max%get_max()
     !
-  end subroutine invoke_r32_field_min_max
+  end subroutine invoke_real32_field_min_max
 
   !-------------------------------------------------------------------------------
 
   ! This is a PSyKAl-lite implementation of a built-in that will be implemented
   ! under PSYclone issue #489. See that issue for further details.
-  subroutine invoke_r64_field_min_max(field_min_norm, &
-                                      field_max_norm, &
-                                      r64_field)
+  subroutine invoke_real64_field_min_max(field_min_norm, &
+                                         field_max_norm, &
+                                         real64_field)
 
     use scalar_real64_mod,  only: scalar_real64_type
     use omp_lib,            only: omp_get_thread_num
@@ -179,7 +179,7 @@ contains
 
     real(kind=real64),               intent(out) :: field_min_norm
     real(kind=real64),               intent(out) :: field_max_norm
-    type(field_real64_type),          intent(in) :: r64_field
+    type(field_real64_type),          intent(in) :: real64_field
     type(scalar_real64_type)                     :: global_min, global_max
     integer(kind=i_def)                          :: df
     real(kind=real64), allocatable, dimension(:) :: l_field_min_norm
@@ -196,7 +196,7 @@ contains
     !
     ! Initialise field and/or operator proxies
     !
-    field_proxy = r64_field%get_proxy()
+    field_proxy = real64_field%get_proxy()
     maxv = huge(maxv)
     minv = -huge(minv)
     !
@@ -239,15 +239,15 @@ contains
     field_min_norm = global_min%get_min()
     field_max_norm = global_max%get_max()
     !
-  end subroutine invoke_r64_field_min_max
+  end subroutine invoke_real64_field_min_max
 
   !-------------------------------------------------------------------------------
 
   ! This is a PSyKAl-lite implementation of a built-in that will be implemented
   ! under PSYclone issue #489. See that issue for further details.
-  subroutine invoke_i32_field_min_max(field_min_norm, &
-                                      field_max_norm, &
-                                      i32_field)
+  subroutine invoke_int32_field_min_max(field_min_norm, &
+                                        field_max_norm, &
+                                        int32_field)
 
     use scalar_int32_mod,   only: scalar_int32_type
     use omp_lib,            only: omp_get_thread_num
@@ -258,7 +258,7 @@ contains
 
     integer(kind=int32),               intent(out) :: field_min_norm
     integer(kind=int32),               intent(out) :: field_max_norm
-    type(field_int32_type),            intent(in)  :: i32_field
+    type(field_int32_type),            intent(in)  :: int32_field
     type(scalar_int32_type)                        :: global_min, global_max
     integer(kind=i_def)                            :: df
     integer(kind=int32), allocatable, dimension(:) :: l_field_min_norm
@@ -275,7 +275,7 @@ contains
     !
     ! Initialise field and/or operator proxies
     !
-    field_proxy = i32_field%get_proxy()
+    field_proxy = int32_field%get_proxy()
     maxv = huge(maxv)
     minv = -huge(minv)
     !
@@ -319,14 +319,14 @@ contains
     field_min_norm = global_min%get_min()
     field_max_norm = global_max%get_max()
     !
-  end subroutine invoke_i32_field_min_max
+  end subroutine invoke_int32_field_min_max
 
   !--------------------------------------------------------------------------
 
   !-----------------------------------------------------------------------------
-  subroutine invoke_r32_local_field_min_max(field_min_norm, &
-                                            field_max_norm, &
-                                            r32_field)
+  subroutine invoke_real32_local_field_min_max(field_min_norm, &
+                                               field_max_norm, &
+                                               real32_field)
 
     use omp_lib,            only: omp_get_thread_num
     use omp_lib,            only: omp_get_max_threads
@@ -337,7 +337,7 @@ contains
 
     real(kind=real32),              intent(out)  :: field_min_norm
     real(kind=real32),              intent(out)  :: field_max_norm
-    type(field_real32_type),         intent(in)  :: r32_field
+    type(field_real32_type),         intent(in)  :: real32_field
     integer(kind=i_def)                          :: df
     real(kind=real32), allocatable, dimension(:) :: l_field_min_norm
     real(kind=real32), allocatable, dimension(:) :: l_field_max_norm
@@ -353,7 +353,7 @@ contains
     !
     ! Initialise field and/or operator proxies
     !
-    field_proxy = r32_field%get_proxy()
+    field_proxy = real32_field%get_proxy()
     maxv = huge(maxv)
     minv = -huge(minv)
     !
@@ -392,12 +392,12 @@ contains
     end do
     deallocate (l_field_min_norm, l_field_max_norm)
     !
-  end subroutine invoke_r32_local_field_min_max
+  end subroutine invoke_real32_local_field_min_max
 
   !-----------------------------------------------------------------------------
-  subroutine invoke_r64_local_field_min_max(field_min_norm, &
-                                            field_max_norm, &
-                                            r64_field)
+  subroutine invoke_real64_local_field_min_max(field_min_norm, &
+                                               field_max_norm, &
+                                               real64_field)
 
     use omp_lib,            only: omp_get_thread_num
     use omp_lib,            only: omp_get_max_threads
@@ -408,7 +408,7 @@ contains
 
     real(kind=real64),               intent(out) :: field_min_norm
     real(kind=real64),               intent(out) :: field_max_norm
-    type(field_real64_type),          intent(in) :: r64_field
+    type(field_real64_type),          intent(in) :: real64_field
     integer(kind=i_def)                          :: df
     real(kind=real64), allocatable, dimension(:) :: l_field_min_norm
     real(kind=real64), allocatable, dimension(:) :: l_field_max_norm
@@ -424,7 +424,7 @@ contains
     !
     ! Initialise field and/or operator proxies
     !
-    field_proxy = r64_field%get_proxy()
+    field_proxy = real64_field%get_proxy()
     maxv = huge(maxv)
     minv = -huge(minv)
     !
@@ -463,12 +463,12 @@ contains
     end do
     deallocate (l_field_min_norm, l_field_max_norm)
     !
-  end subroutine invoke_r64_local_field_min_max
+  end subroutine invoke_real64_local_field_min_max
 
   !-----------------------------------------------------------------------------
-  subroutine invoke_i32_local_field_min_max(field_min_norm, &
-                                            field_max_norm, &
-                                            i32_field)
+  subroutine invoke_int32_local_field_min_max(field_min_norm, &
+                                              field_max_norm, &
+                                              int32_field)
 
     use omp_lib,            only: omp_get_thread_num
     use omp_lib,            only: omp_get_max_threads
@@ -479,7 +479,7 @@ contains
 
     integer(kind=int32),               intent(out) :: field_min_norm
     integer(kind=int32),               intent(out) :: field_max_norm
-    type(field_int32_type),            intent(in)  :: i32_field
+    type(field_int32_type),            intent(in)  :: int32_field
     integer(kind=i_def)                            :: df
     integer(kind=int32), allocatable, dimension(:) :: l_field_min_norm
     integer(kind=int32), allocatable, dimension(:) :: l_field_max_norm
@@ -495,7 +495,7 @@ contains
     !
     ! Initialise field and/or operator proxies
     !
-    field_proxy = i32_field%get_proxy()
+    field_proxy = int32_field%get_proxy()
     maxv = huge(maxv)
     minv = -huge(minv)
     !
@@ -534,6 +534,6 @@ contains
     end do
     deallocate (l_field_min_norm, l_field_max_norm)
     !
-  end subroutine invoke_i32_local_field_min_max
+  end subroutine invoke_int32_local_field_min_max
 
 end module psykal_builtin_light_mod

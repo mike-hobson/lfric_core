@@ -9,11 +9,11 @@
 !>          with the following concrete types.
 !>
 !> * key_value_type (abstract)
-!>     - i32_key_value_type,         i64_key_value_type
-!>     - r32_key_value_type,         r64_key_value_type
+!>     - int32_key_value_type,       int64_key_value_type
+!>     - real32_key_value_type,      real64_key_value_type
 !>     - logical_key_value_type,     str_key_value_type
-!>     - i32_arr_key_value_type,     i64_arr_key_value_type
-!>     - r32_arr_key_value_type,     r64_arr_key_value_type
+!>     - int32_arr_key_value_type,   int64_arr_key_value_type
+!>     - real32_arr_key_value_type,  real64_arr_key_value_type
 !>     - logical_arr_key_value_type, str_arr_key_value_type
 !>     - abstract_key_value_type
 !>
@@ -33,13 +33,13 @@ module key_value_mod
 
   private
 
-  public :: key_value_type,         abstract_value_type
-  public :: i32_key_value_type,     i64_key_value_type
-  public :: i32_arr_key_value_type, i64_arr_key_value_type
-  public :: r32_key_value_type,     r64_key_value_type
-  public :: r32_arr_key_value_type, r64_arr_key_value_type
-  public :: logical_key_value_type, logical_arr_key_value_type
-  public :: str_key_value_type,     str_arr_key_value_type
+  public :: key_value_type,            abstract_value_type
+  public :: int32_key_value_type,      int64_key_value_type
+  public :: int32_arr_key_value_type,  int64_arr_key_value_type
+  public :: real32_key_value_type,     real64_key_value_type
+  public :: real32_arr_key_value_type, real64_arr_key_value_type
+  public :: logical_key_value_type,    logical_arr_key_value_type
+  public :: str_key_value_type,        str_arr_key_value_type
   public :: abstract_key_value_type
   public :: create_key_value
 
@@ -69,40 +69,40 @@ module key_value_mod
   !===============================================
 
   !===============================================
-  ! i32_key_value_type: 32-bit integer key-value pair
+  ! int32_key_value_type: 32-bit integer key-value pair
   !===============================================
-  type, extends(key_value_type) :: i32_key_value_type
+  type, extends(key_value_type) :: int32_key_value_type
     integer(int32) :: value = -huge(0_int32)
   contains
-    procedure :: initialise => init_i32_key_value
-  end type i32_key_value_type
+    procedure :: initialise => init_int32_key_value
+  end type int32_key_value_type
 
   !===============================================
-  ! i64_key_value_type: 64-bit integer key-value pair
+  ! int64_key_value_type: 64-bit integer key-value pair
   !===============================================
-  type, extends(key_value_type) :: i64_key_value_type
+  type, extends(key_value_type) :: int64_key_value_type
     integer(int64) :: value = -huge(0_int64)
   contains
-    procedure :: initialise => init_i64_key_value
-  end type i64_key_value_type
+    procedure :: initialise => init_int64_key_value
+  end type int64_key_value_type
 
   !===============================================
-  ! r32_key_value_type: 32-bit real key-value pair
+  ! real32_key_value_type: 32-bit real key-value pair
   !===============================================
-  type, extends(key_value_type) :: r32_key_value_type
+  type, extends(key_value_type) :: real32_key_value_type
     real(real32) :: value = -huge(0.0_real32)
   contains
-    procedure :: initialise => init_r32_key_value
-  end type r32_key_value_type
+    procedure :: initialise => init_real32_key_value
+  end type real32_key_value_type
 
   !==============================================
-  ! r64_key_value_type: 64-bit real key-value pair
+  ! real64_key_value_type: 64-bit real key-value pair
   !==============================================
-  type, extends(key_value_type) :: r64_key_value_type
+  type, extends(key_value_type) :: real64_key_value_type
     real(real64) :: value = -huge(0.0_real64)
   contains
-    procedure :: initialise => init_r64_key_value
-  end type r64_key_value_type
+    procedure :: initialise => init_real64_key_value
+  end type real64_key_value_type
 
   !==============================================
   ! logical_key_value_type: Logical key-value pair
@@ -123,40 +123,40 @@ module key_value_mod
   end type str_key_value_type
 
   !===============================================
-  ! i32_key_value_type: 32-bit integer key-value pair
+  ! int32_key_value_type: 32-bit integer key-value pair
   !===============================================
-  type, extends(key_value_type) :: i32_arr_key_value_type
+  type, extends(key_value_type) :: int32_arr_key_value_type
     integer(int32), allocatable :: value(:)
   contains
-    procedure :: initialise => init_i32_arr_key_value
-  end type i32_arr_key_value_type
+    procedure :: initialise => init_int32_arr_key_value
+  end type int32_arr_key_value_type
 
   !===============================================
-  ! i64_key_value_type: 64-bit integer key-value pair
+  ! int64_key_value_type: 64-bit integer key-value pair
   !===============================================
-  type, extends(key_value_type) :: i64_arr_key_value_type
+  type, extends(key_value_type) :: int64_arr_key_value_type
     integer(int64), allocatable :: value(:)
   contains
-    procedure :: initialise => init_i64_arr_key_value
-  end type i64_arr_key_value_type
+    procedure :: initialise => init_int64_arr_key_value
+  end type int64_arr_key_value_type
 
   !===============================================
-  ! i32_key_value_type: 32-bit integer key-value pair
+  ! int32_key_value_type: 32-bit integer key-value pair
   !===============================================
-  type, extends(key_value_type) :: r32_arr_key_value_type
+  type, extends(key_value_type) :: real32_arr_key_value_type
     real(real32), allocatable :: value(:)
   contains
-    procedure :: initialise => init_r32_arr_key_value
-  end type r32_arr_key_value_type
+    procedure :: initialise => init_real32_arr_key_value
+  end type real32_arr_key_value_type
 
   !===============================================
-  ! i64_key_value_type: 64-bit integer key-value pair
+  ! int64_key_value_type: 64-bit integer key-value pair
   !===============================================
-  type, extends(key_value_type) :: r64_arr_key_value_type
+  type, extends(key_value_type) :: real64_arr_key_value_type
     real(real64), allocatable :: value(:)
   contains
-    procedure :: initialise => init_r64_arr_key_value
-  end type r64_arr_key_value_type
+    procedure :: initialise => init_real64_arr_key_value
+  end type real64_arr_key_value_type
 
   !==============================================
   ! logical_arr_key_value_type: Logical key-value pair
@@ -219,29 +219,29 @@ function create_key_value( key, value ) result(instance)
 
   class(key_value_type), pointer :: instance
 
-  type(i32_key_value_type) :: concrete_i32
-  type(i64_key_value_type) :: concrete_i64
-  type(r32_key_value_type) :: concrete_r32
-  type(r64_key_value_type) :: concrete_r64
+  type(int32_key_value_type)    :: concrete_int32
+  type(int64_key_value_type)    :: concrete_int64
+  type(real32_key_value_type)   :: concrete_real32
+  type(real64_key_value_type)   :: concrete_real64
   type(abstract_key_value_type) :: abstract_object
 
   select type (value)
 
   type is (integer(int32))
-    call concrete_i32%initialise( key, value )
-    allocate( instance, source=concrete_i32 )
+    call concrete_int32%initialise( key, value )
+    allocate( instance, source=concrete_int32 )
 
   type is (integer(int64))
-    call concrete_i64%initialise( key, value )
-    allocate( instance, source=concrete_i64 )
+    call concrete_int64%initialise( key, value )
+    allocate( instance, source=concrete_int64 )
 
   type is (real(real32))
-    call concrete_r32%initialise( key, value )
-    allocate( instance, source=concrete_r32 )
+    call concrete_real32%initialise( key, value )
+    allocate( instance, source=concrete_real32 )
 
   type is (real(real64))
-    call concrete_r64%initialise( key, value )
-    allocate( instance, source=concrete_r64 )
+    call concrete_real64%initialise( key, value )
+    allocate( instance, source=concrete_real64 )
 
   class is (abstract_value_type)
     call abstract_object%initialise( key, value )
@@ -301,11 +301,11 @@ end function get_key_value_key
 !> @brief Initialiser for 32-bit integer key-value pair object
 !> @param [in] key      String used for key
 !> @param [in] value    32-bit integer value
-subroutine init_i32_key_value( self, key, value )
+subroutine init_int32_key_value( self, key, value )
 
   implicit none
 
-  class(i32_key_value_type), intent(inout) :: self
+  class(int32_key_value_type), intent(inout) :: self
 
   character(*),   intent(in) :: key
   integer(int32), intent(in) :: value
@@ -314,16 +314,16 @@ subroutine init_i32_key_value( self, key, value )
   self%value = value
 
   return
-end subroutine init_i32_key_value
+end subroutine init_int32_key_value
 
 !> @brief Initialiser for 64-bit integer key-value pair object
 !> @param [in] key      String used for key
 !> @param [in] value    64-bit integer value
-subroutine init_i64_key_value( self, key, value )
+subroutine init_int64_key_value( self, key, value )
 
   implicit none
 
-  class(i64_key_value_type), intent(inout) :: self
+  class(int64_key_value_type), intent(inout) :: self
 
   character(*),   intent(in) :: key
   integer(int64), intent(in) :: value
@@ -332,16 +332,16 @@ subroutine init_i64_key_value( self, key, value )
   self%value = value
 
   return
-end subroutine init_i64_key_value
+end subroutine init_int64_key_value
 
 !> @brief Initialiser for 32-bit real key-value pair object
 !> @param [in] key    String used for key
 !> @param [in] value  32-bit real value
-subroutine init_r32_key_value( self, key, value )
+subroutine init_real32_key_value( self, key, value )
 
   implicit none
 
-  class(r32_key_value_type), intent(inout) :: self
+  class(real32_key_value_type), intent(inout) :: self
 
   character(*), intent(in) :: key
   real(real32), intent(in) :: value
@@ -350,16 +350,16 @@ subroutine init_r32_key_value( self, key, value )
   self%value = value
 
   return
-end subroutine init_r32_key_value
+end subroutine init_real32_key_value
 
 !> @brief Initialiser for 64-bit real key-value pair object
 !> @param [in] key    String used for key
 !> @param [in] value  64-bit real value
-subroutine init_r64_key_value( self, key, value )
+subroutine init_real64_key_value( self, key, value )
 
   implicit none
 
-  class(r64_key_value_type), intent(inout) :: self
+  class(real64_key_value_type), intent(inout) :: self
 
   character(*), intent(in) :: key
   real(real64), intent(in) :: value
@@ -368,7 +368,7 @@ subroutine init_r64_key_value( self, key, value )
   self%value = value
 
   return
-end subroutine init_r64_key_value
+end subroutine init_real64_key_value
 
 !> @brief Initialiser for logical key-value pair object
 !> @param [in] key    String used for key
@@ -409,11 +409,11 @@ end subroutine init_str_key_value
 !> @brief Initialiser for 32-bit integer array key-value pair object
 !> @param [in] key      String used for key
 !> @param [in] value    32-bit integer array values
-subroutine init_i32_arr_key_value( self, key, value )
+subroutine init_int32_arr_key_value( self, key, value )
 
   implicit none
 
-  class(i32_arr_key_value_type), intent(inout) :: self
+  class(int32_arr_key_value_type), intent(inout) :: self
 
   character(*),   intent(in) :: key
   integer(int32), intent(in) :: value(:)
@@ -422,16 +422,16 @@ subroutine init_i32_arr_key_value( self, key, value )
   allocate( self%value, source=value )
 
   return
-end subroutine init_i32_arr_key_value
+end subroutine init_int32_arr_key_value
 
 !> @brief Initialiser for 64-bit integer array key-value pair object
 !> @param [in] key      String used for key
 !> @param [in] value    64-bit integer array values
-subroutine init_i64_arr_key_value( self, key, value )
+subroutine init_int64_arr_key_value( self, key, value )
 
   implicit none
 
-  class(i64_arr_key_value_type), intent(inout) :: self
+  class(int64_arr_key_value_type), intent(inout) :: self
 
   character(*),   intent(in) :: key
   integer(int64), intent(in) :: value(:)
@@ -440,16 +440,16 @@ subroutine init_i64_arr_key_value( self, key, value )
   allocate( self%value, source=value )
 
   return
-end subroutine init_i64_arr_key_value
+end subroutine init_int64_arr_key_value
 
 !> @brief Initialiser for 32-bit real array key-value pair object
 !> @param [in] key      String used for key
 !> @param [in] value    32-bit real array values
-subroutine init_r32_arr_key_value( self, key, value )
+subroutine init_real32_arr_key_value( self, key, value )
 
   implicit none
 
-  class(r32_arr_key_value_type), intent(inout) :: self
+  class(real32_arr_key_value_type), intent(inout) :: self
 
   character(*),   intent(in) :: key
   real(real32), intent(in) :: value(:)
@@ -458,16 +458,16 @@ subroutine init_r32_arr_key_value( self, key, value )
   allocate( self%value, source=value )
 
   return
-end subroutine init_r32_arr_key_value
+end subroutine init_real32_arr_key_value
 
 !> @brief Initialiser for 64-bit real array key-value pair object
 !> @param [in] key      String used for key
 !> @param [in] value    64-bit real array values
-subroutine init_r64_arr_key_value( self, key, value )
+subroutine init_real64_arr_key_value( self, key, value )
 
   implicit none
 
-  class(r64_arr_key_value_type), intent(inout) :: self
+  class(real64_arr_key_value_type), intent(inout) :: self
 
   character(*),   intent(in) :: key
   real(real64), intent(in) :: value(:)
@@ -476,7 +476,7 @@ subroutine init_r64_arr_key_value( self, key, value )
   allocate( self%value, source=value )
 
   return
-end subroutine init_r64_arr_key_value
+end subroutine init_real64_arr_key_value
 
 !> @brief Initialiser for a logical array key-value pair object
 !> @param [in] key      String used for key

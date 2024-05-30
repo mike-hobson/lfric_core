@@ -44,17 +44,17 @@ module namelist_mod
 
   contains
 
-    procedure, private :: get_i32_value
-    procedure, private :: get_i64_value
-    procedure, private :: get_r32_value
-    procedure, private :: get_r64_value
+    procedure, private :: get_int32_value
+    procedure, private :: get_int64_value
+    procedure, private :: get_real32_value
+    procedure, private :: get_real64_value
     procedure, private :: get_logical_value
     procedure, private :: get_str_value
 
-    procedure, private :: get_i32_arr_value
-    procedure, private :: get_i64_arr_value
-    procedure, private :: get_r32_arr_value
-    procedure, private :: get_r64_arr_value
+    procedure, private :: get_int32_arr_value
+    procedure, private :: get_int64_arr_value
+    procedure, private :: get_real32_arr_value
+    procedure, private :: get_real64_arr_value
     procedure, private :: get_logical_arr_value
     procedure, private :: get_str_arr_value
 
@@ -66,10 +66,10 @@ module namelist_mod
     procedure :: get_profile_name
     procedure :: get_full_name
 
-    generic   :: get_value => get_i32_value,     get_i32_arr_value,     &
-                              get_i64_value,     get_i64_arr_value,     &
-                              get_r32_value,     get_r32_arr_value,     &
-                              get_r64_value,     get_r64_arr_value,     &
+    generic   :: get_value => get_int32_value,   get_int32_arr_value,   &
+                              get_int64_value,   get_int64_arr_value,   &
+                              get_real32_value,  get_real32_arr_value,  &
+                              get_real64_value,  get_real64_arr_value,  &
                               get_logical_value, get_logical_arr_value, &
                               get_str_value,     get_str_arr_value
 
@@ -181,7 +181,7 @@ contains
   !> @brief Private subroutine to return a 32-bit integer.
   !> @param [in]  name  Namelist member to return data for.
   !> @param [out] value Namelist mamber 32-bit integer data.
-  subroutine get_i32_value( self, name, value )
+  subroutine get_int32_value( self, name, value )
 
     implicit none
 
@@ -194,7 +194,7 @@ contains
     i = self%locate_member( name )
     call self%members(i)%get_value( value )
 
-  end subroutine get_i32_value
+  end subroutine get_int32_value
 
 
   ! 2.2b Namelist member getter: 64-BIT INTEGER
@@ -202,7 +202,7 @@ contains
   !> @brief Private subroutine to return a 64-bit integer.
   !> @param [in]  name  Namelist member name to return data for.
   !> @param [out] value Namelist member data.
-  subroutine get_i64_value( self, name, value )
+  subroutine get_int64_value( self, name, value )
 
     implicit none
 
@@ -215,7 +215,7 @@ contains
     i = self%locate_member( name )
     call self%members(i)%get_value( value )
 
-  end subroutine get_i64_value
+  end subroutine get_int64_value
 
 
   ! 2.2c Namelist member getter: 32-BIT REAL
@@ -223,7 +223,7 @@ contains
   !> @brief Private subroutine to return a 32-bit real.
   !> @param [in]  name  Namelist member name to return data for.
   !> @param [out] value Namelist member data.
-  subroutine get_r32_value( self, name, value )
+  subroutine get_real32_value( self, name, value )
 
     implicit none
 
@@ -236,7 +236,7 @@ contains
     i = self%locate_member( name )
     call self%members(i)%get_value( value )
 
-  end subroutine get_r32_value
+  end subroutine get_real32_value
 
 
   ! 2.2d Namelist member getter: 64-BIT REAL
@@ -244,7 +244,7 @@ contains
   !> @brief Private subroutine to return a 64-bit real.
   !> @param [in]  name  Namelist member name to return data for.
   !> @param [out] value Namelist member data.
-  subroutine get_r64_value( self, name, value )
+  subroutine get_real64_value( self, name, value )
 
     implicit none
 
@@ -257,7 +257,7 @@ contains
     i = self%locate_member( name )
     call self%members(i)%get_value( value )
 
-  end subroutine get_r64_value
+  end subroutine get_real64_value
 
 
   ! 2.2e Namelist member getter: logical
@@ -311,7 +311,7 @@ contains
   !> @brief Private subroutine to return a 32-bit integer array.
   !> @param [in]  name  Namelist member name to return data for.
   !> @param [out] value Namelist member data.
-  subroutine get_i32_arr_value( self, name, value )
+  subroutine get_int32_arr_value( self, name, value )
 
     implicit none
 
@@ -325,7 +325,7 @@ contains
     i = self%locate_member( name )
     call self%members(i)%get_value( value )
 
-  end subroutine get_i32_arr_value
+  end subroutine get_int32_arr_value
 
 
   ! 2.3b Namelist member getter: 64-BIT INTEGER ARRAY
@@ -333,7 +333,7 @@ contains
   !> @brief Private subroutine to return a 64-bit integer array.
   !> @param [in]  name  Namelist member name to return data for.
   !> @param [out] value Namelist member data.
-  subroutine get_i64_arr_value( self, name, value )
+  subroutine get_int64_arr_value( self, name, value )
 
     implicit none
 
@@ -347,7 +347,7 @@ contains
     i = self%locate_member( name )
     call self%members(i)%get_value( value )
 
-  end subroutine get_i64_arr_value
+  end subroutine get_int64_arr_value
 
 
   ! 2.3c Namelist member getter: 32-BIT REAL ARRAY
@@ -355,7 +355,7 @@ contains
   !> @brief Private subroutine to return a 32-bit real array.
   !> @param [in]  name  Namelist member name to return data for.
   !> @param [out] value Namelist member data.
-  subroutine get_r32_arr_value( self, name, value )
+  subroutine get_real32_arr_value( self, name, value )
 
     implicit none
 
@@ -369,7 +369,7 @@ contains
     i = self%locate_member( name )
     call self%members(i)%get_value( value )
 
-  end subroutine get_r32_arr_value
+  end subroutine get_real32_arr_value
 
 
   ! 2.3d Namelist member getter: 64-BIT REAL ARRAY
@@ -377,7 +377,7 @@ contains
   !> @brief Private subroutine to return a 64-bit array.
   !> @param [in]  name  Namelist member name to return data for.
   !> @param [out] value Namelist member data.
-  subroutine get_r64_arr_value( self, name, value )
+  subroutine get_real64_arr_value( self, name, value )
 
     implicit none
 
@@ -391,7 +391,7 @@ contains
     i = self%locate_member( name )
     call self%members(i)%get_value( value )
 
-  end subroutine get_r64_arr_value
+  end subroutine get_real64_arr_value
 
 
   ! 2.3e Namelist member getter: logical array

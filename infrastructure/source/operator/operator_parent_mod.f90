@@ -13,7 +13,7 @@
 
 module operator_parent_mod
 
-  use constants_mod,            only : i_def
+  use constants_mod,            only : i_def, l_def
   use function_space_mod,       only : function_space_type
   use mesh_mod,                 only : mesh_type
 
@@ -28,7 +28,9 @@ module operator_parent_mod
     !! defined as a map from one to the other
      type( function_space_type ), pointer :: fs_from => null( )
      type( function_space_type ), pointer :: fs_to => null( )
-     integer(i_def), allocatable          :: gnu_dummy
+    !> marker for if an operator has been initialised
+    logical(kind=l_def) :: initialised = .false.
+    integer(i_def), allocatable :: gnu_dummy
   contains
     !> Initialise a parent operator object
     procedure, public :: operator_parent_initialiser
@@ -50,6 +52,8 @@ module operator_parent_mod
     !> Returns a pointer to the mesh on which the function spaces, used by
     !> this operator, are built
     procedure, public :: get_mesh
+    !> Returns whether this field has been initialised
+    procedure, public :: is_initialised
     !> Finaliser for an operatot parent object
     procedure, public :: destroy_operator_parent
   end type operator_parent_type
@@ -82,6 +86,7 @@ contains
     class(function_space_type),  target, intent(in)    :: fs_from
     self%fs_to   => fs_to
     self%fs_from => fs_from
+    self%initialised = .true.
   end subroutine operator_parent_initialiser
 
   ! Initialise public pointers that belong to the operator_parent_type.
@@ -148,12 +153,22 @@ contains
     mesh => self%fs_from%get_mesh()
   end function get_mesh
 
+  ! Checks if the operateor parent (so, hence, the operator) is initialised
+  function is_initialised(self) result(initialised)
+    implicit none
+    class(operator_parent_type), intent(in) :: self
+    logical(l_def) :: initialised
+
+    initialised = self%initialised
+  end function is_initialised
+
   ! Destroy an operator_parent_type instance.
   subroutine destroy_operator_parent(self)
     implicit none
     class(operator_parent_type), intent(inout) :: self
     nullify( self%fs_to )
     nullify( self%fs_from )
+    self%initialised = .false.
   end subroutine destroy_operator_parent
 
   ! Destroy an operator_parent_type instance.

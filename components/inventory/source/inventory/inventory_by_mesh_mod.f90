@@ -26,8 +26,8 @@ module inventory_by_mesh_mod
                                               linked_list_item_type
   use mesh_mod,                         only: mesh_type
   use operator_mod,                     only: operator_type
-  use operator_r32_mod,                 only: operator_r32_type
-  use operator_r64_mod,                 only: operator_r64_type
+  use operator_real32_mod,              only: operator_real32_type
+  use operator_real64_mod,              only: operator_real64_type
   use id_abstract_pair_mod,             only: id_abstract_pair_type
   use id_r32_field_pair_mod,            only: id_r32_field_pair_type
   use id_r64_field_pair_mod,            only: id_r64_field_pair_type
@@ -924,7 +924,7 @@ subroutine add_r32_operator(self, operator_out, fs_target, fs_source, mesh)
   implicit none
 
   class(inventory_by_mesh_type),      intent(inout) :: self
-  type(operator_r32_type),   pointer, intent(out)   :: operator_out
+  type(operator_real32_type),pointer, intent(out)   :: operator_out
   type(function_space_type), pointer, intent(in)    :: fs_target
   type(function_space_type), pointer, intent(in)    :: fs_source
   type(mesh_type),                    intent(in)    :: mesh
@@ -947,7 +947,7 @@ subroutine add_r64_operator(self, operator_out, fs_target, fs_source, mesh)
   implicit none
 
   class(inventory_by_mesh_type),      intent(inout) :: self
-  type(operator_r64_type),   pointer, intent(out)   :: operator_out
+  type(operator_real64_type),pointer, intent(out)   :: operator_out
   type(function_space_type), pointer, intent(in)    :: fs_target
   type(function_space_type), pointer, intent(in)    :: fs_source
   type(mesh_type),                    intent(in)    :: mesh
@@ -1126,7 +1126,7 @@ subroutine copy_r32_operator(self, operator_in, mesh)
   implicit none
 
   class(inventory_by_mesh_type),     intent(inout) :: self
-  type(operator_r32_type),           intent(in)    :: operator_in
+  type(operator_real32_type),        intent(in)    :: operator_in
   type(mesh_type),                   intent(in)    :: mesh
   type(id_r32_operator_pair_type)                  :: paired_object
 
@@ -1144,7 +1144,7 @@ subroutine copy_r64_operator(self, operator_in, mesh)
   implicit none
 
   class(inventory_by_mesh_type),     intent(inout) :: self
-  type(operator_r64_type),           intent(in)    :: operator_in
+  type(operator_real64_type),        intent(in)    :: operator_in
   type(mesh_type),                   intent(in)    :: mesh
   type(id_r64_operator_pair_type)                  :: paired_object
 
@@ -1407,10 +1407,10 @@ subroutine get_r32_operator(self, mesh, operator_out)
 
   implicit none
 
-  class(inventory_by_mesh_type),    intent(in)  :: self
-  type(mesh_type),                  intent(in)  :: mesh
-  type(operator_r32_type), pointer, intent(out) :: operator_out
-  class(id_abstract_pair_type),     pointer     :: paired_object
+  class(inventory_by_mesh_type),       intent(in)  :: self
+  type(mesh_type),                     intent(in)  :: mesh
+  type(operator_real32_type), pointer, intent(out) :: operator_out
+  class(id_abstract_pair_type), pointer            :: paired_object
 
   paired_object => self%get_paired_object(mesh%get_id())
 
@@ -1430,10 +1430,10 @@ subroutine get_r64_operator(self, mesh, operator_out)
 
   implicit none
 
-  class(inventory_by_mesh_type),    intent(in)  :: self
-  type(mesh_type),                  intent(in)  :: mesh
-  type(operator_r64_type), pointer, intent(out) :: operator_out
-  class(id_abstract_pair_type),     pointer     :: paired_object
+  class(inventory_by_mesh_type),       intent(in)  :: self
+  type(mesh_type),                     intent(in)  :: mesh
+  type(operator_real64_type), pointer, intent(out) :: operator_out
+  class(id_abstract_pair_type), pointer            :: paired_object
 
   paired_object => self%get_paired_object(mesh%get_id())
 

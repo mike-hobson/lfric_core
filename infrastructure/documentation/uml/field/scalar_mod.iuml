@@ -5,10 +5,10 @@
 class scalar_mod::scalar_type {
 }
 
-class scalar_r32_mod::scalar_r32_type {
+class scalar_real32_mod::scalar_real32_type {
   +value : real32
 
-  <<create>>+scalar_constructor( <<in>>value:real ) : scalar_type
+  <<create>>+scalar_constructor( <<in>>value:real32 ) : scalar_type
 
   +get_sum() : real32
   +get_min() : real32
@@ -16,10 +16,10 @@ class scalar_r32_mod::scalar_r32_type {
   +reduction_finish()
 }
 
-class scalar_r64_mod::scalar_r64_type {
+class scalar_real64_mod::scalar_real64_type {
   +value : real64
 
-  <<create>>+scalar_constructor( <<in>>value:real ) : scalar_type
+  <<create>>+scalar_constructor( <<in>>value:real64 ) : scalar_type
 
   +get_sum() : real64
   +get_min() : real64
@@ -27,5 +27,17 @@ class scalar_r64_mod::scalar_r64_type {
   +reduction_finish()
 }
 
-scalar_mod::scalar_type -- scalar_r32_mod::scalar_r32_type
-scalar_mod::scalar_type -- scalar_r64_mod::scalar_r64_type
+class scalar_int32_mod::scalar_int32_type {
+  +value : int32
+
+  <<create>>+scalar_constructor( <<in>>value:int32 ) : scalar_type
+
+  +get_sum() : int32
+  +get_min() : int32
+  +get_max() : int32
+  +reduction_finish()
+}
+
+scalar_mod::scalar_type -- scalar_real32_mod::scalar_real32_type
+scalar_mod::scalar_type -- scalar_real64_mod::scalar_real64_type
+scalar_mod::scalar_type -- scalar_int32_mod::scalar_int32_type

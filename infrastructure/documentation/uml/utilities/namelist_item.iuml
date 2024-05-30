@@ -9,33 +9,33 @@ class namelist_item_mod::namelist_item_type {
 
   +get_key(): string <<allocatable>>
 
-  +generic :: initialise() => \n\tinit_i32, init_i64,\n\tinit_i32_arr, init_i64_arr,\n\tinit_r32, init_r64,\n\tinit_r32_arr, init_r64_arr,\n\tinit_logical, init_logical_arr,\n\tinit_str, init_str_arr
+  +generic :: initialise() => \n\tinit_int32, init_int64,\n\tinit_int32_arr, init_int64_arr,\n\tinit_real32, init_real64,\n\tinit_real32_arr, init_real64_arr,\n\tinit_logical, init_logical_arr,\n\tinit_str, init_str_arr
 
-  +generic :: get_value() => \n\tvalue_i32, value_i64,\n\tvalue_i32_arr, value_i64_arr,\n\tvalue_r32, value_r64,\n\tvalue_r32_arr, value_r64_arr,\n\tvalue_logical, value_logical_arr,\n\tvalue_str, value_str_arr
+  +generic :: get_value() => \n\tvalue_int32, value_int64,\n\tvalue_int32_arr, value_int64_arr,\n\tvalue_real32, value_real64,\n\tvalue_real32_arr, value_real64_arr,\n\tvalue_logical, value_logical_arr,\n\tvalue_str, value_str_arr
 
-  -init_i32( <<in>>key:string<<len=*>>, <<in>>value:integer<<kind=int32>> )
-  -init_i64( <<in>>key:string<<len=*>>, <<in>>value:integer<<kind=int64>> )
-  -init_r32( <<in>>key:string<<len=*>>, <<in>>value:real<<kind=real32>> )
-  -init_r64( <<in>>key:string<<len=*>>, <<in>>value:real<<kind=real64>> )
+  -init_int32( <<in>>key:string<<len=*>>, <<in>>value:integer<<kind=int32>> )
+  -init_int64( <<in>>key:string<<len=*>>, <<in>>value:integer<<kind=int64>> )
+  -init_real32( <<in>>key:string<<len=*>>, <<in>>value:real<<kind=real32>> )
+  -init_real64( <<in>>key:string<<len=*>>, <<in>>value:real<<kind=real64>> )
   -init_logical( <<in>>key:string<<len=*>>, <<in>>value:logical )
   -init_str( <<in>>key:string<<len=*>>, <<in>>value:string<<len=*>> )
-  -init_r32_arr( <<in>>key:string<<len=*>>, <<in>>value:real[:]<<kind=real32>> )
-  -init_r64_arr( <<in>>key:string<<len=*>>, <<in>>value:real[:]<<kind=real64>> )
-  -init_i32_arr( <<in>>key:string<<len=*>>, <<in>>value:integer[:]<<kind=int32>> )
-  -init_i64_arr( <<in>>key:string<<len=*>>, <<in>>value:integer[:]<<kind=int64>> )
+  -init_real32_arr( <<in>>key:string<<len=*>>, <<in>>value:real[:]<<kind=real32>> )
+  -init_real64_arr( <<in>>key:string<<len=*>>, <<in>>value:real[:]<<kind=real64>> )
+  -init_int32_arr( <<in>>key:string<<len=*>>, <<in>>value:integer[:]<<kind=int32>> )
+  -init_int64_arr( <<in>>key:string<<len=*>>, <<in>>value:integer[:]<<kind=int64>> )
   -init_logical_arr( <<in>>key:string<<len=*>>, <<in>>value:logical[:] )
   -init_str_arr( <<in>>key:string<<len=*>>, <<in>>value:string[:]<<len=*>> )
 
-  -value_i32( <<out>>value:integer<<kind=int32>> )
-  -value_i64( <<out>>value:integer<<kind=int64>> )
-  -value_r32( <<out>>value:real<<kind=real32>> )
-  -value_r64( <<out>>value:real<<kind=real32>> )
+  -value_int32( <<out>>value:integer<<kind=int32>> )
+  -value_int64( <<out>>value:integer<<kind=int64>> )
+  -value_real32( <<out>>value:real<<kind=real32>> )
+  -value_real64( <<out>>value:real<<kind=real32>> )
   -value_logical( <<out>>value:logical )
   -value_str( <<out>>value:string<<len=*>> )
-  -value_i32_arr( <<out>>value:integer[:]<<kind=int32, allocatable>> )
-  -value_i64_arr( <<out>>value:integer[:]<<kind=int64, allocatable>> )
-  -value_r32_arr( <<out>>value:real[:]<<kind=real32, allocatable>> )
-  -value_r64_arr( <<out>>value:real[:]<<kind=int64, allocatable>> )
+  -value_int32_arr( <<out>>value:integer[:]<<kind=int32, allocatable>> )
+  -value_int64_arr( <<out>>value:integer[:]<<kind=int64, allocatable>> )
+  -value_real32_arr( <<out>>value:real[:]<<kind=real32, allocatable>> )
+  -value_real64_arr( <<out>>value:real[:]<<kind=int64, allocatable>> )
   -value_logical_arr( <<out>>value:logical[:]<<allocatable>> )
   -value_str_arr( <<out>>value:string[:]<<len=*,allocatable>> )
 }

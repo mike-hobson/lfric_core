@@ -12,31 +12,31 @@ abstract class key_value_mod::key_value_type {
 }
 
 '==========================================
-class key_value_mod::i32_key_value_type {
+class key_value_mod::int32_key_value_type {
 '==========================================
   +value: integer <<kind=int32>>
-  +initialise => init_i32_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:integer<<kind=int32>> )
+  +initialise => init_int32_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:integer<<kind=int32>> )
 }
 
 '==========================================
-class key_value_mod::i64_key_value_type {
+class key_value_mod::int64_key_value_type {
 '==========================================
   +value: integer <<kind=int64>>
-  +initialise => init_i64_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:integer<<kind=int64>> )
+  +initialise => init_int64_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:integer<<kind=int64>> )
 }
 
 '==========================================
-class key_value_mod::r32_key_value_type {
+class key_value_mod::real32_key_value_type {
 '==========================================
   +value: real <<kind=real32>>
-  +initialise => init_r32_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:real<<kind=real32>> )
+  +initialise => init_real32_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:real<<kind=real32>> )
 }
 
 '==========================================
-class key_value_mod::r64_key_value_type {
+class key_value_mod::real64_key_value_type {
 '==========================================
   +value: real <<kind=real64>>
-  +initialise => init_r64_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:real<<kind=real64>> )
+  +initialise => init_real64_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:real<<kind=real64>> )
 }
 
 '==========================================
@@ -54,31 +54,31 @@ class key_value_mod::str_key_value_type {
 }
 
 '==========================================
-class key_value_mod::i32_arr_key_value_type {
+class key_value_mod::int32_arr_key_value_type {
 '==========================================
   +value: integer[:] <<kind=int32, allocatable>>
-  +initialise => init_i32_arr_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:integer[:]<<kind=int32>> )
+  +initialise => init_int32_arr_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:integer[:]<<kind=int32>> )
 }
 
 '==========================================
-class key_value_mod::i64_arr_key_value_type {
+class key_value_mod::int64_arr_key_value_type {
 '==========================================
   +value: integer[:] <<kind=int64, allocatable>>
-  +initialise => init_i64_arr_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:integer[:]<<kind=int64>> )
+  +initialise => init_int64_arr_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:integer[:]<<kind=int64>> )
 }
 
 '==========================================
-class key_value_mod::r32_arr_key_value_type {
+class key_value_mod::real32_arr_key_value_type {
 '==========================================
   +value: real[:] <<kind=real32, allocatable>>
-  +initialise => init_r32_arr_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:real[:]<<kind=real32>> )
+  +initialise => init_real32_arr_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:real[:]<<kind=real32>> )
 }
 
 '==========================================
-class key_value_mod::r64_arr_key_value_type {
+class key_value_mod::real64_arr_key_value_type {
 '==========================================
   +value: real[:] <<kind=real64, allocatable>>
-  +initialise => init_r64_arr_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:real[:]<<kind=real64>> )
+  +initialise => init_real64_arr_key_value(\n\t<<in>>key:string<<kind=*>>,\n\t<<in>>value:real[:]<<kind=real64>> )
 }
 
 '==========================================
@@ -105,17 +105,17 @@ class key_value_mod::abstract_key_value_type {
 
 linked_list_data_mod::linked_list_data_type <|-- key_value_mod::key_value_type
 
-key_value_mod::key_value_type <|-- key_value_mod::i32_key_value_type
-key_value_mod::key_value_type <|-- key_value_mod::i64_key_value_type
-key_value_mod::key_value_type <|-- key_value_mod::r32_key_value_type
-key_value_mod::key_value_type <|-- key_value_mod::r64_key_value_type
+key_value_mod::key_value_type <|-- key_value_mod::int32_key_value_type
+key_value_mod::key_value_type <|-- key_value_mod::int64_key_value_type
+key_value_mod::key_value_type <|-- key_value_mod::real32_key_value_type
+key_value_mod::key_value_type <|-- key_value_mod::real64_key_value_type
 key_value_mod::key_value_type <|-- key_value_mod::str_key_value_type
 key_value_mod::key_value_type <|-- key_value_mod::logical_key_value_type
 
-key_value_mod::key_value_type <|-- key_value_mod::i32_arr_key_value_type
-key_value_mod::key_value_type <|-- key_value_mod::i64_arr_key_value_type
-key_value_mod::key_value_type <|-- key_value_mod::r32_arr_key_value_type
-key_value_mod::key_value_type <|-- key_value_mod::r64_arr_key_value_type
+key_value_mod::key_value_type <|-- key_value_mod::int32_arr_key_value_type
+key_value_mod::key_value_type <|-- key_value_mod::int64_arr_key_value_type
+key_value_mod::key_value_type <|-- key_value_mod::real32_arr_key_value_type
+key_value_mod::key_value_type <|-- key_value_mod::real64_arr_key_value_type
 key_value_mod::key_value_type <|-- key_value_mod::str_arr_key_value_type
 key_value_mod::key_value_type <|-- key_value_mod::logical_arr_key_value_type
 key_value_mod::key_value_type <|-- key_value_mod::abstract_key_value_type

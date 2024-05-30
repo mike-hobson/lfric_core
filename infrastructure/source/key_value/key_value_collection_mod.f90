@@ -17,10 +17,10 @@ module key_value_collection_mod
 
   use constants_mod,        only: i_def, l_def, str_def
   use key_value_mod,        only: key_value_type, &
-                                  i32_key_value_type, i64_key_value_type, &
-                                  i32_arr_key_value_type, i64_arr_key_value_type, &
-                                  r32_key_value_type, r64_key_value_type, &
-                                  r32_arr_key_value_type, r64_arr_key_value_type, &
+                                  int32_key_value_type, int64_key_value_type, &
+                                  int32_arr_key_value_type, int64_arr_key_value_type, &
+                                  real32_key_value_type, real64_key_value_type, &
+                                  real32_arr_key_value_type, real64_arr_key_value_type, &
                                   logical_key_value_type, logical_arr_key_value_type, &
                                   str_key_value_type, str_arr_key_value_type, &
                                   abstract_key_value_type, abstract_value_type,&
@@ -61,29 +61,29 @@ module key_value_collection_mod
                                            create_key_value_object
     procedure, public  :: remove_key_value
     procedure, public  :: key_value_exists
-    procedure, private :: get_i32_value
-    procedure, private :: get_i64_value
-    procedure, private :: get_r32_value
-    procedure, private :: get_r64_value
+    procedure, private :: get_int32_value
+    procedure, private :: get_int64_value
+    procedure, private :: get_real32_value
+    procedure, private :: get_real64_value
     procedure, private :: get_logical_value
     procedure, private :: get_str_value
-    procedure, private :: get_i32_arr_value
-    procedure, private :: get_i64_arr_value
-    procedure, private :: get_r32_arr_value
-    procedure, private :: get_r64_arr_value
+    procedure, private :: get_int32_arr_value
+    procedure, private :: get_int64_arr_value
+    procedure, private :: get_real32_arr_value
+    procedure, private :: get_real64_arr_value
     procedure, private :: get_logical_arr_value
     procedure, private :: get_str_arr_value
     procedure, private :: get_abstract_value
-    generic            :: get_value => get_i32_value,         &
-                                       get_i64_value,         &
-                                       get_r32_value,         &
-                                       get_r64_value,         &
+    generic            :: get_value => get_int32_value,       &
+                                       get_int64_value,       &
+                                       get_real32_value,      &
+                                       get_real64_value,      &
                                        get_logical_value,     &
                                        get_str_value,         &
-                                       get_i32_arr_value,     &
-                                       get_i64_arr_value,     &
-                                       get_r32_arr_value,     &
-                                       get_r64_arr_value,     &
+                                       get_int32_arr_value,   &
+                                       get_int64_arr_value,   &
+                                       get_real32_arr_value,  &
+                                       get_real64_arr_value,  &
                                        get_logical_arr_value, &
                                        get_str_arr_value,     &
                                        get_abstract_value
@@ -267,7 +267,7 @@ end subroutine remove_key_value
 !> Access a 32-bit integer value from the key-value pair collection
 !> @param [in] key The key of the key-value pair being requested
 !> @param [out] value Pointer to the 32-bit integer value requested
-subroutine get_i32_value(self, key, value)
+subroutine get_int32_value(self, key, value)
 
   implicit none
 
@@ -294,7 +294,7 @@ subroutine get_i32_value(self, key, value)
 
     ! 'cast' to the data type
     select type(listitem => loop%payload)
-      type is (i32_key_value_type)
+      type is (int32_key_value_type)
       if ( trim(key) == trim(listitem%get_key()) ) then
           value => listitem%value
           exit
@@ -304,12 +304,12 @@ subroutine get_i32_value(self, key, value)
     loop => loop%next
   end do
 
-end subroutine get_i32_value
+end subroutine get_int32_value
 
 !> Access a 64-bit integer value from the key-value pair collection
 !> @param [in] key The key of the key-value pair being requested
 !> @param [out] value Pointer to the 64-bit integer value requested
-subroutine get_i64_value(self, key, value)
+subroutine get_int64_value(self, key, value)
 
   implicit none
 
@@ -336,7 +336,7 @@ subroutine get_i64_value(self, key, value)
 
     ! 'cast' to the data type
     select type(listitem => loop%payload)
-      type is (i64_key_value_type)
+      type is (int64_key_value_type)
       if ( trim(key) == trim(listitem%get_key()) ) then
           value => listitem%value
           exit
@@ -346,12 +346,12 @@ subroutine get_i64_value(self, key, value)
     loop => loop%next
   end do
 
-end subroutine get_i64_value
+end subroutine get_int64_value
 
 !> Access a 32-bit real value from the key-value pair collection
 !> @param [in] key The key of the key-value pair being requested
 !> @param [out] value Pointer to the 32-bit real value requested
-subroutine get_r32_value(self, key, value)
+subroutine get_real32_value(self, key, value)
 
   implicit none
 
@@ -378,7 +378,7 @@ subroutine get_r32_value(self, key, value)
 
     ! 'cast' to the data type
     select type(listitem => loop%payload)
-      type is (r32_key_value_type)
+      type is (real32_key_value_type)
       if ( trim(key) == trim(listitem%get_key()) ) then
           value => listitem%value
           exit
@@ -388,12 +388,12 @@ subroutine get_r32_value(self, key, value)
     loop => loop%next
   end do
 
-end subroutine get_r32_value
+end subroutine get_real32_value
 
 !> Access a 64-bit real value from the key-value pair collection
 !> @param [in] key The key of the key-value pair being requested
 !> @param [out] value Pointer to the 64-bit real value requested
-subroutine get_r64_value(self, key, value)
+subroutine get_real64_value(self, key, value)
 
   implicit none
 
@@ -420,7 +420,7 @@ subroutine get_r64_value(self, key, value)
 
     ! 'cast' to the data type
     select type(listitem => loop%payload)
-      type is (r64_key_value_type)
+      type is (real64_key_value_type)
       if ( trim(key) == trim(listitem%get_key()) ) then
           value => listitem%value
           exit
@@ -430,7 +430,7 @@ subroutine get_r64_value(self, key, value)
     loop => loop%next
   end do
 
-end subroutine get_r64_value
+end subroutine get_real64_value
 
 !> Access a logical value from the key-value pair collection
 !> @param [in] key The key of the key-value pair being requested
@@ -519,7 +519,7 @@ end subroutine get_str_value
 !> Access a 32-bit integer array value from the key-value pair collection
 !> @param [in] key The key of the key-value pair being requested
 !> @param [out] value Pointer to the 32-bit integer array value requested
-subroutine get_i32_arr_value(self, key, value)
+subroutine get_int32_arr_value(self, key, value)
 
   implicit none
 
@@ -546,7 +546,7 @@ subroutine get_i32_arr_value(self, key, value)
 
     ! 'cast' to the data type
     select type(listitem => loop%payload)
-      type is (i32_arr_key_value_type)
+      type is (int32_arr_key_value_type)
       if ( trim(key) == trim(listitem%get_key()) ) then
           value => listitem%value
           exit
@@ -556,12 +556,12 @@ subroutine get_i32_arr_value(self, key, value)
     loop => loop%next
   end do
 
-end subroutine get_i32_arr_value
+end subroutine get_int32_arr_value
 
 !> Access a 64-bit integer array value from the key-value pair collection
 !> @param [in] key The key of the key-value pair being requested
 !> @param [out] value Pointer to the 64-bit integer array value requested
-subroutine get_i64_arr_value(self, key, value)
+subroutine get_int64_arr_value(self, key, value)
 
   implicit none
 
@@ -588,7 +588,7 @@ subroutine get_i64_arr_value(self, key, value)
 
     ! 'cast' to the data type
     select type(listitem => loop%payload)
-      type is (i64_arr_key_value_type)
+      type is (int64_arr_key_value_type)
       if ( trim(key) == trim(listitem%get_key()) ) then
           value => listitem%value
           exit
@@ -598,12 +598,12 @@ subroutine get_i64_arr_value(self, key, value)
     loop => loop%next
   end do
 
-end subroutine get_i64_arr_value
+end subroutine get_int64_arr_value
 
 !> Access a 32-bit real array value from the key-value pair collection
 !> @param [in] key The key of the key-value pair being requested
 !> @param [out] value Pointer to the 32-bit real array value requested
-subroutine get_r32_arr_value(self, key, value)
+subroutine get_real32_arr_value(self, key, value)
 
   implicit none
 
@@ -630,7 +630,7 @@ subroutine get_r32_arr_value(self, key, value)
 
     ! 'cast' to the data type
     select type(listitem => loop%payload)
-      type is (r32_arr_key_value_type)
+      type is (real32_arr_key_value_type)
       if ( trim(key) == trim(listitem%get_key()) ) then
           value => listitem%value
           exit
@@ -640,12 +640,12 @@ subroutine get_r32_arr_value(self, key, value)
     loop => loop%next
   end do
 
-end subroutine get_r32_arr_value
+end subroutine get_real32_arr_value
 
 !> Access a 64-bit real array value from the key-value pair collection
 !> @param [in] key The key of the key-value pair being requested
 !> @param [out] value Pointer to the 64-bit real array value requested
-subroutine get_r64_arr_value(self, key, value)
+subroutine get_real64_arr_value(self, key, value)
 
   implicit none
 
@@ -672,7 +672,7 @@ subroutine get_r64_arr_value(self, key, value)
 
     ! 'cast' to the data type
     select type(listitem => loop%payload)
-      type is (r64_arr_key_value_type)
+      type is (real64_arr_key_value_type)
       if ( trim(key) == trim(listitem%get_key()) ) then
           value => listitem%value
           exit
@@ -682,7 +682,7 @@ subroutine get_r64_arr_value(self, key, value)
     loop => loop%next
   end do
 
-end subroutine get_r64_arr_value
+end subroutine get_real64_arr_value
 
 !> Access a logical array value from the key-value pair collection
 !> @param [in] key The key of the key-value pair being requested

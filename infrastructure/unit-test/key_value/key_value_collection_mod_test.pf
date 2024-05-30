@@ -13,13 +13,13 @@ module key_value_collection_mod_test
     use constants_mod,                 only : i_def, r_def, l_def, &
                                               str_longlong, str_def
     use key_value_collection_mod,      only : key_value_collection_type
-    use key_value_mod, only: i32_key_value_type,       i64_key_value_type,     &
-                           i32_arr_key_value_type,     i64_arr_key_value_type, &
-                           r32_key_value_type,         r64_key_value_type,     &
-                           r32_arr_key_value_type,     r64_arr_key_value_type, &
-                           logical_key_value_type,     str_key_value_type,     &
-                           logical_arr_key_value_type, str_arr_key_value_type, &
-                           abstract_key_value_type,                            &
+    use key_value_mod, only: int32_key_value_type,     int64_key_value_type,      &
+                           int32_arr_key_value_type,   int64_arr_key_value_type,  &
+                           real32_key_value_type,      real64_key_value_type,     &
+                           real32_arr_key_value_type,  real64_arr_key_value_type, &
+                           logical_key_value_type,     str_key_value_type,        &
+                           logical_arr_key_value_type, str_arr_key_value_type,    &
+                           abstract_key_value_type,                               &
                            abstract_value_type
     use pFUnit_Mod
 
@@ -54,30 +54,30 @@ contains
 
     type(key_value_collection_type) :: key_value_collection
 
-    type(i32_key_value_type)         :: i32_key_value
-    type(i64_key_value_type)         :: i64_key_value
-    type(r32_key_value_type)         :: r32_key_value
-    type(r64_key_value_type)         :: r64_key_value
+    type(int32_key_value_type)       :: int32_key_value
+    type(int64_key_value_type)       :: int64_key_value
+    type(real32_key_value_type)      :: real32_key_value
+    type(real64_key_value_type)      :: real64_key_value
     type(logical_key_value_type)     :: logical_key_value
     type(str_key_value_type)         :: string_key_value
-    type(i32_arr_key_value_type)     :: i32_arr_key_value
-    type(i64_arr_key_value_type)     :: i64_arr_key_value
-    type(r32_arr_key_value_type)     :: r32_arr_key_value
-    type(r64_arr_key_value_type)     :: r64_arr_key_value
+    type(int32_arr_key_value_type)   :: int32_arr_key_value
+    type(int64_arr_key_value_type)   :: int64_arr_key_value
+    type(real32_arr_key_value_type)  :: real32_arr_key_value
+    type(real64_arr_key_value_type)  :: real64_arr_key_value
     type(logical_arr_key_value_type) :: logical_arr_key_value
     type(str_arr_key_value_type)     :: string_arr_key_value
     type(abstract_key_value_type)    :: abstract_key_value
 
-    integer(int32),             pointer :: i32_val
-    integer(int64),             pointer :: i64_val
-    real(real32),               pointer :: r32_val
-    real(real64),               pointer :: r64_val, r64_val2
+    integer(int32),             pointer :: int32_val
+    integer(int64),             pointer :: int64_val
+    real(real32),               pointer :: real32_val
+    real(real64),               pointer :: real64_val, real64_val2
     logical,                    pointer :: logical_val
     character(str_longlong),    pointer :: string_val
-    integer(int32),             pointer :: i32_arr_val(:)
-    integer(int64),             pointer :: i64_arr_val(:)
-    real(real32),               pointer :: r32_arr_val(:)
-    real(real64),               pointer :: r64_arr_val(:)
+    integer(int32),             pointer :: int32_arr_val(:)
+    integer(int64),             pointer :: int64_arr_val(:)
+    real(real32),               pointer :: real32_arr_val(:)
+    real(real64),               pointer :: real64_arr_val(:)
     logical,                    pointer :: logical_arr_val(:)
     character(str_def),         pointer :: string_arr_val(:)
     class(abstract_value_type), pointer :: abstract_val
@@ -104,26 +104,26 @@ contains
     test_object%int_number = 17
 
     !Add all different types of key-value pair to a single collection
-    call i32_key_value%initialise("key_for_int32", 320_int32)
-    call key_value_collection%add_key_value(i32_key_value)
-    call i64_key_value%initialise("key_for_int64", 640_int64)
-    call key_value_collection%add_key_value(i64_key_value)
-    call r32_key_value%initialise("key_for_real32", 3200.0_real32)
-    call key_value_collection%add_key_value(r32_key_value)
-    call r64_key_value%initialise("key_for_real64", 6400.0_real64)
-    call key_value_collection%add_key_value(r64_key_value)
+    call int32_key_value%initialise("key_for_int32", 320_int32)
+    call key_value_collection%add_key_value(int32_key_value)
+    call int64_key_value%initialise("key_for_int64", 640_int64)
+    call key_value_collection%add_key_value(int64_key_value)
+    call real32_key_value%initialise("key_for_real32", 3200.0_real32)
+    call key_value_collection%add_key_value(real32_key_value)
+    call real64_key_value%initialise("key_for_real64", 6400.0_real64)
+    call key_value_collection%add_key_value(real64_key_value)
     call logical_key_value%initialise("key_for_logical", .true.)
     call key_value_collection%add_key_value(logical_key_value)
     call string_key_value%initialise("key_for_string", "test_string")
     call key_value_collection%add_key_value(string_key_value)
-    call i32_arr_key_value%initialise("key_for_int32_arr", [1_int32, 2_int32, 3_int32, 4_int32, 5_int32])
-    call key_value_collection%add_key_value(i32_arr_key_value)
-    call i64_arr_key_value%initialise("key_for_int64_arr", [9_int64, 8_int64, 7_int64, 6_int64])
-    call key_value_collection%add_key_value(i64_arr_key_value)
-    call r32_arr_key_value%initialise("key_for_real32_arr", [0.1_real32, 0.2_real32])
-    call key_value_collection%add_key_value(r32_arr_key_value)
-    call r64_arr_key_value%initialise("key_for_real64_arr", [99.9_real64, 99.8_real64, 99.7_real64])
-    call key_value_collection%add_key_value(r64_arr_key_value)
+    call int32_arr_key_value%initialise("key_for_int32_arr", [1_int32, 2_int32, 3_int32, 4_int32, 5_int32])
+    call key_value_collection%add_key_value(int32_arr_key_value)
+    call int64_arr_key_value%initialise("key_for_int64_arr", [9_int64, 8_int64, 7_int64, 6_int64])
+    call key_value_collection%add_key_value(int64_arr_key_value)
+    call real32_arr_key_value%initialise("key_for_real32_arr", [0.1_real32, 0.2_real32])
+    call key_value_collection%add_key_value(real32_arr_key_value)
+    call real64_arr_key_value%initialise("key_for_real64_arr", [99.9_real64, 99.8_real64, 99.7_real64])
+    call key_value_collection%add_key_value(real64_arr_key_value)
     call logical_arr_key_value%initialise("key_for_logical_arr", [.true., .false., .true.])
     call key_value_collection%add_key_value(logical_arr_key_value)
     call string_arr_key_value%initialise("key_for_string_arr", ["one", "two"])
@@ -132,26 +132,26 @@ contains
     call key_value_collection%add_key_value(abstract_key_value)
 
     ! Extract the value of all keys and check they're correct
-    call key_value_collection%get_value("key_for_int32", i32_val)
-    @assertEqual(320_int32, i32_val)
-    call key_value_collection%get_value("key_for_int64", i64_val)
-    @assertEqual(640_int64, i64_val)
-    call key_value_collection%get_value("key_for_real32", r32_val)
-    @assertEqual(3200_real32, r32_val, real(tol, real32))
-    call key_value_collection%get_value("key_for_real64", r64_val)
-    @assertEqual(6400_real64, r64_val, real(tol, real64))
+    call key_value_collection%get_value("key_for_int32", int32_val)
+    @assertEqual(320_int32, int32_val)
+    call key_value_collection%get_value("key_for_int64", int64_val)
+    @assertEqual(640_int64, int64_val)
+    call key_value_collection%get_value("key_for_real32", real32_val)
+    @assertEqual(3200_real32, real32_val, real(tol, real32))
+    call key_value_collection%get_value("key_for_real64", real64_val)
+    @assertEqual(6400_real64, real64_val, real(tol, real64))
     call key_value_collection%get_value("key_for_logical", logical_val)
     @assertTrue(logical_val)
     call key_value_collection%get_value("key_for_string", string_val)
     @assertEqual("test_string", trim(string_val))
-    call key_value_collection%get_value("key_for_int32_arr", i32_arr_val)
-    @assertEqual([1_int32, 2_int32, 3_int32, 4_int32, 5_int32], i32_arr_val)
-    call key_value_collection%get_value("key_for_int64_arr", i64_arr_val)
-    @assertEqual([9_int64, 8_int64, 7_int64, 6_int64], i64_arr_val)
-    call key_value_collection%get_value("key_for_real32_arr", r32_arr_val)
-    @assertEqual([0.1_real32, 0.2_real32], r32_arr_val)
-    call key_value_collection%get_value("key_for_real64_arr", r64_arr_val)
-    @assertEqual([99.9_real64, 99.8_real64, 99.7_real64], r64_arr_val)
+    call key_value_collection%get_value("key_for_int32_arr", int32_arr_val)
+    @assertEqual([1_int32, 2_int32, 3_int32, 4_int32, 5_int32], int32_arr_val)
+    call key_value_collection%get_value("key_for_int64_arr", int64_arr_val)
+    @assertEqual([9_int64, 8_int64, 7_int64, 6_int64], int64_arr_val)
+    call key_value_collection%get_value("key_for_real32_arr", real32_arr_val)
+    @assertEqual([0.1_real32, 0.2_real32], real32_arr_val)
+    call key_value_collection%get_value("key_for_real64_arr", real64_arr_val)
+    @assertEqual([99.9_real64, 99.8_real64, 99.7_real64], real64_arr_val)
     !No assertEqual for arrays of logicals or strings, so test each element
     call key_value_collection%get_value("key_for_logical_arr", logical_arr_val)
     @assertTrue(logical_arr_val(1))
@@ -169,9 +169,9 @@ contains
     end select
 
     !Change a value locally, and check the value in the collection is updated
-    r64_val = 12800.0_real64
-    call key_value_collection%get_value("key_for_real64", r64_val2)
-    @assertEqual(12800.0_real64, r64_val2, real(tol, real64))
+    real64_val = 12800.0_real64
+    call key_value_collection%get_value("key_for_real64", real64_val2)
+    @assertEqual(12800.0_real64, real64_val2, real(tol, real64))
 
     !Check length of table
     length = key_value_collection%get_length()

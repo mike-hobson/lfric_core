@@ -13,10 +13,10 @@
 !>          (namelist_item_type). The following concrete key_value types
 !>          are supported in this module.
 !>
-!>          - i32_key_value_type,     i32_arr_key_value_type
-!>          - i64_key_value_type,     i64_arr_key_value_type
-!>          - r32_key_value_type,     r32_arr_key_value_type
-!>          - r64_key_value_type,     r64_arr_key_value_type
+!>          - int32_key_value_type,   int32_arr_key_value_type
+!>          - int64_key_value_type,   int64_arr_key_value_type
+!>          - real32_key_value_type,  real32_arr_key_value_type
+!>          - real64_key_value_type,  real64_arr_key_value_type
 !>          - logical_key_value_type, logical_arr_key_value_type
 !>          - str_key_value_type,     str_arr_key_value_type
 !>
@@ -38,12 +38,12 @@ module namelist_item_mod
   use constants_mod,  only: imdi, rmdi, cmdi, str_def
   use log_mod,        only: log_event, log_scratch_space, LOG_LEVEL_ERROR
   use key_value_mod,   only: key_value_type,                                   &
-                            i32_key_value_type,     i64_key_value_type,        &
-                            i32_arr_key_value_type, i64_arr_key_value_type,    &
-                            r32_key_value_type,     r64_key_value_type,        &
-                            r32_arr_key_value_type, r64_arr_key_value_type,    &
-                            logical_key_value_type, logical_arr_key_value_type,&
-                            str_key_value_type,     str_arr_key_value_type
+                         int32_key_value_type,      int64_key_value_type,      &
+                         int32_arr_key_value_type,  int64_arr_key_value_type,  &
+                         real32_key_value_type,     real64_key_value_type,     &
+                         real32_arr_key_value_type, real64_arr_key_value_type, &
+                         logical_key_value_type,    logical_arr_key_value_type,&
+                         str_key_value_type,        str_arr_key_value_type
   implicit none
 
   private
@@ -60,27 +60,27 @@ module namelist_item_mod
     class(key_value_type), allocatable :: key_value_pair
 
   contains
-    procedure, private :: init_i32
-    procedure, private :: init_i64
-    procedure, private :: init_i32_arr
-    procedure, private :: init_i64_arr
-    procedure, private :: init_r32
-    procedure, private :: init_r64
-    procedure, private :: init_r32_arr
-    procedure, private :: init_r64_arr
+    procedure, private :: init_int32
+    procedure, private :: init_int64
+    procedure, private :: init_int32_arr
+    procedure, private :: init_int64_arr
+    procedure, private :: init_real32
+    procedure, private :: init_real64
+    procedure, private :: init_real32_arr
+    procedure, private :: init_real64_arr
     procedure, private :: init_logical
     procedure, private :: init_logical_arr
     procedure, private :: init_str
     procedure, private :: init_str_arr
 
-    procedure, private :: value_i32
-    procedure, private :: value_i64
-    procedure, private :: value_i32_arr
-    procedure, private :: value_i64_arr
-    procedure, private :: value_r32
-    procedure, private :: value_r64
-    procedure, private :: value_r32_arr
-    procedure, private :: value_r64_arr
+    procedure, private :: value_int32
+    procedure, private :: value_int64
+    procedure, private :: value_int32_arr
+    procedure, private :: value_int64_arr
+    procedure, private :: value_real32
+    procedure, private :: value_real64
+    procedure, private :: value_real32_arr
+    procedure, private :: value_real64_arr
     procedure, private :: value_logical
     procedure, private :: value_logical_arr
     procedure, private :: value_str
@@ -88,18 +88,18 @@ module namelist_item_mod
 
     procedure :: get_key
 
-    generic   :: get_value  => value_i32,     value_i64,         &
-                               value_i32_arr, value_i64_arr,     &
-                               value_r32,     value_r64,         &
-                               value_r32_arr, value_r64_arr,     &
-                               value_logical, value_logical_arr, &
-                               value_str,     value_str_arr
-    generic   :: initialise => init_i32,      init_i64,          &
-                               init_i32_arr,  init_i64_arr,      &
-                               init_r32,      init_r64,          &
-                               init_r32_arr,  init_r64_arr,      &
-                               init_logical,  init_logical_arr,  &
-                               init_str,      init_str_arr
+    generic   :: get_value  => value_int32,      value_int64,       &
+                               value_int32_arr,  value_int64_arr,   &
+                               value_real32,     value_real64,      &
+                               value_real32_arr, value_real64_arr,  &
+                               value_logical,    value_logical_arr, &
+                               value_str,        value_str_arr
+    generic   :: initialise => init_int32,       init_int64,        &
+                               init_int32_arr,   init_int64_arr,    &
+                               init_real32,      init_real64,       &
+                               init_real32_arr,  init_real64_arr,   &
+                               init_logical,     init_logical_arr,  &
+                               init_str,         init_str_arr
 
   end type namelist_item_type
 
@@ -116,7 +116,7 @@ contains
 !>        key_value object for 32-bit integer.
 !> @param[in] key    String variable to use as the "key".
 !> @param[in] value  32-bit integer to assign to the "key"
-subroutine init_i32( self, key, value )
+subroutine init_int32( self, key, value )
 
   implicit none
 
@@ -125,15 +125,15 @@ subroutine init_i32( self, key, value )
   character(*),   intent(in) :: key
   integer(int32), intent(in) :: value
 
-  allocate(i32_key_value_type :: self%key_value_pair)
+  allocate(int32_key_value_type :: self%key_value_pair)
 
   select type( clay => self%key_value_pair )
-  class is (i32_key_value_type)
+  class is (int32_key_value_type)
     call clay%initialise( trim(key), value )
   end select
 
   return
-end subroutine init_i32
+end subroutine init_int32
 
 
 !===========================================================
@@ -141,7 +141,7 @@ end subroutine init_i32
 !>        key_value object for 64-bit integer.
 !> @param[in] key    String variable to use as the "key".
 !> @param[in] value  64-bit integer to assign to the "key"
-subroutine init_i64( self, key, value )
+subroutine init_int64( self, key, value )
 
   implicit none
 
@@ -150,15 +150,15 @@ subroutine init_i64( self, key, value )
   character(*),   intent(in) :: key
   integer(int64), intent(in) :: value
 
-  allocate(i64_key_value_type :: self%key_value_pair)
+  allocate(int64_key_value_type :: self%key_value_pair)
 
   select type( clay => self%key_value_pair )
-  class is (i64_key_value_type)
+  class is (int64_key_value_type)
     call clay%initialise( trim(key), value )
   end select
 
   return
-end subroutine init_i64
+end subroutine init_int64
 
 
 !===========================================================
@@ -166,7 +166,7 @@ end subroutine init_i64
 !>        key_value object for 32-bit real.
 !> @param[in] key    String variable to use as the "key".
 !> @param[in] value  32-bit real to assign to the "key"
-subroutine init_r32( self, key, value )
+subroutine init_real32( self, key, value )
 
   implicit none
 
@@ -175,15 +175,15 @@ subroutine init_r32( self, key, value )
   character(*), intent(in) :: key
   real(real32), intent(in) :: value
 
-  allocate(r32_key_value_type :: self%key_value_pair)
+  allocate(real32_key_value_type :: self%key_value_pair)
 
   select type( clay => self%key_value_pair )
-  class is (r32_key_value_type)
+  class is (real32_key_value_type)
     call clay%initialise( key, value )
   end select
 
   return
-end subroutine init_r32
+end subroutine init_real32
 
 
 !===========================================================
@@ -191,7 +191,7 @@ end subroutine init_r32
 !>        key_value object for 64-bit real.
 !> @param[in] key    String variable to use as the "key".
 !> @param[in] value  64-bit real to assign to the "key"
-subroutine init_r64( self, key, value )
+subroutine init_real64( self, key, value )
 
   implicit none
 
@@ -200,15 +200,15 @@ subroutine init_r64( self, key, value )
   character(*), intent(in) :: key
   real(real64), intent(in) :: value
 
-  allocate(r64_key_value_type :: self%key_value_pair)
+  allocate(real64_key_value_type :: self%key_value_pair)
 
   select type( clay => self%key_value_pair )
-  class is (r64_key_value_type)
+  class is (real64_key_value_type)
     call clay%initialise( key, value )
   end select
 
   return
-end subroutine init_r64
+end subroutine init_real64
 
 
 !===========================================================
@@ -270,7 +270,7 @@ end subroutine init_str
 !>        key_value object for 32-bit integer array.
 !> @param[in] key    String variable to use as the "key".
 !> @param[in] value  32-bit integer array to assign to the "key"
-subroutine init_i32_arr( self, key, value )
+subroutine init_int32_arr( self, key, value )
 
   implicit none
 
@@ -279,15 +279,15 @@ subroutine init_i32_arr( self, key, value )
   character(*),   intent(in) :: key
   integer(int32), intent(in) :: value(:)
 
-  allocate(i32_arr_key_value_type :: self%key_value_pair)
+  allocate(int32_arr_key_value_type :: self%key_value_pair)
 
   select type( clay => self%key_value_pair )
-  class is (i32_arr_key_value_type)
+  class is (int32_arr_key_value_type)
     call clay%initialise( key, value )
   end select
 
   return
-end subroutine init_i32_arr
+end subroutine init_int32_arr
 
 
 !===========================================================
@@ -295,7 +295,7 @@ end subroutine init_i32_arr
 !>        key_value object for 64-bit integer array.
 !> @param[in] key    String variable to use as the "key".
 !> @param[in] value  64-bit integer array to assign to the "key"
-subroutine init_i64_arr( self, key, value )
+subroutine init_int64_arr( self, key, value )
 
   implicit none
 
@@ -304,15 +304,15 @@ subroutine init_i64_arr( self, key, value )
   character(*),   intent(in) :: key
   integer(int64), intent(in) :: value(:)
 
-  allocate(i64_arr_key_value_type :: self%key_value_pair)
+  allocate(int64_arr_key_value_type :: self%key_value_pair)
 
   select type( clay => self%key_value_pair )
-  class is (i64_arr_key_value_type)
+  class is (int64_arr_key_value_type)
     call clay%initialise( key, value )
   end select
 
   return
-end subroutine init_i64_arr
+end subroutine init_int64_arr
 
 
 !===========================================================
@@ -320,7 +320,7 @@ end subroutine init_i64_arr
 !>        key_value object for 32-bit real array.
 !> @param[in] key    String variable to use as the "key".
 !> @param[in] value  32-bit real array to assign to the "key"
-subroutine init_r32_arr( self, key, value )
+subroutine init_real32_arr( self, key, value )
 
   implicit none
 
@@ -329,15 +329,15 @@ subroutine init_r32_arr( self, key, value )
   character(*), intent(in) :: key
   real(real32), intent(in) :: value(:)
 
-  allocate(r32_arr_key_value_type :: self%key_value_pair)
+  allocate(real32_arr_key_value_type :: self%key_value_pair)
 
   select type( clay => self%key_value_pair )
-  class is (r32_arr_key_value_type)
+  class is (real32_arr_key_value_type)
     call clay%initialise( key, value )
   end select
 
   return
-end subroutine init_r32_arr
+end subroutine init_real32_arr
 
 
 !===========================================================
@@ -345,7 +345,7 @@ end subroutine init_r32_arr
 !>        key_value object for 64-bit real array.
 !> @param[in] key    String variable to use as the "key".
 !> @param[in] value  64-bit real array to assign to the "key"
-subroutine init_r64_arr( self, key, value )
+subroutine init_real64_arr( self, key, value )
 
   implicit none
 
@@ -354,15 +354,15 @@ subroutine init_r64_arr( self, key, value )
   character(*), intent(in) :: key
   real(real64), intent(in) :: value(:)
 
-  allocate(r64_arr_key_value_type :: self%key_value_pair)
+  allocate(real64_arr_key_value_type :: self%key_value_pair)
 
   select type( clay => self%key_value_pair )
-  class is (r64_arr_key_value_type)
+  class is (real64_arr_key_value_type)
     call clay%initialise( key, value )
   end select
 
   return
-end subroutine init_r64_arr
+end subroutine init_real64_arr
 
 
 !===========================================================
@@ -452,7 +452,7 @@ end function get_key
 !===========================================================
 !> @brief Extracts the value held by the concrete type.
 !> @param[out] value  32-bit integer value held in object.
-subroutine value_i32( self, value )
+subroutine value_int32( self, value )
 
   implicit none
 
@@ -460,22 +460,22 @@ subroutine value_i32( self, value )
   integer(int32),            intent(out) :: value
 
   select type( clay => self%key_value_pair )
-  class is (i32_key_value_type)
+  class is (int32_key_value_type)
     value = clay%value
   class default
     write( log_scratch_space, '(A)' ) &
-        'Object is not the expected i32_key_value_type.'
+        'Object is not the expected int32_key_value_type.'
     call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end select
 
   return
-end subroutine value_i32
+end subroutine value_int32
 
 
 !===========================================================
 !> @brief Extracts the value held by the concrete type.
 !> @param[out] value  64-bit integer value held in object.
-subroutine value_i64( self, value )
+subroutine value_int64( self, value )
 
   implicit none
 
@@ -483,22 +483,22 @@ subroutine value_i64( self, value )
   integer(int64),            intent(out) :: value
 
   select type( clay => self%key_value_pair )
-  class is (i64_key_value_type)
+  class is (int64_key_value_type)
     value = clay%value
   class default
     write( log_scratch_space, '(A)' ) &
-        'Object is not the expected i64_key_value_type.'
+        'Object is not the expected int64_key_value_type.'
     call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end select
 
   return
-end subroutine value_i64
+end subroutine value_int64
 
 
 !===========================================================
 !> @brief Extracts the value held by the concrete type.
 !> @param[out] value  32-bit real value held in object.
-subroutine value_r32( self, value )
+subroutine value_real32( self, value )
 
   implicit none
 
@@ -506,22 +506,22 @@ subroutine value_r32( self, value )
   real(real32),              intent(out) :: value
 
   select type (clay => self%key_value_pair)
-  class is (r32_key_value_type)
+  class is (real32_key_value_type)
     value = clay%value
   class default
     write( log_scratch_space, '(A)' ) &
-        'Object is not the expected r32_key_value_type.'
+        'Object is not the expected real32_key_value_type.'
     call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end select
 
   return
-end subroutine value_r32
+end subroutine value_real32
 
 
 !===========================================================
 !> @brief Extracts the value held by the concrete type.
 !> @param[out] value  64-bit real value held in object.
-subroutine value_r64( self, value )
+subroutine value_real64( self, value )
 
   implicit none
 
@@ -529,16 +529,16 @@ subroutine value_r64( self, value )
   real(real64),              intent(out) :: value
 
   select type (clay => self%key_value_pair)
-  class is (r64_key_value_type)
+  class is (real64_key_value_type)
     value = clay%value
   class default
     write( log_scratch_space, '(A)' ) &
-        'Object is not the expected r64_key_value_type.'
+        'Object is not the expected real64_key_value_type.'
     call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end select
 
   return
-end subroutine value_r64
+end subroutine value_real64
 
 
 !===========================================================
@@ -592,7 +592,7 @@ end subroutine value_str
 !===========================================================
 !> @brief Extracts the value held by the concrete type.
 !> @param[out] value  32-bit integer array value held in object.
-subroutine value_i32_arr( self, value )
+subroutine value_int32_arr( self, value )
 
   implicit none
 
@@ -600,22 +600,22 @@ subroutine value_i32_arr( self, value )
   integer(int32), allocatable, intent(out) :: value(:)
 
   select type( clay => self%key_value_pair )
-  class is (i32_arr_key_value_type)
+  class is (int32_arr_key_value_type)
     allocate(value, source=clay%value)
   class default
     write( log_scratch_space, '(A)' ) &
-        'Object is not the expected i32_arr_key_value_type.'
+        'Object is not the expected int32_arr_key_value_type.'
     call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end select
 
   return
-end subroutine value_i32_arr
+end subroutine value_int32_arr
 
 
 !===========================================================
 !> @brief Extracts the value held by the concrete type.
 !> @param[out] value  64-bit integer array value held in object.
-subroutine value_i64_arr( self, value )
+subroutine value_int64_arr( self, value )
 
   implicit none
 
@@ -623,22 +623,22 @@ subroutine value_i64_arr( self, value )
   integer(int64), allocatable, intent(out) :: value(:)
 
   select type( clay => self%key_value_pair )
-  class is (i64_arr_key_value_type)
+  class is (int64_arr_key_value_type)
     allocate(value, source=clay%value)
   class default
     write( log_scratch_space, '(A)' ) &
-        'Object is not the expected i64_arr_key_value_type.'
+        'Object is not the expected int64_arr_key_value_type.'
     call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end select
 
   return
-end subroutine value_i64_arr
+end subroutine value_int64_arr
 
 
 !===========================================================
 !> @brief Extracts the value held by the concrete type.
 !> @param[out] value  32-bit real array value held in object.
-subroutine value_r32_arr( self, value )
+subroutine value_real32_arr( self, value )
 
   implicit none
 
@@ -646,23 +646,23 @@ subroutine value_r32_arr( self, value )
   real(real32), allocatable, intent(out) :: value(:)
 
   select type( clay => self%key_value_pair )
-  class is (r32_arr_key_value_type)
+  class is (real32_arr_key_value_type)
     allocate( value(size(clay%value)) )
     value(:) = clay%value(:)
   class default
     write( log_scratch_space, '(A)' ) &
-        'Object is not the expected r32_arr_key_value_type.'
+        'Object is not the expected real32_arr_key_value_type.'
     call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end select
 
   return
-end subroutine value_r32_arr
+end subroutine value_real32_arr
 
 
 !===========================================================
 !> @brief Extracts the value held by the concrete type.
 !> @param[out] value  64-bit real array value held in object.
-subroutine value_r64_arr( self, value )
+subroutine value_real64_arr( self, value )
 
   implicit none
 
@@ -670,17 +670,17 @@ subroutine value_r64_arr( self, value )
   real(real64), allocatable, intent(out) :: value(:)
 
   select type( clay => self%key_value_pair )
-  class is (r64_arr_key_value_type)
+  class is (real64_arr_key_value_type)
     allocate( value( size(clay%value)) )
     value(:) = clay%value(:)
   class default
     write( log_scratch_space, '(A)' ) &
-        'Object is not the expected r64_arr_key_value_type.'
+        'Object is not the expected real64_arr_key_value_type.'
     call log_event( log_scratch_space, LOG_LEVEL_ERROR )
   end select
 
   return
-end subroutine value_r64_arr
+end subroutine value_real64_arr
 
 
 !===========================================================

@@ -15,11 +15,11 @@ module operator_mod
   ! within the model (as it is model information). For now, PSyclone is
   ! expecting to "use" the definitions from operator_mod, so it is set here
 #if (RDEF_PRECISION == 32)
-  use operator_r32_mod, only: operator_type       => operator_r32_type, &
-                              operator_proxy_type => operator_r32_proxy_type
+  use operator_real32_mod, only: operator_type       => operator_real32_type, &
+                                 operator_proxy_type => operator_real32_proxy_type
 #else
-  use operator_r64_mod, only: operator_type       => operator_r64_type, &
-                              operator_proxy_type => operator_r64_proxy_type
+  use operator_real64_mod, only: operator_type       => operator_real64_type, &
+                                 operator_proxy_type => operator_real64_proxy_type
 #endif
 
   use r_solver_operator_mod, only: r_solver_operator_type, &

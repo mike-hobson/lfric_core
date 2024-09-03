@@ -24,9 +24,26 @@ OPENMP_ARG            = -h omp
 
 FFLAGS_COMPILER           =
 FFLAGS_NO_OPTIMISATION    = -O0
-FFLAGS_SAFE_OPTIMISATION  = -O2
+ifeq ($(shell expr ${CRAYFTN_VERSION} \>= 015000000), 1)
+  FFLAGS_SAFE_OPTIMISATION  = -O1 -hnoaggress -hflex_mp=intolerant -hnoautoprefetch -hipa0 -hcache0 -hcblock0 -hscalar0 -hvector0
+else
+  FFLAGS_SAFE_OPTIMISATION  = -O2
+endif
+
 FFLAGS_RISKY_OPTIMISATION = -O3
-FFLAGS_DEBUG              = -Gfast
+
+#Cray has debug levels tied to optimisation levels
+ifeq ($(shell expr ${CRAYFTN_VERSION} \>= 015000000), 1)
+  ifeq "$(PROFILE)" "fast-debug"
+    FFLAGS_DEBUG              = -G1
+  else
+    FFLAGS_DEBUG              = -G0
+  endif
+else
+  FFLAGS_DEBUG              = -Gfast
+endif
+$(info $(FFLAGS_DEBUG))
+
 FFLAGS_WARNINGS           = -m 0 -M E664,E7208,E7212
 FFLAGS_UNIT_WARNINGS      = -m 0
 FFLAGS_RUNTIME            = -R bcdps -Ktrap=fp

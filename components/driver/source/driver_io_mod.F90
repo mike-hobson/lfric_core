@@ -80,14 +80,17 @@ contains
     character(len=str_def), optional, intent(in)    :: alt_mesh_names(:)
     procedure(callback_clock_arg), optional         :: before_close
 
-    procedure(callback_clock_arg), pointer :: before_close_ptr => null()
+    procedure(callback_clock_arg), pointer :: before_close_ptr
 
     ! Allocate IO context type based on model configuration
     if ( use_xios_io ) then
 #ifdef USE_XIOS
       if (present(before_close)) then
         before_close_ptr => before_close
+      else
+        before_close_ptr => null()
       end if
+
       call init_xios_io_context( name,               &
                                  modeldb,            &
                                  chi_inventory,      &

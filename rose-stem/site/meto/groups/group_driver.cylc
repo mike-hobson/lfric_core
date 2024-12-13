@@ -36,6 +36,20 @@
     ]
     }) %}
 
+{# EX1A Groups #}
+{% do site_groups.update({
+    "driver_ex1a_developer": [
+
+    ],
+    "driver_ex1a": [
+        "driver_ex1a_developer"
+    ],
+    "driver_ex1a_unit_tests": [
+        "driver_unit_tests_ex1a_cce_32bit",
+        "driver_unit_tests_ex1a_cce_64bit"
+    ]
+    }) %}
+
 {# Platform Generic Groups #}
 {% do site_groups.update({
     "driver_developer": [
@@ -69,5 +83,10 @@
 {% do site_groups.xc40_developer.extend(site_groups.driver_xc40_developer) %}
 {% do site_groups.xc40.extend(site_groups.driver_xc40) %}
 {% do site_groups.xc40_unit_tests.extend(site_groups.driver_xc40_unit_tests) %}
+
+{# EX1A Extends #}
+{% do site_groups.ex1a_developer.extend(site_groups.driver_ex1a_developer) %}
+{% do site_groups.ex1a.extend(site_groups.driver_ex1a) %}
+{% do site_groups.ex1a_unit_tests.extend(site_groups.driver_ex1a_unit_tests) %}
 
 {% do LOG.debug("Finished in site/meto/groups/group_driver.cylc") %}

@@ -36,6 +36,19 @@
     ]
     }) %}
 
+{# EX1A Groups #}
+{% do site_groups.update({
+    "science_ex1a_developer": [
+
+    ],
+    "science_ex1a": [
+        "science_ex1a_developer"
+    ],
+    "science_ex1a_unit_tests": [
+
+    ]
+    }) %}
+
 {# Platform Generic Groups #}
 {% do site_groups.update({
     "science_developer": [
@@ -69,5 +82,10 @@
 {% do site_groups.xc40_developer.extend(site_groups.science_xc40_developer) %}
 {% do site_groups.xc40.extend(site_groups.science_xc40) %}
 {% do site_groups.xc40_unit_tests.extend(site_groups.science_xc40_unit_tests) %}
+
+{# EX1A Extends #}
+{% do site_groups.ex1a_developer.extend(site_groups.science_ex1a_developer) %}
+{% do site_groups.ex1a.extend(site_groups.science_ex1a) %}
+{% do site_groups.ex1a_unit_tests.extend(site_groups.science_ex1a_unit_tests) %}
 
 {% do LOG.debug("Finished in site/meto/groups/group_science.cylc") %}

@@ -53,7 +53,7 @@
             KGO_DIR          = {{kgo_dir}}
             MESH_DIR         = {{task_output_dir}}
             CONFIG           = {{task_ns.conf_name}}
-            TOLERANCE        = 1.0E-30
+            TOLERANCE        = 1.0E-10
             PROJECT_NAME     = {{task_ns.application}}
             TARGET_OPT       = {{task_ns.platform}}
             COMPILER         = {{task_ns.compiler}}

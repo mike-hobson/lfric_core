@@ -208,10 +208,6 @@
         "mesh_tools_cubedsphere-rotated_xc40_intel_fast-debug-64bit",
         "mesh_tools_cubedsphere-maps_xc40_intel_fast-debug-64bit",
         "mesh_tools_cubedsphere_xc40_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere-op_xc40_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere-rotated_xc40_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere-maps_xc40_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere_xc40_intel_fast-debug-64bit",
     ],
     "mesh_tools_xc40_planar": [
         "mesh_tools_planar-op-lam_xc40_intel_fast-debug-64bit",
@@ -242,21 +238,50 @@
 
 {# EX1A Groups #}
 {% do site_groups.update({
-    "mesh_tools_ex1a_developer": [
-        "mesh_tools_ex1a_canned",
-    ],
     "mesh_tools_ex1a": [
         "mesh_tools_ex1a_developer"
     ],
-    "mesh_tools_ex1a_unit_tests": [
-        "mesh_tools_unit_tests_ex1a_gnu_64bit",
+    "mesh_tools_ex1a_developer": [
+        "mesh_tools_ex1a_planar",
+        "mesh_tools_ex1a_cubedsphere",
     ],
-    "mesh_tools_ex1a_canned": [
-        "mesh_tools_canned_ex1a_gnu_fast-debug-64bit",
+    "mesh_tools_ex1a_unit_tests": [
+        "mesh_tools_unit_tests_ex1a_cce_64bit",
+    ],
+    "mesh_tools_ex1a_cubedsphere": [
+        "mesh_tools_cubedsphere-c1_ex1a_gnu_fast-debug-64bit",
+        "mesh_tools_cubedsphere-c2_ex1a_cce_full-debug-64bit",
+        "mesh_tools_cubedsphere-c3_ex1a_gnu_fast-debug-64bit",
+        "mesh_tools_cubedsphere-op_ex1a_gnu_fast-debug-64bit",
+        "mesh_tools_cubedsphere-maps_ex1a_gnu_fast-debug-64bit",
+        "mesh_tools_cubedsphere_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_cubedsphere-rotated_ex1a_gnu_fast-debug-64bit",
+        "mesh_tools_cubedsphere_ex1a_cce_fast-debug-64bit",
+    ],
+    "mesh_tools_ex1a_planar": [
+        "mesh_tools_planar-op-lam_ex1a_cce_full-debug-64bit",
+        "mesh_tools_equator_ex1a_cce_full-debug-64bit",
+        "mesh_tools_equator-band_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_lam_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_polar_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_uk_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_london-model_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_nzlam4_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_falklands_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_var-seuk_ex1a_gnu_fast-debug-64bit",
+        "mesh_tools_planar-lbc_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_planar-maps_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_planar-stretch-centres_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_planar-stretch-nodes_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_planar-stretch-points_ex1a_gnu_fast-debug-64bit",
+        "mesh_tools_planar-trench-x_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_planar-trench-y_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_planar-bi-periodic_ex1a_cce_fast-debug-64bit",
+        "mesh_tools_planar-non-periodic_ex1a_cce_fast-debug-64bit",
     ],
     "mesh_tools_ex1a_build": [
-        "build_mesh_tools_ex1a_gnu_fast-debug-64bit",
-        "build_mesh_tools_ex1a_gnu_full-debug-64bit",
+        "build_mesh_tools_ex1a_cce_fast-debug-64bit",
+        "build_mesh_tools_ex1a_cce_full-debug-64bit",
     ]
     }) %}
 

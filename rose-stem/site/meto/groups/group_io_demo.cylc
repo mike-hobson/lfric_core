@@ -66,6 +66,33 @@
     ]
     }) %}
 
+{# EX1A Groups #}
+{% do site_groups.update({
+    "io_demo_ex1a_developer": [
+        "io_demo_ex1a_canned",
+        "io_demo_default-C24_ex1a_cce_fast-debug-32bit",
+        "io_demo_default-C24_ex1a_cce_full-debug-64bit",
+        "io_demo_multifile-C24_ex1a_cce_fast-debug-64bit",
+        "io_demo_multifile-C24_ex1a_cce_fast-debug-32bit",
+        "io_demo_multifile-C24_ex1a_gnu_fast-debug-64bit",
+        "io_demo_multifile-C24_ex1a_gnu_fast-debug-32bit",
+    ],
+    "io_demo_ex1a": [
+        "io_demo_ex1a_developer"
+    ],
+    "io_demo_ex1a_unit_tests": [
+        "io_demo_unit_tests_ex1a_cce_64bit",
+    ],
+    "io_demo_ex1a_canned": [
+        "io_demo_canned_ex1a_cce_fast-debug-64bit",
+    ],
+    "io_demo_ex1a_build": [
+        "build_io_demo_ex1a_cce_fast-debug-64-bit",
+        "build_io_demo_ex1a_cce_fast-debug-32-bit",
+        "build_io_demo_ex1a_cce_full-debug-64-bit",
+    ]
+    }) %}
+
 {# Platform Generic Groups #}
 {% do site_groups.update({
     "io_demo_developer": [
@@ -107,5 +134,11 @@
 {% do site_groups.xc40.extend(site_groups.io_demo_xc40) %}
 {% do site_groups.xc40_unit_tests.extend(site_groups.io_demo_xc40_unit_tests) %}
 {% do site_groups.xc40_build.extend(site_groups.io_demo_xc40_build) %}
+
+{# EX1A Extends #}
+{% do site_groups.ex1a_developer.extend(site_groups.io_demo_ex1a_developer) %}
+{% do site_groups.ex1a.extend(site_groups.io_demo_ex1a) %}
+{% do site_groups.ex1a_unit_tests.extend(site_groups.io_demo_ex1a_unit_tests) %}
+{% do site_groups.ex1a_build.extend(site_groups.io_demo_ex1a_build) %}
 
 {% do LOG.debug("Finished in site/meto/groups/group_io_demo.cylc") %}

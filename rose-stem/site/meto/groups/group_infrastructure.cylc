@@ -48,6 +48,24 @@
     ]
     }) %}
 
+{# EX1A Groups #}
+{% do site_groups.update({
+    "infrastructure_ex1a_developer": [
+        "infrastructure_ex1a_integration_tests",
+    ],
+    "infrastructure_ex1a": [
+        "infrastructure_ex1a_developer"
+    ],
+    "infrastructure_ex1a_unit_tests": [
+        "infrastructure_unit_tests_ex1a_cce_32bit",
+        "infrastructure_unit_tests_ex1a_cce_64bit"
+    ],
+    "infrastructure_ex1a_integration_tests": [
+        "infrastructure_integration_tests_ex1a_cce_32bit",
+        "infrastructure_integration_tests_ex1a_cce_64bit"
+    ]
+    }) %}
+
 {# Platform Generic Groups #}
 {% do site_groups.update({
     "infrastructure_developer": [
@@ -89,5 +107,11 @@
 {% do site_groups.xc40.extend(site_groups.infrastructure_xc40) %}
 {% do site_groups.xc40_unit_tests.extend(site_groups.infrastructure_xc40_unit_tests) %}
 {% do site_groups.xc40_unit_tests.extend(site_groups.infrastructure_xc40_integration_tests) %}
+
+{# EX1A Extends #}
+{% do site_groups.ex1a_developer.extend(site_groups.infrastructure_ex1a_developer) %}
+{% do site_groups.ex1a.extend(site_groups.infrastructure_ex1a) %}
+{% do site_groups.ex1a_unit_tests.extend(site_groups.infrastructure_ex1a_unit_tests) %}
+{% do site_groups.ex1a_unit_tests.extend(site_groups.infrastructure_ex1a_integration_tests) %}
 
 {% do LOG.debug("Finished in site/meto/groups/group_infrastructure.cylc") %}

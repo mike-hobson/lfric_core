@@ -82,33 +82,42 @@ contains
 
     class(skeleton_test_type), intent(inout) :: this
 
-    real(kind=r_def) :: d(4,2,1), x(2), y(4), answer(4)
+    real(kind=r_def) :: x(2), y(4), answer(4)
     real(kind=r_def) :: tol
     integer          :: i
 
+    integer, parameter :: ncell_3d = 1
+    integer, parameter :: ndf1 = 4
+    integer, parameter :: ndf2 = 2
+    integer, parameter :: map1(ndf1) = (/1, 2, 3, 4/)
+    integer, parameter :: map2(ndf2) = (/1, 2/)
+
+    real(kind=r_def) :: d( ncell_3d, ndf1, ndf2 )
+
     ! Make up a matrix
-    d(1,:,1) = (/ 2.0_r_def, -2.0_r_def /)
-    d(2,:,1) = (/ 3.0_r_def, -1.0_r_def /)
-    d(3,:,1) = (/ 0.4_r_def,  1.3_r_def /)
-    d(4,:,1) = (/ -4.5_r_def, 7.9_r_def /)
+    d(1,1,:) = (/ 2.0_r_def, -2.0_r_def /)
+    d(1,2,:) = (/ 3.0_r_def, -1.0_r_def /)
+    d(1,3,:) = (/ 0.4_r_def,  1.3_r_def /)
+    d(1,4,:) = (/ -4.5_r_def, 7.9_r_def /)
+
     ! rhs vector
     x(:) = (/ 0.25_r_def, 1.5_r_def /)
     ! lhs vector
     y(:) = 0.0_r_def
-    answer = matmul(d(:,:,1),x)
+    answer = matmul(d(1,:,:),x)
 
-    call matrix_vector_code(1, &
-                            1, &
-                            y, &
-                            x, &
-                            1, &
-                            d, &
-                            4, &
-                            4, &
-                            (/1, 2, 3, 4/), &
-                            2, &
-                            2, &
-                            (/1, 2 /) )
+    call matrix_vector_code( 1,        & ! cell
+                             1,        & ! nlayers
+                             y,        & ! lhs
+                             x,        & ! x
+                             ncell_3d, & ! ncell_3d
+                             d,        & ! matrix
+                             ndf1,     & ! ndf1
+                             4,        & ! undf1
+                             map1,     & ! map1
+                             ndf2,     & ! ndf2
+                             2,        & ! undf2
+                             map2 )      ! map2
 
     tol = 1.0e-14_r_def
 

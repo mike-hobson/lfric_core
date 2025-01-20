@@ -37,21 +37,26 @@ module driver_mesh_mod
   use load_local_mesh_maps_mod,   only: load_local_mesh_maps
   use log_mod,                    only: log_event,         &
                                         log_scratch_space, &
-                                        LOG_LEVEL_INFO,    &
-                                        LOG_LEVEL_ERROR
+                                        log_level_debug,   &
+                                        log_level_error
   use namelist_collection_mod,    only: namelist_collection_type
   use namelist_mod,               only: namelist_type
   use partition_mod,              only: partitioner_interface
   use sci_query_mod,              only: check_uniform_partitions
-  use runtime_partition_mod,      only: get_partition_parameters, &
-                                        create_local_mesh_maps,   &
-                                        create_local_mesh
+
+  use runtime_partition_lfric_mod, only: get_partition_parameters
+  use runtime_partition_mod,       only: mesh_cubedsphere,       &
+                                         mesh_planar,            &
+                                         create_local_mesh_maps, &
+                                         create_local_mesh
 
   use global_mesh_collection_mod, only: global_mesh_collection
   use local_mesh_collection_mod,  only: local_mesh_collection
 
   ! Configuration modules
-  use finite_element_config_mod, only: CELLSHAPE_QUADRILATERAL
+  use finite_element_config_mod, only: cellshape_quadrilateral
+  use base_mesh_config_mod,      only: geometry_spherical, &
+                                       topology_fully_periodic
 
   implicit none
 
@@ -111,24 +116,28 @@ subroutine init_mesh( configuration,           &
   integer(i_def) :: i
 
   ! Namelist variables
-  type(namelist_type), pointer :: base_mesh_nml      => null()
-  type(namelist_type), pointer :: finite_element_nml => null()
-  type(namelist_type), pointer :: partitioning_nml   => null()
+  type(namelist_type), pointer :: base_mesh_nml
+  type(namelist_type), pointer :: finite_element_nml
+  type(namelist_type), pointer :: partitioning_nml
 
   character(str_max_filename)  :: file_prefix
 
   integer(i_def) :: cellshape
-  logical        :: prepartitioned
-  logical(l_def) :: generate_inner_haloes
 
+  logical :: prepartitioned
+  logical :: generate_inner_haloes
+
+  integer :: geometry
+  integer :: topology
+  integer :: mesh_selection
 
   ! Local variables
   character(str_def), allocatable :: names(:)
   character(str_def), allocatable :: tmp_mesh_names(:)
   character(str_max_filename)     :: input_mesh_file
 
-  type(global_mesh_type),           pointer :: global_mesh_ptr => null()
-  procedure(partitioner_interface), pointer :: partitioner_ptr => null()
+  type(global_mesh_type),           pointer :: global_mesh_ptr
+  procedure(partitioner_interface), pointer :: partitioner_ptr
 
   integer(i_def) :: xproc  ! Processor ranks in mesh panel x-direction
   integer(i_def) :: yproc  ! Processor ranks in mesh panel y-direction
@@ -144,12 +153,11 @@ subroutine init_mesh( configuration,           &
 
   call base_mesh_nml%get_value( 'prepartitioned', prepartitioned )
   call base_mesh_nml%get_value( 'file_prefix',    file_prefix )
+
   call finite_element_nml%get_value( 'cellshape', cellshape )
   call partitioning_nml%get_value( 'generate_inner_haloes', generate_inner_haloes )
 
-  base_mesh_nml      => null()
-  finite_element_nml => null()
-  partitioning_nml   => null()
+
 
   !============================================================================
   ! 0.1 Some basic checks
@@ -212,9 +220,9 @@ subroutine init_mesh( configuration,           &
     write(input_mesh_file,'(A,2(I0,A))') &
         trim(file_prefix) // '_', local_rank, '-', total_ranks, '.nc'
 
-    call log_event( 'Using pre-partitioned mesh file:', LOG_LEVEL_INFO )
-    call log_event( '   '//trim(input_mesh_file), LOG_LEVEL_INFO )
-    call log_event( "Loading local mesh(es)", LOG_LEVEL_INFO )
+    call log_event( 'Using pre-partitioned mesh file:', log_level_debug )
+    call log_event( '   '//trim(input_mesh_file), log_level_debug )
+    call log_event( "Loading local mesh(es)", log_level_debug )
 
 
     ! 2.1a Read in all local mesh data for this rank and
@@ -247,13 +255,26 @@ subroutine init_mesh( configuration,           &
     !==========================================================================
     ! 2.2 Perform runtime partitioning of global meshes.
     !==========================================================================
-    call log_event( "Setting up partition mesh(es)", LOG_LEVEL_INFO )
+    call base_mesh_nml%get_value( 'geometry', geometry )
+    call base_mesh_nml%get_value( 'topology', topology )
+
+    if ( geometry == geometry_spherical .and. &
+         topology == topology_fully_periodic ) then
+      mesh_selection = mesh_cubedsphere
+      call log_event( "Setting up cubed-sphere partition mesh(es)", &
+                      log_level_debug )
+    else
+      mesh_selection = mesh_planar
+      call log_event( "Setting up planar partition mesh(es)", &
+                      log_level_debug )
+    end if
     write(input_mesh_file,'(A)') trim(file_prefix) // '.nc'
 
     ! 2.2a Set constants that will control partitioning.
     !===========================================================
-    call get_partition_parameters( configuration, total_ranks, &
-                                   xproc, yproc, partitioner_ptr )
+    call get_partition_parameters( configuration, mesh_selection, &
+                                   total_ranks, xproc, yproc,     &
+                                   partitioner_ptr )
 
     ! 2.2b Read in all global meshes from input file
     !===========================================================

@@ -58,6 +58,8 @@ contains
   procedure, public :: set_time
   !> Checks if the currently set time is scheduled for a coupling operation
   procedure, public :: is_coupling_time
+  !> Manually tidies up
+  procedure, public :: clear
   !> Tidies up on destruction
   final             :: finalise
 end type  coupler_exchange_2d_type
@@ -293,13 +295,22 @@ end type  coupler_exchange_2d_type
 
   end function is_coupling_time
 
-  ! Finaliser
+  ! Finaliser/Clear
   !
+  !> @brief Deallocates the memory associated with the object.
+  subroutine clear(self)
+  implicit none
+  class(coupler_exchange_2d_type), intent(inout) :: self
+
+  if (allocated(self%sorting_index)) deallocate(self%sorting_index)
+
+  end subroutine clear
+
   subroutine finalise(self)
   implicit none
   type(coupler_exchange_2d_type), intent(inout) :: self
 
-  if (allocated(self%sorting_index)) deallocate(self%sorting_index)
+  call self%clear()
 
   end subroutine finalise
 

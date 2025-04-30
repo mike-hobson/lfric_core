@@ -26,22 +26,37 @@ LDFLAGS_OPENMP = -h omp
 
 FFLAGS_COMPILER           =
 FFLAGS_NO_OPTIMISATION    = -O0
-FFLAGS_SAFE_OPTIMISATION  = -O2
-FFLAGS_RISKY_OPTIMISATION = -O3
+FFLAGS_SAFE_OPTIMISATION  = -O2 -hflex_mp=strict
+FFLAGS_RISKY_OPTIMISATION = -O3 -hipa3
 
 #Cray has debug levels tied to optimisation levels
 ifeq ($(shell expr ${CRAYFTN_VERSION} \>= 015000000), 1)
-  ifeq "$(PROFILE)" "fast-debug"
-    FFLAGS_DEBUG              = -G2
-  else
-    FFLAGS_DEBUG              = -G0
+  ifeq "$(PROFILE)" "full-debug"
+    FFLAGS_DEBUG    = -G0
+  else ifeq "$(PROFILE)" "fast-debug"
+    FFLAGS_DEBUG    = -G2
+  else ifeq "$(PROFILE)" "production"
+    FFLAGS_DEBUG    =
   endif
-else
-  FFLAGS_DEBUG              = -Gfast
 endif
-$(info $(FFLAGS_DEBUG))
 
-FFLAGS_WARNINGS           = -m 0 -M E664,E7208,E7212
+# Warnings
+# ftn-664 : WARNING:  Actual argument "%s" has the PROTECTED attribute. The
+#                     associateddummy argument "%s" does not have the INTENT(IN)
+#                     attribute.
+# ftn-7208 : WARNING: Privatized version of variable "var" is used before it is
+#                     defined.
+# ftn-7212 : WARNING: Variable "var" is used before it is defined.
+ifeq "$(PROFILE)" "production"
+    # Set warning output for production runs (not-debug)
+    # -m 3 : Error, Warning (default)
+    FFLAGS_WARNINGS = -m 3 -M E664,E7208,E7212
+else
+    # More verbose option
+    # -m 0 : Error, Warning, Caution, Note, and Comment
+    FFLAGS_WARNINGS = -m 0 -M E664,E7208,E7212
+endif
+
 FFLAGS_UNIT_WARNINGS      = -m 0
 FFLAGS_RUNTIME            = -R bcdps
 # fast-debug flags set separately as Intel compiler needs platform-specific control on them.
@@ -55,6 +70,7 @@ FFLAGS_FORTRAN_STANDARD   = -en
 # Floating point checking with CCE causes XIOS failures. To allow
 # flexibility for testing, do not apply above full-debug
 ifeq "$(PROFILE)" "full-debug"
+  # -Ktrap=fp : Trap on divz, inv, or ovf exceptions
   LDFLAGS_COMPILER = -Ktrap=fp
 else
   LDFLAGS_COMPILER =

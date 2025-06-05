@@ -79,8 +79,7 @@ contains
     !       moment. #1752
     character(str_def + str_max_filename) :: buffer
     logical(l_def)     :: continue_read
-    ! Number of names - technically a scalar but must be defined as a
-    ! single element array to be broadcast-able
+    ! Number of names
     integer(i_def)  :: namecount(1)
 
     namecount = 0
@@ -94,24 +93,24 @@ contains
         !
         if (buffer(1:1) == '&') then
           namecount = namecount + 1
-          allocate(names_temp(namecount(1)))
-          if (namecount(1) > 1) then
-            names_temp(1:namecount(1)-1) = names
+          allocate(names_temp(namecount))
+          if (namecount > 1) then
+            names_temp(1:namecount-1) = names
           end if
-          names_temp(namecount(1)) = trim(buffer(2:))
+          names_temp(namecount) = trim(buffer(2:))
           call move_alloc(names_temp, names)
         end if
       end do text_line_loop
       rewind(unit)
     end if
 
-    call global_mpi%broadcast( namecount, 1, 0 )
+    call global_mpi%broadcast( namecount, 0 )
 
     if (local_rank /= 0) then
-      allocate(names(namecount(1)))
+      allocate(names(namecount))
     end if
 
-    call global_mpi%broadcast( names, namecount(1)*str_def, 0 )
+    call global_mpi%broadcast( names, namecount*str_def, 0 )
 
   end subroutine get_namelist_names
 

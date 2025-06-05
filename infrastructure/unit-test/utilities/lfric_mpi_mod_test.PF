@@ -32,7 +32,8 @@ module lfric_mpi_mod_test
   public set_up, tear_down, &
          test_real64, test_bcast_real64, &
          test_real32, test_bcast_real32, &
-         test_int, test_bcast_int
+         test_int, test_bcast_int, &
+         test_bcast_logical
   !
   ! pFUnit depends on symbol spill
   !
@@ -164,6 +165,7 @@ contains
     class(MPITestMethod), intent(inout) :: this
 
     integer, parameter  :: r_test = real64
+    real(r_test)   :: r_buffer_scalar
     real(r_test)   :: r_buffer_1d(1)
     real(r_test)   :: r_buffer_2d(1,1)
     real(r_test)   :: r_buffer_3d(1,1,1)
@@ -175,6 +177,10 @@ contains
     proc_num      = this%getProcessRank()
 
     ! Test real broadcast routine
+    ! Scalar data
+    r_buffer_scalar = 7.0_r_test*real(proc_num+1, r_test)
+    call global_mpi%broadcast( r_buffer_scalar, 0 )
+    @assertEqual( 7.0_r_test, r_buffer_scalar )
     ! 1d data
     r_buffer_1d(1) = 11.0_r_test*real(proc_num+1, r_test)
     call global_mpi%broadcast( r_buffer_1d, 1, 0 )
@@ -278,6 +284,7 @@ contains
     class(MPITestMethod), intent(inout) :: this
 
     integer, parameter  :: r_test = real32
+    real(r_test)   :: r_buffer_scalar
     real(r_test)   :: r_buffer_1d(1)
     real(r_test)   :: r_buffer_2d(1,1)
     real(r_test)   :: r_buffer_3d(1,1,1)
@@ -289,6 +296,9 @@ contains
     proc_num      = this%getProcessRank()
 
     ! Test real broadcast routine
+    r_buffer_scalar = 7.0_r_test*real(proc_num+1, r_test)
+    call global_mpi%broadcast( r_buffer_scalar, 0 )
+    @assertEqual( 7.0_r_test, r_buffer_scalar )
     ! 1d data
     r_buffer_1d(1) = 11.0_r_test*real(proc_num+1,r_test)
     call global_mpi%broadcast( r_buffer_1d, 1, 0 )
@@ -431,6 +441,7 @@ contains
     class(MPITestMethod), intent(inout) :: this
 
     integer, parameter  :: i_test = int32
+    integer(i_test) :: i_buffer_scalar
     integer(i_test) :: i_buffer_1d(1)
     integer(i_test) :: i_buffer_2d(1,1)
     integer(i_test) :: i_buffer_3d(1,1,1)
@@ -440,6 +451,9 @@ contains
     num_processes = this%context%getNumProcesses()
     proc_num      = this%getProcessRank()
     ! Test integer broadcast routine
+    i_buffer_scalar = 17_i_test*int(proc_num+1, i_test)
+    call global_mpi%broadcast( i_buffer_scalar, 0 )
+    @assertEqual( 17_i_test, i_buffer_scalar )
     ! 1d data
     i_buffer_1d(1) = 900_i_test*int(proc_num+1, i_test)
     call global_mpi%broadcast( i_buffer_1d, 1, 0 )
@@ -454,5 +468,45 @@ contains
     @assertEqual( 19_i_test, i_buffer_3d(1,1,1) )
 
   end subroutine test_bcast_int
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! TEST BROADCAST OF LOGICALS !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @Test( npes = [1, 4] )
+  subroutine test_bcast_logical( this )
+
+    implicit none
+
+    class(MPITestMethod), intent(inout) :: this
+
+    logical :: l_buffer_scalar
+    logical :: l_buffer_1d(1)
+    logical :: l_buffer_2d(1,1)
+    logical :: l_buffer_3d(1,1,1)
+    integer(i_def) :: num_processes
+    integer(i_def) :: proc_num
+
+    num_processes = this%context%getNumProcesses()
+    proc_num      = this%getProcessRank()
+    ! Test logical broadcast routine
+    l_buffer_scalar = .false.
+    if(proc_num == 0)l_buffer_scalar = .true.
+    call global_mpi%broadcast( l_buffer_scalar, 0 )
+    @assertTrue( l_buffer_scalar )
+    ! 1d data
+    l_buffer_1d(1) = .false.
+    if(proc_num == 0)l_buffer_1d(1) = .true.
+    call global_mpi%broadcast( l_buffer_1d, 1, 0 )
+    @assertTrue( l_buffer_1d(1) )
+    ! 2d data
+    l_buffer_2d(1,1) = .false.
+    if(proc_num == 0)l_buffer_2d(1,1) = .true.
+    call global_mpi%broadcast( l_buffer_2d, 1, 0 )
+    @assertTrue( l_buffer_2d(1,1) )
+    ! 3d data
+    l_buffer_3d(1,1,1) = .false.
+    if(proc_num == 0)l_buffer_3d(1,1,1) = .true.
+    call global_mpi%broadcast( l_buffer_3d, 1, 0 )
+    @assertTrue( l_buffer_3d(1,1,1) )
+
+  end subroutine test_bcast_logical
 
 end module lfric_mpi_mod_test

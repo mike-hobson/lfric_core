@@ -25,6 +25,7 @@ module get_unit_test_w3nodal_basis_mod
   public :: get_w0_w3nodal_diff_basis,     &
             get_wtheta_w3nodal_basis,      &
             get_w1_w3nodal_basis,          &
+            get_w2_w3nodal_basis,          &
             get_w0_w3nodal_basis,          &
             get_wchi_w3nodal_basis,        &
             get_wchi_w3nodal_diff_basis
@@ -105,6 +106,26 @@ module get_unit_test_w3nodal_basis_mod
     basis_wtheta(:, 2, 1) =  0.50_r_def
 
   end subroutine get_wtheta_w3nodal_basis
+
+!---------------------------------------------------------------------
+
+  subroutine get_w2_w3nodal_basis(basis_w2)
+    ! Provide w2 basis functions computed at W3 nodal points
+
+    implicit none
+
+    real(r_def), allocatable :: basis_w2(:,:,:)
+
+    ! Lowest order vector. 6 W2 basis functions. 1 W3 nodal point.
+    allocate(basis_w2(3,6,1))
+    basis_w2(:, 1, 1) = (/ 0.5_r_def,  0.0_r_def,  0.0_r_def /)
+    basis_w2(:, 2, 1) = (/ 0.0_r_def, -0.5_r_def,  0.0_r_def /)
+    basis_w2(:, 3, 1) = (/ 0.5_r_def,  0.0_r_def,  0.0_r_def /)
+    basis_w2(:, 4, 1) = (/ 0.0_r_def, -0.5_r_def,  0.0_r_def /)
+    basis_w2(:, 5, 1) = (/ 0.0_r_def,  0.0_r_def,  0.5_r_def /)
+    basis_w2(:, 6, 1) = (/ 0.0_r_def,  0.0_r_def,  0.5_r_def /)
+
+  end subroutine get_w2_w3nodal_basis
 
 !---------------------------------------------------------------------
 

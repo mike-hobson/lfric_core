@@ -86,7 +86,7 @@ end subroutine write_value_generic
 !>  @param[in]     field_proxy      A field proxy to be written
 !>
 subroutine write_field_generic(field_name, field_proxy)
-  use lfric_xios_diag_mod,        only:  get_field_domain_ref
+  use lfric_xios_diag_mod,        only:  get_field_domain_ref, field_is_active
   implicit none
 
   character(len=*), intent(in) :: field_name
@@ -97,6 +97,10 @@ subroutine write_field_generic(field_name, field_proxy)
   integer(i_def) :: vdim          ! vertical dimension
   real(dp_xios), allocatable :: xios_data(:)
   logical(l_def) :: legacy
+
+  ! If the field is not active in xios at this timestep, exit this routine
+  ! without doing anything
+  if (.not. field_is_active(field_name, .true.)) return
 
   undf = field_proxy%vspace%get_last_dof_owned() ! total dimension
 

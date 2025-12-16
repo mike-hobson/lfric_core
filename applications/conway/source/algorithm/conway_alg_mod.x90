@@ -1,0 +1,51 @@
+!-----------------------------------------------------------------------------
+! (c) Crown copyright 2017 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+
+!>@brief Barebones algorithm to help the development of applications
+module conway_alg_mod
+
+  use constants_mod,                  only: i_def
+  use log_mod,                        only: log_event,         &
+                                            LOG_LEVEL_INFO
+  use integer_field_mod,              only: integer_field_type
+  use conway_timestep_kernel_mod,     only: conway_timestep_kernel_type
+
+  implicit none
+
+  private
+
+  public :: conway_alg
+
+contains
+
+  !> @details An algorithm for developing applications
+  !> @param[inout] field_1  A prognostic field object
+  subroutine conway_alg(current_state, next_state)
+
+    implicit none
+
+    ! Prognostic fields
+    type( integer_field_type ), intent( in )    :: current_state
+    type( integer_field_type ), intent( inout ) :: next_state
+
+    integer(kind=i_def), parameter :: stencil_depth = 1_i_def
+
+    call log_event( "conway: Running algorithm", LOG_LEVEL_INFO )
+
+    ! Create a next timestep state from the state at the current timestep
+    ! then advance "current" to the "next" stse and reset "next"
+    call invoke( name = "conway_timestep",  &
+                 conway_timestep_kernel_type(current_state, &
+                                             stencil_depth, &
+                                             next_state),   &
+                 int_setval_X(current_state, next_state),   &
+                 int_setval_c(next_state, 0_i_def) )
+
+    call log_event( "conway: finished algorithm", LOG_LEVEL_INFO )
+
+  end subroutine conway_alg
+
+end module conway_alg_mod

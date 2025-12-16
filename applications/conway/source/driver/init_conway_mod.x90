@@ -1,0 +1,84 @@
+!-----------------------------------------------------------------------------
+! (c) Crown copyright 2017 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+
+!> @brief Initialisation functionality for the conway miniapp
+
+!> @details Handles init of prognostic fields and through the call to
+!>          runtime_contants the coordinate fields and fem operators
+
+module init_conway_mod
+
+  use constants_mod,                  only : i_def, r_def
+  use conway_state_mod,               only : conway_state_type
+  use driver_modeldb_mod,             only : modeldb_type
+  use field_collection_mod,           only : field_collection_type
+  use field_mod,                      only : field_type
+  use integer_field_mod,              only : integer_field_type, &
+                                             integer_field_proxy_type
+  use field_parent_mod,               only : write_interface
+  use finite_element_config_mod,      only : element_order_h, element_order_v
+  use function_space_collection_mod,  only : function_space_collection
+  use function_space_mod,             only : function_space_type
+  use fs_continuity_mod,              only : W3
+  use log_mod,                        only : log_event,      &
+                                             LOG_LEVEL_INFO, &
+                                             LOG_LEVEL_ERROR
+  use mesh_mod,                       only : mesh_type
+
+  implicit none
+
+  contains
+
+  !> @details Initialises everything needed to run the conway miniapp
+  !> @param[in]     mesh Representation of the mesh the code will run on
+  !> @param[in,out] chi The co-ordinate field
+  !> @param[in,out] panel_id 2d field giving the id for cubed sphere panels
+  !> @param[in,out] modeldb The structure that holds model state
+  subroutine init_conway( mesh, chi, panel_id, modeldb)
+
+    implicit none
+
+    type(mesh_type), intent(in), pointer     :: mesh
+    ! Coordinate field
+    type( field_type ), intent(inout)        :: chi(:)
+    type( field_type ), intent(inout)        :: panel_id
+    type(modeldb_type), intent(inout)        :: modeldb
+
+    type( function_space_type ), pointer     :: fs
+    type( field_collection_type ), pointer   :: depository
+
+    type( integer_field_type )               :: current_state, next_state
+    type( integer_field_type ), pointer      :: current_state_ptr
+    type( conway_state_type )                :: conway_current_state
+
+    call log_event( 'conway: Initialising app ...', LOG_LEVEL_INFO )
+
+    ! Get a W3 function space for all fields
+    fs => function_space_collection%get_fs(mesh, element_order_h, &
+                                           element_order_v, W3)
+    ! Create prognostic fields
+    ! Create a field in the W3 function space (fully discontinuous field)
+    ! for the current state of the game at the current timestep
+    call current_state%initialise( vector_space = fs, name="current_state")
+    ! Create a field to hold the state at the next timestep (not actually
+    ! a prognostic - but it's a handy space to calculate into)
+    call next_state%initialise( vector_space = fs, name="next_state")
+
+    ! Add field to modeldb
+    depository => modeldb%fields%get_field_collection("depository")
+    call depository%add_field(current_state)
+    call depository%add_field(next_state)
+
+    call depository%get_field( "current_state",  current_state_ptr)
+    ! Initialise the values in the state to zero
+    call invoke( int_setval_c(current_state_ptr, 0_i_def) )
+    ! Put funky initialisations  (e.g. gliders, blinkers etc.) in here
+    call conway_current_state%initialise(current_state_ptr, 1)
+    call conway_current_state%copy_to_lfric()
+
+  end subroutine init_conway
+
+end module init_conway_mod

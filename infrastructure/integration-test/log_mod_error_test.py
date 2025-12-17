@@ -1,159 +1,194 @@
 #!/usr/bin/env python3
 ##############################################################################
-# Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
+# Copyright (c) 2017,    Met Office, on behalf of HMSO and Queen's Printer
 # For further details please refer to the file LICENCE which you
 # should have received as part of this distribution.
 ##############################################################################
 """
-Test the Fortran code for handling command line arguments. This can't be done
-using the unit test framework due to the requirement to interfact with the
-command line.
+The Fortran logging module terminates on error. This cannot be tested by the
+unit testing framework as it terminates the unit tests as well.
 """
 
+import datetime
+import re
 
-import sys
-
-from testframework import Test, TestEngine, TestFailed
+from testframework import LFRicLoggingTest, MpiTest, TestEngine, TestFailed
 
 
-##############################################################################
-class cli_mod_normal_test(Test):
+###############################################################################
+class LogModErrorSerialTest(MpiTest):  # pylint: disable=too-few-public-methods
     """
-    Tests the case where everything is normal and a filename is passed on the
-    command line.
-    """
-
-    def __init__(self):
-        self._INJECT = "resources/cli_test.nml"
-        super().__init__([sys.argv[1], self._INJECT])
-
-    def test(self, returncode, out, err):
-        if returncode != 0:
-            raise TestFailed(
-                "Unexpected failure of test executable: {code}".format(
-                    code=returncode
-                )
-            )
-
-        if out.strip() != self._INJECT:
-            raise TestFailed(
-                'Expected filename "{expected}" but found "{found}"'.format(
-                    expected=self._INJECT, found=out.strip()
-                )
-            )
-
-        return "Valid filename extracted from command line"
-
-
-##############################################################################
-class cli_mod_missing_file_test(Test):
-    """
-    Tests the case where everything is normal and a filename is passed on the
-    command line, but that file doesn't exist.
+    Tests logging in serial scenarios.
     """
 
     def __init__(self):
-        self._INJECT = "onwards/waffles.nml"
-        super().__init__([sys.argv[1], self._INJECT])
+        super().__init__(processes=1)
 
-    def test(self, returncode, out, err):
-        if returncode == 0:
-            raise TestFailed(
-                "Unexpected success of test executable: {code}".format(
-                    code=returncode
-                )
+        self._minimum_timestamp = datetime.datetime.utcnow()
+
+    def test(self, returncode: int, out: str, err: str):
+        """
+        Tests that loggin an error ends execution.
+        """
+        expected_level = "ERROR"
+        expected_message = " An error was logged."
+
+        if returncode == 0:  # pylint: disable=no-else-raise
+            message = "Logging an error did not cause termination to end"
+            raise TestFailed(message)
+        elif returncode == 127:
+            raise TestFailed("Test executable not found")
+        elif returncode > 128:
+            raise TestFailed("Execution fault such as segmentation fault")
+
+        if out != "":
+            message = (
+                "Expected no output on standard out:\n"
+                + f"Standard out: {out}"
             )
+            raise TestFailed(message)
 
-        return "Command line that refers to a missing file returned with error"
+        try:
+            timestamp_string, level, report = err.split(":", 2)
+            timestamp_without_timezone = timestamp_string[:-5]
+
+            timestamp = datetime.datetime.strptime(
+                timestamp_without_timezone, "%Y%m%d%H%M%S.%f"
+            )
+        except Exception as ex:
+            message = f"Unable to get timestamp from message: {err}"
+            raise TestFailed(message) from ex
+
+        if timestamp < self._minimum_timestamp:
+            message = (
+                f"Expected a timestamp after {self._minimum_timestamp}"
+                f" but read {timestamp}"
+            )
+            raise TestFailed(message)
+
+        if level != expected_level:
+            message = 'Expected "{}" but read "{}"'
+            raise TestFailed(message.format(expected_level, level))
+
+        # We only check the first line as compilers tend to print the return
+        # code as well. This will remain true until we can use Fortran 2008 and
+        # "stop error".
+        #
+        first, _, _ = report.partition("\n")
+        if first != expected_message:
+            message = 'Expected "{}" but read "{}"'
+            raise TestFailed(message.format(expected_message, first))
+
+        message = "Logging an error caused exit as expected with code {code}"
+        return message.format(code=returncode)
 
 
 ##############################################################################
-class cli_mod_too_few_test(Test):
+class LogModErrorParallelTest(LFRicLoggingTest):
     """
-    Tests the case where nothing is passed on the command line. This should be
-    an error as a filename is always needed.
-    """
-
-    def test(self, returncode, out, err):
-        if returncode == 0:
-            raise TestFailed("Unexpected success with no arguments")
-
-        return "Command line with no arguments returned with error"
-
-
-##############################################################################
-class cli_mod_too_many_test(Test):
-    """
-    Tests the case where more than one argument is passed on the command line.
-    This should be an error as only a filename is needed.
+    Tests logging in MPI parallel scenarios.
     """
 
+    # pylint: disable=too-few-public-methods
     def __init__(self):
-        super().__init__(
-            [sys.argv[1], "resources/cli_test.nml", "2"]
+        super().__init__(processes=2)
+
+        self._minimum_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        line_pattern_string = (
+            r"(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)"
+            r"\.(\d{3})([+-])(\d\d)(\d\d):P(\d+):\s*(\w+)"
+            r":\s+(.+)"
         )
+        self._line_pattern = re.compile(line_pattern_string)
 
-    def test(self, returncode, out, err):
+    def test(self, returncode: int, out: str, err: str):
+        """
+        Tests that logging an error terminates execution when run in parallel.
+        """
+        # pylint: disable=too-many-locals
+        expected_level = "ERROR"
+        expected_message = "An error was logged."
+
         if returncode == 0:
-            raise TestFailed("Unexpected success with 2 arguments")
+            message = "Logging an error did not cause termination to end"
+            raise TestFailed(message)
 
-        return "Command line with 2 arguments returned with error"
+        if out != "":
+            message = (
+                "Expected no output on standard out:\n"
+                + f"Standard out: {out}"
+            )
+            raise TestFailed(message)
 
+        # ToDo: Ideally we would test for stderr output here but whether some
+        # is generated or not is dependent on whether the compiler in use
+        # supports generating a backtrace for warnings. Rather than trying to
+        # solve that problem we'll leave it as an exercise for later.
+        #
+        # In light of this we will just ignore the "err" argument we are
+        # passed as part of the LFRicLoggingTest interface.
 
-##############################################################################
-class cli_mod_help_test(Test):
-    """
-    Tests the case where the "-help" switch is specified.
-    """
+        pet_log = self.getLFRicLoggingLog()
+        pet_log = "\n".join(pet_log.splitlines())
 
-    def __init__(self):
-        super().__init__([sys.argv[1], "-help"])
+        match = self._line_pattern.match(pet_log)
+        if match:
+            try:
+                tzsign = -1 if match.group(8) == "-" else 1
+                tzhours = int(match.group(9))
+                tzmins = int(match.group(10))
+                timezone = datetime.timezone(
+                    tzsign * datetime.timedelta(hours=tzhours, minutes=tzmins)
+                )
+                timestamp = datetime.datetime(
+                    int(match.group(1)),  # Year
+                    int(match.group(2)),  # Month
+                    int(match.group(3)),  # Day
+                    int(match.group(4)),  # Hour
+                    int(match.group(5)),  # Minute
+                    int(match.group(6)),  # Second
+                    int(match.group(7)) * 1000,  # Microseconds
+                    timezone,  # Timezone
+                )
+            except Exception as ex:
+                message = f"Bad timestamp format: {pet_log}"
+                raise TestFailed(message) from ex
+            process = int(match.group(11))
+            level = match.group(12)
+            report = match.group(13)
+        else:
+            message = f"Unexpected log message: {pet_log}"
+            raise TestFailed(message)
 
-    def test(self, returncode, out, err):
-        if returncode == 0:
-            raise TestFailed('Unexpected success with "-help"')
+        if timestamp < self._minimum_timestamp:
+            message = (
+                f"Expected a timestamp after {self._minimum_timestamp}"
+                f" but read {timestamp}"
+            )
+            raise TestFailed(message)
 
-        return 'Command line with "-help" returned an error'
+        if process < 0:
+            message = "Process number went negative"
+            raise TestFailed(message)
 
+        if level != expected_level:
+            message = "Expected '{}' but read '{}'"
+            raise TestFailed(message.format(expected_level, level))
 
-##############################################################################
-class cli_mod_h_test(Test):
-    """
-    Tests the case where the "-h" switch is specified.
-    """
+        # We only check the first line as compilers tend to print the return
+        # code as well. This will remain true until we can use Fortran 2008 and
+        # "stop error".
+        #
+        first, _, _ = report.partition("\n")
+        if first != expected_message:
+            message = 'Expected "{}" but read "{}"'
+            raise TestFailed(message.format(expected_message, first))
 
-    def __init__(self):
-        super().__init__([sys.argv[1], "-h"])
-
-    def test(self, returncode, out, err):
-        if returncode == 0:
-            raise TestFailed('Unexpected success with "-h"')
-
-        return 'Command line with "-h" returned an error'
-
-
-##############################################################################
-class cli_mod_other_help_test(Test):
-    """
-    Tests the case where the "--help" switch is specified.
-    """
-
-    def __init__(self):
-        super().__init__([sys.argv[1], "--help"])
-
-    def test(self, returncode, out, err):
-        if returncode == 0:
-            raise TestFailed('Unexpected success with "--help"')
-
-        return 'Command line with "--help" returned an error'
+        message = "Logging an error caused exit as expected with code {code}"
+        return message.format(code=returncode)
 
 
 ##############################################################################
 if __name__ == "__main__":
-    TestEngine.run(cli_mod_normal_test())
-    TestEngine.run(cli_mod_missing_file_test())
-    TestEngine.run(cli_mod_too_few_test())
-    TestEngine.run(cli_mod_too_many_test())
-    TestEngine.run(cli_mod_help_test())
-    TestEngine.run(cli_mod_h_test())
-    TestEngine.run(cli_mod_other_help_test())
+    TestEngine.run(LogModErrorSerialTest())
+    TestEngine.run(LogModErrorParallelTest())

@@ -113,7 +113,7 @@ subroutine write_field_generic(field_name, field_proxy)
   character(len=*), intent(in) :: field_name
   class(field_parent_proxy_type), intent(in) :: field_proxy
 
-  integer(i_def) :: undf
+  integer(i_def) :: num_owned_dofs
   integer(i_def) :: hdim          ! horizontal dimension, domain size
   integer(i_def) :: vdim          ! vertical dimension
   real(dp_xios), allocatable :: xios_data(:)
@@ -123,27 +123,27 @@ subroutine write_field_generic(field_name, field_proxy)
   ! without doing anything
   if (.not. field_is_active(field_name, .true.)) return
 
-  undf = field_proxy%vspace%get_last_dof_owned() ! total dimension
+  num_owned_dofs = field_proxy%vspace%get_last_dof_owned() ! total dimension
 
   vdim = field_proxy%vspace%get_ndata() * size(field_proxy%vspace%get_levels())
 
-  hdim = undf/vdim
+  hdim = num_owned_dofs/vdim
 
   ! detect field with legacy checkpointing domain
   legacy = (index(get_field_domain_ref(field_name), 'checkpoint_') == 1)
 
   ! sanity check
-  if (.not. legacy .and. .not. (hdim*vdim == undf)) then
+  if (.not. legacy .and. .not. (hdim*vdim == num_owned_dofs)) then
     call log_event('assertion failed for field ' // field_name                &
-      // ': hdim*vdim == undf', log_level_error)
+      // ': hdim*vdim == num_owned_dofs', log_level_error)
   end if
 
-  allocate(xios_data(undf))
+  allocate(xios_data(num_owned_dofs))
 
   call format_field(xios_data, field_name, field_proxy, vdim, hdim, legacy)
 
   if (legacy) then
-    call xios_send_field( field_name, reshape(xios_data, (/ 1, undf /)) )
+    call xios_send_field( field_name, reshape(xios_data, (/ 1, num_owned_dofs /)) )
   else
     call xios_send_field( field_name, reshape(xios_data, (/vdim, hdim/)) )
     ! The shape is only necessary for the mock implementation, and
@@ -218,34 +218,34 @@ subroutine checkpoint_write_xios(xios_field_name, file_name, field_proxy)
   character(len=*),               intent(in) :: file_name
   class(field_parent_proxy_type), intent(in) :: field_proxy
 
-  integer(i_def)             :: undf
+  integer(i_def)             :: num_owned_dofs
   real(dp_xios), allocatable :: send_field(:)
 
-  undf = field_proxy%vspace%get_last_dof_owned()
-  allocate(send_field(undf))
+  num_owned_dofs = field_proxy%vspace%get_last_dof_owned()
+  allocate(send_field(num_owned_dofs))
 
   ! Different field kinds are selected to access data
   select type(field_proxy)
 
     type is (field_real32_proxy_type)
-    send_field = field_proxy%data(1:undf)
+    send_field = field_proxy%data(1:num_owned_dofs)
 
     type is (field_real64_proxy_type)
-    send_field = field_proxy%data(1:undf)
+    send_field = field_proxy%data(1:num_owned_dofs)
 
     type is (integer_field_proxy_type)
-    if ( any( abs(field_proxy%data(1:undf)) > xios_max_int) ) then
+    if ( any( abs(field_proxy%data(1:num_owned_dofs)) > xios_max_int) ) then
       call log_event( 'Data for integer field "'// trim(adjustl(xios_field_name)) // &
                       '" contains values too large for 16-bit precision', LOG_LEVEL_WARNING )
     end if
-    send_field = real( field_proxy%data(1:undf), dp_xios )
+    send_field = real( field_proxy%data(1:num_owned_dofs), dp_xios )
 
     class default
     call log_event( "Invalid type for input field proxy", LOG_LEVEL_ERROR )
 
   end select
 
-  call xios_send_field("checkpoint_"//trim(xios_field_name), reshape (send_field, (/1, undf/)))
+  call xios_send_field("checkpoint_"//trim(xios_field_name), reshape (send_field, (/1, num_owned_dofs/)))
 
 end subroutine checkpoint_write_xios
 

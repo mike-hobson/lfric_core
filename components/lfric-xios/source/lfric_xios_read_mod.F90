@@ -191,8 +191,14 @@ subroutine read_field_generic(xios_field_name, field_proxy)
   call log_event( "Reading from XIOS field [" // trim(xios_field_name // "]"), &
                   LOG_LEVEL_TRACE )
 
+! JMH: Temporary fix to read legacy and write layered.
+! Force into "legacy" mode if this is the "u" field
+if(xios_field_name=="restart_u")then
+  legacy =.true.
+else
   ! detect field with legacy checkpointing domain
   legacy = (index(get_field_domain_ref(xios_field_name), 'checkpoint_') == 1)
+end if
 
   ! sanity check
   if (.not. legacy .and. .not. (hdim*vdim == undf)) then
@@ -496,6 +502,12 @@ subroutine read_checkpoint(state, timestep, checkpoint_stem_name, prefix, suffix
     if ( present(suffix) ) xios_field_id = trim(adjustl(xios_field_id)) // trim(adjustl(suffix))
     select type(fld)
     type is (field_real32_type)
+! JMH: Temporary fix to read legacy and write layered.
+! This needs to be thought about better. For now, hard code to only read
+! a "legacy" style checkpoint - these don't have split "u" fields, so
+! don't try to read them.
+! Todo: need to be able to read both legacy and layered in the future
+      if(trim(xios_field_id)/="h_u" .and. trim(xios_field_id)/="v_u")then
        if ( fld%can_checkpoint() ) then
 
           call log_event( 'Reading checkpoint file to restart '// &
@@ -512,7 +524,11 @@ subroutine read_checkpoint(state, timestep, checkpoint_stem_name, prefix, suffix
           call log_event( 'Reading not set up for  '// xios_field_id, &
                LOG_LEVEL_INFO )
        end if
+      end if
     type is (field_real64_type)
+! JMH: Temporary fix to read legacy and write layered.
+! See JMH comment above.
+      if(trim(xios_field_id)/="h_u" .and. trim(xios_field_id)/="v_u")then
        if ( fld%can_checkpoint() ) then
 
           call log_event( 'Reading checkpoint file to restart '// &
@@ -529,7 +545,11 @@ subroutine read_checkpoint(state, timestep, checkpoint_stem_name, prefix, suffix
           call log_event( 'Reading not set up for  '// xios_field_id, &
                LOG_LEVEL_INFO )
        end if
+      end if
     type is (integer_field_type)
+! JMH: Temporary fix to read legacy and write layered.
+! See JMH comment above.
+      if(trim(xios_field_id)/="h_u" .and. trim(xios_field_id)/="v_u")then
        if ( fld%can_checkpoint() ) then
           call log_event( 'Reading checkpoint file to restart '// &
                xios_field_id, LOG_LEVEL_INFO )
@@ -545,6 +565,7 @@ subroutine read_checkpoint(state, timestep, checkpoint_stem_name, prefix, suffix
           call log_event( 'Reading not set up for  '// xios_field_id, &
                LOG_LEVEL_INFO )
        end if
+      end if
     class default
        call log_event('read_checkpoint:Invalid type of field, not supported',LOG_LEVEL_ERROR)
     end select

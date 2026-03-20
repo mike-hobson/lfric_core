@@ -255,7 +255,9 @@ contains
 
         call xios_set_attr(field, name=field_name, prec=prec, operation=operation)
 
-        if (use_legacy) then
+! JMH: Temporary fix to read legacy and write layered.
+! Force into "legacy" mode if this is the "u" field
+        if (use_legacy .or.trim(dict_field_id) == "u") then
           call handle_legacy_fields(field, dict_field_id)
         else
           grid_ref = get_field_grid_ref(dict_field_id)

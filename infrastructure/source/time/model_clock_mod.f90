@@ -112,7 +112,11 @@ contains
     end if
 
     new_clock%current_step = new_clock%first_step
-    new_clock%initialisation_phase = (new_clock%current_step == 1_i_timestep)
+    ! JMH: Temporary fix to read legacy and write layered.
+    ! Temporarily make the first step of every run (NRUN or CRUN) an
+    ! initialisation step to force a initial diags dump - which makes 
+    ! layered checksums work
+    new_clock%initialisation_phase = .true. !(new_clock%current_step == 1_i_timestep)
     new_clock%starting = .true.
     new_clock%ts_events = linked_list_type()
 

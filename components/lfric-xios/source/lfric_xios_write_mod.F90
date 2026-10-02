@@ -184,13 +184,14 @@ subroutine write_field_generic(field_name, field_proxy)
 
   call format_field(xios_data, field_name, field_proxy, vdim, hdim, legacy)
 
-  if (legacy) then
-    call xios_send_field( field_name, reshape(xios_data, (/ 1, undf /)) )
-  else
-    call xios_send_field( field_name, reshape(xios_data, (/vdim, hdim/)) )
-    ! The shape is only necessary for the mock implementation, and
-    ! the only thing that matters is the product of the dimensions.
-  end if
+!  if (legacy) then
+!    call xios_send_field( field_name, reshape(xios_data, (/ 1, undf /)) )
+!  else
+!    call xios_send_field( field_name, reshape(xios_data, (/vdim, hdim/)) )
+    call xios_send_field( field_name, xios_data)
+!    ! The shape is only necessary for the mock implementation, and
+!    ! the only thing that matters is the product of the dimensions.
+!  end if
 
   deallocate(xios_data)
 
